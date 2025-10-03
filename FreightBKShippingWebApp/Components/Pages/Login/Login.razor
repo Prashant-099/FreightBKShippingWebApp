@@ -1,0 +1,176 @@
+@page "/login"
+@using System.ComponentModel.DataAnnotations;
+@using FreightBKShippingWebApp.Authentication
+@using FreightBKShippingWebApp.Components.Layout
+
+@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@layout EmptyLayout
+@inject ApiClient ApiClient
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
+@inject ToasteService ToastService
+@rendermode InteractiveServer
+<AuthCardLayout TModel="LoginModel"
+HeaderTitle="Login Now"
+HeaderSubtitle="Join us to manage your operations"
+HeaderIcon="fas fa-user-plus"
+HeaderTextColor="text-success"
+HeaderIconClass="bg-success bg-gradient"
+BackgroundGradient="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+    <ChildContent>
+        <EditForm Model="@user" OnValidSubmit="@HandleLogin">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+                
+            <div class="mb-3">
+                <label>Email</label>
+                <DxTextBox @bind-Text="user.UserEmail" CssClass="w-100" />
+            </div>
+
+            <div class="mb-3">
+                <label>Password</label>
+                <DxTextBox @bind-Text="user.UserPassword" Password="true" CssClass="w-100" />
+            </div>
+            <p> <a href="/forgot">Forget Password</a></p>
+
+            @*             <button type="submit" class="btn btn-primary mt-3">Login</button> *@
+            <button type="submit" class="btn btn-primary w-100" disabled="@isloading">
+                @if (isloading)
+                {
+                    <span><span class="spinner-border spinner-border-sm me-2"></span> Logging in...</span>
+                }
+                else
+                {
+                    <span>Login</span>
+                }
+                @* 
+<!--             <button type="submit" class="btn btn-primary mt-3" disabled="@isloading">
+                @if (isloading)
+                {
+                    <span><span class="spinner-border spinner-border-sm me-2" ></span>Logging in.....</span>
+                }
+                else
+                {
+                    <i class="fas fa-sign-in-alt">Login</i>
+                } --> *@
+
+            </button>
+        </EditForm>
+    </ChildContent>
+    <FooterContent>
+        <p>Want To Create New Account? <a href="/register">Register</a></p>
+    </FooterContent>
+
+
+</AuthCardLayout>
+@*     <div class="text-center">
+
+    <p>Don't have an account?
+                <NavLink class="text-decoration-none text-primary fw-semibold" href="/register">Register</NavLink>
+            </p>
+
+            <a href="/forgot" class="text-decoration-none text-muted">
+                Forgot your password?
+            </a>
+        </div>
+    </div>
+</div> *@
+
+@* 
+<AuthCardLayout TModel="LoginModel"
+                HeaderTitle="Welcome Back"
+                HeaderSubtitle="Login to access your freight dashboard"
+                HeaderIcon="fas fa-truck"
+                HeaderTextColor="text-primary"
+                HeaderIconClass="bg-primary bg-gradient"
+                BackgroundGradient="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+    <ChildContent>
+        <EditForm Model="@user" OnValidSubmit="HandleLogin">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <div class="mb-3">
+                <label>Email</label>
+                <DxTextBox @bind-Text="user.UserEmail" CssClass="form-control" NullText="Email" />
+            </div>
+
+            <div class="mb-3">
+                <label>Password</label>
+                <DxTextBox @bind-Text="user.UserPassword" Password="true" CssClass="form-control" NullText="Password" />
+            </div>
+
+            <div class="mb-3 text-end">
+                <a href="/forgot" class="text-decoration-none text-primary small fw-semibold">
+                    Forgot your password?
+                </a>
+            </div>
+
+            <DxButton SubmitFormOnClick="true" Text="Sign In" CssClass="btn btn-primary w-100" />
+        </EditForm>
+
+        @if (!string.IsNullOrWhiteSpace(error))
+        {
+            <div class="alert alert-danger mt-3" role="alert">
+                @error
+            </div>
+        }
+    </ChildContent>
+
+    <FooterContent>
+        <p>
+            Don't have an account?
+            <NavLink class="text-decoration-none text-primary fw-semibold" href="/register">Register</NavLink>
+        </p>
+    </FooterContent>
+
+</AuthCardLayout> *@
+
+@code {
+    private bool isloading = false;
+
+    private string? error;
+    private LoginModel user = new LoginModel();
+    private async Task HandleLogin()
+    {
+        isloading = true;  // Start loading
+        error = null;
+
+        try
+        {
+            var loginModel = new LoginModel
+                {
+                    UserEmail = user.UserEmail,
+                    UserPassword = user.UserPassword
+                };
+
+            var result = await AuthService.LoginAsync(loginModel);
+
+            if (result?.Token != null)
+            {
+                isloading = true;
+                await ((CustomAuthStateProvider)AuthStateProvider).MarkUserAsAuthenticated(result);
+
+                Navigation.NavigateTo("/?login=success", forceLoad: false);
+            }
+            else
+            {
+                ToastService.Error("Login failed", "Please check your credentials and try again.");
+
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"🛑 Error: {ex.Message}", "Login Failed");
+        }
+        finally
+        {
+            isloading = false;  // Stop loading
+        }
+
+    }
+}
+}

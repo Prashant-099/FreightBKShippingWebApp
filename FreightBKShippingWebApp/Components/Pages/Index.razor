@@ -1,0 +1,60 @@
+﻿@page "/"
+@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@inject ToasteService ToastService
+@inject NavigationManager Navigation
+@inject AuthService AuthService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject YearStatechangeService YearStatechangeService
+<PageTitle>Welcome</PageTitle>
+<div class="container-fluid">
+    <!-- Header -->
+    <DxGridLayout CssClass="welcome-gridlayout" RowSpacing="2rem">
+        <Rows>
+            <DxGridLayoutRow Height="auto" Areas="header"></DxGridLayoutRow>
+            <DxGridLayoutRow Height="auto" Areas="cards"></DxGridLayoutRow>
+        </Rows>
+        <Items>
+            <DxGridLayoutItem Area="header">
+                <Template>
+                    <div class="text-center">
+                        <h1 class="display-5 fw-bold">Welcome @UserName!</h1>
+                        <p class="lead text-muted">Manage and monitor your Shipping operations</p>
+                    </div>
+                </Template>
+            </DxGridLayoutItem>
+            </Items>
+           </DxGridLayout>
+            </div>
+
+     @code{
+
+    private string UserName { get; set; } = "User Name";
+    protected override async Task OnInitializedAsync()
+    {
+
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity != null && user.Identity.IsAuthenticated)
+        {
+            UserName = user.Identity.Name ?? "Unknown User";
+
+        }
+        YearStatechangeService.OnYearChanged += HandleYearChanged;
+
+   
+
+    }
+    private async void HandleYearChanged()
+    {
+       
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        YearStatechangeService.OnYearChanged -= HandleYearChanged;
+    }
+}

@@ -1,0 +1,81 @@
+﻿@using FreightBKShippingWebApp.Services
+@inject ConfirmationDialogService ConfirmDialogService
+
+@if (isVisible)
+{
+    <div class="modal-backdrop fade show"></div>
+    <div class="modal d-block" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-body text-center">
+                    <p>@Message</p>
+                    <div class="d-flex justify-content-center gap-3">
+                        <button class="btn btn-danger" @onclick="Confirm">Yes</button>
+                        <button class="btn btn-outline-secondary" @onclick="Cancel">No</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool isVisible = false;
+    private TaskCompletionSource<bool> tcs;
+    private string Message;
+
+    protected override void OnInitialized()
+    {
+        ConfirmDialogService.OnShow = ShowDialog;
+    }
+
+    private Task<bool> ShowDialog(string message)
+    {
+        Message = message;
+        isVisible = true;
+        StateHasChanged();
+        tcs = new TaskCompletionSource<bool>();
+        return tcs.Task;
+    }
+
+    private void Confirm()
+    {
+        isVisible = false;
+        tcs.SetResult(true);
+    }
+
+    private void Cancel()
+    {
+        isVisible = false;
+        tcs.SetResult(false);
+    }
+}
+<style>
+      .modal-backdrop {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background-color: rgba(0,0,0,0.5);
+          z-index: 1040;
+      }
+
+      .modal {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          display: flex !important;
+          align-items: center;
+          justify-content: center;
+          z-index: 1050;
+      }
+
+      .modal-content {
+          width: 100%;
+          max-width: 400px;
+      }
+
+</style>

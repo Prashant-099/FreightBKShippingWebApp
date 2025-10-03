@@ -1,0 +1,126 @@
+﻿@page "/year"
+@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Services
+@using FreightBKShippingWebApp.Components.Pages
+@inject YearService YearService
+@inject ToasteService ToastService
+@inject LoadingService LoadingService
+@inject ConfirmationDialogService ConfirmDialogService
+
+<DxGrid TItem="Year"
+        Data="@yearList"
+        @ref="MyGrid"
+        KeyFieldName="YearId"
+        ShowSearchBox="true"
+        PageSize="10"
+        PageSizeSelectorVisible="true"
+        ShowGroupPanel="true"
+        FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always"
+        FocusedRowEnabled="true"
+        SelectionMode="GridSelectionMode.Multiple"
+        SelectedDataItems="@SelectedYears"
+        SelectedDataItemsChanged="OnSelectedYearsChanged">
+
+    <ToolbarTemplate>
+        <DxToolbar>
+            <TitleTemplate Context="tl">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-calendar3"></i>
+                    <span class="fs-5">Years</span>
+                </div>
+            </TitleTemplate>
+            <Items>
+                <DxToolbarItem Text="Add" IconCssClass="bi bi-plus-circle" Click="OnCreateNew" />
+                <DxToolbarItem Text="Edit" IconCssClass="bi bi-pencil-square" Click="OnEdit" />
+                <DxToolbarItem Text="Delete" IconCssClass="bi bi-trash" Click="OnDelete" />
+                <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="@(async (_) => await LoadYearsAsync())" />
+            </Items>
+        </DxToolbar>
+    </ToolbarTemplate>
+
+    <Columns>
+        <DxGridDataColumn FieldName="YearId" Caption="ID" Visible="false" />
+        <DxGridSelectionColumn Width="30" />
+        <DxGridDataColumn FieldName="YearName" Caption="Year Name" />
+        <DxGridDataColumn FieldName="YearDateFrom" Caption="From Date" DisplayFormat="d" />
+        <DxGridDataColumn FieldName="YearDateTo" Caption="To Date" DisplayFormat="d" />
+        <DxGridDataColumn FieldName="YearStatus" Caption="Active" />
+        <DxGridDataColumn FieldName="YearIsDefault" Caption="Default" />
+    </Columns>
+</DxGrid>
+
+<YearAddEditPage @ref="popup" OnSaved="LoadYearsAsync" />
+
+<ConfirmationDialog />
+
+@code {
+    DxGrid MyGrid;
+    private List<YearModel> yearList = [];
+    private List<YearModel> SelectedYears = new();
+    private YearAddEditPage popup;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadYearsAsync();
+    }
+
+    private async Task LoadYearsAsync()
+    {
+        LoadingService.Show();
+        try
+        {
+            yearList = await YearService.GetAllAsync();
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+
+    private void OnSelectedYearsChanged(IEnumerable<object> years)
+    {
+        SelectedYears = years.Cast<YearModel>().ToList();
+    }
+
+    private void OnCreateNew(ToolbarItemClickEventArgs e)
+    {
+        popup.Show(new YearModel()
+        {
+            YearDateFrom = DateTime.Now,
+            YearDateTo = DateTime.Now.AddMonths(12),
+            YearStatus = true
+        });
+    }
+
+    private void OnEdit(ToolbarItemClickEventArgs e)
+    {
+        var year = MyGrid.GetFocusedDataItem() as YearModel;
+        if (year != null)
+            popup.Show(year);
+        else
+            ToastService.Warning("Please select a year to edit.");
+    }
+
+    private async Task OnDelete(ToolbarItemClickEventArgs e)
+    {
+        if (SelectedYears == null || SelectedYears.Count == 0)
+        {
+            ToastService.Warning("Please select at least one year to delete.");
+            return;
+        }
+
+        var confirm = await ConfirmDialogService.ShowAsync(
+            $"Are you sure you want to delete {SelectedYears.Count} selected year(s)?");
+
+        if (confirm)
+        {
+            foreach (var year in SelectedYears)
+            {
+                await YearService.DeleteAsync(year.YearId);
+            }
+
+            ToastService.Success($"{SelectedYears.Count} year(s) deleted successfully.");
+            await LoadYearsAsync();
+        }
+    }
+}

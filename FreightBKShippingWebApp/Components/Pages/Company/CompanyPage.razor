@@ -1,0 +1,338 @@
+﻿@page "/company"
+
+@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Services
+@using DevExpress.Blazor
+@using FreightBKShippingWebApp.Components.Pages
+@inject CompanyService CompanyService
+@inject ToasteService ToasteService
+@inject LoadingService LoadingService
+@inject StateService StateService
+@inject CountryService CountryService
+@inject IJSRuntime JS
+@inject ConfirmationDialogService ConfirmDialogService
+
+@* <div class="text-center mb-4">
+    <h3 class="text-xl font-semibold">
+        <i class="bi bi-building me-2"></i>Company
+    </h3>
+</div> *@
+
+@* <ConfigAuthorize Check="ConfigChecks.CanViewCompany"> *@
+<div class="px-3 py-3">
+<DxGrid TItem="Company"
+        Data="@companyList"
+        @ref="CompanyGrid"
+        KeyFieldName="CompanyId"
+        EditMode="GridEditMode.PopupEditForm"
+        PopupEditFormHeaderText="Edit Company"
+        ShowGroupPanel="true"
+        ShowSearchBox="true"
+        PageSize="10"
+        PageSizeSelectorVisible="true"
+        FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always"
+        FocusedRowEnabled="true"
+        ColumnResizeMode="GridColumnResizeMode.NextColumn"
+        SearchBoxInputDelay="2000"
+        SelectedDataItems="@SelectedCompanies"
+        SelectedDataItemsChanged="@OnSelectedDataItemsChanged"
+        EditModelSaving="OnEditModelSaving"
+        DataItemDeleting="OnDataItemDeleting">
+
+    <ToolbarTemplate Context="grid">
+        <DxToolbar>
+            <TitleTemplate Context="tl">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-building me-2"></i>
+                    <span class="fs-5">Company</span>
+                </div>
+            </TitleTemplate>
+            <Items>
+                @* <DxToolbarItem Text="Add" IconCssClass="bi bi-plus-circle" Click="OnAddNew" /> *@
+                <DxToolbarItem Text="Edit" IconCssClass="bi bi-pencil-square" Click="OnEdit" />
+                @* <DxToolbarItem Text="Delete" IconCssClass="bi bi-trash" Click="OnDelete" /> *@
+                <DxToolbarItem Type="Spacer" />
+                <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="@((_) => LoadCompaniesAsync())" />
+                <DxToolbarItem Text="Column Chooser" IconCssClass="bi bi-list-columns"
+                               Click="OnColumnChooserClick"></DxToolbarItem>
+            </Items>
+        </DxToolbar>
+    </ToolbarTemplate>
+
+    <Columns>
+            <DxGridDataColumn FieldName="CompanyId"
+                              Caption="ID"
+                              Visible="false"
+                              SortIndex="0"
+                              SortOrder="GridColumnSortOrder.Descending" />
+        <DxGridSelectionColumn AllowSelectAll="true" Width="30" MinWidth="50" />
+        <DxGridDataColumn FieldName="@nameof(Company.Name)" Caption="Name" MinWidth=300 />
+            <DxGridDataColumn FieldName="@nameof(Company.Code)" Caption="Code" MinWidth=100 Visible=false />
+        <DxGridDataColumn FieldName="@nameof(Company.PrintName)" Caption="Print Name" MinWidth=100 Visible=false/>
+        <DxGridDataColumn FieldName="@nameof(Company.Address1)" Caption="Address" MinWidth=100 />
+        <DxGridDataColumn FieldName="@nameof(Company.City)" Caption="City" MinWidth=100 />
+        <DxGridDataColumn FieldName="@nameof(Company.StateId)" Caption="State ID" MinWidth=100 Visible=false/>
+        <DxGridDataColumn FieldName="@nameof(Company.Country)" Caption="Country" MinWidth=100 Visible=false/>
+        <DxGridDataColumn FieldName="@nameof(Company.Email)" Caption="Email" MinWidth=100 />
+        <DxGridDataColumn FieldName="@nameof(Company.Mobile)" Caption="Mobile" MinWidth=100 Visible=false />
+        <DxGridDataColumn FieldName="@nameof(Company.Website)" Caption="Website" MinWidth=100 Visible=false />
+        <DxGridDataColumn FieldName="@nameof(Company.Gstin)" Caption="GSTIN" MinWidth=100 />
+        <DxGridDataColumn FieldName="@nameof(Company.Panno)" Caption="PAN No." MinWidth=100 Visible=false />
+        <DxGridDataColumn FieldName="@nameof(Company.IsGstApplicable)" Caption="GST Applicable" MinWidth=100 Visible=false />
+        <DxGridDataColumn FieldName="@nameof(Company.Status)" Caption="Status" MinWidth=100 Visible=false />
+    </Columns>
+
+    <EditFormTemplate Context="editFormContext">
+        <ValidationSummary />
+        <DxFormLayout>
+            <DxFormLayoutItem Caption="Name" ColSpanSm="12" ColSpanMd="12">
+                @editFormContext.GetEditor(nameof(Company.Name))
+            </DxFormLayoutItem>
+           @*  <DxFormLayoutItem Caption="Code" ColSpanSm="12" ColSpanMd="12">
+                @editFormContext.GetEditor(nameof(Company.Code))
+            </DxFormLayoutItem> *@
+
+            <DxFormLayoutItem Caption="Print Name" ColSpanSm="12" ColSpanMd="12">
+                    @editFormContext.GetEditor(nameof(Company.PrintName))
+                </DxFormLayoutItem>
+            <DxFormLayoutItem Caption="Address " ColSpanSm="12" ColSpanMd="12">
+                <DxMemo @bind-Text="((Company)editFormContext.EditContext.Model).Address1" />
+                </DxFormLayoutItem>
+            <DxFormLayoutItem Caption="City" ColSpanSm="12" ColSpanMd="12">
+                    @editFormContext.GetEditor(nameof(Company.City))
+                </DxFormLayoutItem>
+
+            <DxFormLayoutItem Caption="State"  ColSpanSm="12" ColSpanMd="12">
+                    <DxComboBox TData="State" TValue="String"
+                Data="@stateList"
+                TextFieldName="StateName"
+                 ValueFieldName="StateName"
+                 ClearButtonVisible="true"
+                AllowUserInput="false"
+                NullText="-- Select State --"
+                @bind-Value="((Company)editFormContext.EditContext.Model).StateId"
+                SearchMode="ListSearchMode.AutoSearch"
+                SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+                </DxFormLayoutItem>
+           @*  <DxFormLayoutItem caption="State" ColSpanSm="12" ColSpanMd="12">
+
+                <DxComboBox Data="@stateList"
+                            TextFieldName="StateName"
+                            ValueFieldName="StateId"
+                            @bind-Value="((Company)editFormContext.EditContext.Model).StateId" />
+
+            </DxFormLayoutItem> *@
+                <DxFormLayoutItem Caption="Country" ColSpanSm="12" ColSpanMd="12">
+                    <DxComboBox TData="Country" TValue="String"
+                                Data="@CountryList"
+                                TextFieldName="CountryName"
+                                ValueFieldName="CountryName"
+                                ClearButtonVisible="true"
+                                AllowUserInput="false"
+                                NullText="-- Select Country --"
+                                @bind-Value="((Company)editFormContext.EditContext.Model).Country"
+                                SearchMode="ListSearchMode.AutoSearch"
+                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+                </DxFormLayoutItem>
+            <DxFormLayoutItem Caption="Email" ColSpanSm="12" ColSpanMd="12">
+                    @editFormContext.GetEditor(nameof(Company.Email))
+                </DxFormLayoutItem>
+            <DxFormLayoutItem Caption="Mobile" ColSpanSm="12" ColSpanMd="12">
+                    @editFormContext.GetEditor(nameof(Company.Mobile))
+                </DxFormLayoutItem>
+
+            @* <DxFormLayoutItem Caption="Website" ColSpanSm="12" ColSpanMd="12">
+                    @editFormContext.GetEditor(nameof(Company.Website))
+                </DxFormLayoutItem> *@
+            <DxFormLayoutItem Caption="GSTIN" ColSpanSm="12" ColSpanMd="12">
+                    <DxTextBox @bind-Text="((Company)editFormContext.EditModel).Gstin "></DxTextBox>
+                    
+                </DxFormLayoutItem>
+                <DxFormLayoutItem Caption="PAN No" ColSpanSm="12" ColSpanMd="12">
+                    <DxTextBox @bind-Text="((Company)editFormContext.EditModel).Panno "></DxTextBox>
+                </DxFormLayoutItem>
+      @*       <DxFormLayoutItem Caption="PAN No." ColSpanSm="12" ColSpanMd="12">
+                    @editFormContext.GetEditor(nameof(Company.Panno))
+                </DxFormLayoutItem> *@
+
+            <DxFormLayoutItem Caption="GST Applicable" ColSpanSm="12" ColSpanMd="12">
+                    @editFormContext.GetEditor(nameof(Company.IsGstApplicable))
+                </DxFormLayoutItem>
+            <DxFormLayoutItem Caption="Status" ColSpanSm="12" ColSpanMd="12">
+                    @editFormContext.GetEditor(nameof(Company.Status))
+                </DxFormLayoutItem>
+        </DxFormLayout>
+    </EditFormTemplate>
+</DxGrid>
+</div>
+<ConfirmationDialog />
+@* </ConfigAuthorize> *@
+@code {
+
+
+  
+    void OnColumnChooserClick()
+    {
+        CompanyGrid.ShowColumnChooser(".column-chooser-button");
+    }
+    //===================================================
+    DxGrid CompanyGrid;
+    List<Company> companyList = [];
+    List<Company> SelectedCompanies = new();
+    private List<State> stateList = new();
+    private List<Country> CountryList = new();
+    bool isSaving = false;
+
+    protected override async Task OnInitializedAsync() 
+    {
+        await LoadCompaniesAsync();
+    }
+
+    private async Task LoadCompaniesAsync()
+    {
+        LoadingService.Show();
+        try
+        {
+            stateList = await StateService.GetStatesAsync();
+            CountryList = await CountryService.GetAllAsync();
+
+            companyList = await CompanyService.GetAllAsync();
+        }
+        catch (Exception ex)
+        {
+            ToasteService.Error($"❌ Failed to load companies: {ex.Message}", "Error");
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+
+    async Task OnAddNew(ToolbarItemClickEventArgs e)
+    {
+        await CompanyGrid.StartEditNewRowAsync();
+        ToasteService.Info("Creating new company...", "Info");
+    }
+
+    async Task OnEdit(ToolbarItemClickEventArgs e)
+    {
+        var company = CompanyGrid.GetFocusedDataItem() as Company;
+        if (company != null)
+            await CompanyGrid.StartEditDataItemAsync(company);
+        else
+            ToasteService.Warning("Please select a company to edit", "No Selection");
+    }
+
+    async Task OnDelete(ToolbarItemClickEventArgs e)
+    {
+        if (SelectedCompanies.Any())
+        {
+            var confirm = await ConfirmDialogService.ShowAsync($"Are you sure you want to delete {SelectedCompanies.Count} selected company(s)?");
+            if (confirm)
+            {
+                LoadingService.Show();
+
+                try
+                {
+                    foreach (var company in SelectedCompanies.ToList())
+                    {
+                        var result = await CompanyService.DeleteAsync(company.CompanyId);
+                        if (result)
+                        {
+                            companyList.Remove(company);
+
+                        }
+                    }
+                    ToasteService.Success($"{SelectedCompanies.Count} company(s) deleted", "Deleted");
+                    SelectedCompanies.Clear();
+                }
+                catch (Exception ex)
+                {
+                    ToasteService.Error($"Delete failed: {ex.Message}", "Error");
+                }
+                finally
+                {
+                    LoadingService.Hide();
+                    await LoadCompaniesAsync();
+                }
+            }
+        }
+        else
+        {
+            var company = CompanyGrid.GetFocusedDataItem();
+            if (company != null)
+                CompanyGrid.ShowDataItemDeleteConfirmation(company);
+            else
+                ToasteService.Warning("Please select a company to delete", "No Selection");
+        }
+    }
+
+    async Task OnEditModelSaving(GridEditModelSavingEventArgs e)
+    {
+        LoadingService.Show();
+        var model = e.EditModel as Company;
+        if (model == null)
+        {
+            e.Cancel = true;
+            ToasteService.Error("Invalid company data", "Error");
+            return;
+        }
+
+        try
+        {
+            if (e.IsNew)
+            {
+                await CompanyService.CreateAsync(model);
+                ToasteService.Success("Company created", "Success");
+            }
+            else
+            {
+                e.CopyChangesToDataItem();
+                await CompanyService.UpdateAsync(model);
+                ToasteService.Success("Company updated", "Success");
+            }
+            await LoadCompaniesAsync();
+        }
+        catch (Exception ex)
+        {
+            ToasteService.Error($"Save failed: {ex.Message}", "Error");
+            e.Cancel = true;
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+
+    async Task OnDataItemDeleting(GridDataItemDeletingEventArgs e)
+    {
+        LoadingService.Show();
+        var company = e.DataItem as Company;
+
+        try
+        {
+            await CompanyService.DeleteAsync(company.CompanyId);
+            ToasteService.Success("Company deleted", "Deleted");
+            await LoadCompaniesAsync();
+        }
+        catch (Exception ex)
+        {
+            ToasteService.Error($"Delete failed: {ex.Message}", "Error");
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+
+    void OnSelectedDataItemsChanged(IReadOnlyList<object> selectedItems)
+    {
+        SelectedCompanies = selectedItems.Cast<Company>().ToList();
+    }
+    // void OnSelectedDataItemsChanged(object selectedItems)
+    // {
+    //     SelectedCompanies = ((IEnumerable<Company>)selectedItems).ToList();
+    // }
+
+
+}

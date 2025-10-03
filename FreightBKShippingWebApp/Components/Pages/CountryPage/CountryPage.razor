@@ -1,0 +1,119 @@
+﻿@page "/country"
+@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Services
+@using FreightBKShippingWebApp.Components.Pages
+@inject CountryService CountryService
+@inject ToasteService ToastService
+@inject LoadingService LoadingService
+@inject ConfirmationDialogService ConfirmDialogService
+
+<DxGrid TItem="Country"
+        Data="@countryList"
+        @ref="MyGrid"
+        KeyFieldName="CountryId"
+        ShowSearchBox="true"
+        PageSize="10"
+        PageSizeSelectorVisible="true"
+        ShowGroupPanel="true"
+        FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always"
+        FocusedRowEnabled="true"
+        SelectionMode="GridSelectionMode.Multiple"
+        SelectedDataItems="@SelectedCountries"
+        SelectedDataItemsChanged="OnSelectedCountriesChanged">
+
+    <ToolbarTemplate>
+        <DxToolbar>
+            <TitleTemplate Context="tl">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-globe"></i>
+                    <span class="fs-5">Country</span>
+                </div>
+            </TitleTemplate>
+            <Items>
+                <DxToolbarItem Text="Add" IconCssClass="bi bi-plus-circle" Click="OnCreateNew" />
+                <DxToolbarItem Text="Edit" IconCssClass="bi bi-pencil-square" Click="OnEdit" />
+                <DxToolbarItem Text="Delete" IconCssClass="bi bi-trash" Click="OnDelete" />
+                <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="@(async (_) => await LoadCountriesAsync())" />
+            </Items>
+        </DxToolbar>
+    </ToolbarTemplate>
+
+    <Columns>
+        <DxGridDataColumn FieldName="CountryId" Caption="ID" Visible="false" />
+        <DxGridSelectionColumn Width="30" />
+        <DxGridDataColumn FieldName="CountryName" Caption="Name" />
+        <DxGridDataColumn FieldName="CountryCode" Caption="Code" Visible=false />
+        <DxGridDataColumn FieldName="CountryCurrency" Caption="Currency" />
+        <DxGridDataColumn FieldName="CountryRemarks" Caption="Remarks" />
+        <DxGridDataColumn FieldName="CountryStatus" Caption="Active" />
+    </Columns>
+</DxGrid>
+
+<CountryAddEditPage @ref="popup" OnSaved="LoadCountriesAsync" />
+
+<ConfirmationDialog />
+
+@code {
+    DxGrid MyGrid;
+    private List<Country> countryList = [];
+    private List<Country> SelectedCountries = new();
+    private CountryAddEditPage popup;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCountriesAsync();
+    }
+
+    private async Task LoadCountriesAsync()
+    {
+        LoadingService.Show();
+        try
+        {
+            countryList = await CountryService.GetAllAsync();
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+    private void OnSelectedCountriesChanged(IEnumerable<object> countries)
+    {
+        SelectedCountries = countries.Cast<Country>().ToList();
+    }
+    private void OnCreateNew(ToolbarItemClickEventArgs e)
+    {
+        popup.Show(new Country());
+    }
+
+    private void OnEdit(ToolbarItemClickEventArgs e)
+    {
+        var country = MyGrid.GetFocusedDataItem() as Country;
+        if (country != null)
+            popup.Show(country);
+        else
+            ToastService.Warning("Please select a country to edit.");
+    }
+
+    private async Task OnDelete(ToolbarItemClickEventArgs e)
+    {
+        if (SelectedCountries == null || SelectedCountries.Count == 0)
+        {
+            ToastService.Warning("Please select at least one country to delete.");
+            return;
+        }
+
+        var confirm = await ConfirmDialogService.ShowAsync(
+            $"Are you sure you want to delete {SelectedCountries.Count} selected country(ies)?");
+
+        if (confirm)
+        {
+            foreach (var country in SelectedCountries)
+            {
+                await CountryService.DeleteAsync(country.CountryId);
+            }
+
+            ToastService.Success($"{SelectedCountries.Count} country(ies) deleted successfully.");
+            await LoadCountriesAsync();
+        }
+    }
+}

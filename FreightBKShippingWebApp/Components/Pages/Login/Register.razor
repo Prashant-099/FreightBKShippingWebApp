@@ -1,0 +1,127 @@
+﻿@layout EmptyLayout
+@page "/register"
+@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Authentication
+@using FreightBKShippingWebApp.Components.Layout
+@using FreightBKShippingWebApp.Services
+@inject NavigationManager Navigation
+@inject AuthService AuthService
+@rendermode InteractiveServer
+
+@using System.ComponentModel.DataAnnotations;
+@using FreightBKShippingWebApp.Services
+@using FreightBKShippingWebApp.Model
+
+<AuthCardLayout TModel="RegisterDto"
+HeaderTitle="Create Account"
+HeaderSubtitle="Join us to manage your freight operations"
+HeaderIcon="fas fa-user-plus"
+HeaderTextColor="text-success"
+HeaderIconClass="bg-success bg-gradient"
+BackgroundGradient="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+    <ChildContent>
+        <EditForm Model="@registerUser" OnValidSubmit="OnRegister" Context="wea">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <!-- Full Name -->
+            <div class="mb-3">
+                <label>Full Name</label>
+                <DxTextBox @bind-Text="registerUser.UserName"
+                CssClass="form-control"
+                NullText="Full Name" />
+            </div>
+
+            <!-- Email -->
+            <div class="mb-3">
+                <label>Email</label>
+                <DxTextBox @bind-Text="registerUser.UserEmail"
+                CssClass="form-control"
+                NullText="Email" />
+            </div>
+
+            <!-- Password -->
+            <div class="mb-3">
+                <label>Password</label>
+                <DxTextBox @bind-Text="registerUser.UserPassword"
+                Password="true"
+                CssClass="form-control"
+                NullText="Password" />
+            </div>
+
+            <!-- Confirm Password -->
+            <div class="mb-3">
+                <label>Confirm Password</label>
+                <DxTextBox @bind-Text="registerUser.ConfirmPassword"
+                Password="true"
+                CssClass="form-control"
+                NullText="Confirm Password" />
+            </div>
+
+            <!-- Register Button -->
+            <DxButton SubmitFormOnClick="true"
+            Text="Register"
+            CssClass="btn btn-primary w-100" />
+        </EditForm>
+    </ChildContent>
+
+    <FooterContent>
+        <p>Already have an account? <a href="/login">Login</a></p>
+    </FooterContent>
+
+
+</AuthCardLayout>
+
+
+@code {
+    private RegisterDto registerUser = new();
+    private string? message;
+    private bool isLoading = false;
+    private bool isSuccess = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Check if already authenticated
+
+    }
+
+    private async Task OnRegister()
+    {
+        try
+        {
+            isLoading = true;
+            message = "";
+            isSuccess = false;
+
+            // Validate passwords match
+            if (registerUser.UserPassword != registerUser.ConfirmPassword)
+            {
+                message = "Passwords do not match.";
+                isSuccess = false;
+                return;
+            }
+            await AuthService.RegisterAsync(registerUser);
+            // For now, simulate registration
+            await Task.Delay(1500); // Simulate API call
+
+            message = "Registration successful! Redirecting to login...";
+            isSuccess = true;
+
+            // Redirect to login after successful registration
+            await Task.Delay(1500);
+            Navigation.NavigateTo("/");
+        }
+        catch (Exception ex)
+        {
+            message = "Registration failed. Please try again.";
+            isSuccess = false;
+            Console.WriteLine($"Registration error: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    
+}

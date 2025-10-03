@@ -1,0 +1,263 @@
+﻿@inherits LayoutComponentBase
+@inject NavigationManager NavigationManager
+@using FreightBKShippingWebApp.Authentication
+@using FreightBKShippingWebApp.Components.Pages
+@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Services
+@inject CompanyService CompanyService
+
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthStateProvider
+@inject LoadingService LoadingService
+@inject YearService YearService
+@inject YearStatechangeService YearStatechangeService
+<DxLoadingPanel Visible="@LoadingService.IsLoading"
+                PositionTarget="body"
+                ApplyBackgroundShading="true"
+                IsContentBlocked="true"
+                IndicatorAreaVisible="false"
+                IndicatorAnimationType="WaitIndicatorAnimationType.Spin">
+
+</DxLoadingPanel>
+@if (IsShowContent)
+{
+    <CascadingValue Value="this">
+    <div class="page">
+        <DxToastProvider Name="GlobalToast"
+                         HorizontalAlignment="HorizontalAlignment.Right"
+                         VerticalAlignment="VerticalEdge.Top"
+                         Width="300px"
+                         ThemeMode="ToastThemeMode.Saturated" />
+
+        <DxGridLayout CssClass="page-layout px-0">
+            <Rows>
+                <DxGridLayoutRow Areas="sidebar header" Height="auto"></DxGridLayoutRow>
+                <DxGridLayoutRow Areas="sidebar content"></DxGridLayoutRow>
+            </Rows>
+            <Columns>
+                <DxGridLayoutColumn Width="auto" />
+                <DxGridLayoutColumn />
+            </Columns>
+            <Items>
+                <DxGridLayoutItem Area="sidebar" CssClass="layout-sidebar">
+                    <Template>
+                        @* <NavMenu /> *@
+                    </Template>
+                </DxGridLayoutItem>
+                <DxGridLayoutItem Area="content" CssClass="content px-0">
+                    <Template>
+                        <div class="w-100 d-flex justify-content-between align-items-center flex-wrap">
+                            <div style="display: flex; justify-content: center; background: linear-gradient(90deg, white -1%, #62cdf8 49%, #ffffff 87%); width: 100%; padding: 5px 0; color: black;">
+                                <div class="marquee-container">
+                                        <div class="marquee">
+                                            @(string.IsNullOrEmpty(CompanyName)
+                                                                                    ? "Unknown Company"
+                                                                                    : (string.IsNullOrEmpty(finYear) ? CompanyName : $"{CompanyName} - {finYear}"))
+                                    </div>
+
+
+                                </div>
+                            </div>
+
+                            @* <div class="marquee">
+                                <div class="marquee-content">
+                                    @CompanyName – @finYear
+                                </div>
+                                <div class="marquee-content" aria-hidden="true">
+                                    @CompanyName – @finYear
+                                </div>
+                            </div> *@
+
+
+                            <div class="w-100 ">
+                                @* <NavLink id="menu-top" class="button-link hidden" onclick="(document.getElementById('sidebar').classList.toggle('auto-expanded'), document.getElementById('menu-top').classList.toggle('hidden'))">
+                            <DxButton RenderStyle="@ButtonRenderStyle.Dark" RenderStyleMode="@ButtonRenderStyleMode.Text" CssClass="menu-button" IconCssClass="icon icon-menu"></DxButton>
+
+                        </NavLink>
+                        @if (!string.IsNullOrEmpty(NavigationManager.ToBaseRelativePath(NavigationManager.Uri)))
+                        {
+                            <NavLink href="/" class="button-link">
+                                <DxButton RenderStyle="@ButtonRenderStyle.Dark" Text="Back to Home" RenderStyleMode="@ButtonRenderStyleMode.Text" CssClass="menu-button" IconCssClass="icon icon-back"></DxButton>
+                            </NavLink>
+                        } *@
+
+                                <AuthorizeView Context="auth">
+                                    <Authorized>
+
+                                        <NavMenu />
+                                  
+
+                                        <AntiforgeryToken />
+                                  
+
+                                    </Authorized>
+
+                                </AuthorizeView>
+                            </div>
+                        </div>
+                        @Body
+
+                    </Template>
+                </DxGridLayoutItem>
+            </Items>
+        </DxGridLayout>
+    </div>
+    </CascadingValue>
+}
+@code {
+    public bool IsShowContent { get; set; }
+    private bool _shouldRedirect = false;
+    private string? CompanyName { get; set; }
+    private string? Yearname { get; set; }
+    private string finYear => YearStatechangeService.Years.FirstOrDefault(y => y.YearId == YearStatechangeService.SelectedYearId)?.YearName ?? Yearname ;
+
+    protected override async Task OnInitializedAsync()
+    {
+        LoadingService.OnChange += StateHasChanged;
+        YearStatechangeService.OnYearChanged += StateHasChanged; // <-- listen for year changes
+
+        var authState = await ((CustomAuthStateProvider)AuthStateProvider).GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (!user.Identity.IsAuthenticated)
+        {
+            _shouldRedirect = true;
+            return; // 🚨 Don't call APIs if not logged in
+        }
+        // var allYears = await YearService.GetYearsAsync();
+        // Yearname = allYears.FirstOrDefault(y => y.YearIsDefault)?.YearName ?? "No Year Selected";
+        // ✅ Safe to call API now
+        var companies = await CompanyService.GetAllAsync();
+        CompanyName = companies.FirstOrDefault()?.Name ?? "Unknown Company";
+        // load years globally
+
+        // await YearStatechangeService.LoadYearsAsync();
+
+
+        IsShowContent = true;
+
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && _shouldRedirect)
+        {
+            NavigationManager.NavigateTo("/login", forceLoad: true);
+        }
+    }
+    private async Task Logout()
+    {
+        if (AuthStateProvider is CustomAuthStateProvider customProvider)
+        {
+            await customProvider.MarkUserAsLoggedOut();
+        }
+        RedirectToLogin(forceReload: true);
+    }
+
+
+
+
+    //\/\/\/\for year-------------------------------
+    // public int SelectedYearId { get; set; }
+    // public List<YearModel> Years { get; set; } = new();
+
+    // public async Task<IEnumerable<YearModel>> LoadYears(CancellationToken token)
+    // {
+    //     var allYears = await YearService.GetYearsAsync();
+    //     Years = allYears.Where(y => y.YearStatus == true).ToList();
+    //     var defaultYear = Years.FirstOrDefault(y => y.YearIsDefault);
+    //     if (defaultYear != null)
+    //         SelectedYearId = defaultYear.YearId;
+    //     return Years;
+    // }
+    // public string finYear => Years.FirstOrDefault(y => y.YearId == SelectedYearId)?.YearName ?? "";
+
+    // public void OnYearChanged(int newYearId)
+    // {
+    //     SelectedYearId = newYearId;
+    //     var selected = Years.FirstOrDefault(y => y.YearId == newYearId);
+    //     InvokeAsync(StateHasChanged);
+    //     Console.WriteLine($"Year changed to: {selected?.YearName}");
+    // }
+
+    // Always computed from the current selection
+
+    //\/\/\/\---------------------------
+
+
+
+    private void RedirectToLogin(bool forceReload = false)
+    {
+        var currentUri = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+        if (!currentUri.StartsWith("login", StringComparison.OrdinalIgnoreCase))
+        {
+            NavigationManager.NavigateTo("/login", forceReload);
+        }
+    }
+
+    // loadingservice
+
+    public void Dispose()
+    {
+        LoadingService.OnChange -= StateHasChanged;
+    }
+}
+
+        <style>
+.marquee-container {
+    background: linear-gradient(90deg, white -1%, #62cdf8 50%, #ffffff 87%);
+    width: 100%;
+    /* padding: 2px 0; */
+    color: black;
+    font-weight: bold;
+    overflow: hidden;
+    position: relative;
+}
+
+.marquee {
+    display: inline-block;
+    white-space: nowrap;
+    padding-left: 100%;
+    animation: scroll-left 10s linear infinite;
+}
+
+@@keyframes scroll-left {
+    from { transform: translateX(0%); }
+    to { transform: translateX(-100%); }
+}
+</style>
+
+
+@* <style>
+    .marquee {
+        display: flex;
+        overflow: hidden;
+        white-space: nowrap;
+        width: 100%;
+        background: linear-gradient(90deg, white -1%, #62cdf8 49%, white 87%);
+    }
+
+    .marquee-content {
+        display: inline-block;
+        padding: 0 2rem;
+        animation: marquee 15s linear infinite;
+    }
+
+    @@keyframes marquee {
+        from
+
+    {
+        transform: translateX(0%);
+    }
+
+    to {
+        transform: translateX(-100%);
+    }
+
+    }
+
+    .marquee:hover .marquee-content {
+        animation-play-state: paused;
+    }
+
+</style> *@

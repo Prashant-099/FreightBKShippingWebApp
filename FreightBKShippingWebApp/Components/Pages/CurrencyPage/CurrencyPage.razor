@@ -1,0 +1,119 @@
+﻿@page "/currency"
+@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Services
+@using FreightBKShippingWebApp.Components.Pages
+@inject CurrencyService CurrencyService
+@inject ToasteService ToastService
+@inject LoadingService LoadingService
+@inject ConfirmationDialogService ConfirmDialogService
+
+<DxGrid TItem="Currency"
+        Data="@currencyList"
+        @ref="MyGrid"
+        KeyFieldName="CurrencyId"
+        ShowSearchBox="true"
+        PageSize="10"
+        PageSizeSelectorVisible="true"
+        ShowGroupPanel="true"
+        FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always"
+        FocusedRowEnabled="true"
+        SelectionMode="GridSelectionMode.Multiple"
+        SelectedDataItems="@SelectedCurrencies"
+        SelectedDataItemsChanged="OnSelectedCurrenciesChanged">
+
+    <ToolbarTemplate>
+        <DxToolbar>
+            <TitleTemplate Context="tl">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-currency-exchange"></i>
+                    <span class="fs-5">Currency</span>
+                </div>
+            </TitleTemplate>
+            <Items>
+                <DxToolbarItem Text="Add" IconCssClass="bi bi-plus-circle" Click="OnCreateNew" />
+                <DxToolbarItem Text="Edit" IconCssClass="bi bi-pencil-square" Click="OnEdit" />
+                <DxToolbarItem Text="Delete" IconCssClass="bi bi-trash" Click="OnDelete" />
+                <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="@(async (_) => await LoadCurrenciesAsync())" />
+            </Items>
+        </DxToolbar>
+    </ToolbarTemplate>
+
+    <Columns>
+        <DxGridDataColumn FieldName="CurrencyId" Caption="ID" Visible="false" />
+        <DxGridSelectionColumn Width="30" />
+        <DxGridDataColumn FieldName="CurrencyName" Caption="Name" />
+        <DxGridDataColumn FieldName="CurrencySymbol" Caption="Symbol" />
+        <DxGridDataColumn FieldName="CurrencyStatus" Caption="Active" />
+    </Columns>
+</DxGrid>
+
+<CurrencyAddEditPage @ref="popup" OnSaved="LoadCurrenciesAsync" />
+
+<ConfirmationDialog />
+
+@code {
+    DxGrid MyGrid;
+    private List<Currency> currencyList = [];
+    private List<Currency> SelectedCurrencies = new();
+    private CurrencyAddEditPage popup;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCurrenciesAsync();
+    }
+
+    private async Task LoadCurrenciesAsync()
+    {
+        LoadingService.Show();
+        try
+        {
+            currencyList = await CurrencyService.GetAllAsync();
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+
+    private void OnSelectedCurrenciesChanged(IEnumerable<object> currencies)
+    {
+        SelectedCurrencies = currencies.Cast<Currency>().ToList();
+    }
+
+    private void OnCreateNew(ToolbarItemClickEventArgs e)
+    {
+        popup.Show(new Currency());
+    }
+
+    private void OnEdit(ToolbarItemClickEventArgs e)
+    {
+        var currency = MyGrid.GetFocusedDataItem() as Currency;
+        if (currency != null)
+            popup.Show(currency);
+        else
+            ToastService.Warning("Please select a currency to edit.");
+    }
+
+    private async Task OnDelete(ToolbarItemClickEventArgs e)
+    {
+        if (SelectedCurrencies == null || SelectedCurrencies.Count == 0)
+        {
+            ToastService.Warning("Please select at least one currency to delete.");
+            return;
+        }
+
+        var confirm = await ConfirmDialogService.ShowAsync(
+            $"Are you sure you want to delete {SelectedCurrencies.Count} selected currency(ies)?");
+
+        if (confirm)
+        {
+            foreach (var currency in SelectedCurrencies)
+            {
+                await CurrencyService.DeleteAsync(currency.CurrencyId);
+            }
+
+            ToastService.Success($"{SelectedCurrencies.Count} currency(ies) deleted successfully.");
+            await LoadCurrenciesAsync();
+        }
+    }
+}

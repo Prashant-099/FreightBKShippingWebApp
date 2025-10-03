@@ -1,0 +1,43 @@
+﻿@using FreightBKShippingWebApp.Services
+@using Microsoft.AspNetCore.Mvc.ViewFeatures
+@inject IFileVersionProvider FileVersionProvider
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="/" />
+    <link href=@AppendVersion("_content/DevExpress.Blazor.Themes/blazing-berry.bs5.min.css") rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.css" rel="stylesheet" />
+    <link rel="icon" href="/images/Fumicerti (Logo).png" />
+
+    @DxResourceManager.RegisterScripts()
+    <link href=@AppendVersion("css/site.css") rel="stylesheet" />
+    <link href=@AppendVersion("BlazorApp.styles.css") rel="stylesheet" />
+
+
+    <HeadOutlet @rendermode="new InteractiveServerRenderMode(prerender: false)" />
+    @DxResourceManager.RegisterScripts()
+</head>
+<body>
+
+    <Routes @rendermode="new InteractiveServerRenderMode(prerender: false)" />
+    <script src="_framework/blazor.web.js"></script>
+    <script>
+        function closeMobileMenuIfNeeded() {
+             if (window.innerWidth < 768) {
+                 // This depends on how you're toggling your nav
+                 document.getElementById('mobile-menu-wrapper')?.classList.remove('show');
+                 document.getElementById('sidebar')?.classList.remove('auto-expanded');
+             }
+         }</script>
+</body>
+
+</html>
+
+@code {
+    private string AppendVersion(string path) => FileVersionProvider.AddFileVersionToPath("/", path);
+
+
+}

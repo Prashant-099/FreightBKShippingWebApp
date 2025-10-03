@@ -1,0 +1,327 @@
+﻿@using FreightBKShippingWebApp.Authentication
+@inject NavigationManager NavigationManager
+@using FreightBKShippingWebApp.Model
+@inject HttpClient Http
+@using FreightBKShippingWebApp.Components.Pages
+@using FreightBKShippingWebApp.Services
+@* @using Blazored.Toast
+@using Blazored.Toast.Configuration *@
+@using FreightBKShippingWebApp.Authentication
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@inject AuthenticationStateProvider AuthStateProvider
+@inject LoadingService LoadingService
+@inject YearService YearService
+@inject ToasteService ToasteService
+@inject YearStatechangeService YearStatechangeService
+@using FreightBKShippingWebApp.Components.Layout
+
+<style>
+    .user-profile-popup-modern {
+        width: 250px;
+        max-width: 90vw;
+        padding: 16px;
+        background: #ffffff;
+        border-radius: 16px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .profile-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .profile-avatar {
+        font-size: 3rem;
+        color: #6f42c1;
+    }
+
+    .profile-info {
+        flex: 1;
+    }
+
+    .profile-name {
+        font-weight: 600;
+        font-size: 1rem;
+        color: #212529;
+    }
+
+    .profile-email {
+        font-size: 0.85rem;
+        color: #6c757d;
+        word-break: break-word;
+    }
+
+    .profile-divider {
+        margin: 12px 0;
+        border: 0;
+        border-top: 1px solid #e9ecef;
+    }
+
+    .profile-section {
+        margin-bottom: 12px;
+    }
+
+    .logout-btn {
+        width: 100%;
+        border-radius: 10px !important;
+        font-weight: 500;
+    }
+
+    .year {
+        padding: 0;
+        width: 140px;
+    }
+
+    .dxbl-btn.dxbl-btn-text-none {
+        padding: 4px 5px !important;
+    }
+</style>
+
+<DxGridLayout CssClass="page-layout px-2" RowSpacing="0.1rem">
+    <Items>
+        <DxGridLayoutItem Area="menu-button" CssClass="sidebar-header menu-button-container">
+            <Template>
+                <div class="menu-button"
+                     onclick="(document.getElementById('sidebar').classList.toggle('auto-expanded'),
+                               document.getElementById('menu-top').classList.toggle('hidden'))"></div>
+            </Template>
+        </DxGridLayoutItem>
+
+        <DxGridLayoutItem Area="navigation" CssClass="layout-item">
+            <Template>
+                <DxMenu CollapseItemsToHamburgerMenu="true"
+                        CollapseItemToIconMode="MenuCollapseItemToIconMode.Sequentially"
+                        CssClass="compact-menu"
+                        DisplayMode="MenuDisplayMode.Desktop">
+                    <TitleTemplate>
+                        <div class="d-flex align-items-center">
+                            <img src="images/Fumicerti (Logo).png"
+                                 alt="Fumicerti Logo"
+                                 style="max-height: 25px; margin-right: 6px;" />
+                            <span style="font-weight: bold; font-size: 1.2rem;">FreightBook</span>
+                        </div>
+                    </TitleTemplate>
+
+                    <Items>
+                        <DxMenuItem Text="Home" NavigateUrl="/" IconCssClass="bi bi-house-door-fill" />
+
+                        <!-- Admin -->
+                        <DxMenuItem Text="Admin" IconCssClass="bi bi-shield-lock-fill" >
+                            <Items>
+                                <DxMenuItem Text="Company" NavigateUrl="/company" IconCssClass="bi bi-buildings" />
+                                <DxMenuItem Text="Branch" NavigateUrl="/branch" IconCssClass="bi bi-diagram-3" />
+                                <DxMenuItem Text="Year" NavigateUrl="/year" IconCssClass="bi bi-calendar3" />
+                                <DxMenuItem Text="Voucher Type" NavigateUrl="/voucherconfig" IconCssClass="bi bi-receipt" />
+                                <DxMenuItem Text="User" NavigateUrl="/user" IconCssClass="bi bi-person-circle" />
+                                <DxMenuItem Text="GST Slab" NavigateUrl="/gstslab" IconCssClass="bi bi-cash-coin" />
+
+                               @*  <DxMenuItem NavigateUrl="/company-config" Text="Company Config" IconCssClass="bi bi-gear"/>
+                                <DxMenuItem NavigateUrl="/send-file" Text="send"></DxMenuItem> *@
+                            </Items>
+                        </DxMenuItem>
+
+                        <!-- Masters -->
+                        <DxMenuItem Text="Masters" IconCssClass="bi bi-collection-fill" >
+                            <Items>
+                                <DxMenuItem NavigateUrl="/party" Text="Party" IconCssClass="bi bi-person" />
+                                <DxMenuItem NavigateUrl="/productt" Text="Supplier" IconCssClass="bi bi-truck" />
+                                <DxMenuItem NavigateUrl="/Bank" Text="Bank" IconCssClass="bi bi-bank" />
+                                <DxMenuItem NavigateUrl="/Accounts" Text="Accounts" IconCssClass="bi bi-journal-text" />
+                                <DxMenuItem NavigateUrl="/Service" Text="Service" IconCssClass="bi bi-gear" />
+                                <DxMenuItem NavigateUrl="/ServiceGroup" Text="Service Group" IconCssClass="bi bi-collection" />
+                                <DxMenuItem NavigateUrl="/HSN/SAC" Text="HSN/SAC" IconCssClass="bi bi-card-list" />
+                                <DxMenuItem NavigateUrl="/Cargo" Text="Cargo" IconCssClass="bi bi-box-seam" />
+                                <DxMenuItem NavigateUrl="/StationPort" Text="Station/Port" IconCssClass="bi bi-geo" />
+                                <DxMenuItem NavigateUrl="/MiscellaneousMaster" Text="Miscellaneous Master" IconCssClass="bi bi-grid" />
+                                <DxMenuItem NavigateUrl="/Vessel" Text="Vessel" IconCssClass="bi bi-boats" /> <!-- alt: bi-ship if using -->
+                                <DxMenuItem NavigateUrl="/currency" Text="Currency" IconCssClass="bi bi-currency-exchange" />
+                                <DxMenuItem NavigateUrl="/country" Text="Country" IconCssClass="bi bi-globe" />
+                                <DxMenuItem NavigateUrl="/Unit" Text="Unit" IconCssClass="bi bi-rulers" /> <!-- alt: bi-bounding-box -->
+
+
+                            </Items>
+                        </DxMenuItem>
+
+                        <!-- Voucher Entry -->
+                        <DxMenuItem Text="Voucher Entry" IconCssClass="bi bi-pen-fill" >
+                            <Items>
+                               @*  <DxMenuItem NavigateUrl="/invoice" Text="Purchase Invoice" IconCssClass="bi bi-clipboard-check"/> *@
+                                <DxMenuItem NavigateUrl="/bills" Text="Sell Invoice" IconCssClass="bi bi-clipboard-data"/>
+                            </Items>
+                        </DxMenuItem>
+
+                        <!-- Certificate Entry -->
+                       @*  <DxMenuItem Text="Certificate Entry" IconCssClass="bi bi-check-circle-fill" >
+                            <Items>
+                                <DxMenuItem NavigateUrl="/ALPcerti" Text="Certificate (ALP)" IconCssClass="bi bi-clipboard-check"/>
+                                <DxMenuItem NavigateUrl="/certi" Text="Certificate (MBR)" IconCssClass="bi bi-clipboard-check"/>
+                                <DxMenuItem NavigateUrl="/AFAScerti" Text="Certificate (AFAS)" IconCssClass="bi bi-clipboard-check"/>
+                            </Items>
+                        </DxMenuItem> *@
+
+                        <!-- Reports -->
+                       @*  <DxMenuItem Text="Reports" IconCssClass="bi bi-clipboard-check-fill" >
+                            <Items>
+                                <DxMenuItem NavigateUrl="/certiReport" Text="Certi Report" IconCssClass="bi bi-clipboard-check"/>
+                            </Items>
+                        </DxMenuItem> *@
+
+                        <!-- About -->
+                     @*    <DxMenuItem NavigateUrl="/about" Text="About" IconCssClass="bi bi-info-square-fill"  /> *@
+
+                        <!-- User Profile -->
+                        <DxMenuItem Text="User"
+                                    IconCssClass="bi bi-people-fill"
+                                    Position="ItemPosition.End"
+                                    CssClass="notoggle">
+                            <TextTemplate>
+                                <div class="menu-icon-person-circle menu-icon"></div>
+                            </TextTemplate>
+
+                            <SubMenuTemplate>
+                                <div class="user-profile-popup-modern">
+                                    <!-- Profile Header -->
+                                    <div class="profile-header">
+                                        <i class="bi bi-person-circle profile-avatar"></i>
+                                        <div class="profile-info">
+                                            <div class="profile-name">@UserName</div>
+                                            <div class="profile-email">@UserEmail</div>
+                                        </div>
+                                    </div>
+
+                                    <hr class="profile-divider" />
+
+                                    <!-- Year Dropdown -->
+                                    <div class="profile-section">
+                                        <label class="form-label small mb-1">Active Year</label>
+                                        <DxComboBox Data="@(YearStatechangeService.Years ?? new List<YearModel>())"
+                                                    TextFieldName="YearName"
+                                                    ValueFieldName="YearId"
+                                                    Value="@YearStatechangeService.SelectedYearId"
+                                                    ValueChanged="@((int? v) => YearStatechangeService.ChangeYear(v ?? 0))"
+                                                    CssClass="form-select w-100 year-dropdown" />
+                                    </div>
+
+                                    <!-- Logout -->
+                                    <div class="profile-section">
+                                        <DxButton Text="Log Off"
+                                                  RenderStyle="@ButtonRenderStyle.Danger"
+                                                  CssClass="logout-btn"
+                                                  Click="Logout" />
+                                    </div>
+                                </div>
+                            </SubMenuTemplate>
+                        </DxMenuItem>
+                    </Items>
+                </DxMenu>
+            </Template>
+        </DxGridLayoutItem>
+
+        <DxGridLayoutItem Area="footer" CssClass="footer">
+            <Template></Template>
+        </DxGridLayoutItem>
+    </Items>
+</DxGridLayout>
+
+@code {
+    [Inject] IJSRuntime JS { get; set; }
+    [Inject] private AuthService AuthService { get; set; }
+    // [Inject] private CompanyConfigService CompanyConfigService { get; set; }
+
+    private string UserName { get; set; } = "User Name";
+    private string UserEmail { get; set; } = "user@example.com";
+
+    // Visibility flags
+    // private bool ShowAdmin, ShowMasters, ShowVoucherEntry, ShowCertificateEntry;
+    // private bool ShowCompany, ShowBranch, ShowUser, ShowYear, ShowVoucherConfig,ShowCompanyConfig;
+    // private bool ShowAFO, ShowProduct, ShowNotify, ShowLocation, ShowContainerList;
+    // private bool ShowPurchaseInvoice, ShowSellInvoice;
+    // private bool ShowCertImbr, ShowCertIalp, ShowCertIafas;
+    // private bool ShowAllCerti, ShowAbout, ShowReport, ShowIndex, ShowGroupHome;
+
+
+    private async Task Logout()
+    {
+        if (AuthStateProvider is CustomAuthStateProvider customProvider)
+            await customProvider.MarkUserAsLoggedOut();
+
+        NavigationManager.NavigateTo("/login", true);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        var token = await AuthService.GetTokenAsync();
+        string userId = BaseService.JwtHelper.GetUserIdFromToken(token);
+        string companyId = BaseService.JwtHelper.GetCompanyIdFromToken(token);
+
+        // var configs = await CompanyConfigService.GetAllAsync();
+        // var config = configs.FirstOrDefault(c => c.CompanyId.ToString() == companyId && c.UserId == userId)
+        //              ?? configs.FirstOrDefault(c => c.CompanyId.ToString() == companyId && string.IsNullOrEmpty(c.UserId));
+
+        // UpdateVisibilityFlags(config);
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            UserName = user.FindFirst(ClaimTypes.GivenName)?.Value
+                       ?? user.Identity.Name
+                       ?? "Unknown User";
+
+            UserEmail = user.FindFirst(c =>
+                            c.Type == "email" ||
+                            c.Type == ClaimTypes.Email ||
+                            c.Type.ToLower() == "emails" ||
+                            c.Type.ToLower() == "upn")?.Value ?? "No Email";
+
+            await YearStatechangeService.LoadYearsAsync();
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    // private void UpdateVisibilityFlags(CompanyConfig config)
+    // {
+    //     if (config == null) return;
+
+    //     ShowAFO = config.AfoVisible ?? false;
+    //     ShowBranch = config.BranchVisible ?? false;
+    //     ShowProduct = config.ProductVisible ?? false;
+    //     ShowNotify = config.NotifyVisible ?? false;
+    //     ShowLocation = config.LocationVisible ?? false;
+    //     ShowContainerList = config.ContainerListVisible ?? false;
+    //     ShowUser = config.UserVisible ?? false;
+    //     ShowCompany = config.CompanyVisible ?? false;
+    //     ShowYear = config.YearVisible ?? false;
+    //     ShowVoucherConfig = config.VoucherConfigVisible ?? false;
+
+
+
+    //     ShowPurchaseInvoice = config.PurchaseInvoiceVisible ?? false;
+    //     ShowSellInvoice = config.SellInvoiceVisible ?? false;
+
+    //     ShowCertImbr = config.CertImbrVisible ?? false;
+    //     ShowCertIalp = config.CertIalpVisible ?? false;
+    //     ShowCertIafas = config.CertIafasVisible ?? false;
+
+    //     ShowAllCerti = config.AllCertiVisible ?? false;
+    //     ShowAbout = config.AboutVisible ?? false;
+
+    //     ShowAdmin = config.GroupAdminVisible ?? (ShowCompany || ShowBranch || ShowUser || ShowYear || ShowVoucherConfig);
+    //     ShowMasters = config.MasterVisible ?? (ShowAFO || ShowProduct || ShowNotify || ShowLocation || ShowContainerList);
+    //     ShowVoucherEntry = config.VoucherEntryVisible ?? (ShowPurchaseInvoice || ShowSellInvoice);
+    //     ShowCertificateEntry = config.CertificateEntryVisible ?? (ShowCertImbr || ShowCertIalp || ShowCertIafas);
+
+    //     ShowReport = config.ReportVisible ?? false;
+    //     ShowIndex = config.IndexVisible ?? false;
+    //     ShowGroupHome = config.GroupHomeVisible ?? false;
+    //     ShowCompanyConfig = config.CompanyConfigVisible ?? false;
+
+    // }
+
+    //private bool CanShow(bool parentVisible, bool childVisible = true) => parentVisible && childVisible;
+}

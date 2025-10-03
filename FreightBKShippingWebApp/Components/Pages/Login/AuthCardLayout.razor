@@ -1,0 +1,49 @@
+﻿@typeparam TModel
+
+<div class="d-flex justify-content-center align-items-center min-vh-100 position-relative" style="@BackgroundGradient">
+    <!-- Floating Background -->
+    <div class="position-absolute top-0 start-0 w-100 h-100 opacity-10">
+        <div class="position-absolute rounded-circle bg-white"
+             style="width: 200px; height: 200px; top: 10%; left: 10%; animation: float 6s ease-in-out infinite;"></div>
+        <div class="position-absolute rounded-circle bg-white"
+             style="width: 150px; height: 150px; top: 60%; right: 15%; animation: float 8s ease-in-out infinite reverse;"></div>
+        <div class="position-absolute rounded-circle bg-white"
+             style="width: 100px; height: 100px; top: 80%; left: 20%; animation: float 7s ease-in-out infinite;"></div>
+    </div>
+
+    <div class="card shadow-lg border-0 rounded-4 position-relative" style="width: 450px; backdrop-filter: blur(10px);">
+        <div class="card-header bg-white bg-opacity-95 text-center py-3 rounded-top-4">
+            <!-- Logo Above the Circle -->
+            <div class="mb-3">
+                <img src="images/Fumicerti (Logo).png" alt="FreightBook Logo" style="max-width: 100px;" />
+            </div>
+            @* <div class="mb-4">
+                <div class="@HeaderIconClass rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 80px; height: 80px;">
+                    <i class="@HeaderIcon text-white" style="font-size: 2rem;"></i>
+                </div>
+            </div> *@
+            <h3 class="fw-bold @HeaderTextColor mb-2">@HeaderTitle</h3>
+            <p class="text-muted mb-0">@HeaderSubtitle</p>
+        </div>
+
+        <div class="card-body px-5 py-4 bg-white bg-opacity-95">
+            @ChildContent
+        </div>
+
+        <div class="card-footer bg-white bg-opacity-95 text-center py-4 rounded-bottom-4">
+            @FooterContent
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string HeaderIconClass { get; set; } = "bg-primary bg-gradient";
+    [Parameter] public string HeaderIcon { get; set; } = "fas fa-truck";
+    [Parameter] public string HeaderTitle { get; set; } = "Welcome";
+    [Parameter] public string HeaderSubtitle { get; set; } = "";
+    [Parameter] public string HeaderTextColor { get; set; } = "text-primary";
+    [Parameter] public string BackgroundGradient { get; set; } = "background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);";
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public RenderFragment? FooterContent { get; set; }
+}

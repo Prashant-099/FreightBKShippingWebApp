@@ -1,0 +1,121 @@
+﻿@page "/branch"
+@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Services
+@using FreightBKShippingWebApp.Components.Pages
+@inject BranchService BranchService
+@inject ToasteService ToastService
+@inject LoadingService LoadingService
+@inject ConfirmationDialogService ConfirmDialogService
+
+<DxGrid TItem="Branch"
+        Data="@branchList"
+        @ref="MyGrid"
+        KeyFieldName="BranchId"
+        ShowSearchBox="true"
+        PageSize="10"
+        PageSizeSelectorVisible="true"
+        ShowGroupPanel="true"
+        FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always"
+        FocusedRowEnabled="true"
+        SelectionMode="GridSelectionMode.Multiple"
+        SelectedDataItems="@SelectedBranches"
+        SelectedDataItemsChanged="OnSelectedBranchesChanged">
+
+    <ToolbarTemplate>
+        <DxToolbar>
+            <TitleTemplate Context="tl">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-diagram-3"></i>
+                    <span class="fs-5">Branch</span>
+                </div>
+            </TitleTemplate>
+            <Items>
+                <DxToolbarItem Text="Add" IconCssClass="bi bi-plus-circle" Click="OnCreateNew" />
+                <DxToolbarItem Text="Edit" IconCssClass="bi bi-pencil-square" Click="OnEdit" />
+                <DxToolbarItem Text="Delete" IconCssClass="bi bi-trash" Click="OnDelete" />
+                <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="@(async (_) => await LoadBranchesAsync())" />
+            </Items>
+        </DxToolbar>
+    </ToolbarTemplate>
+
+    <Columns>
+        <DxGridDataColumn FieldName="BranchId" Caption="ID" Visible="false" />
+        <DxGridSelectionColumn Width="30" />
+        <DxGridDataColumn FieldName="BranchName" Caption="Name" />
+        <DxGridDataColumn FieldName="BranchCountry" Caption="Country" />
+        <DxGridDataColumn FieldName="BranchAddress1" Caption="Address" />
+        <DxGridDataColumn FieldName="BranchStatus" Caption="Active" />
+    </Columns>
+</DxGrid>
+
+<BranchAddEditPage @ref="popup" OnSaved="LoadBranchesAsync" />
+
+<ConfirmationDialog />
+
+@code {
+    DxGrid MyGrid;
+    private List<Branch> branchList = [];
+    private List<Branch> SelectedBranches = new();
+    private BranchAddEditPage popup;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadBranchesAsync();
+    }
+
+    private async Task LoadBranchesAsync()
+    {
+        LoadingService.Show();
+        try
+        {
+
+            branchList = await BranchService.GetAllAsync();
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+
+    private void OnSelectedBranchesChanged(IEnumerable<object> branches)
+    {
+        SelectedBranches = branches.Cast<Branch>().ToList();
+    }
+
+    private void OnCreateNew(ToolbarItemClickEventArgs e)
+    {
+        popup.Show(new Branch());
+    }
+
+    private void OnEdit(ToolbarItemClickEventArgs e)
+    {
+        var branch = MyGrid.GetFocusedDataItem() as Branch;
+        if (branch != null)
+            popup.Show(branch);
+        else
+            ToastService.Warning("Please select a branch to edit.");
+    }
+
+    private async Task OnDelete(ToolbarItemClickEventArgs e)
+    {
+        if (SelectedBranches == null || SelectedBranches.Count == 0)
+        {
+            ToastService.Warning("Please select at least one branch to delete.");
+            return;
+        }
+
+        var confirm = await ConfirmDialogService.ShowAsync(
+            $"Are you sure you want to delete {SelectedBranches.Count} selected branch(es)?");
+
+        if (confirm)
+        {
+            foreach (var branch in SelectedBranches)
+            {
+                await BranchService.DeleteAsync(branch.BranchId);
+            }
+
+            ToastService.Success($"{SelectedBranches.Count} branch(es) deleted successfully.");
+            await LoadBranchesAsync();
+        }
+    }
+}
