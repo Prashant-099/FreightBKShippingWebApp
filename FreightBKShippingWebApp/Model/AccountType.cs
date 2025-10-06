@@ -37,6 +37,12 @@ namespace FreightBKShippingWebApp.Model
         [Column("account_type_company_id")]
        
         public int? CompanyId { get; set; }
+
+
+
+        [ForeignKey("AccountTypeGroupId")]
+        public AccountGroup? AccountGroup { get; set; }
+
     }
 
 }

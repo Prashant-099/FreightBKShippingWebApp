@@ -8,21 +8,63 @@
 @inject AccountGroupService AccountGroupService
 @inject AccountTypeService AccountTypeService
 
-<DxPopup @bind-Visible="Visible" ShowCloseButton="true" HeaderText="@Title"  CloseOnOutsideClick="false">
+<DxPopup @bind-Visible="Visible" ShowCloseButton="true" HeaderText="@Title" CloseOnOutsideClick="false" MaxWidth="1050px"  Width="90%"  
+horizontalAlignment="HorizontalAlignment.Center"
+verticalAlignment="VerticalAlignment.Center"
+         scrollable="true">
     <EditForm Model="@EditModel" OnValidSubmit="HandleValidSubmit" Context="ctxaccount">
         <DataAnnotationsValidator />
         <ValidationSummary />
 
         <DxFormLayout>
-            <DxFormLayoutItem Caption="Account Code">
-                <DxTextBox @bind-Text="EditModel.AccountCode" />
-            </DxFormLayoutItem>
+            @* <DxFormLayoutItem Caption="Account Code"> *@
+            @*     <DxTextBox @bind-Text="EditModel.AccountCode" /> *@
+            @* </DxFormLayoutItem> *@
 
-            <DxFormLayoutItem Caption="Account Name">
+            <DxFormLayoutItem Caption="Account Name" ColSpanMd="6" ColSpanSm="12">
                 <DxTextBox @bind-Text="EditModel.AccountName" />
             </DxFormLayoutItem>
+            <DxFormLayoutItem Caption="Opening Bal." ColSpanMd="6">
+                <div class="d-flex gap-1">
+                    <DxSpinEdit @bind-value="EditModel.AccountOpening" ShowSpinButtons="false"></DxSpinEdit>
 
-            <DxFormLayoutItem Caption="Tax Type">
+                    <DxComboBox Data="@balanceTypes"
+                                @bind-Value="EditModel.AccountBalanceType"
+                                NullText="Select Balance Type..." AllowUserInput="true"
+                                SearchMode="ListSearchMode.AutoSearch"
+                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+                </div>
+            </DxFormLayoutItem>
+            <DxFormLayoutItem Caption="Type" ColSpanMd="6">
+                <DxComboBox Data="@typeList"
+                            TextFieldName="AccountTypeName"
+                            ValueFieldName="AccountTypeId"
+                            @bind-Value="EditModel.AccountTypeId"
+                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                            NullText="Select Type..." AllowUserInput="true"
+                            SearchMode="ListSearchMode.AutoSearch"
+                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+            </DxFormLayoutItem>
+            <DxFormLayoutItem Caption="Group" ColSpanMd="4">
+                <DxComboBox Data="@groupList"
+                            TextFieldName="AccountGroupName"
+                            ValueFieldName="AccountGroupId"
+                            @bind-Value="EditModel.AccountGroupId"
+                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                            NullText="Select Group..."
+                            AllowUserInput="true"
+                            SearchMode="ListSearchMode.AutoSearch"
+                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+            </DxFormLayoutItem>
+         @*    <DxFormLayoutItem Caption="Master Group " ColSpanMd="4">
+                <DxComboBox Data="@mastergroup"
+                            @bind-Value="EditModel.AccountGroup"
+                            NullText="Select Method..."
+                            AllowUserInput="true"
+                            SearchMode="ListSearchMode.AutoSearch"
+                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+            </DxFormLayoutItem> *@
+            <DxFormLayoutItem Caption="Tax Type" ColSpanMd="4">
                 <DxComboBox Data="@taxTypes"
                 @bind-Value="EditModel.AccountTaxType"
                 NullText="Select Tax Type..."
@@ -31,123 +73,160 @@
                 SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
             </DxFormLayoutItem>
 
+          
 
-            <DxFormLayoutItem Caption="Group">
-                <DxComboBox Data="@groupList"
-                TextFieldName="AccountGroupName"
-                ValueFieldName="AccountGroupId"
-                @bind-Value="EditModel.AccountGroupId"
-                ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
-                NullText="Select Group..."
-                AllowUserInput="true"
-                SearchMode="ListSearchMode.AutoSearch"
-                SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
-            </DxFormLayoutItem>
 
-            <DxFormLayoutItem Caption="Type">
-                <DxComboBox Data="@typeList"
-                TextFieldName="AccountTypeName"
-                ValueFieldName="AccountTypeId"
-                @bind-Value="EditModel.AccountTypeId"
-                ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
-                NullText="Select Type..." AllowUserInput="true"
-                SearchMode="ListSearchMode.AutoSearch"
-                SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
-            </DxFormLayoutItem>
-            <DxFormLayoutItem Caption="Master Group ">
-                <DxComboBox Data="@mastergroup"
-                @bind-Value="EditModel.AccountGroup"
-                NullText="Select Method..."
-                AllowUserInput="true"
-                SearchMode="ListSearchMode.AutoSearch"
-                SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
-            </DxFormLayoutItem>
-            <DxFormLayoutItem Caption="Opening Bal."></DxFormLayoutItem>
-            <DxFormLayoutItem Caption="Balance Type">
-                <DxComboBox Data="@balanceTypes"
-                @bind-Value="EditModel.AccountBalanceType"
-                NullText="Select Balance Type..." AllowUserInput="true"
-                SearchMode="ListSearchMode.AutoSearch"
-                SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
-            </DxFormLayoutItem>
             @if (EditModel.AccountGroup == "PARTY" || EditModel.AccountGroup == "BANK" || EditModel.AccountGroup == "CASH" || EditModel.AccountGroup == "PUMP" || EditModel.AccountGroup == "CUSTOMER" || EditModel.AccountGroup == "SUPPLIER" || EditModel.AccountGroup == "TRANSPORTER")
             {
-                <DxFormLayoutItem Caption="Contact Person">
-                    <DxTextBox @bind-Text="EditModel.AccountContactPerson" />
+                    <DxFormLayoutTabPages>  
+                    <DxFormLayoutTabPage Caption="Basic Info">
+
+                     <DxFormLayoutGroup ColSpanMd="6" Caption="Basic Info">
+
+                        <DxFormLayoutItem Caption="Print Name" ColSpanMd="12">
+                            <DxTextBox @bind-Text="EditModel.AccountPrintName" />
+                        </DxFormLayoutItem>
+             
+
+                <DxFormLayoutItem Caption="Address " ColSpanMd="12">
+                    <DxMemo @bind-Text="EditModel.AccountAddress1" Rows="1"/>
                 </DxFormLayoutItem>
 
-                <DxFormLayoutItem Caption="Address ">
-                    <DxMemo @bind-Text="EditModel.AccountAddress1" />
-                </DxFormLayoutItem>
-
-                <DxFormLayoutItem Caption="City">
+                <DxFormLayoutItem Caption="City" ColSpanMd="12">
                     <DxTextBox @bind-Text="EditModel.AccountCity" />
                 </DxFormLayoutItem>
-
-                <DxFormLayoutItem Caption="State">
+                        <DxFormLayoutItem Caption="Pincode" ColSpanMd="12">
+                            <DxTextBox @bind-Text="EditModel.AccountPincode" />
+                        </DxFormLayoutItem>
+                <DxFormLayoutItem Caption="State" ColSpanMd="12">
                     <DxComboBox Data="@stateList" @bind-Value="EditModel.AccountStateId"
                     ValueFieldName="StateId" TextFieldName="StateName" AllowUserInput="true"
                     SearchMode="ListSearchMode.AutoSearch"
                     SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
-                </DxFormLayoutItem>                <DxFormLayoutItem Caption="Country">
-                    <DxComboBox Data="@countryList" @bind-Value="EditModel.AccountCountry"
-                    ValueFieldName="CountryId" TextFieldName="CountryName" AllowUserInput="true"
-                    SearchMode="ListSearchMode.AutoSearch"
-                    SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
                 </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Country" ColSpanMd="12">
+                                <DxComboBox Data="@countryList" @bind-Value="EditModel.AccountCountry"
+                                            ValueFieldName="CountryId" TextFieldName="CountryName" AllowUserInput="true"
+                                            SearchMode="ListSearchMode.AutoSearch"
+                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+                            </DxFormLayoutItem>
 
-                <DxFormLayoutItem Caption="Pincode">
-                    <DxTextBox @bind-Text="EditModel.AccountPincode" />
-                </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="Contact Person" ColSpanMd="12">
+                            <DxTextBox @bind-Text="EditModel.AccountContactPerson" />
+                        </DxFormLayoutItem>
 
-                <DxFormLayoutItem Caption="Mobile">
+                <DxFormLayoutItem Caption="Mobile" ColSpanMd="6">
                     <DxTextBox @bind-Text="EditModel.AccountMobile" />
                 </DxFormLayoutItem>
 
-                <DxFormLayoutItem Caption="Phone">
+                <DxFormLayoutItem Caption="Phone" ColSpanMd="6">
                     <DxTextBox @bind-Text="EditModel.AccountPhone" />
                 </DxFormLayoutItem>
 
-                <DxFormLayoutItem Caption="Email">
+                <DxFormLayoutItem Caption="Email" ColSpanMd="12">
                     <DxTextBox @bind-Text="EditModel.AccountEmail" />
                 </DxFormLayoutItem>
 
-                <DxFormLayoutItem Caption="Website">
+                <DxFormLayoutItem Caption="Website" ColSpanMd="12">
                     <DxTextBox @bind-Text="EditModel.AccountWebsite" />
                 </DxFormLayoutItem>
+                      
 
-                <DxFormLayoutItem Caption="PAN">
-                    <DxTextBox @bind-Text="EditModel.AccountPan" />
-                </DxFormLayoutItem>
 
-                <DxFormLayoutItem Caption="GST No">
-                    <DxTextBox @bind-Text="EditModel.AccountGstNo" />
-                </DxFormLayoutItem>
+                   </DxFormLayoutGroup>
 
-                <DxFormLayoutItem Caption="Is SEZ">
+
+                        <DxFormLayoutGroup Caption="Tax Details" ColSpanMd="6">
+                            <DxFormLayoutItem Caption="Registration Type" ColSpanMd="12">
+                                <DxComboBox Data="@registrationTypes"
+                                            @bind-Value="EditModel.AccountRegisterType"
+                                            NullText="Select Registration Type..."
+                                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" AllowUserInput="true"
+                                            SearchMode="ListSearchMode.AutoSearch"
+                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="GST No" ColSpanMd="12">
+                                <DxTextBox @bind-Text="EditModel.AccountGstNo" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="PAN" ColSpanMd="12">
+                                <DxTextBox @bind-Text="EditModel.AccountPan" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="TAN" ColSpanMd="12">
+                                <DxTextBox @bind-Text="EditModel.AccountTanNo" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Ifs Code" ColSpanMd="6">
+                                <DxTextBox @bind-Text="EditModel.AccountIfsCode" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="MSME" ColSpanMd="6">
+                                <DxTextBox @bind-Text="EditModel.AccountMsmeno" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Tds Applicable" ColSpanMd="6">
+                                <DxCheckBox @bind-Checked="EditModel.AccountTdsApplicable"></DxCheckBox>
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Tds Perc(%)" ColSpanMd="6">
+                                <DxSpinEdit @bind-Value="EditModel.AccountTdsPer" ShowSpinButtons="false" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutGroup Caption="Credit info" ColSpanMd="12">
+                                <DxFormLayoutItem Caption="Credit Limit" ColSpanMd="6">
+                                    <DxSpinEdit @bind-Value="EditModel.AccountCreditLimit" ShowSpinButtons="false"></DxSpinEdit>
+                                </DxFormLayoutItem>
+                                <DxFormLayoutItem Caption="Credit Days" ColSpanMd="6">
+                                    <DxSpinEdit @bind-Value="EditModel.AccountCreditDays" ShowSpinButtons="false"></DxSpinEdit>
+                                </DxFormLayoutItem>
+                                <DxFormLayoutItem Caption="Account Method" ColSpanMd="12">
+                                    <DxComboBox Data="@methods"
+                                                @bind-Value="EditModel.AccountMethod"
+                                                NullText="Select Method..." AllowUserInput="true"
+                                                SearchMode="ListSearchMode.AutoSearch"
+                                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+                                </DxFormLayoutItem>
+                            </DxFormLayoutGroup>
+                        </DxFormLayoutGroup>
+             
+              @*   <DxFormLayoutItem Caption="Is SEZ" ColSpanMd="6">
                     <DxCheckBox @bind-Checked="EditModel.AccountIsSez" />
-                </DxFormLayoutItem>            <DxFormLayoutItem Caption="Registration Type">
-                    <DxComboBox Data="@registrationTypes"
-                    @bind-Value="EditModel.AccountRegisterType"
-                    NullText="Select Registration Type..."
-                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" AllowUserInput="true"
-                    SearchMode="ListSearchMode.AutoSearch"
-                    SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
-                </DxFormLayoutItem>                       <DxFormLayoutItem Caption="Method">
-                    <DxComboBox Data="@methods"
-                    @bind-Value="EditModel.AccountMethod"
-                    NullText="Select Method..." AllowUserInput="true"
-                    SearchMode="ListSearchMode.AutoSearch"
-                    SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
                 </DxFormLayoutItem>
+              *@
+              
 
-                <DxFormLayoutItem Caption="Status">
+              @*   <DxFormLayoutItem Caption="Status" ColSpanMd="6">
                     <DxCheckBox @bind-Checked="EditModel.AccountStatus" />
-                </DxFormLayoutItem>
+                </DxFormLayoutItem> *@
+
+                    </DxFormLayoutTabPage>      
+                    <DxFormLayoutTabPage Caption="Banking">
+                        <DxFormLayoutGroup ColSpanMd="6">
+                            <DxFormLayoutItem Caption="Bank Name" ColSpanMd="12">
+                                <DxTextBox @bind-Text="EditModel.AccountBankName" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Bank A/C" ColSpanMd="12">
+                                <DxTextBox @bind-Text="EditModel.AccountAccNo" />
+                            </DxFormLayoutItem>  
+                            <DxFormLayoutItem Caption="Ifsc Code" ColSpanMd="12">
+                                <DxTextBox @bind-Text="EditModel.AccountIfsCode" />
+                            </DxFormLayoutItem> 
+                            <DxFormLayoutItem Caption="Branch" ColSpanMd="12">
+                                <DxTextBox @bind-Text="EditModel.AccountBankBranch" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Swift Code" ColSpanMd="12">
+                                <DxTextBox @bind-Text="EditModel.AccountSwiftCode" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Auth Delar Code" ColSpanMd="12">
+                                <DxTextBox @bind-Text="EditModel.AccountAuthdCode" />
+                            </DxFormLayoutItem>
+                        </DxFormLayoutGroup>
+                      <DxFormLayoutItem Caption="Remarks" ColSpanMd="6">
+                          <DxMemo @bind-Text="EditModel.AccountRemarks"></DxMemo>
+                      </DxFormLayoutItem>
+                    </DxFormLayoutTabPage>
+
+
+                </DxFormLayoutTabPages>
+
             }
         </DxFormLayout>
 
-        <div class="mt-3 text-end">
+        <div class="mt-1 text-end">
             <DxButton Text="Save" RenderStyle="ButtonRenderStyle.Primary" SubmitFormOnClick="true" />
             <DxButton Text="Cancel" RenderStyle="ButtonRenderStyle.Secondary" Click="Hide" />
         </div>
@@ -201,35 +280,18 @@
         "N/A"
     };
 
-    public void Show(Account account)
+    public void Show(Account? account = null)
     {
-        EditModel = account != null ? new Account
-            {
-                AccountId = account.AccountId,
-                AccountCompanyId = account.AccountCompanyId,
-                AccountAddedByUserId = account.AccountAddedByUserId,
-                AccountUpdatedByUserId = account.AccountUpdatedByUserId,
-                AccountCode = account.AccountCode,
-                AccountName = account.AccountName,
-                AccountPrintName = account.AccountPrintName,
-                AccountGroupId = account.AccountGroupId,
-                AccountTypeId = account.AccountTypeId,
-                AccountContactPerson = account.AccountContactPerson,
-                AccountMobile = account.AccountMobile,
-                AccountEmail = account.AccountEmail,
-                AccountAddress1 = account.AccountAddress1,
-                AccountCity = account.AccountCity,
-                AccountStateId = account.AccountStateId,
-                AccountGstNo = account.AccountGstNo,
-                AccountPan = account.AccountPan,
-                AccountStatus = account.AccountStatus,
-                AccountMethod = account.AccountMethod,
-                AccountRegisterType = account.AccountRegisterType,
-                AccountIsSez = account.AccountIsSez,
-                AccountCreated = account.AccountCreated
-            } : new Account();
-
-        Title = account?.AccountId > 0 ? "Edit Account" : "Add Account";
+        if (account == null)
+        {
+        EditModel = new Account();
+            Title = "Add Account";
+        }
+        else
+        {
+            EditModel = account;         // direct same model
+            Title = "Edit Account";
+        }
         Visible = true;
     }
 

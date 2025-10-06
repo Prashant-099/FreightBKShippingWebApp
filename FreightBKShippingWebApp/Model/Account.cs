@@ -37,7 +37,7 @@ namespace FreightBKShippingWebApp.Model
 
         [Required]
         [Column("account_type_id")]
-        public int AccountTypeId { get; set; }
+        public int AccountTypeId { get; set; } = 1;
 
         [Column("account_contact_person")]
         public string? AccountContactPerson { get; set; }
