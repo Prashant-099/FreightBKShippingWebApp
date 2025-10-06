@@ -18,7 +18,7 @@ builder.Services.AddDevExpressBlazor(options => {
 builder.Services.AddMvc();
 builder.Services.AddAuthenticationCore();
 builder.Services.AddCascadingAuthenticationState();
-builder.Services.AddSingleton<WeatherForecastService>();
+
 
 builder.Services.AddOutputCache();
 builder.Services.AddScoped<ApiClient>();
@@ -35,9 +35,6 @@ builder.Services.AddScoped<StateService>();
 builder.Services.AddScoped<CountryService>();
 builder.Services.AddScoped<BranchService>();
 builder.Services.AddScoped<CurrencyService>();
-builder.Services.AddScoped<AccountService>();
-builder.Services.AddScoped<AccountTypeService>();
-builder.Services.AddScoped<AccountGroupService>();
 
 builder.Services.AddHttpClient<ApiClient>(client =>
 {
