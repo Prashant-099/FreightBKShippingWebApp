@@ -35,6 +35,9 @@ builder.Services.AddScoped<StateService>();
 builder.Services.AddScoped<CountryService>();
 builder.Services.AddScoped<BranchService>();
 builder.Services.AddScoped<CurrencyService>();
+builder.Services.AddScoped<AccountService>();
+builder.Services.AddScoped<AccountTypeService>();
+builder.Services.AddScoped<AccountGroupService>();
 
 builder.Services.AddHttpClient<ApiClient>(client =>
 {

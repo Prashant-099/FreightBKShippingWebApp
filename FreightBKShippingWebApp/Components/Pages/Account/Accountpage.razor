@@ -1,0 +1,124 @@
+﻿@page "/account"
+@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Services
+@using FreightBKShippingWebApp.Components.Pages
+@inject AccountService AccountService
+@inject ToasteService ToastService
+@inject LoadingService LoadingService
+@inject ConfirmationDialogService ConfirmDialogService
+
+<DxGrid TItem="Account"
+        Data="@accountList"
+        @ref="MyGrid"
+        KeyFieldName="AccountId"
+        ShowSearchBox="true"
+        PageSize="10"
+        PageSizeSelectorVisible="true"
+        ShowGroupPanel="true"
+        FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always"
+        FocusedRowEnabled="true"
+        SelectionMode="GridSelectionMode.Multiple"
+        SelectedDataItems="@SelectedAccounts"
+        SelectedDataItemsChanged="OnSelectedAccountsChanged">
+
+    <ToolbarTemplate>
+        <DxToolbar>
+            <TitleTemplate Context="tl">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-person-lines-fill"></i>
+                    <span class="fs-5">Accounts</span>
+                </div>
+            </TitleTemplate>
+            <Items>
+                <DxToolbarItem Text="Add" IconCssClass="bi bi-plus-circle" Click="OnCreateNew" />
+                <DxToolbarItem Text="Edit" IconCssClass="bi bi-pencil-square" Click="OnEdit" />
+                <DxToolbarItem Text="Delete" IconCssClass="bi bi-trash" Click="OnDelete" />
+                <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="@(async (_) => await LoadAccountsAsync())" />
+            </Items>
+        </DxToolbar>
+    </ToolbarTemplate>
+
+    <Columns>
+        <DxGridDataColumn FieldName="AccountId" Caption="ID" Visible="false" />
+        <DxGridSelectionColumn Width="30" />
+        <DxGridDataColumn FieldName="AccountCode" Caption="Code" />
+        <DxGridDataColumn FieldName="AccountName" Caption="Name" />
+        <DxGridDataColumn FieldName="AccountContactPerson" Caption="Contact Person" />
+        <DxGridDataColumn FieldName="AccountMobile" Caption="Mobile" />
+        <DxGridDataColumn FieldName="AccountEmail" Caption="Email" />
+        <DxGridDataColumn FieldName="AccountCity" Caption="City" />
+        <DxGridDataColumn FieldName="AccountCountry" Caption="Country" />
+        <DxGridDataColumn FieldName="AccountStatus" Caption="Active" />
+    </Columns>
+</DxGrid>
+
+<AccountAddEditPage @ref="popup" OnSaved="LoadAccountsAsync" />
+
+<ConfirmationDialog />
+
+@code {
+    DxGrid MyGrid;
+    private List<Account> accountList = [];
+    private List<Account> SelectedAccounts = new();
+    private AccountAddEditPage popup;   
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAccountsAsync();
+    }
+
+    private async Task LoadAccountsAsync()
+    {
+        LoadingService.Show();
+        try
+        {
+            accountList = await AccountService.GetAllAsync();
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+
+    private void OnSelectedAccountsChanged(IEnumerable<object> accounts)
+    {
+        SelectedAccounts = accounts.Cast<Account>().ToList();
+    }
+
+    private void OnCreateNew(ToolbarItemClickEventArgs e)
+    {
+        popup.Show(new Account());
+    }
+
+    private void OnEdit(ToolbarItemClickEventArgs e)
+    {
+        var account = MyGrid.GetFocusedDataItem() as Account;
+        if (account != null)
+            popup.Show(account);
+        else
+            ToastService.Warning("Please select an account to edit.");
+    }
+
+    private async Task OnDelete(ToolbarItemClickEventArgs e)
+    {
+        if (SelectedAccounts == null || SelectedAccounts.Count == 0)
+        {
+            ToastService.Warning("Please select at least one account to delete.");
+            return;
+        }
+
+        var confirm = await ConfirmDialogService.ShowAsync(
+            $"Are you sure you want to delete {SelectedAccounts.Count} selected account(s)?");
+
+        if (confirm)
+        {
+            foreach (var account in SelectedAccounts)
+            {
+                await AccountService.DeleteAsync(account.AccountId);
+            }
+
+            ToastService.Success($"{SelectedAccounts.Count} account(s) deleted successfully.");
+            await LoadAccountsAsync();
+        }
+    }
+}
