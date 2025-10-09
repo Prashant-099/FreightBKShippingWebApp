@@ -1,0 +1,129 @@
+﻿@page "/hsnsac"
+@using FreightBKShipping.Models
+@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Services
+@using FreightBKShippingWebApp.Components.Pages
+@inject HsnSacService HsnSacService
+@inject ToasteService ToastService
+@inject LoadingService LoadingService
+@inject ConfirmationDialogService ConfirmDialogService
+
+<DxGrid TItem="HsnSacModel" Data="@hsnList" @ref="MyGrid" 
+        KeyFieldName="HsnId" 
+        ShowSearchBox="true"
+        PageSize="10"
+        PageSizeSelectorVisible="true"
+        ShowGroupPanel="true"
+        FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always"
+        FocusedRowEnabled="true"
+        SelectionMode="GridSelectionMode.Multiple"
+        SelectedDataItems="@SelectedHsn"
+        SelectedDataItemsChanged="OnSelectedHsnChanged">
+    <ToolbarTemplate>
+        <DxToolbar>
+            <TitleTemplate Context="tl">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-tags"></i>
+                    <span class="fs-5 ms-2">HSN/SAC</span>
+                </div>
+            </TitleTemplate>
+            <Items>
+                <DxToolbarItem Text="Add" IconCssClass="bi bi-plus-circle" Click="OnCreateNew" />
+                <DxToolbarItem Text="Edit" IconCssClass="bi bi-pencil-square" Click="OnEdit" />
+                <DxToolbarItem Text="Delete" IconCssClass="bi bi-trash" Click="OnDelete" />
+                <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="@(async (_) => await LoadHsnAsync())" />
+            </Items>
+        </DxToolbar>
+    </ToolbarTemplate>
+
+    <Columns>
+        <DxGridDataColumn FieldName="HsnId" Caption="ID" Visible="false" />
+        <DxGridSelectionColumn Width="30" />
+        <DxGridDataColumn FieldName="HsnName" Caption="HSN/SAC Name" />
+        <DxGridDataColumn FieldName="HsnGstPer" Caption="GST %" DisplayFormat="n2" />
+        <DxGridDataColumn FieldName="HsnCessType" Caption="Cess Type" />
+        <DxGridDataColumn FieldName="HsnCess" Caption="Cess %" DisplayFormat="n2" />
+        <DxGridDataColumn FieldName="HsnAddCess" Caption="Addl Cess %" DisplayFormat="n2" />
+        <DxGridDataColumn FieldName="HsnStatus" Caption="Active" />
+    </Columns>
+</DxGrid>
+
+<HsnSacAddEditPage @ref="popup" OnSaved="LoadHsnAsync" />
+<ConfirmationDialog />
+
+@code {
+    DxGrid MyGrid;
+    private List<HsnSac> hsnList = [];
+    private List<HsnSac> SelectedHsn = new();
+    private HsnSacAddEditPage popup;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadHsnAsync();
+    }
+
+    private async Task LoadHsnAsync()
+    {
+        LoadingService.Show();
+        try
+        {
+            hsnList = await HsnSacService.GetAllAsync();
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+
+    private void OnSelectedHsnChanged(IEnumerable<object> items)
+    {
+        SelectedHsn = items.Cast<HsnSac>().ToList();
+    }
+
+    private void OnCreateNew(ToolbarItemClickEventArgs e)
+    {
+        popup.Show(new HsnSac() { HsnStatus = true });
+    }
+
+    private void OnEdit(ToolbarItemClickEventArgs e)
+    {
+        var hsn = MyGrid.GetFocusedDataItem() as HsnSac;
+        if (hsn != null)
+            popup.Show(hsn);
+        else
+            ToastService.Warning("Please select a record to edit.");
+    }
+
+    private async Task OnDelete(ToolbarItemClickEventArgs e)
+    {
+        if (SelectedHsn == null || SelectedHsn.Count == 0)
+        {
+            ToastService.Warning("Please select at least one record to delete.");
+            return;
+        }
+
+        var confirm = await ConfirmDialogService.ShowAsync(
+            $"Are you sure you want to delete {SelectedHsn.Count} selected record(s)?");
+
+        if (!confirm) return;
+
+        int successCount = 0;
+        int failCount = 0;
+
+        foreach (var item in SelectedHsn)
+        {
+            var result = await HsnSacService.DeleteAsync(item.HsnId);
+            if (result)
+                successCount++;
+            else
+                failCount++;
+        }
+
+        if (successCount > 0)
+            ToastService.Success($"{successCount} record(s) deleted successfully.");
+        if (failCount > 0)
+            ToastService.Error($"{failCount} record(s) failed to delete.");
+
+        await LoadHsnAsync();
+    }
+}

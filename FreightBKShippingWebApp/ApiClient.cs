@@ -9,6 +9,7 @@ using Newtonsoft.Json;
 using System.Net.Http;
 using FreightBKShippingWebApp.Model;
 using System.Text.Json;
+
 namespace FreightBKShippingWebApp
 {
     public class ApiClient(HttpClient httpClient, ProtectedLocalStorage localStorage, NavigationManager navigationManager, AuthenticationStateProvider authStateProvider)
@@ -108,9 +109,23 @@ namespace FreightBKShippingWebApp
             Console.WriteLine("=== HTTP Request ===");
             Console.WriteLine("Path: " + path);
             Console.WriteLine("Auth Header: " + httpClient.DefaultRequestHeaders.Authorization);
+
             try
             {
-                return await httpClient.GetFromJsonAsync<T>(path, _jsonOptions);
+                //return await httpClient.GetFromJsonAsync<T>(path, _jsonOptions);
+                var res = await httpClient.GetAsync(path);
+
+                Console.WriteLine("=== HTTP Response ===");
+                Console.WriteLine("Status Code: " + res.StatusCode);
+
+                var content = await res.Content.ReadAsStringAsync();
+                Console.WriteLine("Raw JSON Response:");
+                Console.WriteLine(content);
+
+                res.EnsureSuccessStatusCode(); // throws HttpRequestException for non-success codes
+
+                return System.Text.Json.JsonSerializer.Deserialize<T>(content, _jsonOptions);
+
             }
             catch (HttpRequestException ex)
             {
@@ -299,11 +314,30 @@ namespace FreightBKShippingWebApp
         public async Task<T> DeleteAsync<T>(string path)
         {
             await SetAuthorizeHeader();
-            return await httpClient.DeleteFromJsonAsync<T>(path);
+            try
+            {
+                var response = await httpClient.DeleteAsync(path);
+                var content = await response.Content.ReadAsStringAsync(); // ✅ added line for debugging/logging
+
+                if (response.IsSuccessStatusCode)
+                {
+                    return await response.Content.ReadFromJsonAsync<T>();
+                }
+                else
+                {
+                    Console.WriteLine($"❌ Delete failed: {response.StatusCode} - {content}");
+                    throw new Exception(content);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Exception during DELETE: {ex.Message}");
+                throw;
+            }
         }
 
 
-        //added by dhruv
+        
 
         public async Task<T?> SafeGetFromJsonAsync<T>(string path)
         {

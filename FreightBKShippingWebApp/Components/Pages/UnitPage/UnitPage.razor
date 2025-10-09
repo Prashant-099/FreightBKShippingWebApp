@@ -1,0 +1,137 @@
+﻿@page "/unit"
+@using FreightBKShippingWebApp.Models
+@using FreightBKShippingWebApp.Services
+@using FreightBKShippingWebApp.Components.Pages
+@inject UnitService UnitService
+@inject ToasteService ToastService
+@inject LoadingService LoadingService
+@inject ConfirmationDialogService ConfirmDialogService
+
+<DxGrid TItem="Unit"
+        Data="@unitList"
+        @ref="MyGrid"
+        KeyFieldName="UnitId"
+        ShowSearchBox="true"
+        PageSize="10"
+        PageSizeSelectorVisible="true"
+        ShowGroupPanel="true"
+        FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always"
+        FocusedRowEnabled="true"
+        SelectionMode="GridSelectionMode.Multiple"
+        SelectedDataItems="@SelectedUnits"
+        SelectedDataItemsChanged="OnSelectedUnitsChanged">
+
+    <ToolbarTemplate>
+        <DxToolbar>
+            <TitleTemplate Context="tl">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-box"></i>
+                    <span class="fs-5 ms-2">Units</span>
+                </div>
+            </TitleTemplate>
+            <Items>
+                <DxToolbarItem Text="Add" IconCssClass="bi bi-plus-circle" Click="OnCreateNew" />
+                <DxToolbarItem Text="Edit" IconCssClass="bi bi-pencil-square" Click="OnEdit" />
+                <DxToolbarItem Text="Delete" IconCssClass="bi bi-trash" Click="OnDelete" />
+                <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="@(async (_) => await LoadUnitsAsync())" />
+            </Items>
+        </DxToolbar>
+    </ToolbarTemplate>
+
+    <Columns>
+        <DxGridDataColumn FieldName="UnitId" Caption="ID" Visible="false" />
+        <DxGridSelectionColumn Width="30" />
+        <DxGridDataColumn FieldName="UnitName" Caption="Unit Name" />
+        <DxGridDataColumn FieldName="UnitFormalName" Caption="Formal Name" />
+        <DxGridDataColumn FieldName="UnitGstUnit" Caption="Group Name" />
+        <DxGridDataColumn FieldName="UnitStatus" Caption="Active" />
+        <DxGridDataColumn FieldName="UnitCreated" Caption="Created" DisplayFormat="g" />
+        <DxGridDataColumn FieldName="UnitUpdated" Caption="Updated" DisplayFormat="g" />
+    </Columns>
+</DxGrid>
+
+<UnitAddEditPage @ref="popup" OnSaved="LoadUnitsAsync" />
+
+<ConfirmationDialog />
+
+@code {
+    DxGrid MyGrid;
+    private List<Unit> unitList = [];
+    private List<Unit> SelectedUnits = new();
+    private UnitAddEditPage popup;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUnitsAsync();
+    }
+
+    private async Task LoadUnitsAsync()
+    {
+        LoadingService.Show("Loading units...");
+        try
+        {
+            unitList = await UnitService.GetAllAsync();
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+
+    private void OnSelectedUnitsChanged(IEnumerable<object> units)
+    {
+        SelectedUnits = units.Cast<Unit>().ToList();
+    }
+
+    private void OnCreateNew(ToolbarItemClickEventArgs e)
+    {
+        popup.Show(new Unit()
+        {
+            UnitStatus = true,
+            UnitCreated = DateTime.Now
+        });
+    }
+
+    private void OnEdit(ToolbarItemClickEventArgs e)
+    {
+        var unit = MyGrid.GetFocusedDataItem() as Unit;
+        if (unit != null)
+            popup.Show(unit);
+        else
+            ToastService.Warning("Please select a unit to edit.");
+    }
+
+    private async Task OnDelete(ToolbarItemClickEventArgs e)
+    {
+        if (SelectedUnits == null || SelectedUnits.Count == 0)
+        {
+            ToastService.Warning("Please select at least one unit to delete.");
+            return;
+        }
+
+        var confirm = await ConfirmDialogService.ShowAsync(
+            $"Are you sure you want to delete {SelectedUnits.Count} selected unit(s)?");
+
+        if (!confirm)
+            return;
+
+        int successCount = 0, failCount = 0;
+
+        foreach (var unit in SelectedUnits)
+        {
+            var result = await UnitService.DeleteAsync(unit.UnitId);
+            if (result)
+                successCount++;
+            else
+                failCount++;
+        }
+
+        if (successCount > 0)
+            ToastService.Success($"{successCount} Unit(s) deleted successfully.");
+
+        if (failCount > 0)
+            ToastService.Error($"{failCount} Unit(s) failed to delete.");
+
+        await LoadUnitsAsync();
+    }
+}

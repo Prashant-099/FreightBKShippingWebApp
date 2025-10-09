@@ -46,6 +46,8 @@ builder.Services.AddScoped<LocationService>();
 builder.Services.AddScoped<HsnSacService>();
 builder.Services.AddScoped<GstSlabService>();
 builder.Services.AddScoped<CargoService>();
+builder.Services.AddScoped<UnitService>();
+builder.Services.AddScoped<VesselService>();
 
 builder.Services.AddHttpClient<ApiClient>(client =>
 {

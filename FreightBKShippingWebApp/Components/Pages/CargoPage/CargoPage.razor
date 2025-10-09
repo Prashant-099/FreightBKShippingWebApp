@@ -1,0 +1,145 @@
+﻿@page "/cargo"
+@using FreightBKShipping.Models
+@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Services
+@using FreightBKShippingWebApp.Components.Pages
+@inject CargoService CargoService
+@inject ToasteService ToastService
+@inject LoadingService LoadingService
+@inject ConfirmationDialogService ConfirmDialogService
+
+<DxGrid TItem="Cargo"
+        Data="@cargoList"
+        @ref="MyGrid"
+        KeyFieldName="CargoId"
+        ShowSearchBox="true"
+        PageSize="10"
+        PageSizeSelectorVisible="true"
+        ShowGroupPanel="true"
+        FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always"
+        FocusedRowEnabled="true"
+        SelectionMode="GridSelectionMode.Multiple"
+        SelectedDataItems="@SelectedCargos"
+        SelectedDataItemsChanged="OnSelectedCargosChanged">
+
+    <ToolbarTemplate>
+        <DxToolbar>
+            <TitleTemplate Context="tl">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-box-seam"></i>
+                    <span class="fs-5">Cargo List</span>
+                </div>
+            </TitleTemplate>
+            <Items>
+                <DxToolbarItem Text="Add" IconCssClass="bi bi-plus-circle" Click="OnCreateNew" />
+                <DxToolbarItem Text="Edit" IconCssClass="bi bi-pencil-square" Click="OnEdit" />
+                <DxToolbarItem Text="Delete" IconCssClass="bi bi-trash" Click="OnDelete" />
+                <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="@(async (_) => await LoadCargosAsync())" />
+            </Items>
+        </DxToolbar>
+    </ToolbarTemplate>
+
+    <Columns>
+        <DxGridDataColumn FieldName="CargoId" Caption="ID" Visible="false" />
+        <DxGridSelectionColumn Width="30" />
+        <DxGridDataColumn FieldName="CargoName" Caption="Cargo Name" />
+        <DxGridDataColumn FieldName="CargoType" Caption="Type" />
+        <DxGridDataColumn FieldName="CargoHsn" Caption="HSN Code" />
+        <DxGridDataColumn FieldName="CargoGstPer" Caption="GST (%)" DisplayFormat="N2" />
+        <DxGridDataColumn FieldName="CargoCess" Caption="Cess (%)" DisplayFormat="N2" />
+        <DxGridDataColumn FieldName="CargoRemarks" Caption="Remarks" />
+        <DxGridDataColumn FieldName="CargoStatus" Caption="Active" />
+        <DxGridDataColumn FieldName="CargoCreated" Caption="Created" DisplayFormat="g" />
+        <DxGridDataColumn FieldName="CargoUpdated" Caption="Updated" DisplayFormat="g" />
+    </Columns>
+</DxGrid>
+
+<CargoAddEditPage @ref="popup" OnSaved="LoadCargosAsync" />
+
+<ConfirmationDialog />
+
+@code {
+    DxGrid MyGrid;
+    private List<Cargo> cargoList = [];
+    private List<Cargo> SelectedCargos = new();
+    private CargoAddEditPage popup;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCargosAsync();
+    }
+
+    private async Task LoadCargosAsync()
+    {
+        LoadingService.Show();
+        try
+        {
+            cargoList = await CargoService.GetAllAsync();
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+
+    private void OnSelectedCargosChanged(IEnumerable<object> cargos)
+    {
+        SelectedCargos = cargos.Cast<Cargo>().ToList();
+    }
+
+    private void OnCreateNew(ToolbarItemClickEventArgs e)
+    {
+        popup.Show(new Cargo
+        {
+            CargoStatus = true,
+            CargoGstPer = 0,
+            CargoCess = 0,
+            CargoCreated = DateTime.Now
+        });
+    }
+
+    private void OnEdit(ToolbarItemClickEventArgs e)
+    {
+        var cargo = MyGrid.GetFocusedDataItem() as Cargo;
+        if (cargo != null)
+            popup.Show(cargo);
+        else
+            ToastService.Warning("Please select a cargo to edit.");
+    }
+
+    private async Task OnDelete(ToolbarItemClickEventArgs e)
+    {
+        if (SelectedCargos == null || SelectedCargos.Count == 0)
+        {
+            ToastService.Warning("Please select at least one cargo to delete.");
+            return;
+        }
+
+        var confirm = await ConfirmDialogService.ShowAsync(
+            $"Are you sure you want to delete {SelectedCargos.Count} selected cargo item(s)?");
+
+        if (!confirm)
+            return;
+
+        int successCount = 0;
+        int failCount = 0;
+
+        foreach (var cargo in SelectedCargos)
+        {
+            var result = await CargoService.DeleteAsync(cargo.CargoId);
+
+            if (result)
+                successCount++;
+            else
+                failCount++;
+        }
+
+        if (successCount > 0)
+            ToastService.Success($"{successCount} Cargo(s) Deleted Successfully.");
+
+        if (failCount > 0)
+            ToastService.Error($"{failCount} Cargo(s) Failed To Delete.");
+
+        await LoadCargosAsync();
+    }
+}

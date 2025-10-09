@@ -112,15 +112,29 @@
         var confirm = await ConfirmDialogService.ShowAsync(
             $"Are you sure you want to delete {SelectedYears.Count} selected year(s)?");
 
-        if (confirm)
-        {
-            foreach (var year in SelectedYears)
-            {
-                await YearService.DeleteAsync(year.YearId);
-            }
+        if (!confirm)
+            return;
 
-            ToastService.Success($"{SelectedYears.Count} year(s) deleted successfully.");
-            await LoadYearsAsync();
+        int successCount = 0;
+        int failCount = 0;
+
+        foreach (var year in SelectedYears)
+        {
+            var result = await YearService.DeleteAsync(year.YearId);
+
+            if (result)
+                successCount++;
+            else
+                failCount++;
         }
+
+        if (successCount > 0)
+            ToastService.Success($"{successCount} Year(s) Deleted Successfully.");
+
+        if (failCount > 0)
+            ToastService.Error($"{failCount} Year(s) Failed To Delete.");
+
+        await LoadYearsAsync();
     }
+
 }

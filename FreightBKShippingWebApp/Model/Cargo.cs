@@ -35,7 +35,7 @@ namespace FreightBKShipping.Models
         public string? CargoRemarks { get; set; }
 
         [Column("cargo_hsn")]
-        public int? CargoHsn { get; set; }
+        public int CargoHsn { get; set; }
 
         [Column("cargo_status")]
         public bool CargoStatus { get; set; } = true;

@@ -1,0 +1,135 @@
+﻿@page "/gstslabs"
+@using FreightBKShipping.Models
+@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Services
+@using FreightBKShippingWebApp.Components.Pages
+@inject GstSlabService GstSlabService
+@inject ToasteService ToastService
+@inject LoadingService LoadingService
+@inject ConfirmationDialogService ConfirmDialogService
+
+<DxGrid TItem="GstSlabModel"
+        Data="@gstSlabList"
+        @ref="MyGrid"
+        KeyFieldName="GstSlabId"
+        ShowSearchBox="true"
+        PageSize="10"
+        PageSizeSelectorVisible="true"
+        ShowGroupPanel="true"
+        FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always"
+        FocusedRowEnabled="true"
+        SelectionMode="GridSelectionMode.Multiple"
+        SelectedDataItems="@SelectedGstSlabs"
+        SelectedDataItemsChanged="OnSelectedGstSlabsChanged">
+
+    <ToolbarTemplate>
+        <DxToolbar>
+            <TitleTemplate Context="tl">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-receipt-cutoff"></i>
+                    <span class="fs-5 ms-2">GST Slabs</span>
+                </div>
+            </TitleTemplate>
+
+            <Items>
+                <DxToolbarItem Text="Add" IconCssClass="bi bi-plus-circle" Click="OnCreateNew" />
+                <DxToolbarItem Text="Edit" IconCssClass="bi bi-pencil-square" Click="OnEdit" />
+                <DxToolbarItem Text="Delete" IconCssClass="bi bi-trash" Click="OnDelete" />
+                <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="@(async (_) => await LoadGstSlabsAsync())" />
+            </Items>
+        </DxToolbar>
+    </ToolbarTemplate>
+
+    <Columns>
+        <DxGridDataColumn FieldName="GstSlabId" Caption="ID" Visible="false" />
+        <DxGridSelectionColumn Width="30" />
+        <DxGridDataColumn FieldName="GstSlabName" Caption="Slab Name" />
+        <DxGridDataColumn FieldName="GstSlabType" Caption="Type" />
+        <DxGridDataColumn FieldName="GstSlabSgstPer" Caption="SGST %" />
+        <DxGridDataColumn FieldName="GstSlabCgstPer" Caption="CGST %" />
+        <DxGridDataColumn FieldName="GstSlabIgstPer" Caption="IGST %" />
+        <DxGridDataColumn FieldName="GstSlabStatus" Caption="Active" />
+        <DxGridDataColumn FieldName="GstSlabCreated" Caption="Created" DisplayFormat="g" />
+    </Columns>
+</DxGrid>
+
+<GstSlabAddEditPage @ref="popup" OnSaved="LoadGstSlabsAsync" />
+<ConfirmationDialog />
+
+@code {
+    DxGrid MyGrid;
+    private List<GstSlab> gstSlabList = new();
+    private List<GstSlab> SelectedGstSlabs = new();
+    private GstSlabAddEditPage popup;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadGstSlabsAsync();
+    }
+
+    private async Task LoadGstSlabsAsync()
+    {
+        LoadingService.Show();
+        try
+        {
+            gstSlabList = await GstSlabService.GetAllAsync();
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+
+    private void OnSelectedGstSlabsChanged(IEnumerable<object> slabs)
+    {
+        SelectedGstSlabs = slabs.Cast<GstSlab>().ToList();
+    }
+
+    private void OnCreateNew(ToolbarItemClickEventArgs e)
+    {
+        popup.Show(new GstSlab
+        {
+            GstSlabStatus = true,
+            GstSlabType = "GST"
+        });
+    }
+
+    private void OnEdit(ToolbarItemClickEventArgs e)
+    {
+        var slab = MyGrid.GetFocusedDataItem() as GstSlab;
+        if (slab != null)
+            popup.Show(slab);
+        else
+            ToastService.Warning("Please select a GST Slab to edit.");
+    }
+
+    private async Task OnDelete(ToolbarItemClickEventArgs e)
+    {
+        if (SelectedGstSlabs == null || SelectedGstSlabs.Count == 0)
+        {
+            ToastService.Warning("Please select at least one GST Slab to delete.");
+            return;
+        }
+
+        var confirm = await ConfirmDialogService.ShowAsync(
+            $"Are you sure you want to delete {SelectedGstSlabs.Count} selected GST slab(s)?");
+        if (!confirm) return;
+
+        int successCount = 0;
+        int failCount = 0;
+
+        foreach (var slab in SelectedGstSlabs)
+        {
+            var result = await GstSlabService.DeleteAsync(slab.GstSlabId);
+            if (result) successCount++;
+            else failCount++;
+        }
+
+        if (successCount > 0)
+            ToastService.Success($"{successCount} GST Slab(s) deleted successfully.");
+        if (failCount > 0)
+            ToastService.Error($"{failCount} GST Slab(s) failed to delete.");
+
+        await LoadGstSlabsAsync();
+    }
+}

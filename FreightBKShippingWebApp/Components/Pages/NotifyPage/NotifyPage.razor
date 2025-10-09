@@ -1,0 +1,137 @@
+﻿@page "/notify"
+@using FreightBKShippingWebApp.Models
+@using FreightBKShippingWebApp.Services
+@using FreightBKShippingWebApp.Components.Pages
+@inject NotifyService NotifyService
+@inject ToasteService ToastService
+@inject LoadingService LoadingService
+@inject ConfirmationDialogService ConfirmDialogService
+
+<DxGrid TItem="NotifyModel"
+        Data="@notifyList"
+        @ref="MyGrid"
+        KeyFieldName="NotifyId"
+        ShowSearchBox="true"
+        PageSize="10"
+        PageSizeSelectorVisible="true"
+        ShowGroupPanel="true"
+        FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always"
+        FocusedRowEnabled="true"
+        SelectionMode="GridSelectionMode.Multiple"
+        SelectedDataItems="@SelectedNotifies"
+        SelectedDataItemsChanged="OnSelectedNotifiesChanged">
+
+    <ToolbarTemplate>
+        <DxToolbar>
+            <TitleTemplate Context="tl">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-bell"></i>
+                    <span class="fs-5">Notifies</span>
+                </div>
+            </TitleTemplate>
+            <Items>
+                <DxToolbarItem Text="Add" IconCssClass="bi bi-plus-circle" Click="OnCreateNew" />
+                <DxToolbarItem Text="Edit" IconCssClass="bi bi-pencil-square" Click="OnEdit" />
+                <DxToolbarItem Text="Delete" IconCssClass="bi bi-trash" Click="OnDelete" />
+                <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="@(async (_) => await LoadNotifiesAsync())" />
+            </Items>
+        </DxToolbar>
+    </ToolbarTemplate>
+
+    <Columns>
+        <DxGridSelectionColumn Width="30" />
+        <DxGridDataColumn FieldName="NotifyId" Caption="ID" Visible="false" />
+        <DxGridDataColumn FieldName="NotifyName" Caption="Name" />
+        <DxGridDataColumn FieldName="NotifyType" Caption="Type" />
+        <DxGridDataColumn FieldName="NotifyCity" Caption="GSTIN" />
+        <DxGridDataColumn FieldName="NotifyCountry" Caption="PAN" />
+        <DxGridDataColumn FieldName="NotifyEmail" Caption="Address" />
+        <DxGridDataColumn FieldName="NotifyStatus" Caption="Active" />
+    </Columns>
+</DxGrid>
+
+<NotifyAddEditPage @ref="popup" OnSaved="LoadNotifiesAsync" />
+
+<ConfirmationDialog />
+
+@code {
+    DxGrid MyGrid;
+    private List<Notify> notifyList = new();
+    private List<Notify> SelectedNotifies = new();
+    private NotifyAddEditPage popup;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadNotifiesAsync();
+    }
+
+    private async Task LoadNotifiesAsync()
+    {
+        LoadingService.Show("Loading notifies...");
+        try
+        {
+            notifyList = await NotifyService.GetAllAsync();
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+
+    private void OnSelectedNotifiesChanged(IEnumerable<object> notifies)
+    {
+        SelectedNotifies = notifies.Cast<Notify>().ToList();
+    }
+
+    private void OnCreateNew(ToolbarItemClickEventArgs e)
+    {
+        popup.Show(new Notify()
+        {
+            NotifyStatus = true,
+            NotifyCreated = DateTime.Now,
+            NotifyUpdated = DateTime.Now
+        });
+    }
+
+    private void OnEdit(ToolbarItemClickEventArgs e)
+    {
+        var notify = MyGrid.GetFocusedDataItem() as Notify;
+        if (notify != null)
+            popup.Show(notify);
+        else
+            ToastService.Warning("Please select a record to edit.");
+    }
+
+    private async Task OnDelete(ToolbarItemClickEventArgs e)
+    {
+        if (SelectedNotifies == null || SelectedNotifies.Count == 0)
+        {
+            ToastService.Warning("Please select at least one record to delete.");
+            return;
+        }
+
+        var confirm = await ConfirmDialogService.ShowAsync(
+            $"Are you sure you want to delete {SelectedNotifies.Count} selected record(s)?");
+
+        if (!confirm)
+            return;
+
+        int successCount = 0, failCount = 0;
+
+        foreach (var notify in SelectedNotifies)
+        {
+            var result = await NotifyService.DeleteAsync(notify.NotifyId);
+            if (result)
+                successCount++;
+            else
+                failCount++;
+        }
+
+        if (successCount > 0)
+            ToastService.Success($"{successCount} record(s) deleted successfully.");
+        if (failCount > 0)
+            ToastService.Error($"{failCount} record(s) failed to delete.");
+
+        await LoadNotifiesAsync();
+    }
+}

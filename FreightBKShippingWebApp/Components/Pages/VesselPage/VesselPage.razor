@@ -1,0 +1,146 @@
+﻿@page "/vessels"
+@using FreightBKShippingWebApp.Models
+@using FreightBKShippingWebApp.Services
+@using FreightBKShippingWebApp.Components.Pages
+@inject VesselService VesselService
+@inject ToasteService ToastService
+@inject LoadingService LoadingService
+@inject ConfirmationDialogService ConfirmDialogService
+
+<DxGrid TItem="Vessel"
+        Data="@vesselList"
+        @ref="MyGrid"
+        KeyFieldName="VesselId"
+        ShowSearchBox="true"
+        PageSize="10"
+        PageSizeSelectorVisible="true"
+        ShowGroupPanel="true"
+        FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always"
+        FocusedRowEnabled="true"
+        SelectionMode="GridSelectionMode.Multiple"
+        SelectedDataItems="@SelectedVessels"
+        SelectedDataItemsChanged="OnSelectedVesselsChanged">
+
+    <ToolbarTemplate>
+        <DxToolbar>
+            <TitleTemplate Context="tl">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-ship"></i>
+                    <span class="fs-5 ms-2">Vessels</span>
+                </div>
+            </TitleTemplate>
+            <Items>
+                <DxToolbarItem Text="Add" IconCssClass="bi bi-plus-circle" Click="OnCreateNew" />
+                <DxToolbarItem Text="Edit" IconCssClass="bi bi-pencil-square" Click="OnEdit" />
+                <DxToolbarItem Text="Delete" IconCssClass="bi bi-trash" Click="OnDelete" />
+                <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="@(async (_) => await LoadVesselsAsync())" />
+            </Items>
+        </DxToolbar>
+    </ToolbarTemplate>
+
+    <Columns>
+        <DxGridSelectionColumn Width="30" />
+        <DxGridDataColumn FieldName="VesselId" Caption="ID" Visible="false" />
+        <DxGridDataColumn FieldName="VesselName" Caption="Vessel Name" />
+        <DxGridDataColumn FieldName="VesselQty" Caption="Quantity" DisplayFormat="N2" />
+        <DxGridDataColumn FieldName="VesselCbm" Caption="CBM" DisplayFormat="N2" />
+       
+        <DxGridDataColumn FieldName="VesselDtSailing" Caption="Sailing Date" DisplayFormat="d" />
+        <DxGridDataColumn FieldName="VesselDtBerting" Caption="Berting Date" DisplayFormat="d" />
+        <DxGridDataColumn FieldName="VesselDtDemmurate" Caption="Demmurate Date" DisplayFormat="d" />
+        <DxGridDataColumn FieldName="VesselNoOfBL" Caption="No. of BL" />
+        <DxGridDataColumn FieldName="VesselStatus" Caption="Active" />
+        <DxGridDataColumn FieldName="VesselCreated" Caption="Created At" />
+        <DxGridDataColumn FieldName="VesselUpdated" Caption="Upadetes At" />
+
+    </Columns>
+</DxGrid>
+
+<VesselAddEditPage @ref="popup" OnSaved="LoadVesselsAsync" />
+
+<ConfirmationDialog />
+
+@code {
+    DxGrid MyGrid;
+    private List<Vessel> vesselList = new();
+    private List<Vessel> SelectedVessels = new();
+    private VesselAddEditPage popup;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadVesselsAsync();
+    }
+
+    private async Task LoadVesselsAsync()
+    {
+        LoadingService.Show();
+        try
+        {
+            vesselList = await VesselService.GetAllAsync();
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+
+    private void OnSelectedVesselsChanged(IEnumerable<object> vessels)
+    {
+        SelectedVessels = vessels.Cast<Vessel>().ToList();
+    }
+
+    private void OnCreateNew(ToolbarItemClickEventArgs e)
+    {
+        popup.Show(new Vessel()
+        {
+            VesselStatus = true,
+            VesselDtSailing = DateTime.Now,
+            VesselDtBerting = DateTime.Now.AddDays(3),
+            VesselEta = DateTime.Now.AddDays(5)
+        });
+    }
+
+    private void OnEdit(ToolbarItemClickEventArgs e)
+    {
+        var vessel = MyGrid.GetFocusedDataItem() as Vessel;
+        if (vessel != null)
+            popup.Show(vessel);
+        else
+            ToastService.Warning("Please select a vessel to edit.");
+    }
+
+    private async Task OnDelete(ToolbarItemClickEventArgs e)
+    {
+        if (SelectedVessels == null || SelectedVessels.Count == 0)
+        {
+            ToastService.Warning("Please select at least one vessel to delete.");
+            return;
+        }
+
+        var confirm = await ConfirmDialogService.ShowAsync(
+            $"Are you sure you want to delete {SelectedVessels.Count} selected vessel(s)?");
+
+        if (!confirm)
+            return;
+
+        int successCount = 0;
+        int failCount = 0;
+
+        foreach (var vessel in SelectedVessels)
+        {
+            var result = await VesselService.DeleteAsync(vessel.VesselId);
+            if (result)
+                successCount++;
+            else
+                failCount++;
+        }
+
+        if (successCount > 0)
+            ToastService.Success($"{successCount} Vessel(s) Deleted Successfully.");
+
+        if (failCount > 0)
+            ToastService.Error($"{failCount} Vessel(s) Failed To Delete.");
+
+        await LoadVesselsAsync();
+    }
+}
