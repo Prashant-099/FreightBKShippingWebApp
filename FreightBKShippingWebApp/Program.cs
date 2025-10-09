@@ -46,6 +46,9 @@ builder.Services.AddScoped<LocationService>();
 builder.Services.AddScoped<HsnSacService>();
 builder.Services.AddScoped<GstSlabService>();
 builder.Services.AddScoped<CargoService>();
+builder.Services.AddScoped<AccountService>();
+builder.Services.AddScoped<AccountTypeService>();
+builder.Services.AddScoped<AccountGroupService>();
 builder.Services.AddScoped<UnitService>();
 builder.Services.AddScoped<VesselService>();
 
@@ -59,7 +62,8 @@ builder.Services.AddControllers();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (!app.Environment.IsDevelopment()) {
+if (!app.Environment.IsDevelopment())
+{
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();

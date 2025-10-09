@@ -1,0 +1,134 @@
+﻿@page "/accounttype"
+@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Services
+@using FreightBKShippingWebApp.Components.Pages
+@inject AccountTypeService AccountTypeService
+@inject ToasteService ToastService
+@inject LoadingService LoadingService
+@inject ConfirmationDialogService ConfirmDialogService
+@inject AccountGroupService AccountGroupService
+
+<DxGrid TItem="AccountType"
+        Data="@accountTypeList"
+        @ref="MyGrid"
+        KeyFieldName="AccountTypeId"
+        ShowSearchBox="true"
+        PageSize="10"
+        PageSizeSelectorVisible="true"
+        ShowGroupPanel="true"
+        FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always"
+        FocusedRowEnabled="true"
+        SelectionMode="GridSelectionMode.Multiple"
+        SelectedDataItems="@SelectedAccountTypes"
+        SelectedDataItemsChanged="OnSelectedAccountTypesChanged">
+
+    <ToolbarTemplate>
+        <DxToolbar>
+            <TitleTemplate Context="tl">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-gear-fill"></i>
+                    <span class="fs-5">Account Types</span>
+                </div>
+            </TitleTemplate>
+            <Items>
+                <DxToolbarItem Text="Add" IconCssClass="bi bi-plus-circle" Click="OnCreateNew" />
+                <DxToolbarItem Text="Edit" IconCssClass="bi bi-pencil-square" Click="OnEdit" />
+                <DxToolbarItem Text="Delete" IconCssClass="bi bi-trash" Click="OnDelete" />
+                <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="@(async (_) => await LoadAccountTypesAsync())" />
+            </Items>
+        </DxToolbar>
+    </ToolbarTemplate>
+
+    <Columns>
+        <DxGridDataColumn FieldName="AccountTypeId" Caption="ID" Visible="false" />
+        <DxGridSelectionColumn Width="30" />
+        <DxGridDataColumn FieldName="AccountTypeName" Caption="Name" />
+        <DxGridDataColumn FieldName="AccountTypeGroupId" Caption="Group Name">
+            <EditSettings>
+                <DxComboBoxSettings Data="@accountGroupList"
+                                    ValueFieldName="AccountGroupId"
+                                    TextFieldName="AccountGroupName"
+                                    FilteringMode="DataGridFilteringMode.Contains"
+                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+            </EditSettings>
+        </DxGridDataColumn>
+        <DxGridDataColumn FieldName="CompanyId" Caption="Company" />
+        <DxGridDataColumn FieldName="Status" Caption="Active" />
+        <DxGridDataColumn FieldName="AccountTypeCreated" Caption="Created" />
+        <DxGridDataColumn FieldName="AccountTypeUpdated" Caption="Updated" />
+    </Columns>
+</DxGrid>
+
+<AccountTypeAddEditPage @ref="popup" OnSaved="LoadAccountTypesAsync" />
+
+<ConfirmationDialog />
+
+@code {
+    DxGrid MyGrid;
+    private List<AccountType> accountTypeList = [];
+    private List<AccountType> SelectedAccountTypes = new();
+    private AccountTypeAddEditPage popup;
+    private List<AccountGroup> accountGroupList = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAccountTypesAsync();
+        accountGroupList = await AccountGroupService.GetAllAsync();
+
+    }
+
+    private async Task LoadAccountTypesAsync()
+    {
+        LoadingService.Show();
+        try
+        {
+            accountTypeList = await AccountTypeService.GetAllAsync();
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+
+    private void OnSelectedAccountTypesChanged(IEnumerable<object> accountTypes)
+    {
+        SelectedAccountTypes = accountTypes.Cast<AccountType>().ToList();
+    }
+
+    private void OnCreateNew(ToolbarItemClickEventArgs e)
+    {
+        popup.Show(new AccountType());
+    }
+
+    private void OnEdit(ToolbarItemClickEventArgs e)
+    {
+        var accountType = MyGrid.GetFocusedDataItem() as AccountType;
+        if (accountType != null)
+            popup.Show(accountType);
+        else
+            ToastService.Warning("Please select an account type to edit.");
+    }
+
+    private async Task OnDelete(ToolbarItemClickEventArgs e)
+    {
+        if (SelectedAccountTypes == null || SelectedAccountTypes.Count == 0)
+        {
+            ToastService.Warning("Please select at least one account type to delete.");
+            return;
+        }
+
+        var confirm = await ConfirmDialogService.ShowAsync(
+            $"Are you sure you want to delete {SelectedAccountTypes.Count} selected account type(s)?");
+
+        if (confirm)
+        {
+            foreach (var accountType in SelectedAccountTypes)
+            {
+                await AccountTypeService.DeleteAsync(accountType.AccountTypeId);
+            }
+
+            ToastService.Success($"{SelectedAccountTypes.Count} account type(s) deleted successfully.");
+            await LoadAccountTypesAsync();
+        }
+    }
+}
