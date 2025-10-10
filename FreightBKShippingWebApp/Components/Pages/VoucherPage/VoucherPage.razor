@@ -1,0 +1,120 @@
+﻿@page "/voucher"
+@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Services
+@inject VoucherService VoucherService
+@inject ToasteService ToastService
+@inject LoadingService LoadingService
+@inject ConfirmationDialogService ConfirmDialogService
+
+<DxGrid TItem="Voucher"
+        Data="@voucherList"
+        @ref="MyGrid"
+        KeyFieldName="VoucherId"
+        ShowSearchBox="true"
+        PageSize="10"
+        PageSizeSelectorVisible="true"
+        ShowGroupPanel="true"
+        FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always"
+        FocusedRowEnabled="true"
+        SelectionMode="GridSelectionMode.Multiple"
+        SelectedDataItems="@SelectedVouchers"
+        SelectedDataItemsChanged="OnSelectedVouchersChanged">
+
+    <ToolbarTemplate>
+        <DxToolbar>
+            <TitleTemplate Context="tl">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-receipt"></i>
+                    <span class="fs-5">Vouchers</span>
+                </div>
+            </TitleTemplate>
+            <Items>
+                <DxToolbarItem Text="Add" IconCssClass="bi bi-plus-circle" Click="OnCreateNew" />
+                <DxToolbarItem Text="Edit" IconCssClass="bi bi-pencil-square" Click="OnEdit" />
+                <DxToolbarItem Text="Delete" IconCssClass="bi bi-trash" Click="OnDelete" />
+                <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="@LoadVouchersAsync" />
+            </Items>
+        </DxToolbar>
+    </ToolbarTemplate>
+
+    <Columns>
+        <DxGridDataColumn FieldName="VoucherId" Caption="ID" Visible="false" />
+        <DxGridSelectionColumn Width="30" />
+        <DxGridDataColumn FieldName="VoucherName" Caption="Name" />
+        <DxGridDataColumn FieldName="VoucherGroup" Caption="Group" />
+        <DxGridDataColumn FieldName="VoucherMethod" Caption="Method" />
+        <DxGridDataColumn FieldName="VoucherStatus" Caption="Active" />
+        <DxGridDataColumn FieldName="VoucherCreated" Caption="Created On" DisplayFormat="dd/MM/yyyy" />
+    </Columns>
+</DxGrid>
+
+<VoucherAddEditPage @ref="popup" OnSaved="LoadVouchersAsync" />
+
+<ConfirmationDialog />
+
+@code {
+    DxGrid MyGrid;
+    private List<Voucher> voucherList = new();
+    private List<Voucher> SelectedVouchers = new();
+    private VoucherAddEditPage popup;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadVouchersAsync();
+    }
+
+    private async Task LoadVouchersAsync()
+    {
+        LoadingService.Show();
+        try
+        {
+            voucherList = await VoucherService.GetAllAsync();
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+
+    private void OnSelectedVouchersChanged(IEnumerable<object> vouchers)
+    {
+        SelectedVouchers = vouchers.Cast<Voucher>().ToList();
+    }
+
+    private void OnCreateNew(ToolbarItemClickEventArgs e)
+    {
+        popup.Show(new Voucher());
+    }
+
+    private void OnEdit(ToolbarItemClickEventArgs e)
+    {
+        var voucher = MyGrid.GetFocusedDataItem() as Voucher;
+        if (voucher != null)
+            popup.Show(voucher);
+        else
+            ToastService.Warning("Please select a voucher to edit.");
+    }
+
+    private async Task OnDelete(ToolbarItemClickEventArgs e)
+    {
+        if (SelectedVouchers == null || SelectedVouchers.Count == 0)
+        {
+            ToastService.Warning("Please select at least one voucher to delete.");
+            return;
+        }
+
+        var confirm = await ConfirmDialogService.ShowAsync(
+            $"Are you sure you want to delete {SelectedVouchers.Count} selected voucher(s)?");
+
+        if (confirm)
+        {
+            foreach (var voucher in SelectedVouchers)
+            {
+                await VoucherService.DeleteAsync(voucher.VoucherId);
+            }
+
+            ToastService.Success($"{SelectedVouchers.Count} voucher(s) deleted successfully.");
+            await LoadVouchersAsync();
+        }
+    }
+}
