@@ -1,0 +1,136 @@
+﻿@page "/location"
+@using FreightBKShipping.Models
+@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Services
+@using FreightBKShippingWebApp.Components.Pages
+@inject LocationService LocationService
+@inject ToasteService ToastService
+@inject LoadingService LoadingService
+@inject ConfirmationDialogService ConfirmDialogService
+
+<DxGrid TItem="Location" Data="@locationList" @ref="MyGrid"
+        KeyFieldName="LocationId"
+        ShowSearchBox="true"
+        PageSize="10"
+        PageSizeSelectorVisible="true"
+        ShowGroupPanel="true"
+        FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always"
+        FocusedRowEnabled="true"
+        SelectionMode="GridSelectionMode.Multiple"
+        SelectedDataItems="@SelectedLocations"
+        SelectedDataItemsChanged="OnSelectedLocationsChanged">
+
+    <ToolbarTemplate>
+        <DxToolbar>
+            <TitleTemplate Context="tl">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-geo-alt-fill"></i>
+                    <span class="fs-5 ms-2">Locations</span>
+                </div>
+            </TitleTemplate>
+            <Items>
+                <DxToolbarItem Text="Add" IconCssClass="bi bi-plus-circle" Click="OnCreateNew" />
+                <DxToolbarItem Text="Edit" IconCssClass="bi bi-pencil-square" Click="OnEdit" />
+                <DxToolbarItem Text="Delete" IconCssClass="bi bi-trash" Click="OnDelete" />
+                <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="@(async (_) => await LoadLocationsAsync())" />
+            </Items>
+        </DxToolbar>
+    </ToolbarTemplate>
+
+    <Columns>
+        <DxGridDataColumn FieldName="LocationId" Caption="ID" Visible="false" />
+        <DxGridSelectionColumn Width="30" />
+        <DxGridDataColumn FieldName="LocationName" Caption="Location Name" />
+        <DxGridDataColumn FieldName="LocationCode" Caption="Code" Visible="false" />
+        <DxGridDataColumn FieldName="LocationType" Caption="Type" />
+        <DxGridDataColumn FieldName="LocationState" Caption="State" />
+        <DxGridDataColumn FieldName="LocationDistrict" Caption="District" />
+        <DxGridDataColumn FieldName="LocationPincode" Caption="Pincode" />
+        <DxGridDataColumn FieldName="LocationStatus" Caption="Active" />
+        <DxGridDataColumn FieldName="LocationCreated" Caption="Created On"  />
+        <DxGridDataColumn FieldName="LocationUpdated" Caption="Updated On"  />
+    </Columns>
+</DxGrid>
+
+<LocationAddEditPage @ref="popup" OnSaved="LoadLocationsAsync" />
+<ConfirmationDialog />
+
+@code {
+    DxGrid MyGrid;
+    private List<Location> locationList = new();
+    private List<Location> SelectedLocations = new();
+    private LocationAddEditPage popup;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadLocationsAsync();
+    }
+
+    private async Task LoadLocationsAsync()
+    {
+        LoadingService.Show();
+        try
+        {
+            locationList = await LocationService.GetAllAsync();
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+
+    private void OnSelectedLocationsChanged(IEnumerable<object> locations)
+    {
+        SelectedLocations = locations.Cast<Location>().ToList();
+    }
+
+    private void OnCreateNew(ToolbarItemClickEventArgs e)
+    {
+        popup.Show(new Location()
+        {
+            LocationStatus = true,
+            LocationType = "STATION",
+            LocationCreated = DateTime.Now
+        });
+    }
+
+    private void OnEdit(ToolbarItemClickEventArgs e)
+    {
+        var location = MyGrid.GetFocusedDataItem() as Location;
+        if (location != null)
+            popup.Show(location);
+        else
+            ToastService.Warning("Please select a location to edit.");
+    }
+
+    private async Task OnDelete(ToolbarItemClickEventArgs e)
+    {
+        if (SelectedLocations == null || SelectedLocations.Count == 0)
+        {
+            ToastService.Warning("Please select at least one location to delete.");
+            return;
+        }
+
+        var confirm = await ConfirmDialogService.ShowAsync(
+            $"Are you sure you want to delete {SelectedLocations.Count} selected location(s)?");
+
+        if (!confirm) return;
+
+        int successCount = 0;
+        int failCount = 0;
+
+        foreach (var location in SelectedLocations)
+        {
+            var result = await LocationService.DeleteAsync(location.LocationId);
+            if (result) successCount++;
+            else failCount++;
+        }
+
+        if (successCount > 0)
+            ToastService.Success($"{successCount} Location(s) Deleted Successfully.");
+        if (failCount > 0)
+            ToastService.Error($"{failCount} Location(s) Failed To Delete.");
+
+        await LoadLocationsAsync();
+    }
+}

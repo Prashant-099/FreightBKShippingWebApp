@@ -1,0 +1,208 @@
+﻿@using FreightBKShipping.Models
+@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Models
+@using FreightBKShippingWebApp.Services
+@inject ServiceService ServiceService
+@inject ToasteService ToastService
+@inject LoadingService LoadingService
+@inject ServiceGroupService ServiceGroupService
+@inject HsnSacService HsnSacService
+@inject UnitService UnitService
+@inject AccountService AccountService
+<DxPopup @bind-Visible="Visible" ShowCloseButton="true" HeaderText="@Title" Width="600px" CloseOnOutsideClick="false">
+    <EditForm Model="@EditModel" OnValidSubmit="HandleValidSubmit" Context="CXservice">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        <DxFormLayout>
+
+            <DxFormLayoutItem Caption="Service Name" ColSpanMd="12">
+                <DxTextBox @bind-Text="EditModel.ServiceName" />
+            </DxFormLayoutItem>
+            <DxFormLayoutItem Caption="Print Name" ColSpanMd="12">
+                <DxTextBox @bind-Text="EditModel.ServicePrintName" />
+            </DxFormLayoutItem>
+            <DxFormLayoutItem Caption="Type" ColSpanMd="12">
+                <DxComboBox TData="ServiceGroup" TValue="int?"
+                            Data="@GroupList"
+                            TextFieldName="ServiceGroupsName"
+                            ValueFieldName="ServiceGroupsId"
+                            ClearButtonVisible="true"
+                            AllowUserInput="false"
+                            NullText="-- Select Group Type --"
+                            @bind-Value="EditModel.ServiceGroupId"
+                            SearchMode="ListSearchMode.AutoSearch"
+                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+            </DxFormLayoutItem>
+            <DxFormLayoutItem Caption="HSN">
+                <DxComboBox TData="HsnSac" TValue="int?"
+                            Data="@HsnSacList"
+                            TextFieldName="HsnName"
+                            ValueFieldName="HsnId"
+                            ClearButtonVisible="true"
+                            AllowUserInput="false"
+                            NullText="-- Select HSN/SAC --"
+                            @bind-Value="EditModel.ServiceHsnId"
+                            SearchMode="ListSearchMode.AutoSearch"
+                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+            </DxFormLayoutItem>
+            <DxFormLayoutItem Caption="Purchase Rate">
+                <DxSpinEdit @bind-Value="EditModel.ServicePRate" />
+            </DxFormLayoutItem>
+            <DxFormLayoutItem Caption="Unit">
+                <DxComboBox TData="Unit" TValue="int?"
+                            Data="@UnitList"
+                            TextFieldName="UnitName"
+                            ValueFieldName="UnitId"
+                            ClearButtonVisible="true"
+                            AllowUserInput="false"
+                            NullText="-- Select Unit --"
+                            @bind-Value="EditModel.ServiceUnitId"
+                            SearchMode="ListSearchMode.AutoSearch"
+                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+            </DxFormLayoutItem>
+            <DxFormLayoutItem Caption="Sale Rate">
+                <DxSpinEdit @bind-Value="EditModel.ServiceSRate" />
+            </DxFormLayoutItem>
+            <DxFormLayoutItem Caption="Charges Type">
+                <DxComboBox Data="@ChargeTypeList"
+                            @bind-Value="EditModel.ServiceChargeType"
+                            TextFieldName="Text"
+                            ValueFieldName="Value"
+                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                            AllowUserInput="true"
+                            SearchMode="ListSearchMode.AutoSearch" SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+            </DxFormLayoutItem>
+            <DxFormLayoutItem Caption="Add. Charge">
+                <DxSpinEdit @bind-Value="EditModel.ServiceExtraCharge" />
+            </DxFormLayoutItem>
+            <DxFormLayoutItem Caption="Add/Deduct">
+                <DxComboBox Data="@AddDeductList"
+                            @bind-Value="EditModel.ServiceType"
+                            TextFieldName="Text"
+                            ValueFieldName="Value"
+                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                            AllowUserInput="true"
+                            SearchMode="ListSearchMode.AutoSearch" SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+            </DxFormLayoutItem>
+
+           
+            <DxFormLayoutItem Caption="Voucher Type">
+                <DxSpinEdit @bind-Value="EditModel.ServiceVoucherId" />
+            </DxFormLayoutItem>
+            <DxFormLayoutItem Caption="Account Name" ColSpanMd="12">
+                <DxComboBox TData="Account" TValue="int?"
+                            Data="@AccountList"
+                            TextFieldName="AccountName"
+                            ValueFieldName="AccountId"
+                            ClearButtonVisible="true"
+                            AllowUserInput="false"
+                            NullText="-- Select Account --"
+                            @bind-Value="EditModel.ServiceAccountId"
+                            SearchMode="ListSearchMode.AutoSearch"
+                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+            </DxFormLayoutItem>
+
+            <DxFormLayoutItem Caption="Is Goods">
+                <DxCheckBox @bind-Checked="EditModel.ServiceIsGoods" />
+            </DxFormLayoutItem>
+            <DxFormLayoutItem Caption="Description" ColSpanMd="12">
+                <DxMemo @bind-Text="EditModel.ServiceRemarks" />
+            </DxFormLayoutItem>
+        </DxFormLayout>
+
+        <div class="mt-3 text-end">
+            <DxButton Text="Save" RenderStyle="ButtonRenderStyle.Primary" SubmitFormOnClick="true" />
+            <DxButton Text="Cancel" RenderStyle="ButtonRenderStyle.Secondary" Click="Hide" />
+        </div>
+    </EditForm>
+</DxPopup>
+
+@code {
+    [Parameter] public EventCallback OnSaved { get; set; }
+
+    private bool Visible { get; set; }
+    private string Title { get; set; } = "Add/Edit Service";
+    private Service EditModel { get; set; } = new();
+    private List<ServiceGroup> GroupList = new();
+    private List<HsnSac> HsnSacList = new();
+    private List<Unit> UnitList = new();
+    private List<Account> AccountList = new();
+    protected override async Task OnInitializedAsync()
+    {
+        GroupList = await ServiceGroupService.GetAllAsync();
+        HsnSacList = await HsnSacService.GetAllAsync();
+        UnitList = await UnitService.GetAllAsync();
+        AccountList = await AccountService.GetAllAsync();
+
+    }
+    public class SelectItem
+    {
+        public string Text { get; set; }
+        public string Value { get; set; }
+
+    }
+    List<SelectItem> AddDeductList = new()
+{
+    new SelectItem { Text = "ADD", Value = "ADD" },
+    new SelectItem { Text = "DEDUCT", Value = "DEDUCT" },
+    new SelectItem { Text = "N/A", Value = "N/A" }
+};
+    List<SelectItem> ChargeTypeList = new()
+{
+    new SelectItem { Text = "ABSOLUTE", Value = "ABSOLUTE" },
+    new SelectItem { Text = "PER UNIT", Value = "PERUNIT" }
+};
+    public void Show(Service model)
+    {
+        EditModel = model != null ? new Service
+        {
+            ServiceId = model.ServiceId,
+            ServiceName = model.ServiceName,
+            ServiceCode = model.ServiceCode,
+            ServiceSRate = model.ServiceSRate,
+            ServicePRate = model.ServicePRate,
+            ServiceStatus = model.ServiceStatus,
+            ServiceRemarks = model.ServiceRemarks
+        } : new Service
+        {
+            ServiceStatus = true
+        };
+
+        Title = model?.ServiceId > 0 ? "Edit Service" : "Add Service";
+        Visible = true;
+    }
+
+    private void Hide() => Visible = false;
+
+    private async Task HandleValidSubmit()
+    {
+        LoadingService.Show();
+        try
+        {
+            bool result;
+            if (EditModel.ServiceId == 0)
+                result = await ServiceService.CreateAsync(EditModel);
+            else
+                result = await ServiceService.UpdateAsync(EditModel);
+
+            if (result)
+            {
+                ToastService.Success($"Service {(EditModel.ServiceId == 0 ? "created" : "updated")} successfully!");
+                Visible = false;
+                await OnSaved.InvokeAsync();
+            }
+            else
+            {
+                ToastService.Error("Failed to save service!");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Error saving service: {ex.Message}");
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+}

@@ -1,0 +1,132 @@
+﻿@page "/servicegroup"
+
+@using FreightBKShipping.Models
+@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Services
+@using FreightBKShippingWebApp.Components.Pages
+@inject ServiceGroupService ServiceGroupService
+@inject ToasteService ToastService
+@inject LoadingService LoadingService
+@inject ConfirmationDialogService ConfirmDialogService
+
+<DxGrid TItem="ServiceGroup" Data="@serviceGroupList" @ref="MyGrid"
+        KeyFieldName="ServiceGroupsId"
+        ShowSearchBox="true"
+        PageSize="10"
+        PageSizeSelectorVisible="true"
+        ShowGroupPanel="true"
+        FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always"
+        FocusedRowEnabled="true"
+        SelectionMode="GridSelectionMode.Multiple"
+        SelectedDataItems="@SelectedGroups"
+        SelectedDataItemsChanged="OnSelectedGroupsChanged">
+
+    <ToolbarTemplate>
+        <DxToolbar>
+            <TitleTemplate Context="tl">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-diagram-3"></i>
+                    <span class="fs-5 ms-2">Service Groups</span>
+                </div>
+            </TitleTemplate>
+            <Items>
+                <DxToolbarItem Text="Add" IconCssClass="bi bi-plus-circle" Click="OnCreateNew" />
+                <DxToolbarItem Text="Edit" IconCssClass="bi bi-pencil-square" Click="OnEdit" />
+                <DxToolbarItem Text="Delete" IconCssClass="bi bi-trash" Click="OnDelete" />
+                <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="@(async (_) => await LoadServiceGroupsAsync())" />
+            </Items>
+        </DxToolbar>
+    </ToolbarTemplate>
+
+    <Columns>
+        <DxGridDataColumn FieldName="ServiceGroupsId" Caption="ID" Visible="false" />
+        <DxGridSelectionColumn Width="30" />
+        <DxGridDataColumn FieldName="ServiceGroupsName" Caption="Group Name" />
+        <DxGridDataColumn FieldName="ServiceGroupsRemarks" Caption="Description" />
+        <DxGridDataColumn FieldName="ServiceGroupsStatus" Caption="Active" />
+        <DxGridDataColumn FieldName="ServiceGroupsAdded" Caption="Created At" DisplayFormat="g" />
+        <DxGridDataColumn FieldName="ServiceGroupsUpdated" Caption="Updated At" DisplayFormat="g" />
+    </Columns>
+</DxGrid>
+
+<ServiceGroupAddEditPage @ref="popup" OnSaved="LoadServiceGroupsAsync" />
+<ConfirmationDialog />
+
+@code {
+    DxGrid MyGrid;
+    private List<ServiceGroup> serviceGroupList = new();
+    private List<ServiceGroup> SelectedGroups = new();
+    private ServiceGroupAddEditPage popup;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadServiceGroupsAsync();
+    }
+
+    private async Task LoadServiceGroupsAsync()
+    {
+        LoadingService.Show();
+        try
+        {
+            serviceGroupList = await ServiceGroupService.GetAllAsync();
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+
+    private void OnSelectedGroupsChanged(IEnumerable<object> groups)
+    {
+        SelectedGroups = groups.Cast<ServiceGroup>().ToList();
+    }
+
+    private void OnCreateNew(ToolbarItemClickEventArgs e)
+    {
+        popup.Show(new ServiceGroup()
+        {
+            ServiceGroupsStatus = true
+        });
+    }
+
+    private void OnEdit(ToolbarItemClickEventArgs e)
+    {
+        var group = MyGrid.GetFocusedDataItem() as ServiceGroup;
+        if (group != null)
+            popup.Show(group);
+        else
+            ToastService.Warning("Please select a Service Group to edit.");
+    }
+
+    private async Task OnDelete(ToolbarItemClickEventArgs e)
+    {
+        if (SelectedGroups == null || SelectedGroups.Count == 0)
+        {
+            ToastService.Warning("Please select at least one Service Group to delete.");
+            return;
+        }
+
+        var confirm = await ConfirmDialogService.ShowAsync(
+            $"Are you sure you want to delete {SelectedGroups.Count} selected group(s)?");
+
+        if (!confirm) return;
+
+        int successCount = 0;
+        int failCount = 0;
+
+        foreach (var group in SelectedGroups)
+        {
+            var result = await ServiceGroupService.DeleteAsync(group.ServiceGroupsId);
+            if (result) successCount++;
+            else failCount++;
+        }
+
+        if (successCount > 0)
+            ToastService.Success($"{successCount} Group(s) Deleted Successfully.");
+
+        if (failCount > 0)
+            ToastService.Error($"{failCount} Group(s) Failed To Delete.");
+
+        await LoadServiceGroupsAsync();
+    }
+}

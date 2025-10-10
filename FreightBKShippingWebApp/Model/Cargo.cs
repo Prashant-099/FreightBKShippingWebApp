@@ -33,9 +33,9 @@ namespace FreightBKShipping.Models
         [Column("cargo_remarks")]
        
         public string? CargoRemarks { get; set; }
-
+        [ForeignKey("HsnSac")]
         [Column("cargo_hsn")]
-        public int CargoHsn { get; set; }
+        public int? CargoHsn { get; set; }
 
         [Column("cargo_status")]
         public bool CargoStatus { get; set; } = true;

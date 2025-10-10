@@ -22,8 +22,8 @@ namespace FreightBKShipping.Models
  
         public string? LocationUpdatedByUserId { get; set; }
 
+        [Required]
         [Column("location_name")]
-     
         public string LocationName { get; set; } = string.Empty;
 
         [Column("location_pincode")]
@@ -42,20 +42,21 @@ namespace FreightBKShipping.Models
         public bool LocationStatus { get; set; } = true;
 
         [Column("location_created")]
-        public DateTime LocationCreated { get; set; } = DateTime.UtcNow;
+        public DateTime LocationCreated { get; set; } 
 
         [Column("location_updated")]
-        public DateTime? LocationUpdated { get; set; }
+        public DateTime LocationUpdated { get; set; }
 
         [Column("location_code")]
         
         public string? LocationCode { get; set; }
 
+        [Required]
         [Column("location_country_id")]
         public int? LocationCountryId { get; set; }
 
+        [Required]
         [Column("location_type")]
-
-        public string LocationType { get; set; } = "STATION"; // default
+        public string LocationType { get; set; } 
     }
 }

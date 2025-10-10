@@ -1,0 +1,136 @@
+﻿@page "/service"
+
+@using FreightBKShipping.Models
+@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Services
+@using FreightBKShippingWebApp.Components.Pages
+@inject ServiceService ServiceService
+@inject ToasteService ToastService
+@inject LoadingService LoadingService
+@inject ConfirmationDialogService ConfirmDialogService
+
+<DxGrid TItem="ServiceModel" Data="@serviceList" @ref="MyGrid"
+        KeyFieldName="ServiceId"
+        ShowSearchBox="true"
+        PageSize="10"
+        PageSizeSelectorVisible="true"
+        ShowGroupPanel="true"
+        FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always"
+        FocusedRowEnabled="true"
+        SelectionMode="GridSelectionMode.Multiple"
+        SelectedDataItems="@SelectedServices"
+        SelectedDataItemsChanged="OnSelectedServicesChanged">
+
+    <ToolbarTemplate>
+        <DxToolbar>
+            <TitleTemplate Context="tl">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-gear"></i>
+                    <span class="fs-5">Services</span>
+                </div>
+            </TitleTemplate>
+            <Items>
+                <DxToolbarItem Text="Add" IconCssClass="bi bi-plus-circle" Click="OnCreateNew" />
+                <DxToolbarItem Text="Edit" IconCssClass="bi bi-pencil-square" Click="OnEdit" />
+                <DxToolbarItem Text="Delete" IconCssClass="bi bi-trash" Click="OnDelete" />
+                <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="@(async (_) => await LoadServicesAsync())" />
+            </Items>
+        </DxToolbar>
+    </ToolbarTemplate>
+
+    <Columns>
+        <DxGridDataColumn FieldName="ServiceId" Caption="ID" Visible="false" />
+        <DxGridSelectionColumn Width="30" />
+        <DxGridDataColumn FieldName="ServiceName" Caption="Service Name" />
+        <DxGridDataColumn FieldName="ServiceGroupId" Caption="Group" />
+        <DxGridDataColumn FieldName="ServiceType" Caption="Type" />
+        <DxGridDataColumn FieldName="ServiceSRate" Caption="Sale Rate" DisplayFormat="N2" />
+        <DxGridDataColumn FieldName="ServicePRate" Caption="Purchase Rate" DisplayFormat="N2" />
+        <DxGridDataColumn FieldName="ServiceChargeType" Caption="Charge Type" />
+        <DxGridDataColumn FieldName="ServiceHsnId" Caption="SAC" />
+        <DxGridDataColumn FieldName="ServiceStatus" Caption="Active" />
+        <DxGridDataColumn FieldName="ServiceRemarks" Caption="Remarks" />
+    </Columns>
+</DxGrid>
+
+<ServiceAddEditPage @ref="popup" OnSaved="LoadServicesAsync" />
+<ConfirmationDialog />
+
+@code {
+    DxGrid MyGrid;
+    private List<Service> serviceList = new();
+    private List<Service> SelectedServices = new();
+    private ServiceAddEditPage popup;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadServicesAsync();
+    }
+
+    private async Task LoadServicesAsync()
+    {
+        LoadingService.Show();
+        try
+        {
+            serviceList = await ServiceService.GetAllAsync();
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+
+    private void OnSelectedServicesChanged(IEnumerable<object> items)
+    {
+        SelectedServices = items.Cast<Service>().ToList();
+    }
+
+    private void OnCreateNew(ToolbarItemClickEventArgs e)
+    {
+        popup.Show(new Service
+        {
+            ServiceStatus = true,
+            ServiceSRate = 0,
+            ServicePRate = 0
+        });
+    }
+
+    private void OnEdit(ToolbarItemClickEventArgs e)
+    {
+        var item = MyGrid.GetFocusedDataItem() as Service;
+        if (item != null)
+            popup.Show(item);
+        else
+            ToastService.Warning("Please select a service to edit.");
+    }
+
+    private async Task OnDelete(ToolbarItemClickEventArgs e)
+    {
+        if (SelectedServices == null || SelectedServices.Count == 0)
+        {
+            ToastService.Warning("Please select at least one service to delete.");
+            return;
+        }
+
+        var confirm = await ConfirmDialogService.ShowAsync(
+            $"Are you sure you want to delete {SelectedServices.Count} selected service(s)?");
+        if (!confirm) return;
+
+        int successCount = 0;
+        int failCount = 0;
+
+        foreach (var service in SelectedServices)
+        {
+            var result = await ServiceService.DeleteAsync(service.ServiceId);
+            if (result) successCount++;
+            else failCount++;
+        }
+
+        if (successCount > 0)
+            ToastService.Success($"{successCount} Service(s) Deleted Successfully.");
+        if (failCount > 0)
+            ToastService.Error($"{failCount} Service(s) Failed To Delete.");
+
+        await LoadServicesAsync();
+    }
+}

@@ -1,0 +1,191 @@
+﻿@using FreightBKShipping.Models
+@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Services
+@inject LocationService LocationService
+@inject ToasteService ToastService
+@inject LoadingService LoadingService
+@inject StateService StateService
+@inject CountryService CountryService
+<DxPopup @bind-Visible="Visible" ShowCloseButton="true" HeaderText="@Title" Width="600px">
+    <EditForm Model="@EditModel" OnValidSubmit="HandleValidSubmit" Context="cxlocation">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        <DxFormLayout>
+
+            <DxFormLayoutItem Caption="Location Name">
+                <ChildContent >
+                    <DxTextBox @bind-Text="EditModel.LocationName" />
+                </ChildContent>
+            </DxFormLayoutItem>
+
+           @*  <DxFormLayoutItem Caption="Code">
+                <ChildContent >
+                    <DxTextBox @bind-Text="EditModel.LocationCode" />
+                </ChildContent>
+            </DxFormLayoutItem> *@
+
+            <DxFormLayoutItem Caption="Type">
+                <ChildContent >
+                    
+                  <DxComboBox Data="@TypeList"
+                    @bind-Value="EditModel.LocationType"
+                    TextFieldName="Text"
+                    ValueFieldName="Value"
+                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                    AllowUserInput="true"
+                    SearchMode="ListSearchMode.AutoSearch" SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+
+                </ChildContent>
+            </DxFormLayoutItem>
+            <DxFormLayoutItem Caption="Country">
+                <ChildContent>
+
+                    <DxComboBox TData="Country" TValue="int?"
+                                Data="@CountryList"
+                                TextFieldName="CountryName"
+                                ValueFieldName="CountryId"
+                                ClearButtonVisible="true"
+                                AllowUserInput="false"
+                                NullText="-- Select Country --"
+                                @bind-Value="EditModel.LocationCountryId"
+                                SearchMode="ListSearchMode.AutoSearch"
+                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+                </ChildContent>
+            </DxFormLayoutItem>
+            <DxFormLayoutItem Caption="State">
+                <ChildContent >
+                  
+                    <DxComboBox TData="State" TValue="String"
+                                Data="@stateList"
+                                TextFieldName="StateName"
+                                ValueFieldName="StateName"
+                                ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                AllowUserInput="false"
+                                NullText="-- Select State --"
+                                @bind-Value="EditModel.LocationState"
+                                SearchMode="ListSearchMode.AutoSearch"
+                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+                </ChildContent>
+            </DxFormLayoutItem>
+
+            @* <DxFormLayoutItem Caption="District">
+                <ChildContent >
+                    <DxTextBox @bind-Text="EditModel.LocationDistrict" />
+                </ChildContent>
+            </DxFormLayoutItem> *@
+
+            <DxFormLayoutItem Caption="Pincode">
+                <ChildContent >
+                    <DxTextBox @bind-Text="EditModel.LocationPincode" />
+                </ChildContent>
+            </DxFormLayoutItem>
+
+            <DxFormLayoutItem Caption="Active">
+                <ChildContent >
+                    <DxCheckBox @bind-Checked="EditModel.LocationStatus" />
+                </ChildContent>
+            </DxFormLayoutItem>
+
+        </DxFormLayout>
+
+        <div class="mt-3 text-end">
+            <DxButton Text="Save" RenderStyle="ButtonRenderStyle.Primary" SubmitFormOnClick="true" />
+            <DxButton Text="Cancel" RenderStyle="ButtonRenderStyle.Secondary" Click="Hide" />
+        </div>
+    </EditForm>
+</DxPopup>
+
+@code {
+    [Parameter] public EventCallback OnSaved { get; set; }
+
+    private bool Visible { get; set; }
+    private string Title { get; set; } = "Add/Edit Location";
+    private Location EditModel { get; set; } = new();
+    private List<State> stateList = new();
+    private List<Country> CountryList = new();
+       protected override async Task OnInitializedAsync()
+        {
+            stateList = await StateService.GetStatesAsync();
+        CountryList = await CountryService.GetAllAsync();
+           
+        }
+    public class SelectItem
+    {
+        public string Text { get; set; }
+        public string Value { get; set; }
+
+    }
+    List<SelectItem> TypeList = new()
+{
+    new SelectItem { Text = "PORT", Value = "PORT" },
+    new SelectItem { Text = "STATION", Value = "STATION" }
+};
+
+    public void Show(Location location)
+    {
+        EditModel = location != null ? new Location
+        {
+            LocationId = location.LocationId,
+            LocationName = location.LocationName,
+            LocationCode = location.LocationCode,
+            LocationType = location.LocationType,
+            LocationState = location.LocationState,
+            LocationDistrict = location.LocationDistrict,
+            LocationPincode = location.LocationPincode,
+            LocationStatus = location.LocationStatus
+        } : new Location
+        {
+            LocationType = "STATION",
+            LocationStatus = true
+        };
+
+        Title = location?.LocationId > 0 ? "Edit Location" : "Add Location";
+        Visible = true;
+    }
+
+    private void Hide()
+    {
+        Visible = false;
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        LoadingService.Show();
+        try
+        {
+            if (EditModel.LocationId == 0)
+            {
+                var result = await LocationService.CreateAsync(EditModel);
+                if (result)
+                    ToastService.Success("Location created successfully!");
+                else
+                {
+                    ToastService.Error("Failed to create Location!");
+                    return;
+                }
+            }
+            else
+            {
+                var result = await LocationService.UpdateAsync(EditModel);
+                if (result)
+                    ToastService.Success("Location updated successfully!");
+                else
+                {
+                    ToastService.Error("Failed to update Location!");
+                    return;
+                }
+            }
+
+            Visible = false;
+            await OnSaved.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Error saving location: {ex.Message}");
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+}
