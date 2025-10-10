@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations;
 namespace FreightBKShippingWebApp.Model
 {
     [Table("accounts")]
-    public class Account
+    public class Account : IValidatableObject
     {
         [Key]
         [Column("account_id")]
@@ -99,7 +99,7 @@ namespace FreightBKShippingWebApp.Model
         [Column("account_agroup_id")]
         public string? AccountAgroupId { get; set; }
 
-        [Required]
+ 
         [Column("account_method")]
         public string AccountMethod { get; set; } 
 
@@ -121,18 +121,18 @@ namespace FreightBKShippingWebApp.Model
         [Column("account_ifscode")]
         public string? AccountIfsCode { get; set; }
 
-        [Required]
+
         [Column("account_issez")]
         public bool AccountIsSez { get; set; } = false;
 
-        [Required]
+
         [Column("account_register_type")]
         public string AccountRegisterType { get; set; } 
 
         [Column("account_tally_name")]
         public string? AccountTallyName { get; set; }
 
-        [Required]
+
         [Column("account_status")]
         public bool AccountStatus { get; set; } = true;
 
@@ -183,5 +183,44 @@ namespace FreightBKShippingWebApp.Model
 
         [Column("account_msmeno")]
         public string? AccountMsmeno { get; set; }
+
+
+        public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+        {
+            if (string.IsNullOrWhiteSpace(AccountName))
+            {
+                yield return new ValidationResult(
+                    "Account Name is required",
+                    new[] { nameof(AccountName) });
+            }
+
+            if (AccountGroupId != 0)
+            {
+                // Jab group select hai
+                if (string.IsNullOrWhiteSpace(AccountPrintName))
+                {
+                    yield return new ValidationResult(
+                        "Print Name is required when Group is selected",
+                        new[] { nameof(AccountPrintName) });
+                }
+
+                if (string.IsNullOrWhiteSpace(AccountAddress1))
+                {
+                    yield return new ValidationResult(
+                        "Address is required when Group is selected",
+                        new[] { nameof(AccountAddress1) });
+                }
+            }
+            else
+            {
+                // Jab group select nahi hai
+                if (string.IsNullOrWhiteSpace(AccountBalanceType))
+                {
+                    yield return new ValidationResult(
+                        "Balance Type must be selected when no Group",
+                        new[] { nameof(AccountBalanceType) });
+                }
+            }
+        }
     }
 }
