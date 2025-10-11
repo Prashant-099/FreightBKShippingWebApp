@@ -97,5 +97,11 @@ namespace FreightBKShipping.Models
         // 🔹 Add navigation property
         [ForeignKey("ServiceGroupId")]
         public virtual ServiceGroup? ServiceGroup { get; set; }
+
+        // ✅ Extra unmapped fields for frontend
+        public string? GroupName { get; set; }
+        public string? HsnName { get; set; }
+        public float? HsnGstPer { get; set; }
+        public string? AccountName { get; set; }
     }
 }
