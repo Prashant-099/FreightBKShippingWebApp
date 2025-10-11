@@ -27,7 +27,6 @@ builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<CompanyService>();
 builder.Services.AddScoped<LoadingService>();
 builder.Services.AddScoped<ToasteService>();
-builder.Services.AddScoped<VoucherConfigService>();
 builder.Services.AddScoped<YearService>();
 builder.Services.AddScoped<YearStatechangeService>();
 builder.Services.AddScoped<ConfirmationDialogService>();

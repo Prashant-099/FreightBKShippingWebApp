@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 
-namespace FreightBKShipping.Models
+namespace FreightBKShippingWebApp.Model
 {
    
     [Table("roles")]
