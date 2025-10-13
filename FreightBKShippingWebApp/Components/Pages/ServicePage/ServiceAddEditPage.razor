@@ -9,6 +9,7 @@
 @inject HsnSacService HsnSacService
 @inject UnitService UnitService
 @inject AccountService AccountService
+
 <DxPopup @bind-Visible="Visible" ShowCloseButton="true" HeaderText="@Title" Width="600px" CloseOnOutsideClick="false">
     <EditForm Model="@EditModel" OnValidSubmit="HandleValidSubmit" Context="CXservice">
         <DataAnnotationsValidator />
@@ -18,9 +19,11 @@
             <DxFormLayoutItem Caption="Service Name" ColSpanMd="12">
                 <DxTextBox @bind-Text="EditModel.ServiceName" />
             </DxFormLayoutItem>
+
             <DxFormLayoutItem Caption="Print Name" ColSpanMd="12">
                 <DxTextBox @bind-Text="EditModel.ServicePrintName" />
             </DxFormLayoutItem>
+
             <DxFormLayoutItem Caption="Type" ColSpanMd="12">
                 <DxComboBox TData="ServiceGroup" TValue="int?"
                             Data="@GroupList"
@@ -61,7 +64,7 @@
                             SearchFilterCondition="ListSearchFilterCondition.StartsWith" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
             </DxFormLayoutItem>
             <DxFormLayoutItem Caption="Sale Rate">
-                <DxSpinEdit @bind-Value="EditModel.ServiceSRate" />
+                <DxSpinEdit @bind-Value="EditModel.ServiceSRate" ShowSpinButtons="false" />
             </DxFormLayoutItem>
             <DxFormLayoutItem Caption="Charges Type">
                 <DxComboBox Data="@ChargeTypeList"
@@ -73,7 +76,7 @@
                             SearchMode="ListSearchMode.AutoSearch" SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
             </DxFormLayoutItem>
             <DxFormLayoutItem Caption="Add. Charge">
-                <DxSpinEdit @bind-Value="EditModel.ServiceExtraCharge" />
+                <DxSpinEdit @bind-Value="EditModel.ServiceExtraCharge" ShowSpinButtons="false" />
             </DxFormLayoutItem>
             <DxFormLayoutItem Caption="Add/Deduct">
                 <DxComboBox Data="@AddDeductList"
@@ -87,7 +90,7 @@
 
            
             <DxFormLayoutItem Caption="Voucher Type">
-                <DxSpinEdit @bind-Value="EditModel.ServiceVoucherId" />
+                <DxSpinEdit @bind-Value="EditModel.ServiceVoucherId" ShowSpinButtons="false" />
             </DxFormLayoutItem>
             <DxFormLayoutItem Caption="Account Name" ColSpanMd="12">
                 <DxComboBox TData="Account" TValue="int?"

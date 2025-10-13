@@ -14,7 +14,7 @@
 
                 <!-- Voucher Info -->
                 <DxFormLayoutTabPage Caption="Voucher Info">
-                    <DxFormLayoutItem Caption="Type" Context="ctxvocher">
+                    <DxFormLayoutItem Caption="Type" >
                         <DxComboBox Data="@voucherGroupList"
                                     @bind-Value="EditModel.VoucherGroup"
                                     ValueFieldName="Value"
@@ -57,12 +57,16 @@
                         <DxCheckBox @bind-Checked="EditModel.VoucherIsTaxInvoice" />
                     </DxFormLayoutItem>
 
-                    <DxFormLayoutItem Caption="Bank 1">
-                        <DxSpinEdit @bind-Value="EditModel.VoucherBank1" MinValue="0" />
+                    <DxFormLayoutItem Caption="Bank">
+                        <DxComboBox Data="@LoadBankList" 
+                                    @bind-Value="EditModel.VoucherBank1"
+                                    TextFieldName="BankName"
+                                    ValueFieldName="BankId"
+                                    NullText="Select Bank..." />
                     </DxFormLayoutItem>
 
                     <DxFormLayoutItem Caption="Report ID / reportformats">
-                        <DxSpinEdit @bind-Value="EditModel.VoucherReportId" MinValue="0" />
+                        <DxSpinEdit @bind-Value="EditModel.VoucherReportId" MinValue="0" ShowSpinButtons="false" />
                     </DxFormLayoutItem>
 
                     <DxFormLayoutItem Caption="Jurisdiction">
@@ -74,7 +78,7 @@
                     </DxFormLayoutItem>
 
                     <DxFormLayoutItem Caption="Copies">
-                        <DxSpinEdit @bind-Value="EditModel.VoucherCopies" MinValue="1" />
+                        <DxSpinEdit @bind-Value="EditModel.VoucherCopies" MinValue="1" ShowSpinButtons="false" />
                     </DxFormLayoutItem>
 
                     <DxFormLayoutItem Caption="Show Dialog">
@@ -129,6 +133,7 @@
 @code {
     private List<VoucherDetail> VoucherDetailList = new();
     private List<Voucher> VoucherList = new();
+    private List<Account> BankList = new();
     private DxGrid voucherGrid;
 
     private bool Visible { get; set; }
@@ -190,6 +195,8 @@
                     VoucherDetailZeroFill = 0,
                     VoucherDetailLutno = ""
                 });
+
+
             Title = "Add Voucher";
         }
 
@@ -213,6 +220,7 @@
         }
         else
         {
+            EditModel = new Voucher();
             VoucherList = new List<Voucher>();
             VoucherDetailList = new List<VoucherDetail>();
         }
@@ -304,5 +312,21 @@
     {
         public string Text { get; set; } = "";
         public string Value { get; set; } = "";
+    }
+
+
+    private async Task<IEnumerable<object>> LoadBankList()
+    {
+        try
+        {
+            var banks = await VoucherService.GetAllAsync();
+            // Map to anonymous type that has BankId & BankName
+            return banks.Select(b => new { BankId = b.VoucherBank1, BankName = b.VoucherBank1    }).ToList();
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error("Failed to load bank list: " + ex.Message);
+            return new List<object>();
+        }
     }
 }
