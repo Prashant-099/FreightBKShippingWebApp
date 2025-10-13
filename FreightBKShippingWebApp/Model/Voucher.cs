@@ -1,9 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
+﻿
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace FreightBKShipping.Models
+namespace FreightBKShippingWebApp.Model
 {
     [Table("vouchers")]
     public class Voucher
@@ -20,11 +19,11 @@ namespace FreightBKShipping.Models
 
         [Column("voucher_updatedby_user_id")]
         public string? VoucherUpdatedByUserId { get; set; }
-
+        [Required]
         [Column("voucher_group")]
        
         public string VoucherGroup { get; set; } = string.Empty;
-
+        [Required]
         [Column("voucher_name")]
         
         public string VoucherName { get; set; } = string.Empty;
@@ -33,6 +32,7 @@ namespace FreightBKShipping.Models
        
         public string VoucherMethod { get; set; } = "Manual"; // "Automatic" / "Manual"
 
+        [Required]
         [Column("voucher_title")]
        
         public string? VoucherTitle { get; set; }
@@ -64,7 +64,7 @@ namespace FreightBKShipping.Models
         [Column("voucher_remarks")]
   
         public string? VoucherRemarks { get; set; }
-
+        [Required]
         [Column("voucher_copies")]
         public int VoucherCopies { get; set; } = 1;
 
@@ -73,7 +73,7 @@ namespace FreightBKShipping.Models
 
         [Column("voucher_isshowpreview")]
         public bool VoucherIsShowPreview { get; set; }
-
+        [Required]
         [Column("voucher_status")]
         public bool VoucherStatus { get; set; }
 

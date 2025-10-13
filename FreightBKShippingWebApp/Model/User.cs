@@ -2,7 +2,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace FreightBKShipping.Models
+namespace FreightBKShippingWebApp.Model
 {
     [Table("users")]
     public class User
@@ -146,14 +146,5 @@ namespace FreightBKShipping.Models
         public PaginationInfo Pagination { get; set; }
        
     }
-
-    public class PaginationInfo
-    {
-        public int Page { get; set; }
-        public int PageSize { get; set; }
-        public int TotalRecords { get; set; }
-        public int TotalPages { get; set; }
-    }
-
    
 }

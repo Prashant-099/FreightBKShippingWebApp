@@ -2,7 +2,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace FreightBKShipping.Models
+namespace FreightBKShippingWebApp.Model
 {
     [Table("bill_details")]
     public class BillDetail

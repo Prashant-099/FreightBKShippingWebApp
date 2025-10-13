@@ -2,7 +2,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace FreightBKShipping.Models
+namespace FreightBKShippingWebApp.Model
 {
     [Table("cargoes")]
     public class Cargo

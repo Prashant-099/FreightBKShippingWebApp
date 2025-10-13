@@ -41,8 +41,8 @@ namespace FreightBKShippingWebApp
                 // Token expired → logout
                 if (sessionState.tokenExp <= now)
                 {
-                    //await ((CustomAuthStateProvider)authStateProvider).MarkUserAsLoggedOut();
-                    //navigationManager.NavigateTo("/login");
+                    await ((CustomAuthStateProvider)authStateProvider).MarkUserAsLoggedOut();
+                    navigationManager.NavigateTo("/login");
                     return;
                 }
 
@@ -179,7 +179,7 @@ namespace FreightBKShippingWebApp
             }
 
             if (typeof(T1) == typeof(string))
-            {
+            {      
                 return (T1)(object)content;
             }
 
