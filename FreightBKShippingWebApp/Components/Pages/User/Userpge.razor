@@ -1,0 +1,121 @@
+﻿@page "/user"
+@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Services
+@inject UserService UserService
+@inject ToasteService ToastService
+@inject LoadingService LoadingService
+@inject ConfirmationDialogService ConfirmDialogService
+
+<DxGrid TItem="User"
+        Data="@userList"
+        @ref="MyGrid"
+        KeyFieldName="UserId"
+        ShowSearchBox="true"
+        PageSize="10"
+        PageSizeSelectorVisible="true"
+        ShowGroupPanel="true"
+        FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always"
+        FocusedRowEnabled="true"
+        SelectionMode="GridSelectionMode.Multiple"
+        SelectedDataItems="@SelectedUsers"
+        SelectedDataItemsChanged="OnSelectedUsersChanged">
+
+    <ToolbarTemplate>
+        <DxToolbar>
+            <TitleTemplate Context="tl">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-people"></i>
+                    <span class="fs-5">Users</span>
+                </div>
+            </TitleTemplate>
+            <Items>
+                <DxToolbarItem Text="Add" IconCssClass="bi bi-plus-circle" Click="OnCreateNew" />
+                <DxToolbarItem Text="Edit" IconCssClass="bi bi-pencil-square" Click="OnEdit" />
+                <DxToolbarItem Text="Delete" IconCssClass="bi bi-trash" Click="OnDelete" />
+                <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="@LoadUsersAsync" />
+            </Items>
+        </DxToolbar>
+    </ToolbarTemplate>
+
+    <Columns>
+        <DxGridDataColumn FieldName="UserId" Caption="ID" Visible="false" />
+        <DxGridSelectionColumn Width="30" />
+        <DxGridDataColumn FieldName="UserName" Caption="User Name" MinWidth="150" />
+        <DxGridDataColumn FieldName="UserFirstName" Caption="First Name" MinWidth="120" />
+        <DxGridDataColumn FieldName="UserLastName" Caption="Last Name" MinWidth="120" />
+        <DxGridDataColumn FieldName="UserEmail" Caption="Email" MinWidth="150" />
+        <DxGridDataColumn FieldName="UserMobile" Caption="Mobile" MinWidth="120" />
+        <DxGridDataColumn FieldName="UserStatus" Caption="Status" MinWidth="100" />
+        <DxGridDataColumn FieldName="UserCreated" Caption="Created On" DisplayFormat="dd/MM/yyyy" MinWidth="120" />
+    </Columns>
+</DxGrid>
+
+<UserAddEditPage @ref="popup" OnSaved="LoadUsersAsync" />
+<ConfirmationDialog />
+
+@code {
+    DxGrid MyGrid;
+    private List<User> userList = new();
+    private List<User> SelectedUsers = new();
+    private UserAddEditPage popup;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUsersAsync();
+    }
+
+    private async Task LoadUsersAsync()
+    {
+        LoadingService.Show();
+        try
+        {
+            userList = await UserService.GetAllAsync();
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+
+    private void OnSelectedUsersChanged(IEnumerable<object> users)
+    {
+        SelectedUsers = users.Cast<User>().ToList();
+    }
+
+    private void OnCreateNew(ToolbarItemClickEventArgs e)
+    {
+        popup.Show(new User(),true);
+    }
+
+    private void OnEdit(ToolbarItemClickEventArgs e)
+    {
+        var user = MyGrid.GetFocusedDataItem() as User;
+        if (user != null)
+            popup.Show(user,false);
+        else
+            ToastService.Warning("Please select a user to edit.");
+    }
+
+    private async Task OnDelete(ToolbarItemClickEventArgs e)
+    {
+        if (SelectedUsers == null || SelectedUsers.Count == 0)
+        {
+            ToastService.Warning("Please select at least one user to delete.");
+            return;
+        }
+
+        var confirm = await ConfirmDialogService.ShowAsync(
+            $"Are you sure you want to delete {SelectedUsers.Count} selected user(s)?");
+
+        if (confirm)
+        {
+            foreach (var user in SelectedUsers)
+            {
+                await UserService.DeleteAsync(user.UserId);
+            }
+
+            ToastService.Success($"{SelectedUsers.Count} user(s) deleted successfully.");
+            await LoadUsersAsync();
+        }
+    }
+}

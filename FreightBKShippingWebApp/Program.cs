@@ -50,6 +50,8 @@ builder.Services.AddScoped<AccountTypeService>();
 builder.Services.AddScoped<AccountGroupService>();
 builder.Services.AddScoped<UnitService>();
 builder.Services.AddScoped<VesselService>();
+builder.Services.AddScoped<RateMasterService>();
+
 builder.Services.AddScoped<BillService>();
 builder.Services.AddHttpClient<ApiClient>(client =>
 {

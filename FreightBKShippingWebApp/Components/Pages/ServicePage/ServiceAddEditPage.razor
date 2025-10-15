@@ -16,6 +16,9 @@
 @inject UnitService UnitService
 @inject AccountService AccountService
 @inject VoucherService VoucherService
+
+
+
 <style>
     .hsn-field-wrapper {
         position: relative;
@@ -64,9 +67,11 @@
             <DxFormLayoutItem Caption="Service Name" ColSpanMd="12">
                 <DxTextBox @bind-Text="EditModel.ServiceName" />
             </DxFormLayoutItem>
+
             <DxFormLayoutItem Caption="Print Name" ColSpanMd="12">
                 <DxTextBox @bind-Text="EditModel.ServicePrintName" />
             </DxFormLayoutItem>
+
             <DxFormLayoutItem Caption="Type" ColSpanMd="12">
                 <DxComboBox TData="ServiceGroup" TValue="int?"
                             Data="@GroupList"
@@ -117,7 +122,7 @@
                 </div>
                         </DxFormLayoutItem>
             <DxFormLayoutItem Caption="Sale Rate">
-                <DxSpinEdit @bind-Value="EditModel.ServiceSRate" />
+                <DxSpinEdit @bind-Value="EditModel.ServiceSRate" ShowSpinButtons="false" />
             </DxFormLayoutItem>
             <DxFormLayoutItem Caption="Charges Type">
                 <DxComboBox Data="@ChargeTypeList"
@@ -129,7 +134,7 @@
                             SearchMode="ListSearchMode.AutoSearch" SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
             </DxFormLayoutItem>
             <DxFormLayoutItem Caption="Add. Charge">
-                <DxSpinEdit @bind-Value="EditModel.ServiceExtraCharge" />
+                <DxSpinEdit @bind-Value="EditModel.ServiceExtraCharge" ShowSpinButtons="false" />
             </DxFormLayoutItem>
             <DxFormLayoutItem Caption="Add/Deduct">
                 <DxComboBox Data="@AddDeductList"
@@ -154,6 +159,7 @@
                             SearchMode="ListSearchMode.AutoSearch"
                             SearchFilterCondition="ListSearchFilterCondition.StartsWith" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
           
+                <DxSpinEdit @bind-Value="EditModel.ServiceVoucherId" ShowSpinButtons="false" />
             </DxFormLayoutItem>
             <DxFormLayoutItem Caption="Account Name" ColSpanMd="10">
                    <div class="hsn-field-wrapper">
