@@ -11,7 +11,6 @@ namespace FreightBKShippingWebApp.Model
         public int ServiceGroupsId { get; set; }
 
         [Column("service_groups_name")]
-      
         public string ServiceGroupsName { get; set; } = string.Empty;
 
         [Column("service_groups_status")]

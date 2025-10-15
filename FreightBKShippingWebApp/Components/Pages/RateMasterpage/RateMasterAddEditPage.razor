@@ -1,0 +1,109 @@
+﻿@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Services
+@inject RateMasterService RateMasterService
+@inject ToasteService ToastService
+@inject LoadingService LoadingService
+@inject AccountService AccountService
+@inject ServiceService ServiceService
+
+<DxPopup @bind-Visible="Visible" ShowCloseButton="true" HeaderText="@Title" CloseOnOutsideClick="false" MaxWidth="800px" Width="80%">
+    <BodyContentTemplate Context="ctxratemasteeradd">
+        <EditForm Model="@EditModel" OnValidSubmit="HandleValidSubmit" Context="ctxratemasteraddedit">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <DxFormLayout>
+                <DxFormLayoutItem Caption="Applicable Date" ColSpanMd="6">
+                    <DxDateEdit @bind-Date="EditModel.RateMasterApplicableDt" />
+                </DxFormLayoutItem>
+
+                <DxFormLayoutItem Caption="Party" ColSpanMd="6">
+                    <DxComboBox Data="@partyList" TextFieldName="AccountName" ValueFieldName="AccountId"
+                                @bind-Value="EditModel.RateMasterPartyId"
+                                NullText="Select Party..." AllowUserInput="true"
+                                SearchMode="ListSearchMode.AutoSearch" />
+                </DxFormLayoutItem>
+
+                <DxFormLayoutItem Caption="Service" ColSpanMd="6">
+                    <DxComboBox Data="@serviceList" TextFieldName="ServiceName" ValueFieldName="ServiceId"
+                                @bind-Value="EditModel.RateMasterServiceId"
+                                NullText="Select Service..." AllowUserInput="true"
+                                SearchMode="ListSearchMode.AutoSearch" />
+                </DxFormLayoutItem>
+
+                <DxFormLayoutItem Caption="Sale Rate" ColSpanMd="3">
+                    <DxSpinEdit @bind-Value="EditModel.RateMasterSaleRate" ShowSpinButtons="false" />
+                </DxFormLayoutItem>
+
+                <DxFormLayoutItem Caption="Purchase Rate" ColSpanMd="3">
+                    <DxSpinEdit @bind-Value="EditModel.RateMasterPurchaseRate" ShowSpinButtons="false" />
+                </DxFormLayoutItem>
+            </DxFormLayout>
+
+            <div class="mt-2 text-end">
+                <DxButton Text="Save" RenderStyle="ButtonRenderStyle.Primary" SubmitFormOnClick="true" />
+                <DxButton Text="Cancel" RenderStyle="ButtonRenderStyle.Secondary" Click="Hide" />
+            </div>
+        </EditForm>
+    </BodyContentTemplate>
+</DxPopup>
+
+@code {
+    [Parameter] public EventCallback OnSaved { get; set; }
+    private bool Visible { get; set; }
+    private string Title { get; set; } = "Add/Edit Rate";
+    private RateMaster EditModel { get; set; } = new();
+    private List<Account> partyList = new();
+    private List<Service> serviceList = new();
+
+    public void Show(RateMaster? rate = null)
+    {
+        if (rate == null)
+        {
+            EditModel = new RateMaster { RateMasterApplicableDt = DateTime.Today };
+            Title = "Add Rate";
+        }
+        else
+        {
+            EditModel = rate;
+            Title = "Edit Rate";
+        }
+        Visible = true;
+    }
+
+    private void Hide() => Visible = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        partyList = await AccountService.GetAllAsync();
+        serviceList = await ServiceService.GetAllAsync();
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        LoadingService.Show();
+        try
+        {
+            bool result;
+            if (EditModel.RateMasterId == 0)
+                result = await RateMasterService.CreateAsync(EditModel);
+            else
+                result = await RateMasterService.UpdateAsync(EditModel);
+
+            if (result)
+            {
+                ToastService.Success(EditModel.RateMasterId == 0 ? "Rate created successfully!" : "Rate updated successfully!");
+                Visible = false;
+                await OnSaved.InvokeAsync();
+            }
+            else
+            {
+                ToastService.Error("Operation failed!");
+            }
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+}
