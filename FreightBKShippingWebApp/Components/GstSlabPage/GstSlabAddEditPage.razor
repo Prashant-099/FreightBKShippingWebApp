@@ -5,11 +5,23 @@
 @inject ToasteService ToastService
 @inject LoadingService LoadingService
 
-<DxPopup @bind-Visible="Visible" ShowCloseButton="true" HeaderText="@Title" Width="650px">
+<DxPopup @bind-Visible="Visible" ShowCloseButton="true" HeaderText="@Title" CloseOnOutsideClick="false" MaxWidth="900px" Width="90%"
+         horizontalAlignment="HorizontalAlignment.Center"
+         verticalAlignment="VerticalAlignment.Center">
     <EditForm Model="@EditModel" OnValidSubmit="HandleValidSubmit" Context="cxgstslab"> 
         <DataAnnotationsValidator />
         <ValidationSummary />
+       
         <DxFormLayout>
+            <DxFormLayoutGroup Caption="Tax Details" ColSpanMd="9">
+                <DxFormLayoutItem Caption="Type" ColSpanMd="7">
+                    <ChildContent>
+                        <DxComboBox @bind-Value="EditModel.GstSlabType" Data="@gstTypes" />
+                    </ChildContent>
+                </DxFormLayoutItem>
+
+
+
 
             <DxFormLayoutItem Caption="GST Slab Name">
                 <ChildContent>
@@ -17,11 +29,7 @@
                 </ChildContent>
             </DxFormLayoutItem>
 
-            <DxFormLayoutItem Caption="Type">
-                <ChildContent>
-                    <DxComboBox @bind-Value="EditModel.GstSlabType" Data="@gstTypes" />
-                </ChildContent>
-            </DxFormLayoutItem>
+               
 
             <DxFormLayoutItem Caption="SGST %">
                 <ChildContent>
@@ -46,9 +54,9 @@
                     <DxCheckBox @bind-Checked="EditModel.GstSlabStatus" />
                 </ChildContent>
             </DxFormLayoutItem>
-
+            </DxFormLayoutGroup>
         </DxFormLayout>
-
+        
         <div class="mt-3 text-end">
             <DxButton Text="Save" RenderStyle="ButtonRenderStyle.Primary" SubmitFormOnClick="true" />
             <DxButton Text="Cancel" RenderStyle="ButtonRenderStyle.Secondary" Click="Hide" />

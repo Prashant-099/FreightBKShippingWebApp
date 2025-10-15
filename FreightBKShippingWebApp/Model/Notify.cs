@@ -3,7 +3,7 @@ using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace FreightBKShippingWebApp.Models
+namespace FreightBKShippingWebApp.Model
 {
     [Table("notifies")]
     public class Notify

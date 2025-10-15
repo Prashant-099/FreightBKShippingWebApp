@@ -194,5 +194,10 @@ namespace FreightBKShippingWebApp.Model
         public float BillDetailGstPer { get; set; }
         [ForeignKey(nameof(BillDetailBillId))]
         public Bill Bill { get; set; }
+
+
+
+        //not mapped in database
+        public int SNo { get; set; }
     }
 }

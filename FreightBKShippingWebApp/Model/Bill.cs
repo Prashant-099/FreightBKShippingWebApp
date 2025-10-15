@@ -34,8 +34,8 @@ namespace FreightBKShippingWebApp.Model
         public int BillYearId { get; set; }
 
         [Column("bill_salesman_id")]
-        [StringLength(30)]
-        public string? BillSalesmanId { get; set; }
+
+        public string? BillSalesmanId { get; set; } = string.Empty;
 
         [Column("bill_no")]
         [StringLength(50)]
