@@ -14,7 +14,7 @@ namespace FreightBKShippingWebApp.Model
 
         [Column("bill_detail_addedby_user_id")]
         [StringLength(30)]
-        public string? BillDetailAddedByUserId { get; set; }
+        public string? BillDetailAddedByUserId { get; set; } = string.Empty;
 
         [Column("bill_detail_updatedby_user_id")]
         [StringLength(30)]
@@ -27,7 +27,7 @@ namespace FreightBKShippingWebApp.Model
         public int BillDetailProductId { get; set; }
 
         [Column("bill_detail_unit_id")]
-        public int BillDetailUnitId { get; set; }
+        public int? BillDetailUnitId { get; set; }
 
         [Column("bill_detail_hsnid")]
         public int BillDetailHsnId { get; set; }
@@ -199,5 +199,6 @@ namespace FreightBKShippingWebApp.Model
 
         //not mapped in database
         public int SNo { get; set; }
+        public string Taxcode { get; set; }
     }
 }
