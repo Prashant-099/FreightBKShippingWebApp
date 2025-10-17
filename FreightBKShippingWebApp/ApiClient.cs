@@ -102,6 +102,7 @@ namespace FreightBKShippingWebApp
                 navigationManager.NavigateTo("/login");
             }
         }
+
         public async Task<T?> GetFromJsonAsync<T>(string path)
         {
             await SetAuthorizeHeader();

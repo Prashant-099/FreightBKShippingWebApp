@@ -6,36 +6,36 @@
 @inject AccountService AccountService
 @inject ServiceService ServiceService
 
-<DxPopup @bind-Visible="Visible" ShowCloseButton="true" HeaderText="@Title" CloseOnOutsideClick="false" MaxWidth="800px" Width="80%">
+<DxPopup @bind-Visible="Visible" ShowCloseButton="true" HeaderText="@Title" CloseOnOutsideClick="false" MaxWidth="600px" Width="80%">
     <BodyContentTemplate Context="ctxratemasteeradd">
         <EditForm Model="@EditModel" OnValidSubmit="HandleValidSubmit" Context="ctxratemasteraddedit">
             <DataAnnotationsValidator />
             <ValidationSummary />
 
             <DxFormLayout>
-                <DxFormLayoutItem Caption="Applicable Date" ColSpanMd="6">
+                <DxFormLayoutItem Caption="Applicable Date" ColSpanMd="12">
                     <DxDateEdit @bind-Date="EditModel.RateMasterApplicableDt" />
                 </DxFormLayoutItem>
 
-                <DxFormLayoutItem Caption="Party" ColSpanMd="6">
+                <DxFormLayoutItem Caption="Party" ColSpanMd="12">
                     <DxComboBox Data="@partyList" TextFieldName="AccountName" ValueFieldName="AccountId"
                                 @bind-Value="EditModel.RateMasterPartyId"
                                 NullText="Select Party..." AllowUserInput="true"
                                 SearchMode="ListSearchMode.AutoSearch" />
                 </DxFormLayoutItem>
 
-                <DxFormLayoutItem Caption="Service" ColSpanMd="6">
+                <DxFormLayoutItem Caption="Service" ColSpanMd="12">
                     <DxComboBox Data="@serviceList" TextFieldName="ServiceName" ValueFieldName="ServiceId"
                                 @bind-Value="EditModel.RateMasterServiceId"
                                 NullText="Select Service..." AllowUserInput="true"
                                 SearchMode="ListSearchMode.AutoSearch" />
                 </DxFormLayoutItem>
 
-                <DxFormLayoutItem Caption="Sale Rate" ColSpanMd="3">
+                <DxFormLayoutItem Caption="Sale Rate" ColSpanMd="6">
                     <DxSpinEdit @bind-Value="EditModel.RateMasterSaleRate" ShowSpinButtons="false" />
                 </DxFormLayoutItem>
 
-                <DxFormLayoutItem Caption="Purchase Rate" ColSpanMd="3">
+                <DxFormLayoutItem Caption="Purchase Rate" ColSpanMd="6">
                     <DxSpinEdit @bind-Value="EditModel.RateMasterPurchaseRate" ShowSpinButtons="false" />
                 </DxFormLayoutItem>
             </DxFormLayout>

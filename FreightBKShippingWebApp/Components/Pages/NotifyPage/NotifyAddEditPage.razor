@@ -1,5 +1,4 @@
-﻿
-@using FreightBKShippingWebApp.Model
+﻿@using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Models
 @using FreightBKShippingWebApp.Services
 @inject NotifyService NotifyService
@@ -37,7 +36,7 @@
                 </ChildContent>
             </DxFormLayoutItem>
 
-           @*  <DxFormLayoutItem Caption="Address 2">
+            @*  <DxFormLayoutItem Caption="Address 2">
                 <ChildContent>
                     <DxMemo @bind-Text="EditModel.NotifyAddress2" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
                 </ChildContent>
@@ -55,7 +54,7 @@
                                 Data="@stateList"
                                 TextFieldName="StateName"
                                 ValueFieldName="StateId"
-                                ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" "
+                                ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
                                 AllowUserInput="false"
                                 NullText="-- Select State --"
                                 @bind-Value="EditModel.NotifyStateId"
@@ -92,7 +91,7 @@
                     <DxTextBox @bind-Text="EditModel.NotifyContactNo" />
                 </ChildContent>
             </DxFormLayoutItem>
-          
+
             <DxFormLayoutItem Caption="Email">
                 <ChildContent>
                     <DxTextBox @bind-Text="EditModel.NotifyEmail" />
@@ -104,7 +103,7 @@
                 </ChildContent>
             </DxFormLayoutItem>
 
-          @*   <DxFormLayoutItem Caption="Active">
+            @*   <DxFormLayoutItem Caption="Active">
                 <ChildContent>
                     <DxCheckBox @bind-Checked="EditModel.NotifyStatus" />
                 </ChildContent>
@@ -125,7 +124,6 @@
     private bool Visible { get; set; }
     private string Title { get; set; } = "Add/Edit Notify";
     private Notify EditModel { get; set; } = new();
-    private List<string> notifyTypes = new() { "Notify", "Consignee", "Exporter" };
     private List<State> stateList = new();
     private List<Country> CountryList = new();
     public class SelectItem
@@ -149,43 +147,43 @@
     new SelectItem { Text = "ALL", Value = "ALL" },
 
 };
-        protected override async Task OnInitializedAsync()
-        {
-            stateList = await StateService.GetStatesAsync();
-            CountryList = await CountryService.GetAllAsync();
-        }
+    protected override async Task OnInitializedAsync()
+    {
+        stateList = await StateService.GetStatesAsync();
+        CountryList = await CountryService.GetAllAsync();
+    }
     public void Show(Notify notify)
     {
         if (notify != null)
         {
             EditModel = new Notify
-            {
-                NotifyId = notify.NotifyId,
-                NotifyName = notify.NotifyName,
-                NotifyType = notify.NotifyType,
-                NotifyAddress1 = notify.NotifyAddress1,
-                NotifyAddress2 = notify.NotifyAddress2,
-                NotifyCity = notify.NotifyCity,
-                NotifyState = notify.NotifyState,
-                NotifyStateId = notify.NotifyStateId,
-                NotifyCountry = notify.NotifyCountry,
-                NotifyEmail = notify.NotifyEmail,
-                NotifyContactNo = notify.NotifyContactNo,
-                NotifyGstNo = notify.NotifyGstNo,
-                NotifyPan = notify.NotifyPan,
-                NotifyStatus = notify.NotifyStatus,
-                NotifyUpdated = DateTime.Now
-            };
+                {
+                    NotifyId = notify.NotifyId,
+                    NotifyName = notify.NotifyName,
+                    NotifyType = notify.NotifyType,
+                    NotifyAddress1 = notify.NotifyAddress1,
+                    NotifyAddress2 = notify.NotifyAddress2,
+                    NotifyCity = notify.NotifyCity,
+                    NotifyState = notify.NotifyState,
+                    NotifyStateId = notify.NotifyStateId,
+                    NotifyCountry = notify.NotifyCountry,
+                    NotifyEmail = notify.NotifyEmail,
+                    NotifyContactNo = notify.NotifyContactNo,
+                    NotifyGstNo = notify.NotifyGstNo,
+                    NotifyPan = notify.NotifyPan,
+                    NotifyStatus = notify.NotifyStatus,
+                    NotifyUpdated = DateTime.Now
+                };
             Title = "Edit Notify";
         }
         else
         {
             EditModel = new Notify
-            {
-                NotifyStatus = true,
-                NotifyCreated = DateTime.Now,
-                NotifyUpdated = DateTime.Now
-            };
+                {
+                    NotifyStatus = true,
+                    NotifyCreated = DateTime.Now,
+                    NotifyUpdated = DateTime.Now
+                };
             Title = "Add Notify";
         }
 
