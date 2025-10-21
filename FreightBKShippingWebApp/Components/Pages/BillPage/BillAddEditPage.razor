@@ -20,6 +20,15 @@
 @inject CompanyService CompanyService
 
 <style>
+    .popup-footer {
+        position: sticky;
+        bottom: 0;
+        background-color: #fff; /* or use your popup background color */
+        padding: 10px 20px;
+        text-align: right;
+        border-top: 1px solid #ddd;
+        z-index: 100;
+    }
     .grid-container {
         background: #fff;
         border-radius: 6px;
@@ -37,9 +46,9 @@
 
 </style>
 
-<DxPopup @bind-Visible="Visible" ShowCloseButton="true" HeaderText="@Title" CloseOnOutsideClick="false" MaxWidth="1500px" Width="90%"
+<DxPopup @bind-Visible="Visible" ShowCloseButton="true" HeaderText="@Title" CloseOnOutsideClick="false" MaxWidth="1700px" Width="90%"
          horizontalAlignment="HorizontalAlignment.Center"
-         verticalAlignment="VerticalAlignment.Center">
+         verticalAlignment="VerticalAlignment.Center" scrollable="true">
     <EditForm Model="@EditModel" OnValidSubmit="HandleValidSubmit" Context="cxbill">
         <DataAnnotationsValidator />
         <ValidationSummary />
@@ -58,17 +67,22 @@
                                 SearchFilterCondition="ListSearchFilterCondition.StartsWith" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
                 </ChildContent>
             </DxFormLayoutItem>
-            <DxFormLayoutItem Caption="Bill Date" ColSpanMd="3">
+            <DxFormLayoutItem Caption="Bill No" ColSpanMd="3">
+                <ChildContent Context="ctx">
+                    <DxTextBox @bind-Text="EditModel.BillNo" />
+                </ChildContent>
+            </DxFormLayoutItem>
+            <DxFormLayoutItem Caption="Bill Date" ColSpanMd="2">
                 <ChildContent Context="ctx">
                     <DxDateEdit @bind-Date="EditModel.BillDate" Format="yyyy-MM-dd" />
                 </ChildContent>
             </DxFormLayoutItem>
-            <DxFormLayoutItem Caption="Bill Due Date" ColSpanMd="3">
+            <DxFormLayoutItem Caption="Bill Due Date" ColSpanMd="2">
                 <ChildContent Context="ctx">
                     <DxDateEdit @bind-Date="EditModel.BillDueDate" Format="yyyy-MM-dd" />
                 </ChildContent>
             </DxFormLayoutItem>
-            <DxFormLayoutItem Caption="Party Name" ColSpanMd="3">
+            <DxFormLayoutItem Caption="Party Name" ColSpanMd="4">
                 <ChildContent Context="ctx">
                     <DxComboBox TData="Account" TValue="int"
                                 Data="@AccountList"
@@ -82,11 +96,7 @@
                                 SearchFilterCondition="ListSearchFilterCondition.StartsWith" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
                 </ChildContent>
             </DxFormLayoutItem>
-            <DxFormLayoutItem Caption="Bill No" ColSpanMd="3">
-                <ChildContent Context="ctx">
-                    <DxTextBox @bind-Text="EditModel.BillNo" />
-                </ChildContent>
-            </DxFormLayoutItem>
+           
 
             <DxFormLayoutItem Caption="Job Type" ColSpanMd="3">
                 <DxComboBox Data="@JobTypeList"
@@ -122,7 +132,7 @@
                             SearchMode="ListSearchMode.AutoSearch"
                             SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
             </DxFormLayoutItem>
-            <DxFormLayoutGroup Caption="Tax Details" Expanded="true"
+            <DxFormLayoutGroup Caption="Tax Details" Expanded="true" 
                                ExpandButtonDisplayMode="GroupExpandButtonDisplayMode.Start" ColSpanMd="12">
 
                 <DxFormLayoutItem Caption="POL" ColSpanMd="3">
@@ -148,13 +158,13 @@
                                 SearchMode="ListSearchMode.AutoSearch"
                                 SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
                 </DxFormLayoutItem>
-                <DxFormLayoutItem Caption="SB/BE No" ColSpanMd="3">
+                <DxFormLayoutItem Caption="SB/BE No" ColSpanMd="2">
                     <DxTextBox @bind-Text="EditModel.BillSbNo" />
                 </DxFormLayoutItem>
-                <DxFormLayoutItem Caption="Date" ColSpanMd="3">
+                <DxFormLayoutItem Caption="Date" ColSpanMd="2">
                     <DxDateEdit @bind-Date="EditModel.BillSbDate" />
                 </DxFormLayoutItem>
-                <DxFormLayoutItem Caption="QTY" ColSpanMd="3">
+                <DxFormLayoutItem Caption="QTY" ColSpanMd="2">
                     <DxSpinEdit @bind-Value="EditModel.BillQty" ShowSpinButtons="false" />
                 </DxFormLayoutItem>
                 <DxFormLayoutItem Caption="POD" ColSpanMd="3">
@@ -179,13 +189,13 @@
                                 SearchMode="ListSearchMode.AutoSearch"
                                 SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
                 </DxFormLayoutItem>
-                <DxFormLayoutItem Caption="BL No" ColSpanMd="3">
+                <DxFormLayoutItem Caption="BL No" ColSpanMd="2">
                     <DxTextBox @bind-Text="EditModel.BillBlNo" />
                 </DxFormLayoutItem>
-                <DxFormLayoutItem Caption="Date" ColSpanMd="3">
+                <DxFormLayoutItem Caption="Date" ColSpanMd="2">
                     <DxDateEdit @bind-Date="EditModel.BillBlDate" />
                 </DxFormLayoutItem>
-                <DxFormLayoutItem Caption="Gross WT" ColSpanMd="3">
+                <DxFormLayoutItem Caption="Gross WT" ColSpanMd="2">
                     <DxSpinEdit @bind-Value="EditModel.BillGrossWt" ShowSpinButtons="false" />
                 </DxFormLayoutItem>
 
@@ -211,13 +221,13 @@
                                 SearchMode="ListSearchMode.AutoSearch"
                                 SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
                 </DxFormLayoutItem>
-                <DxFormLayoutItem Caption="S.Inv." ColSpanMd="3">
+                <DxFormLayoutItem Caption="S.Inv." ColSpanMd="2">
                     <DxTextBox @bind-Text="EditModel.BillShipperInvNo" />
                 </DxFormLayoutItem>
-                <DxFormLayoutItem Caption="Date" ColSpanMd="3">
+                <DxFormLayoutItem Caption="Date" ColSpanMd="2">
                     <DxDateEdit @bind-Date="EditModel.BillShipperInvDate" />
                 </DxFormLayoutItem>
-                <DxFormLayoutItem Caption="Net WT" ColSpanMd="3">
+                <DxFormLayoutItem Caption="Net WT" ColSpanMd="2">
                     <DxSpinEdit @bind-Value="EditModel.BillNetWt" ShowSpinButtons="false" />
                 </DxFormLayoutItem>
                 <DxFormLayoutItem Caption="Line" ColSpanMd="3">
@@ -237,7 +247,7 @@
                 <DxFormLayoutItem Caption="Cont 40 FT" ColSpanMd="2">
                     <DxTextBox @bind-Text="EditModel.Bill40Ft" />
                 </DxFormLayoutItem>
-                <DxFormLayoutItem Caption="Ex. Rate" ColSpanMd="4">
+                <DxFormLayoutItem Caption="Ex. Rate" ColSpanMd="4 ">
                     <div class="d-flex gap-1">
                         <DxComboBox TData="Currency" TValue="int"
                                     Data="@CurrList"
@@ -252,7 +262,7 @@
                     </div>
                 </DxFormLayoutItem>
 
-                <DxFormLayoutItem Caption="HBL No" ColSpanMd="3">
+                <DxFormLayoutItem Caption="HBL No" ColSpanMd="2">
                     <DxTextBox @bind-Text="EditModel.BillHblNo" />
                 </DxFormLayoutItem>
                 <DxFormLayoutItem Caption="CBM" ColSpanMd="2">
@@ -481,11 +491,126 @@
 
                     </DxFormLayoutTabPage>
                     <DxFormLayoutTabPage Caption="Extra Details">
+                        <DxFormLayout>
+                        <DxFormLayoutGroup Caption="Shipping Address" ColSpanMd="4">
+                            <DxFormLayoutItem Caption="Party Name" ColSpanMd="12">
+                                    <DxComboBox TData="Account" TValue="int"
+                                                Data="@AccountList"
+                                                TextFieldName="AccountName"
+                                                ValueFieldName="AccountId"
+                                                ClearButtonVisible="true"
+                                                AllowUserInput="false"
+                                                NullText="-- Select Account --"
+                                                @bind-Value="EditModel.BillShipPartyId"
+                                                SearchMode="ListSearchMode.AutoSearch"
+                                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Address" ColSpanMd="12">
+                                <DxMemo @bind-Text="EditModel.BillAddress1" />
+                            </DxFormLayoutItem>
+
+                            
+                            <DxFormLayoutItem Caption="Mob No." ColSpanMd="6">
+                                <DxTextBox @bind-Text="EditModel.BillContactNo" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="GSTIN No." ColSpanMd="6">
+                                <DxTextBox @bind-Text="EditModel.BillGstNo" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="PIN" ColSpanMd="6">
+                                <DxTextBox @bind-Text="EditModel.BillPincode" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="City" ColSpanMd="6">
+                                <DxTextBox @bind-Text="EditModel.BillCity" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="State" ColSpanMd="12">
+                                <DxComboBox TData="State" TValue="int"
+                                            Data="@stateList"
+                                            TextFieldName="StateName"
+                                            ValueFieldName="StateId"
+                                            AllowUserInput="true"
+                                            NullText="-- Select POS --"
+                                            @bind-Value="EditModel.BillStateId"
+                                            SearchMode="ListSearchMode.AutoSearch"
+                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith"
+                                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                            </DxFormLayoutItem>
+
+                        </DxFormLayoutGroup>
+                        <DxFormLayoutGroup Caption="Custom  Field" ColSpanMd="3">
+                            <DxFormLayoutItem Caption="ETD" ColSpanMd="12">
+                                <DxTextBox @bind-Text="EditModel.BillCust1" />
+                            </DxFormLayoutItem>
+
+                            <DxFormLayoutItem Caption="ETA" ColSpanMd="12">
+                                <DxTextBox @bind-Text="EditModel.BillCust2" />
+                            </DxFormLayoutItem>
+
+                            <DxFormLayoutItem Caption="Job no(Manual)" ColSpanMd="12">
+                                <DxTextBox @bind-Text="EditModel.BillCust3" />
+                            </DxFormLayoutItem>
+
+                            <DxFormLayoutItem Caption="Dem To" ColSpanMd="12">
+                                <DxTextBox @bind-Text="EditModel.BillCust4" />
+                            </DxFormLayoutItem>
+
+                            <DxFormLayoutItem Caption="Payment Dt/Gr From" ColSpanMd="12">
+                                <DxTextBox @bind-Text="EditModel.BillCust5" />
+                            </DxFormLayoutItem>
+
+                            <DxFormLayoutItem Caption="DO Dt/Gr To" ColSpanMd="12">
+                                <DxTextBox @bind-Text="EditModel.BillCust6" />
+                            </DxFormLayoutItem>
+
+                            <DxFormLayoutItem Caption="OBL/BG DT" ColSpanMd="12">
+                                <DxTextBox @bind-Text="EditModel.BillCust7" />
+                            </DxFormLayoutItem>
+
+                            <DxFormLayoutItem Caption="Custom O.C" ColSpanMd="12">
+                                    <DxTextBox @bind-Text="EditModel.BillCust8" />
+                                </DxFormLayoutItem>
+                        </DxFormLayoutGroup>
+                    
+
+                         <DxFormLayoutGroup Caption="E-Invoice Info" ColSpanMd="4">
+                        <DxFormLayoutItem Caption="IRN No" ColSpanMd="12">
+                            <DxTextBox @bind-Text="EditModel.BillIrnNo" />
+                        </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="ACK No" ColSpanMd="12">
+                            <DxTextBox @bind-Text="EditModel.BillAckNo" />
+                        </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="ACK Date " ColSpanMd="12">
+                            <DxTextBox @bind-Text="EditModel.BillAckNo" />
+                        </DxFormLayoutItem>
+
+                            <DxFormLayoutItem Caption="Custom 9" ColSpanMd="12">
+                                <DxTextBox @bind-Text="EditModel.BillCust9" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Custom 10" ColSpanMd="12">
+                                <DxTextBox @bind-Text="EditModel.BillCust10" />
+                            </DxFormLayoutItem>
+                         </DxFormLayoutGroup>
+                       
+
+                    </DxFormLayout>
+                     
+                   
+                        <DxFormLayoutItem Caption="Goods Description" ColSpanMd="12">
+                            <DxMemo @bind-Text="EditModel.BillAckNo" />
+                        </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="Container No. " ColSpanMd="12">
+                            <DxMemo @bind-Text="EditModel.BillAckNo" />
+                        </DxFormLayoutItem>
+                    
+
+
+
+
+
                     </DxFormLayoutTabPage>
                 </DxFormLayoutTabPages>
             
         </DxFormLayout>
-        <div class="mt-3 text-end">
+        <div class="popup-footer">
             <DxButton Text="Save" RenderStyle="ButtonRenderStyle.Primary" SubmitFormOnClick="true" />
             <DxButton Text="Cancel" RenderStyle="ButtonRenderStyle.Secondary" Click="Hide" />
         </div>
@@ -528,6 +653,14 @@
 
     protected override async Task OnInitializedAsync()
     {
+         await LoadBillsDataAsync();
+    }
+
+     private async Task LoadBillsDataAsync()
+    {
+        LoadingService.Show();
+        try
+        {
         ServiceList = await ServiceService.GetAllAsync();
         VoucherList = await VoucherService.GetAllAsync();
         stateList = await StateService.GetStatesAsync();
@@ -548,8 +681,12 @@
 
         var allAccounts = await AccountService.GetAllAsync();
         AccountList = allAccounts.Where(a => a.AccountTypeId == 14 || a.AccountTypeId == 18).ToList();
-    }
-
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }   
     public class SelectItem
     {
         public string Text { get; set; }
@@ -655,15 +792,20 @@
 
     private async Task New_Click()
     {
-        // Recalculate missing SNo in case of deletions
-        for (int i = 0; i < BillDetails.Count; i++)
-        {
-            BillDetails[i].SNo = i + 1;
-        }
-
-        // Find next available SNo (continuous numbering)
-        int nextAvailableSNo = BillDetails.Count > 0 ? BillDetails.Max(d => d.SNo) + 1 : 1;
-
+        if (DetailGrid?.IsEditing() ?? false)
+    {
+        await DetailGrid.CancelEditAsync();
+    }
+    
+    // Find next available SNo
+    var activeDetails = BillDetails
+        .Where(d => !UnsavedChanges.ContainsKey(d) || UnsavedChanges[d].Type != DataChangeType.Delete)
+        .ToList();
+    
+    int nextAvailableSNo = activeDetails.Count > 0 
+        ? activeDetails.Max(d => d.SNo) + 1 
+        : 1;
+          
         // Create a new BillDetail with defaults
         var newItem = new BillDetail
         {
@@ -681,13 +823,16 @@
             BillDetailIgst = 0,
             BillDetailTotal = 0,
             BillDetailExchRate = EditModel?.BillExchRate ?? 1,
-            Taxcode = string.Empty
+            BillDetailCurrencyId = EditModel?.BillDefaultCurrencyId ?? 0,
+        Taxcode = string.Empty,
+        BillDetailStatus = true
         };
 
         BillDetails.Add(newItem);
 
         // Refresh grid
-        DetailGrid.Reload();
+        //DetailGrid.Reload();
+         await InvokeAsync(StateHasChanged);
     }
 
 
@@ -703,13 +848,20 @@
     {
         try
         {
-            //     BillDetails.Clear();
-            // Add initial empty rows
-            for (int i = 1; i <= 5; i++)
-            {
-                BillDetails.Add(new BillDetail { SNo = i, BillDetailId = 0 });
-            }
-            nextSNo = 6;
+            BillDetails.Clear();
+        
+        for (int i = 1; i <= 5; i++)
+        {
+            BillDetails.Add(new BillDetail 
+            { 
+                SNo = i, 
+                BillDetailId = 0,
+                BillDetailExchRate = EditModel?.BillExchRate ?? 1,
+                BillDetailCurrencyId = EditModel?.BillDefaultCurrencyId ?? 0
+            });
+        }
+        
+        nextSNo = 6;
         }
         catch (Exception ex)
         {
@@ -794,6 +946,9 @@
         {
             BillDetails.Add(editableDetail);
             UnsavedChanges[editableDetail] = new(DataChangeType.Addition, new());
+            // Initialize defaults for new row
+        editableDetail.BillDetailExchRate = EditModel?.BillExchRate ?? 1;
+        editableDetail.BillDetailCurrencyId = EditModel?.BillDefaultCurrencyId ?? 0;
         }
         else
         {
@@ -810,10 +965,13 @@
         }
 
         // Update main bill total
-        EditModel.BillNetAmount = (float)BillDetails.Sum(d => d.BillDetailTotal);
+        //EditModel.BillNetAmount = (float)BillDetails.Sum(d => d.BillDetailTotal
+         EditModel.BillNetAmount = (float)BillDetails
+        .Where(d => !UnsavedChanges.ContainsKey(d) || UnsavedChanges[d].Type != DataChangeType.Delete)
+        .Sum(d => d.BillDetailTotal);
     }
 
-    void DeleteDataItem(object dataItem)
+     async Task DeleteDataItem(object dataItem)
     {
         var detail = (BillDetail)dataItem;
 
@@ -827,20 +985,37 @@
         {
             // Mark existing item for deletion
             UnsavedChanges[detail] = new(DataChangeType.Delete, new());
+            BillDetails.Remove(detail);
         }
         // ✅ Reindex SNo after deletion
-        int sn = 1;
-        foreach (var d in BillDetails.Where(d => !UnsavedChanges.ContainsKey(d) || UnsavedChanges[d].Type != DataChangeType.Delete))
-        {
-            d.SNo = sn++;
+        // int sn = 1;
+        // foreach (var d in BillDetails.Where(d => !UnsavedChanges.ContainsKey(d) || UnsavedChanges[d].Type != DataChangeType.Delete))
+        // {
+        //     d.SNo = sn++;
            
-        }
+        // }
 
-        EditModel.BillNetAmount = (float)BillDetails.Where(d => !UnsavedChanges.ContainsKey(d) ||
-                                                            UnsavedChanges[d].Type != DataChangeType.Delete)
-                                                     .Sum(d => d.BillDetailTotal);
-        DetailGrid.Reload();
+        // EditModel.BillNetAmount = (float)BillDetails.Where(d => !UnsavedChanges.ContainsKey(d) ||
+        //                                                     UnsavedChanges[d].Type != DataChangeType.Delete)
+        //                                              .Sum(d => d.BillDetailTotal);
+        // DetailGrid.Reload();
 
+        // Reindex SNo after deletion (only for non-deleted items)
+    var activeDetails = BillDetails
+        .Where(d => !UnsavedChanges.ContainsKey(d) || UnsavedChanges[d].Type != DataChangeType.Delete)
+        .OrderBy(d => d.SNo)
+        .ToList();
+    
+    int sn = 1;
+    foreach (var d in activeDetails)
+    {
+        d.SNo = sn++;
+    }
+    
+    // Update totals
+    EditModel.BillNetAmount = (float)activeDetails.Sum(d => d.BillDetailTotal);
+  
+     await InvokeAsync(StateHasChanged);
     }
 
     async Task ClearUnsavedChangesAsync()
@@ -855,11 +1030,12 @@
             BillDetails[i].SNo = i + 1;
         }
         nextSNo = BillDetails.Count + 1;
-        StateHasChanged();
+        await InvokeAsync(StateHasChanged);
     }
 
     private void UpdateRowAmounts(BillDetail item)
     {
+        if (item == null) return;
         // Auto-populate HSN and Unit when service is selected
         if (item.BillDetailProductId > 0)
         {
@@ -873,14 +1049,23 @@
                 // ✅ Handle BillDetailQty logic based on user input
                 double bill20Ft = 0;
                 double bill40Ft = 0;
-
+                double manualQty = 0;
                 // Try converting user input (if any) from string → number
+                if (!string.IsNullOrWhiteSpace(EditModel?.Bill20Ft))
                 double.TryParse(EditModel.Bill20Ft, out bill20Ft);
+            
+            if (!string.IsNullOrWhiteSpace(EditModel?.Bill40Ft))
                 double.TryParse(EditModel.Bill40Ft, out bill40Ft);
 
-                // If both fields are empty or zero, default to 1
-                if ((string.IsNullOrWhiteSpace(EditModel.Bill20Ft) && string.IsNullOrWhiteSpace(EditModel.Bill40Ft))
-                    || (bill20Ft == 0 && bill40Ft == 0))
+                if ((item?.BillDetailQty)!=0)
+             manualQty=item.BillDetailQty ;
+
+                
+                if (manualQty > 0)
+              {
+                 item.BillDetailQty = manualQty;
+               }
+                else if (bill20Ft == 0 && bill40Ft == 0)
                 {
                     item.BillDetailQty = 1;
                 }
@@ -894,7 +1079,7 @@
                 if (item.BillDetailExchRate == 0 || item.BillDetailExchRate == default)
                 {
                     // Only auto-assign if user hasn't entered custom value
-                    item.BillDetailExchRate = (EditModel.BillExchRate == 0)
+                    item.BillDetailExchRate = (EditModel?.BillExchRate ?? 0) == 0
                         ? 1
                         : EditModel.BillExchRate;
                 }
@@ -907,12 +1092,9 @@
 
                     // Map GST % from slab — if your HSN table has GST percentage
                     item.BillDetailGstPer = selectedHsn.HsnGstPer; // ✅ You said this ID corresponds to percentage
-                   
-                   
-
                     item.Taxcode = selectedGstslab.GstSlabName; // ✅ Not mapped to DB but used in grid
                 }
-                var selectedCompany = CompanyList.FirstOrDefault(c => c.Status == true);
+                var selectedCompany = CompanyList?.FirstOrDefault(c => c.Status == true);
                 var selectedpos = StateList.FirstOrDefault(h => h.StateId == EditModel.BillPlaceOfSupply);
                 // ✅ Apply IGST or CGST+SGST based on Place of Supply vs Company State
                 if (selectedCompany != null && selectedpos != null)
@@ -920,7 +1102,7 @@
                     item.BillDetailAmount = item.BillDetailQty * item.BillDetailRate;
                     item.BillDetailTaxableAmt = item.BillDetailAmount * item.BillDetailExchRate;
                     // Convert string StateId → int for safe comparison
-                    var companyState = StateList.FirstOrDefault(s =>
+                    var companyState = StateList?.FirstOrDefault(s =>
            !string.IsNullOrEmpty(selectedCompany.StateId) &&
            s.StateName.Equals(selectedCompany.StateId, StringComparison.OrdinalIgnoreCase));
 
@@ -964,9 +1146,12 @@
         item.BillDetailTaxableAmt = item.BillDetailAmount * item.BillDetailExchRate;
         item.BillDetailTotal = item.BillDetailTaxableAmt +item.BillDetailIgst +item.BillDetailCgst +item.BillDetailSgst;
         // Update main bill total
+       if (EditModel != null)
+    {
         EditModel.BillNetAmount = (float)BillDetails
             .Where(d => !UnsavedChanges.ContainsKey(d) || UnsavedChanges[d].Type != DataChangeType.Delete)
             .Sum(d => d.BillDetailTotal);
+    }
     }
 
     private HashSet<string> ApplyModifiedFields(BillDetail source, BillDetail target)
