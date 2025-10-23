@@ -18,7 +18,8 @@
 @inject GstSlabService GstSlabService
 @inject StateService StateService
 @inject CompanyService CompanyService
-
+@inject RateMasterService RateMasterService
+.
 <style>
     .popup-footer {
         position: sticky;
@@ -132,7 +133,7 @@
                             SearchMode="ListSearchMode.AutoSearch"
                             SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
             </DxFormLayoutItem>
-            <DxFormLayoutGroup Caption="Tax Details" Expanded="true" 
+            <DxFormLayoutGroup Caption="Tax Details" Expanded="true" Decoration="FormLayoutGroupDecoration.Card"
                                ExpandButtonDisplayMode="GroupExpandButtonDisplayMode.Start" ColSpanMd="12">
 
                 <DxFormLayoutItem Caption="POL" ColSpanMd="3">
@@ -247,7 +248,7 @@
                 <DxFormLayoutItem Caption="Cont 40 FT" ColSpanMd="2">
                     <DxTextBox @bind-Text="EditModel.Bill40Ft" />
                 </DxFormLayoutItem>
-                <DxFormLayoutItem Caption="Ex. Rate" ColSpanMd="4 ">
+                <DxFormLayoutItem Caption="Ex. Rate" ColSpanMd="3">
                     <div class="d-flex gap-1">
                         <DxComboBox TData="Currency" TValue="int"
                                     Data="@CurrList"
@@ -370,19 +371,7 @@
                     </div> *@
 
 
-                        <!-- Action Buttons Row -->
-                        <div class="action-buttons">
-                            <button type="button"
-                                    class="btn btn-primary btn-sm"
-                                    @onclick="New_Click">
-                                <i class="bi bi-plus"></i> Add Row
-                            </button>
-                            <button type="button"   
-                                    class="btn btn-secondary btn-sm"
-                                    @onclick="Revert_Click">
-                                <i class="bi bi-trash"></i> Clear All
-                            </button>
-                        </div>
+                    
                         <DxGrid Data="@BillDetails"
                                 TItem="BillDetail"
                                 @ref="DetailGrid"
@@ -395,8 +384,21 @@
                                 CustomizeEditModel="Grid_CustomizeEditModel"
                                 ShowFilterRow="false"
                                 ShowGroupPanel="false"
+                            ColumnResizeMode="GridColumnResizeMode.NextColumn" TextWrapEnabled="false"
                                 PageSize="10">
+                        <ToolbarTemplate>
+                            <DxToolbar ItemRenderStyleMode="ToolbarRenderStyleMode.Contained">
+                                <Items>
+                                   
+                                    <DxToolbarItem Text="Add Row" IconCssClass="bi bi-plus" RenderStyle="ButtonRenderStyle.Success" Click="New_Click" />
+                                    <DxToolbarItem Type="Spacer" />
+                                    <DxToolbarItem Text="Clear All" IconCssClass="bi bi-trash" RenderStyle="ButtonRenderStyle.Danger" Click="Revert_Click" />
+                                    <DxToolbarItem Type="Spacer" /> 
+                                    <DxToolbarItem Text="Column Chooser" RenderStyle="ButtonRenderStyle.Primary" IconCssClass="bi bi-list-columns" Click="ColumnChooserButton_Click" />
 
+                                </Items>
+                            </DxToolbar>
+                        </ToolbarTemplate>
                             <Columns>
 
 
@@ -437,13 +439,15 @@
                                         <DxComboBoxSettings Data="@ServiceList"
                                                             TextFieldName="ServiceName"
                                                             ValueFieldName="ServiceId"
-                                                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                                                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                                        SearchMode="ListSearchMode.AutoSearch"
+                                                        SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
                                     </EditSettings>
                                 </DxGridDataColumn>
 
                             <DxGridDataColumn FieldName="BillDetailHsnCode" Caption="SAC" Width="100px" ReadOnly="true" />
                             <DxGridDataColumn FieldName="BillDetailUnit" Caption="Unit" Width="80px" ReadOnly="true" />
-                                <DxGridDataColumn FieldName="BillDetailRate" Caption="Rate" Width="100px" />
+                                <DxGridDataColumn FieldName="BillDetailRate" Caption="Rate" Width="100px"  />
                                 <DxGridDataColumn FieldName="BillDetailQty" Caption="Qty" Width="100px" />
                                 <DxGridDataColumn FieldName="BillDetailAmount" Caption="Amount" Width="120px" ReadOnly="true" />
                             <DxGridDataColumn FieldName="BillDetailExchRate" Caption="Ex. Rate" Width="100px" />
@@ -579,7 +583,7 @@
                             <DxTextBox @bind-Text="EditModel.BillAckNo" />
                         </DxFormLayoutItem>
                         <DxFormLayoutItem Caption="ACK Date " ColSpanMd="12">
-                            <DxTextBox @bind-Text="EditModel.BillAckNo" />
+                                <DxDateEdit @bind-Date="EditModel.BillAckDate" />
                         </DxFormLayoutItem>
 
                             <DxFormLayoutItem Caption="Custom 9" ColSpanMd="12">
@@ -595,10 +599,10 @@
                      
                    
                         <DxFormLayoutItem Caption="Goods Description" ColSpanMd="12">
-                            <DxMemo @bind-Text="EditModel.BillAckNo" />
+                            <DxMemo @bind-Text="EditModel.BillRemarks" />
                         </DxFormLayoutItem>
                         <DxFormLayoutItem Caption="Container No. " ColSpanMd="12">
-                            <DxMemo @bind-Text="EditModel.BillAckNo" />
+                            <DxMemo @bind-Text="EditModel.BillContainerNo" />
                         </DxFormLayoutItem>
                     
 
@@ -619,6 +623,10 @@
 
 @code {
     [Parameter] public EventCallback OnSaved { get; set; }
+    void ColumnChooserButton_Click()
+    {
+        DetailGrid.ShowColumnChooser();
+    }
 
     private bool Visible { get; set; }
     private string Title { get; set; } = "Add/Edit Bill";
@@ -649,7 +657,7 @@
     private List<GstSlab> GstslabList = new();
     private List<Company> CompanyList = new();
     private List<State> StateList = new();
-
+    private List<RateMaster> RateMasterList = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -673,6 +681,7 @@
         GstslabList = await GstSlabService.GetAllAsync();
         CompanyList = await CompanyService.GetAllAsync();
         StateList = await StateService.GetStatesAsync();
+            RateMasterList = await RateMasterService.GetAllAsync();
 
         var allNotify = await NotifyService.GetAllAsync();
         ConsigneeList = allNotify.Where(n => n.NotifyType == "CONSIGNEE").ToList();
@@ -1046,6 +1055,23 @@
                 item.BillDetailHsnCode = selectedService.HsnName;
                 var unitName = UnitList.FirstOrDefault(u => u.UnitId == selectedService.ServiceUnitId)?.UnitName;
                 item.BillDetailUnit = unitName ?? string.Empty;
+
+                if (item.BillDetailRate == 0 || item.BillDetailRate == default(double))
+                {
+                    var applicableRate = RateMasterList?
+                        .Where(r =>
+                            r.RateMasterPartyId == EditModel.BillPartyId &&
+                            r.RateMasterServiceId == item.BillDetailProductId &&
+                            r.RateMasterApplicableDt <= EditModel.BillDate)
+                        .OrderByDescending(r => r.RateMasterApplicableDt) // Get the most recent rate
+                        .FirstOrDefault();
+
+                    if (applicableRate != null)
+                    {
+                        item.BillDetailRate = (double)applicableRate.RateMasterSaleRate;
+                    }
+                }
+
                 // ✅ Handle BillDetailQty logic based on user input
                 double bill20Ft = 0;
                 double bill40Ft = 0;

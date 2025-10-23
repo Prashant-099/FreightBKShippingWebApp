@@ -4,7 +4,8 @@
 @inject GstSlabService GstSlabService
 @inject ToasteService ToastService
 @inject LoadingService LoadingService
-
+@inject AccountService AccountService
+@inject YearStatechangeService YearStatechangeService
 <DxPopup @bind-Visible="Visible" ShowCloseButton="true" HeaderText="@Title" CloseOnOutsideClick="false" MaxWidth="900px" Width="90%"
          horizontalAlignment="HorizontalAlignment.Center"
          verticalAlignment="VerticalAlignment.Center">
@@ -13,50 +14,171 @@
         <ValidationSummary />
        
         <DxFormLayout>
-            <DxFormLayoutGroup Caption="Tax Details" ColSpanMd="9">
-                <DxFormLayoutItem Caption="Type" ColSpanMd="7">
+            <DxFormLayoutGroup Caption="Tax Details" ColSpanMd="6">
+                <DxFormLayoutItem Caption="Type" ColSpanMd="12">
                     <ChildContent>
-                        <DxComboBox @bind-Value="EditModel.GstSlabType" Data="@gstTypes" />
+                        <DxComboBox Value="@EditModel.GstSlabType" Data="@gstTypes"
+                                    ValueExpression="@(() => EditModel.GstSlabType)"
+                                    ValueChanged="@((string v) => OnGstTypeChanged(v))" />
                     </ChildContent>
                 </DxFormLayoutItem>
 
 
+                <DxFormLayoutItem Caption="Integrated Tax (%)" ColSpanMd="12">
+                    <ChildContent>
+                        <DxSpinEdit 
+                    Value="@EditModel.GstSlabIgstPer"
+                    ValueChanged="@( (double v) => OnIgstChanged(v) )"
+                                    ValueExpression="@(() => EditModel.GstSlabIgstPer)" ShowSpinButtons="false"
+                                    Enabled="@IsGstType" />
+                    </ChildContent>
+                </DxFormLayoutItem>
+                <DxFormLayoutItem Caption="State Tax (%)" ColSpanMd="12">
+                    <ChildContent>
+                        <DxSpinEdit @bind-Value="EditModel.GstSlabSgstPer" Min="0" Max="100" ShowSpinButtons="false" />
+                    </ChildContent>
+                </DxFormLayoutItem>
 
-
-            <DxFormLayoutItem Caption="GST Slab Name">
+                <DxFormLayoutItem Caption="Central Tax (%)" ColSpanMd="12">
+                    <ChildContent>
+                        <DxSpinEdit @bind-Value="EditModel.GstSlabCgstPer" Min="0" Max="100" ShowSpinButtons="false" />
+                    </ChildContent>
+                </DxFormLayoutItem>
+                <DxFormLayoutItem Caption="Tax Name" ColSpanMd="12" >
                 <ChildContent>
                     <DxTextBox @bind-Text="EditModel.GstSlabName" />
                 </ChildContent>
             </DxFormLayoutItem>
 
-               
-
-            <DxFormLayoutItem Caption="SGST %">
-                <ChildContent>
-                    <DxSpinEdit @bind-Value="EditModel.GstSlabSgstPer" Min="0" Max="100" ShowSpinButtons="false" />
-                </ChildContent>
-            </DxFormLayoutItem>
-
-            <DxFormLayoutItem Caption="CGST %">
-                <ChildContent>
-                    <DxSpinEdit @bind-Value="EditModel.GstSlabCgstPer" Min="0" Max="100" ShowSpinButtons="false" />
-                </ChildContent>
-            </DxFormLayoutItem>
-
-            <DxFormLayoutItem Caption="IGST %">
-                <ChildContent>
-                    <DxSpinEdit @bind-Value="EditModel.GstSlabIgstPer" Min="0" Max="100" ShowSpinButtons="false" />
-                </ChildContent>
-            </DxFormLayoutItem>
-
-            <DxFormLayoutItem Caption="Active">
-                <ChildContent>
-                    <DxCheckBox @bind-Checked="EditModel.GstSlabStatus" />
-                </ChildContent>
-            </DxFormLayoutItem>
             </DxFormLayoutGroup>
-        </DxFormLayout>
+            <DxFormLayoutGroup ColSpanMd="6" Decoration="FormLayoutGroupDecoration.None">
+                <DxFormLayoutItem Caption="Purchase A/c" ColSpanMd="12">
+                    <ChildContent>
+                        <DxComboBox TData="Account" TValue="int?"
+                                    Data="@PurchaseAcList"
+                                    TextFieldName="AccountName"
+                                    ValueFieldName="AccountId"
+                                    AllowUserInput="false"
+                                    NullText="-- Select Account --"
+                                    @bind-Value="EditModel.GstSlabPurchaseAccountId"
+                                    SearchMode="ListSearchMode.AutoSearch"
+                                    SearchFilterCondition="ListSearchFilterCondition.StartsWith" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+
+                    </ChildContent>
+                </DxFormLayoutItem>
+                <DxFormLayoutItem Caption="Sales A/c" ColSpanMd="12">
+                    <ChildContent>
+                        <DxComboBox TData="Account" TValue="int?"
+                                    Data="@SalesAcList"
+                                    TextFieldName="AccountName"
+                                    ValueFieldName="AccountId"
+                                    AllowUserInput="false"
+                                    NullText="-- Select Account --"
+                                    @bind-Value="EditModel.GstSlabSalesAccountId"
+                                    SearchMode="ListSearchMode.AutoSearch"
+                                    SearchFilterCondition="ListSearchFilterCondition.StartsWith" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+
+                    </ChildContent>
+                </DxFormLayoutItem>
+                <DxFormLayoutItem Caption="Disable Tax Slab">
+                    <ChildContent>
+                        <DxCheckBox @bind-Checked="EditModel.GstSlabStatus" />
+                    </ChildContent> 
+                </DxFormLayoutItem>
+            </DxFormLayoutGroup>
+
+
+            <DxFormLayoutGroup Caption="Out Account" ColSpanMd="6" Visible="@IsGstType">
+                <DxFormLayoutItem Caption="State Ledger A/c" ColSpanMd="12">
+                    <ChildContent>
+                        <DxComboBox TData="Account" TValue="string"
+                                    Data="@GstAcList"
+                                    TextFieldName="AccountName"
+                                    ValueFieldName="AccountName"
+                                    AllowUserInput="false"
+                                    NullText="-- Select Account --"
+                                    @bind-Value="EditModel.GstSlabSgstAccountId"
+                                    SearchMode="ListSearchMode.AutoSearch"
+                                    SearchFilterCondition="ListSearchFilterCondition.StartsWith" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+
+                    </ChildContent>
+                </DxFormLayoutItem>
+                <DxFormLayoutItem Caption="Central Ledger A/c" ColSpanMd="12">
+                    <ChildContent>
+                          <DxComboBox TData="Account" TValue="string"
+                                    Data="@GstAcList"
+                                    TextFieldName="AccountName"
+                                    ValueFieldName="AccountName"
+                                    AllowUserInput="false"
+                                    NullText="-- Select Account --"
+                                    @bind-Value="EditModel.GstSlabCgstAccountId"
+                                    SearchMode="ListSearchMode.AutoSearch"/>
+                                 
+                    </ChildContent>
+                </DxFormLayoutItem>
+                <DxFormLayoutItem Caption="Integrated Ledger A/c" ColSpanMd="12">
+                    <ChildContent>
+                        <DxComboBox TData="Account" TValue="string"
+                                    Data="@GstAcList"
+                                    TextFieldName="AccountName"
+                                    ValueFieldName="AccountName"
+                                    AllowUserInput="false"
+                                    NullText="-- Select Account --"
+                                    @bind-Value="EditModel.GstSlabIgstAccountId"
+                                    SearchMode="ListSearchMode.AutoSearch" />
+                    </ChildContent>
+                </DxFormLayoutItem>
+                
+            </DxFormLayoutGroup>
+
+
         
+            
+
+            <DxFormLayoutGroup Caption="In Account" ColSpanMd="6" Visible="@IsGstType">
+                <DxFormLayoutItem Caption="State Ledger A/c" ColSpanMd="12">
+                    <ChildContent>
+                    <DxComboBox TData="Account" TValue="string"
+                                    Data="@GstAcList"
+                                    TextFieldName="AccountName"
+                                    ValueFieldName="AccountName"
+                                    AllowUserInput="false"
+                                    NullText="-- Select Account --"
+                                    @bind-Value="EditModel.GstSlabPsgstAccountId"
+                                    SearchMode="ListSearchMode.AutoSearch"/>
+                                
+                    </ChildContent>
+                </DxFormLayoutItem>
+                <DxFormLayoutItem Caption="Central Ledger A/c" ColSpanMd="12">
+                    <ChildContent>
+                        <DxComboBox TData="Account" TValue="string"
+                                    Data="@GstAcList"
+                                    TextFieldName="AccountName"
+                                    ValueFieldName="AccountName"
+                                    AllowUserInput="false"
+                                    NullText="-- Select Account --"
+                                    @bind-Value="EditModel.GstSlabPcgstAccountId"
+                                    SearchMode="ListSearchMode.AutoSearch" />
+                    </ChildContent>
+                </DxFormLayoutItem>
+                <DxFormLayoutItem Caption="Integrated Ledger A/c" ColSpanMd="12">
+                    <ChildContent>
+                        <DxComboBox TData="Account" TValue="string"
+                                    Data="@GstAcList"
+                                    TextFieldName="AccountName"
+                                    ValueFieldName="AccountName"
+                                    AllowUserInput="false"
+                                    NullText="-- Select Account --"
+                                    @bind-Value="EditModel.GstSlabPigstAccountId"
+                                    SearchMode="ListSearchMode.AutoSearch" />
+                    </ChildContent>
+                </DxFormLayoutItem>
+            </DxFormLayoutGroup>
+
+
+
+         </DxFormLayout>
+
         <div class="mt-3 text-end">
             <DxButton Text="Save" RenderStyle="ButtonRenderStyle.Primary" SubmitFormOnClick="true" />
             <DxButton Text="Cancel" RenderStyle="ButtonRenderStyle.Secondary" Click="Hide" />
@@ -71,21 +193,43 @@
     private string Title { get; set; } = "Add/Edit GST Slab";
     private GstSlab EditModel { get; set; } = new();
     private List<string> gstTypes = new() { "GST", "EXEMPT", "NILL RATED" };
+    private List<Account> PurchaseAcList = new();
+    private List<Account> SalesAcList = new();
+    private List<Account> GstAcList = new();
 
+    // Property to check if GST type is selected
+    private bool IsGstType => EditModel.GstSlabType == "GST";
+    protected override async Task OnInitializedAsync()
+    {
+
+        var allAccounts = await AccountService.GetAllAsync();
+        PurchaseAcList = allAccounts.Where(a => a.AccountGroupId == 23).ToList();
+        SalesAcList = allAccounts.Where(a => a.AccountGroupId == 22).ToList();
+        GstAcList = allAccounts.Where(a => a.AccountGroupId == 3).ToList();
+    }
     public void Show(GstSlab slab)
     {
         if (slab != null)
         {
-            EditModel = new GstSlab
-            {
-                GstSlabId = slab.GstSlabId,
-                GstSlabName = slab.GstSlabName,
-                GstSlabType = slab.GstSlabType,
-                GstSlabSgstPer = slab.GstSlabSgstPer,
-                GstSlabCgstPer = slab.GstSlabCgstPer,
-                GstSlabIgstPer = slab.GstSlabIgstPer,
-                GstSlabStatus = slab.GstSlabStatus
-            };
+            // EditModel = new GstSlab
+            // {
+            //     GstSlabId = slab.GstSlabId,
+            //     GstSlabName = slab.GstSlabName,
+            //     GstSlabType = slab.GstSlabType,
+            //     GstSlabSgstPer = slab.GstSlabSgstPer,
+            //     GstSlabCgstPer = slab.GstSlabCgstPer,
+            //     GstSlabIgstPer = slab.GstSlabIgstPer,
+            //     GstSlabStatus = slab.GstSlabStatus,
+            //     GstSlabPurchaseAccountId = slab.GstSlabPurchaseAccountId,
+            //     GstSlabSalesAccountId = slab.GstSlabSalesAccountId,
+            //     GstSlabSgstAccountId = slab.GstSlabSgstAccountId,
+            //     GstSlabCgstAccountId = slab.GstSlabCgstAccountId,
+            //     GstSlabIgstAccountId = slab.GstSlabIgstAccountId,
+            //     GstSlabPsgstAccountId = slab.GstSlabPsgstAccountId,
+            //     GstSlabPcgstAccountId = slab.GstSlabPcgstAccountId,
+            //     GstSlabPigstAccountId = slab.GstSlabPigstAccountId
+            // };
+            EditModel = slab;
             Title = "Edit GST Slab";
         }
         else
@@ -105,14 +249,54 @@
     {
         Visible = false;
     }
+    // Handle GST Type change
+    private void OnGstTypeChanged(string newType)
+    {
+        EditModel.GstSlabType = newType;
 
+        if (newType != "GST")
+        {
+            // Reset tax percentages and accounts for EXEMPT/NILL RATED
+            EditModel.GstSlabIgstPer = 0;
+            EditModel.GstSlabSgstPer = 0;
+            EditModel.GstSlabCgstPer = 0;
+            EditModel.GstSlabSgstAccountId = null;
+            EditModel.GstSlabCgstAccountId = null;
+            EditModel.GstSlabIgstAccountId = null;
+            EditModel.GstSlabPsgstAccountId = null;
+            EditModel.GstSlabPcgstAccountId = null;
+            EditModel.GstSlabPigstAccountId = null;
+            EditModel.GstSlabName = EditModel.GstSlabType;
+        }
+
+        StateHasChanged();
+    }
+
+    // Handle IGST change and auto-calculate SGST/CGST
+    private void OnIgstChanged(double newIgst)
+    {
+        EditModel.GstSlabIgstPer = newIgst;
+
+        if (EditModel.GstSlabType == "GST" && newIgst >= 0)
+        {
+            // Auto-calculate SGST and CGST (both are IGST/2)
+            EditModel.GstSlabSgstPer = newIgst / 2;
+            EditModel.GstSlabCgstPer = newIgst / 2;
+
+            // Auto-generate GST Slab Name
+            EditModel.GstSlabName = $"GST@{newIgst}%";   
+        }
+       
+
+        StateHasChanged();
+    }
     private async Task HandleValidSubmit()
     {
         LoadingService.Show();
         try
         {
             bool result;
-
+            EditModel.GstSlabYearId = YearStatechangeService.SelectedYearId;
             if (EditModel.GstSlabId == 0)
             {
                 result = await GstSlabService.CreateAsync(EditModel);
