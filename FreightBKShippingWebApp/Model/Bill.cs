@@ -1,4 +1,5 @@
-﻿using System;
+﻿using FreightBKShippingWebApp.Services;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -44,7 +45,9 @@ namespace FreightBKShippingWebApp.Model
         [Column("bill_vch_no")]
         public int BillVchNo { get; set; }
 
+        [Required]
         [Column("bill_date")]
+        [CustomValidation(typeof(YearStatechangeService), nameof(YearStatechangeService.ValidateDateWithinYear))]
         public DateTime BillDate { get; set; }
 
         [Column("bill_time")]

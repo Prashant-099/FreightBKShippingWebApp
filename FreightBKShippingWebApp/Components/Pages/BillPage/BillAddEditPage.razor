@@ -19,7 +19,7 @@
 @inject StateService StateService
 @inject CompanyService CompanyService
 @inject RateMasterService RateMasterService
-.
+@inject YearStatechangeService YearStatechangeService
 <style>
     .popup-footer {
         position: sticky;
@@ -63,7 +63,9 @@
                                 ValueFieldName="VoucherId"
                                 AllowUserInput="true"
                                 NullText="-- Select Account --"
-                                @bind-Value="EditModel.BillVoucherId"
+                                Value="@EditModel.BillVoucherId"
+                                ValueChanged="@((int voucherId) => OnvoucherChanged(EditModel, voucherId))"
+                                ValueExpression="@( () => EditModel.BillVoucherId )"
                                 SearchMode="ListSearchMode.AutoSearch"
                                 SearchFilterCondition="ListSearchFilterCondition.StartsWith" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
                 </ChildContent>
@@ -73,32 +75,16 @@
                     <DxTextBox @bind-Text="EditModel.BillNo" />
                 </ChildContent>
             </DxFormLayoutItem>
-            <DxFormLayoutItem Caption="Bill Date" ColSpanMd="2">
+            <DxFormLayoutItem Caption="Bill Date" ColSpanMd="3">
                 <ChildContent Context="ctx">
                     <DxDateEdit @bind-Date="EditModel.BillDate" Format="yyyy-MM-dd" />
                 </ChildContent>
             </DxFormLayoutItem>
-            <DxFormLayoutItem Caption="Bill Due Date" ColSpanMd="2">
+            <DxFormLayoutItem Caption="Bill Due Date" ColSpanMd="3">
                 <ChildContent Context="ctx">
                     <DxDateEdit @bind-Date="EditModel.BillDueDate" Format="yyyy-MM-dd" />
                 </ChildContent>
             </DxFormLayoutItem>
-            <DxFormLayoutItem Caption="Party Name" ColSpanMd="4">
-                <ChildContent Context="ctx">
-                    <DxComboBox TData="Account" TValue="int"
-                                Data="@AccountList"
-                                TextFieldName="AccountName"
-                                ValueFieldName="AccountId"
-                                ClearButtonVisible="true"
-                                AllowUserInput="false"
-                                NullText="-- Select Account --"
-                                @bind-Value="EditModel.BillPartyId"
-                                SearchMode="ListSearchMode.AutoSearch"
-                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
-                </ChildContent>
-            </DxFormLayoutItem>
-           
-
             <DxFormLayoutItem Caption="Job Type" ColSpanMd="3">
                 <DxComboBox Data="@JobTypeList"
                             @bind-Value="EditModel.BillJobType"
@@ -111,6 +97,7 @@
             <DxFormLayoutItem Caption="Job No" ColSpanMd="3">
                 <DxTextBox @bind-Text="EditModel.BillJobNo" />
             </DxFormLayoutItem>
+          
             <DxFormLayoutItem Caption="Supply Type" ColSpanMd="3">
                 <DxComboBox Data="@SupplyTypeList"
                             @bind-Value="EditModel.BillSupplyType"
@@ -132,6 +119,20 @@
                             @bind-Value="EditModel.BillPlaceOfSupply"
                             SearchMode="ListSearchMode.AutoSearch"
                             SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+            </DxFormLayoutItem>
+            <DxFormLayoutItem Caption="Party Name" ColSpanMd="4">
+                <ChildContent Context="ctx">
+                    <DxComboBox TData="Account" TValue="int"
+                                Data="@AccountList"
+                                TextFieldName="AccountName"
+                                ValueFieldName="AccountId"
+                                ClearButtonVisible="true"
+                                AllowUserInput="false"
+                                NullText="-- Select Account --"
+                                @bind-Value="EditModel.BillPartyId"
+                                SearchMode="ListSearchMode.AutoSearch"
+                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                </ChildContent>
             </DxFormLayoutItem>
             <DxFormLayoutGroup Caption="Tax Details" Expanded="true" Decoration="FormLayoutGroupDecoration.Card"
                                ExpandButtonDisplayMode="GroupExpandButtonDisplayMode.Start" ColSpanMd="12">
@@ -496,7 +497,7 @@
                     </DxFormLayoutTabPage>
                     <DxFormLayoutTabPage Caption="Extra Details">
                         <DxFormLayout>
-                        <DxFormLayoutGroup Caption="Shipping Address" ColSpanMd="4">
+                        <DxFormLayoutGroup Caption="Shipping Address" ColSpanMd="5">
                             <DxFormLayoutItem Caption="Party Name" ColSpanMd="12">
                                     <DxComboBox TData="Account" TValue="int"
                                                 Data="@AccountList"
@@ -583,7 +584,7 @@
                             <DxTextBox @bind-Text="EditModel.BillAckNo" />
                         </DxFormLayoutItem>
                         <DxFormLayoutItem Caption="ACK Date " ColSpanMd="12">
-                                <DxDateEdit @bind-Date="EditModel.BillAckDate" />
+                                <DxTextBox @bind-Text="EditModel.BillAckDate" />
                         </DxFormLayoutItem>
 
                             <DxFormLayoutItem Caption="Custom 9" ColSpanMd="12">
@@ -661,41 +662,69 @@
 
     protected override async Task OnInitializedAsync()
     {
-         await LoadBillsDataAsync();
+        await LoadBillsDataAsync();
     }
 
-     private async Task LoadBillsDataAsync()
+    private async Task LoadBillsDataAsync()
     {
         LoadingService.Show();
         try
         {
-        ServiceList = await ServiceService.GetAllAsync();
-        VoucherList = await VoucherService.GetAllAsync();
-        stateList = await StateService.GetStatesAsync();
-        locationList = await LocationService.GetAllAsync();
-        CargoList = await CargoService.GetAllAsync();
-        CurrList = await CurrencyService.GetAllAsync();
-        VesselList = await VesselService.GetAllAsync();
-        UnitList = await UnitService.GetAllAsync();
-        HsnList = await HsnSacService.GetAllAsync();
-        GstslabList = await GstSlabService.GetAllAsync();
-        CompanyList = await CompanyService.GetAllAsync();
-        StateList = await StateService.GetStatesAsync();
+            ServiceList = await ServiceService.GetAllAsync();
+            VoucherList = await VoucherService.GetAllAsync();
+            stateList = await StateService.GetStatesAsync();
+            locationList = await LocationService.GetAllAsync();
+            CargoList = await CargoService.GetAllAsync();
+            CurrList = await CurrencyService.GetAllAsync();
+            VesselList = await VesselService.GetAllAsync();
+            UnitList = await UnitService.GetAllAsync();
+            HsnList = await HsnSacService.GetAllAsync();
+            GstslabList = await GstSlabService.GetAllAsync();
+            CompanyList = await CompanyService.GetAllAsync();
+            StateList = await StateService.GetStatesAsync();
             RateMasterList = await RateMasterService.GetAllAsync();
 
-        var allNotify = await NotifyService.GetAllAsync();
-        ConsigneeList = allNotify.Where(n => n.NotifyType == "CONSIGNEE").ToList();
-        ShipperList = allNotify.Where(n => n.NotifyType == "SHIPPER").ToList();
-        LineList = allNotify.Where(n => n.NotifyType == "LINE").ToList();
+            var allNotify = await NotifyService.GetAllAsync();
+            ConsigneeList = allNotify.Where(n => n.NotifyType == "CONSIGNEE").ToList();
+            ShipperList = allNotify.Where(n => n.NotifyType == "SHIPPER").ToList();
+            LineList = allNotify.Where(n => n.NotifyType == "LINE").ToList();
 
-        var allAccounts = await AccountService.GetAllAsync();
-        AccountList = allAccounts.Where(a => a.AccountTypeId == 14 || a.AccountTypeId == 18).ToList();
+            var allAccounts = await AccountService.GetAllAsync();
+            AccountList = allAccounts.Where(a => a.AccountTypeId == 14 || a.AccountTypeId == 18).ToList();
         }
         finally
         {
             LoadingService.Hide();
         }
-    }   
+    }  
+
+
+    private async Task OnvoucherChanged(Bill model, int? voucherId)
+    {
+        if (voucherId == null || voucherId == 0)
+            return;
+        model.BillVoucherId = voucherId.Value;
+        if (string.IsNullOrEmpty(model.BillNo) || model.BillId == 0)
+        {
+            var finYearId = YearStatechangeService.SelectedYearId;
+            try
+            {
+                var result = await YearStatechangeService.GeneratebillNoAsync(voucherId, finYearId);
+
+                model.BillPrefix = result.prefix;
+                model.BillNo = result.prefix + result.number + result.suffix;
+                model.BillPostfix = result.suffix;
+
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                ToastService.Error("Error: " + ex.Message);
+            }
+        }
+
+    }
+
     public class SelectItem
     {
         public string Text { get; set; }
@@ -802,19 +831,19 @@
     private async Task New_Click()
     {
         if (DetailGrid?.IsEditing() ?? false)
-    {
-        await DetailGrid.CancelEditAsync();
-    }
-    
-    // Find next available SNo
-    var activeDetails = BillDetails
-        .Where(d => !UnsavedChanges.ContainsKey(d) || UnsavedChanges[d].Type != DataChangeType.Delete)
-        .ToList();
-    
-    int nextAvailableSNo = activeDetails.Count > 0 
-        ? activeDetails.Max(d => d.SNo) + 1 
-        : 1;
-          
+        {
+            await DetailGrid.CancelEditAsync();
+        }
+
+        // Find next available SNo
+        var activeDetails = BillDetails
+            .Where(d => !UnsavedChanges.ContainsKey(d) || UnsavedChanges[d].Type != DataChangeType.Delete)
+            .ToList();
+
+        int nextAvailableSNo = activeDetails.Count > 0 
+            ? activeDetails.Max(d => d.SNo) + 1 
+            : 1;
+
         // Create a new BillDetail with defaults
         var newItem = new BillDetail
         {
@@ -841,7 +870,7 @@
 
         // Refresh grid
         //DetailGrid.Reload();
-         await InvokeAsync(StateHasChanged);
+        await InvokeAsync(StateHasChanged);
     }
 
 
@@ -858,19 +887,19 @@
         try
         {
             BillDetails.Clear();
-        
-        for (int i = 1; i <= 5; i++)
-        {
-            BillDetails.Add(new BillDetail 
+
+            for (int i = 1; i <= 5; i++)
+            {
+                BillDetails.Add(new BillDetail 
             { 
                 SNo = i, 
                 BillDetailId = 0,
                 BillDetailExchRate = EditModel?.BillExchRate ?? 1,
                 BillDetailCurrencyId = EditModel?.BillDefaultCurrencyId ?? 0
             });
-        }
-        
-        nextSNo = 6;
+            }
+
+            nextSNo = 6;
         }
         catch (Exception ex)
         {
@@ -956,8 +985,8 @@
             BillDetails.Add(editableDetail);
             UnsavedChanges[editableDetail] = new(DataChangeType.Addition, new());
             // Initialize defaults for new row
-        editableDetail.BillDetailExchRate = EditModel?.BillExchRate ?? 1;
-        editableDetail.BillDetailCurrencyId = EditModel?.BillDefaultCurrencyId ?? 0;
+            editableDetail.BillDetailExchRate = EditModel?.BillExchRate ?? 1;
+            editableDetail.BillDetailCurrencyId = EditModel?.BillDefaultCurrencyId ?? 0;
         }
         else
         {
@@ -975,12 +1004,12 @@
 
         // Update main bill total
         //EditModel.BillNetAmount = (float)BillDetails.Sum(d => d.BillDetailTotal
-         EditModel.BillNetAmount = (float)BillDetails
-        .Where(d => !UnsavedChanges.ContainsKey(d) || UnsavedChanges[d].Type != DataChangeType.Delete)
-        .Sum(d => d.BillDetailTotal);
+        EditModel.BillNetAmount = (float)BillDetails
+       .Where(d => !UnsavedChanges.ContainsKey(d) || UnsavedChanges[d].Type != DataChangeType.Delete)
+       .Sum(d => d.BillDetailTotal);
     }
 
-     async Task DeleteDataItem(object dataItem)
+    async Task DeleteDataItem(object dataItem)
     {
         var detail = (BillDetail)dataItem;
 
@@ -1001,7 +1030,7 @@
         // foreach (var d in BillDetails.Where(d => !UnsavedChanges.ContainsKey(d) || UnsavedChanges[d].Type != DataChangeType.Delete))
         // {
         //     d.SNo = sn++;
-           
+
         // }
 
         // EditModel.BillNetAmount = (float)BillDetails.Where(d => !UnsavedChanges.ContainsKey(d) ||
@@ -1010,21 +1039,21 @@
         // DetailGrid.Reload();
 
         // Reindex SNo after deletion (only for non-deleted items)
-    var activeDetails = BillDetails
-        .Where(d => !UnsavedChanges.ContainsKey(d) || UnsavedChanges[d].Type != DataChangeType.Delete)
-        .OrderBy(d => d.SNo)
-        .ToList();
-    
-    int sn = 1;
-    foreach (var d in activeDetails)
-    {
-        d.SNo = sn++;
-    }
-    
-    // Update totals
-    EditModel.BillNetAmount = (float)activeDetails.Sum(d => d.BillDetailTotal);
-  
-     await InvokeAsync(StateHasChanged);
+        var activeDetails = BillDetails
+            .Where(d => !UnsavedChanges.ContainsKey(d) || UnsavedChanges[d].Type != DataChangeType.Delete)
+            .OrderBy(d => d.SNo)
+            .ToList();
+
+        int sn = 1;
+        foreach (var d in activeDetails)
+        {
+            d.SNo = sn++;
+        }
+
+        // Update totals
+        EditModel.BillNetAmount = (float)activeDetails.Sum(d => d.BillDetailTotal);
+
+        await InvokeAsync(StateHasChanged);
     }
 
     async Task ClearUnsavedChangesAsync()
@@ -1078,19 +1107,19 @@
                 double manualQty = 0;
                 // Try converting user input (if any) from string → number
                 if (!string.IsNullOrWhiteSpace(EditModel?.Bill20Ft))
-                double.TryParse(EditModel.Bill20Ft, out bill20Ft);
-            
-            if (!string.IsNullOrWhiteSpace(EditModel?.Bill40Ft))
-                double.TryParse(EditModel.Bill40Ft, out bill40Ft);
+                    double.TryParse(EditModel.Bill20Ft, out bill20Ft);
+
+                if (!string.IsNullOrWhiteSpace(EditModel?.Bill40Ft))
+                    double.TryParse(EditModel.Bill40Ft, out bill40Ft);
 
                 if ((item?.BillDetailQty)!=0)
-             manualQty=item.BillDetailQty ;
+                    manualQty=item.BillDetailQty ;
 
-                
+
                 if (manualQty > 0)
-              {
-                 item.BillDetailQty = manualQty;
-               }
+                {
+                    item.BillDetailQty = manualQty;
+                }
                 else if (bill20Ft == 0 && bill40Ft == 0)
                 {
                     item.BillDetailQty = 1;
@@ -1112,7 +1141,7 @@
 
                 var selectedHsn = HsnList.FirstOrDefault(h => h.HsnName == selectedService.HsnName);
                 var selectedGstslab = GstslabList.FirstOrDefault(h => h.GstSlabIgstPer == selectedService.HsnGstPer);
-                    if (selectedHsn != null)
+                if (selectedHsn != null)
                 {
 
 
@@ -1161,7 +1190,7 @@
 
 
 
-                    }
+                }
 
 
             }
@@ -1172,12 +1201,12 @@
         item.BillDetailTaxableAmt = item.BillDetailAmount * item.BillDetailExchRate;
         item.BillDetailTotal = item.BillDetailTaxableAmt +item.BillDetailIgst +item.BillDetailCgst +item.BillDetailSgst;
         // Update main bill total
-       if (EditModel != null)
-    {
-        EditModel.BillNetAmount = (float)BillDetails
-            .Where(d => !UnsavedChanges.ContainsKey(d) || UnsavedChanges[d].Type != DataChangeType.Delete)
-            .Sum(d => d.BillDetailTotal);
-    }
+        if (EditModel != null)
+        {
+            EditModel.BillNetAmount = (float)BillDetails
+                .Where(d => !UnsavedChanges.ContainsKey(d) || UnsavedChanges[d].Type != DataChangeType.Delete)
+                .Sum(d => d.BillDetailTotal);
+        }
     }
 
     private HashSet<string> ApplyModifiedFields(BillDetail source, BillDetail target)
@@ -1230,7 +1259,7 @@
                 }
             }
 
-            
+
 
             // --- STEP 2: Prepare Active Rows (non-deleted) ---
             var activeDetails = BillDetails
@@ -1245,6 +1274,7 @@
             EditModel.BillCgst = activeDetails.Sum(d => d.BillDetailCgst);
             EditModel.BillSgst = activeDetails.Sum(d => d.BillDetailSgst);
             EditModel.BillTotal = EditModel.BillNetAmount;
+            EditModel.BillYearId = YearStatechangeService.SelectedYearId;
 
             // --- STEP 4: Filter only valid detail lines ---
             var validDetails = activeDetails
