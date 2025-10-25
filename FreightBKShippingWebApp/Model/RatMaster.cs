@@ -12,12 +12,14 @@ namespace FreightBKShippingWebApp.Model{
         [Column("ratemaster_id")]
         public int RateMasterId { get; set; }
 
+        [Required]
         [Column("ratemaster_applicable_dt")]
         public DateTime? RateMasterApplicableDt { get; set; }
 
+        [Required]
         [Column("ratemaster_party_id")]
         public int RateMasterPartyId { get; set; }
-
+        [Required]
         [Column("ratemaster_service_id")]
         public int RateMasterServiceId { get; set; }
 

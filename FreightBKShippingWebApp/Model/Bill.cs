@@ -1,4 +1,5 @@
-﻿using System;
+﻿using FreightBKShippingWebApp.Services;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -34,8 +35,8 @@ namespace FreightBKShippingWebApp.Model
         public int BillYearId { get; set; }
 
         [Column("bill_salesman_id")]
-        [StringLength(30)]
-        public string? BillSalesmanId { get; set; }
+
+        public string? BillSalesmanId { get; set; } = string.Empty;
 
         [Column("bill_no")]
         [StringLength(50)]
@@ -44,7 +45,9 @@ namespace FreightBKShippingWebApp.Model
         [Column("bill_vch_no")]
         public int BillVchNo { get; set; }
 
+        [Required]
         [Column("bill_date")]
+        [CustomValidation(typeof(YearStatechangeService), nameof(YearStatechangeService.ValidateDateWithinYear))]
         public DateTime BillDate { get; set; }
 
         [Column("bill_time")]
@@ -423,7 +426,10 @@ namespace FreightBKShippingWebApp.Model
         [InverseProperty(nameof(BillDetail.Bill))]
         public ICollection<BillDetail>? BillDetails { get; set; }
 
-  
-      //  public ICollection<BillRefDetail>? BillRefDetails { get; set; }
+
+        //  public ICollection<BillRefDetail>? BillRefDetails { get; set; }
+        //NOT MAPPED IN DB    
+        public string? partyname { get; set; }
+        public string? posname { get; set; }
     }
 }

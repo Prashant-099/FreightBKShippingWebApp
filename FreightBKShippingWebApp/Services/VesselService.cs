@@ -1,4 +1,4 @@
-﻿using FreightBKShippingWebApp.Models;
+﻿using FreightBKShippingWebApp.Model;
 
 namespace FreightBKShippingWebApp.Services
 {
