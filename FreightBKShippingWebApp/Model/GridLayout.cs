@@ -32,9 +32,9 @@ namespace FreightBKShippingWebApp.Model
         public string? GridLayoutUpdateBy { get; set; }
 
         [Column("gridlayout_company_id")]
-
+        [StringLength(45)]
         [Required]
-        public int GridLayoutCompanyId { get; set; }
+        public string GridLayoutCompanyId { get; set; } = string.Empty;
 
         [Column("gridlayout_created")]
         public DateTime? GridLayoutCreated { get; set; }

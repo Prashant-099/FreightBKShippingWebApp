@@ -1,0 +1,527 @@
+﻿    @using FreightBKShippingWebApp.Model
+    @using FreightBKShippingWebApp.Models
+    @using FreightBKShippingWebApp.Services
+
+    @inject JobService JobService
+    @inject AccountService AccountService
+    @inject VesselService VesselService
+    @inject CargoService CargoService
+    @inject ToasteService ToastService
+    @inject NotifyService NotifyService
+    @inject LocationService LocationService
+    @inject CountryService CountryService
+    @inject CurrencyService CurrencyService
+    @inject YearStatechangeService YearStatechangeService
+
+    <DxPopup @bind-Visible="Visible"
+    ShowCloseButton="true"
+    HeaderText="@PopupTitle"
+    Scrollable="true"
+    CloseOnOutsideClick="false"
+    MaxWidth="1150px" Width="90%">
+
+        <EditForm Model="@EditModel" OnValidSubmit="HandleValidSubmit" Context="ctxjobaddedit">
+
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <DxFormLayout>
+
+                <!-- Basic Info -->
+                <DxFormLayoutItem Caption="Job No" ColSpanMd="4">
+                    <div class="d-flex gap-1">
+                        <DxTextBox @bind-Text="EditModel.JobPrefix" ></DxTextBox>
+                        <DxTextBox @bind-Text="EditModel.JobNo" />
+                        <DxTextBox @bind-Text="EditModel.JobSufix" />
+                    </div>
+                </DxFormLayoutItem>
+
+                <DxFormLayoutItem Caption="Job Date" ColSpanMd="4">
+                    <DxDateEdit @bind-Date="EditModel.JobDate" DisplayFormat="dd/MM/yyyy" />
+                </DxFormLayoutItem>
+
+                <DxFormLayoutTabPages>
+                    <DxFormLayoutTabPage Caption="Job Info">
+                    <DxFormLayoutGroup Decoration="FormLayoutGroupDecoration.None">
+                        <DxFormLayoutGroup ColSpanMd="6" Decoration="FormLayoutGroupDecoration.None">
+
+                            <DxFormLayoutItem Caption="Importer" ColSpanMd="12">
+                                <DxComboBox Data="@parties"
+                                            TextFieldName="AccountName"
+                                            ValueFieldName="AccountId"
+                                            @bind-Value="@EditModel.JobPartyId"                      
+                                         
+                                            NullText="Select Importer.." AllowUserInput="true"
+                                            SearchMode="ListSearchMode.AutoSearch"
+                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+                            </DxFormLayoutItem>
+
+                            <DxFormLayoutItem Caption="Importer Address" ColSpanMd="12">
+                                <DxMemo @bind-Text="EditModel.JobPartyAddress" Rows="3"></DxMemo>
+                            </DxFormLayoutItem>
+
+                            <DxFormLayoutItem Caption="High Seas" ColSpanMd="12">
+                                <DxComboBox Data="@parties"
+                                TextFieldName="AccountName"
+                                ValueFieldName="AccountId"
+                                @bind-Value="EditModel.JobHighSeas1"
+                                            NullText="Select Importer.." AllowUserInput="true"
+                                            SearchMode="ListSearchMode.AutoSearch"
+                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+                            </DxFormLayoutItem>
+
+                            <DxFormLayoutItem Caption="High Seas Address" ColSpanMd="12">
+                                <DxMemo @bind-Text="EditModel.JobHighseas1Address"  Rows="3"></DxMemo>
+                            </DxFormLayoutItem>
+
+                            <DxFormLayoutItem Caption="Agetnt"  ColSpanMd="12">
+                                <DxTextBox @bind-Text="EditModel.JobAgent"></DxTextBox>
+                            </DxFormLayoutItem>
+
+                            <DxFormLayoutItem Caption="Agent Address" ColSpanMd="12">
+                                <DxMemo @bind-Text="EditModel.JobAgentAddress" Rows="3"></DxMemo>
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Cargo" ColSpanMd="12">
+                                <DxComboBox Data="@cargos" TextFieldName="CargoName"
+                                    ValueFieldName="CargoId" @bind-Value="EditModel.JobCargoId"
+                                            NullText="Select Cargo..." AllowUserInput="true"
+                                            SearchMode="ListSearchMode.AutoSearch"
+                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Cargo Desc" ColSpanMd="12">
+                                <DxMemo @bind-Text="EditModel.JobGoodsDesc" Rows="3"></DxMemo>
+                            </DxFormLayoutItem>
+
+
+
+                            <DxFormLayoutItem Caption="Vessel" ColSpanMd="12">
+                                <DxComboBox Data="@vessels"
+                                            TextFieldName="VesselName"
+                                            ValueFieldName="VesselId"
+                                            @bind-Value="EditModel.JobVesselId"
+                                            NullText="Select Importer.." AllowUserInput="true"
+                                            SearchMode="ListSearchMode.AutoSearch"
+                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+                            </DxFormLayoutItem>
+
+
+
+                            <DxFormLayoutItem Caption="Line" ColSpanMd="12">
+                                <DxComboBox Data="@lines" TextFieldName="NotifyName"
+                                    ValueFieldName="NotifyId" @bind-Value="EditModel.JobLineId"
+                                            NullText="Select Line..." AllowUserInput="true"
+                                            SearchMode="ListSearchMode.AutoSearch"
+                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Default Currency " ColSpanMd="12">
+                                <DxComboBox Data="@Currencies" @bind-Value="EditModel.JobDefCurrId"
+                                            TextFieldName="CurrencyName" ValueFieldName="CurrencyId" AllowUserInput="true"
+                                            SearchMode="ListSearchMode.AutoSearch"
+                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith"></DxComboBox>
+                            </DxFormLayoutItem>
+
+
+                        </DxFormLayoutGroup>
+
+
+                        <DxFormLayoutGroup ColSpanMd="6" Decoration="FormLayoutGroupDecoration.None">
+                        <DxFormLayoutItem Caption="BL No" ColSpanMd="6">
+                            <DxTextBox @bind-Text="EditModel.JobBlNo" />
+                        </DxFormLayoutItem>
+
+                        <DxFormLayoutItem Caption="BL Date" ColSpanMd="6">
+                            <DxDateEdit @bind-Date="EditModel.JobBlDate" DisplayFormat="dd/MM/yyyy" />
+                        </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="HBL No" ColSpanMd="6">
+                            <DxTextBox @bind-Text="EditModel.JobHblNo" />
+                        </DxFormLayoutItem>
+
+                        <DxFormLayoutItem Caption="HBL Date" ColSpanMd="6">
+                            <DxDateEdit @bind-Date="EditModel.JobHblDate" DisplayFormat="dd/MM/yyyy" />
+                        </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="BE No" ColSpanMd="6">
+                            <DxTextBox @bind-Text="EditModel.JobBeNo" />
+                        </DxFormLayoutItem>
+
+                        <DxFormLayoutItem Caption="BE Date" ColSpanMd="6">
+                            <DxDateEdit @bind-Date="EditModel.JobBeDate" DisplayFormat="dd/MM/yyyy" />
+                        </DxFormLayoutItem>
+
+                        <DxFormLayoutItem Caption="Shipper Inv No" ColSpanMd="6">
+                            <DxTextBox @bind-Text="EditModel.JobShipperInvNo" />
+                        </DxFormLayoutItem>
+
+                        <DxFormLayoutItem Caption="Shipper Inv Date" ColSpanMd="6">
+                            <DxDateEdit @bind-Date="EditModel.JobShipperInvDate" DisplayFormat="dd/MM/yyyy" />
+                        </DxFormLayoutItem>
+
+
+                        <DxFormLayoutItem Caption="Gross Weight" ColSpanMd="6">
+                                <DxSpinEdit @bind-Value="EditModel.JobGrossWt" ShowSpinButtons=false />
+                        </DxFormLayoutItem>
+
+                        <DxFormLayoutItem Caption="Unit" ColSpanMd="6">
+                                <DxComboBox Data="@weightUnits" @bind-Value="EditModel.JobGrossUnit" AllowUserInput="true"
+                                            SearchMode="ListSearchMode.AutoSearch"
+                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith"></DxComboBox>
+                        </DxFormLayoutItem>
+
+
+                            <DxFormLayoutItem Caption="Net Weight" ColSpanMd="6">
+                                <DxSpinEdit @bind-Value="EditModel.JobNetWt" ShowSpinButtons=false />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Unit" ColSpanMd="6">
+                                <DxComboBox Data="@weightUnits" @bind-Value="EditModel.JobNetUnit" AllowUserInput="true"
+                                            SearchMode="ListSearchMode.AutoSearch"
+                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith"></DxComboBox>
+                            </DxFormLayoutItem>
+
+
+                            <DxFormLayoutItem Caption="Quantity" ColSpanMd="6">
+                                <DxSpinEdit @bind-Value="EditModel.JobQty" ShowSpinButtons=false />
+
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Unit" ColSpanMd="6">
+                                <DxComboBox Data="@weightUnits" @bind-Value="EditModel.JobQtyUnit" AllowUserInput="true"
+                                            SearchMode="ListSearchMode.AutoSearch"
+                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith"></DxComboBox>
+
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="POL" ColSpanMd="12">
+                                <DxComboBox Data="@locationList"
+                                            @bind-Value="EditModel.JobPolId" TextFieldName="LocationName"
+                                            ValueFieldName="LocationId" AllowUserInput="true"
+                                            SearchMode="ListSearchMode.AutoSearch"
+                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith"></DxComboBox>
+                            </DxFormLayoutItem>
+                          
+                            <DxFormLayoutItem Caption="POD" ColSpanMd="12">
+                                <DxComboBox Data="@locationList" @bind-Value="EditModel.JobPodId"
+                                            TextFieldName="LocationName" ValueFieldName="LocationId" AllowUserInput="true"
+                                            SearchMode="ListSearchMode.AutoSearch"
+                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith"></DxComboBox>
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Place of Delivery" ColSpanMd="12">
+                                <DxTextBox @bind-Text="EditModel.JobPlaceOfDelivery" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Place of Receipt" ColSpanMd="12">
+                                <DxTextBox @bind-Text="EditModel.JobPlaceOfReceipt" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Country of Origin" ColSpanMd="12">
+                                <DxComboBox Data="@countryList"
+                                            @bind-Value="EditModel.JobCountryOrigin"
+                                            TextFieldName="CountryName" ValueFieldName="CountryName" AllowUserInput="true"
+                                            SearchMode="ListSearchMode.AutoSearch"
+                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+                            </DxFormLayoutItem>
+
+
+                            <DxFormLayoutItem Caption="Certificate Origin" ColSpanMd="12">
+                                <DxTextBox @bind-Text="EditModel.JobCertiOrigin"></DxTextBox>
+                            </DxFormLayoutItem>
+
+                            <DxFormLayoutItem Caption="Consignee" ColSpanMd="12">
+                                <DxComboBox Data="@consignees" TextFieldName="NotifyName"
+                                            ValueFieldName="NotifyId" @bind-Value="EditModel.JobConsigneeId"
+                                            NullText="Select Consignor..." AllowUserInput="true"
+                                            SearchMode="ListSearchMode.AutoSearch"
+                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Supplier/Consignor" ColSpanMd="12">
+                                <DxComboBox Data="@consignor"
+                                            @bind-Value="EditModel.JobSupplierId" TextFieldName="NotifyName"
+                                            ValueFieldName="NotifyId" AllowUserInput="true"
+                                            SearchMode="ListSearchMode.AutoSearch"
+                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+                            </DxFormLayoutItem>
+                            </DxFormLayoutGroup>
+
+
+
+
+
+
+                        <DxFormLayoutGroup Decoration="FormLayoutGroupDecoration.None">
+                               
+                                <DxFormLayoutItem Caption="CHA" ColSpanMd="6">
+                                    <DxComboBox Data="@chaList"
+                                        @bind-Value="EditModel.JobChaId" TextFieldName="NotifyName"
+                                            ValueFieldName="NotifyId" AllowUserInput="true"
+                                            SearchMode="ListSearchMode.AutoSearch"
+                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+                                </DxFormLayoutItem>
+                                <DxFormLayoutItem Caption="Shipper" ColSpanMd="6">
+                                    <DxComboBox Data="@shippers"
+                                        TextFieldName="NotifyName" ValueFieldName="NotifyId"
+                                        @bind-Value="EditModel.JobShipperId"
+                                            NullText="Select Shipper..." AllowUserInput="true"
+                                            SearchMode="ListSearchMode.AutoSearch"
+                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+                                </DxFormLayoutItem>
+
+
+                                
+
+
+                                <DxFormLayoutItem Caption="Booking No." ColSpanMd="6">
+                                    <DxTextBox @bind-Text="EditModel.JobBookingNo" />
+                                </DxFormLayoutItem>
+                                <DxFormLayoutItem Caption="Exchange Rate" ColSpanMd="6">
+                                <DxSpinEdit @bind-Value="EditModel.JobExchRate" ShowSpinButtons=false />
+                                </DxFormLayoutItem>
+                                <DxFormLayoutItem Caption="CFS" ColSpanMd="6">
+                                    <DxTextBox @bind-Text="EditModel.JobCfs" />
+                                </DxFormLayoutItem>    
+                                <DxFormLayoutItem Caption="Prd. Brand" ColSpanMd="6">
+                                    <DxTextBox @bind-Text="EditModel.JobBrand" />
+                                </DxFormLayoutItem>
+                                <DxFormLayoutItem Caption="CBM" ColSpanMd="6">
+                                <DxSpinEdit @bind-Value="EditModel.JobCbm" ShowSpinButtons=false />
+                                </DxFormLayoutItem>
+                                <DxFormLayoutItem Caption="HSN" ColSpanMd="6">
+                                    <DxTextBox @bind-Text="EditModel.JobHsnCode" />
+                                </DxFormLayoutItem>
+                                <DxFormLayoutItem Caption="Status" ColSpanMd="6">
+                                    <DxComboBox Data="@stuslist"
+                                            @bind-Value="EditModel.JobState" AllowUserInput="true"
+                                            SearchMode="ListSearchMode.AutoSearch"
+                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith"></DxComboBox>
+                                </DxFormLayoutItem>
+                                <DxFormLayoutItem Caption="Remarks" ColSpanMd="12">
+                                    <DxMemo @bind-Text="EditModel.JobRemarks" Rows="3" />
+                                </DxFormLayoutItem>
+
+                            </DxFormLayoutGroup>
+                        </DxFormLayoutGroup>
+                    </DxFormLayoutTabPage >
+
+                    <DxFormLayoutTabPage Caption="Extra details">
+                    <DxFormLayoutGroup Decoration="FormLayoutGroupDecoration.None">
+                            <DxFormLayoutItem Caption="ETA">
+                                <DxDateEdit @bind-Date="EditModel.JobEta" DisplayFormat="dd/MM/yyyy" />
+                            </DxFormLayoutItem>
+
+                            <DxFormLayoutItem Caption="ETD">
+                                <DxDateEdit @bind-Date="EditModel.JobEtd" DisplayFormat="dd/MM/yyyy" />
+                            </DxFormLayoutItem>
+
+                            <DxFormLayoutItem Caption="CFS">
+                                <DxMemo @bind-Text="EditModel.JobCfs" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="ICD">
+                                <DxTextBox @bind-Text="EditModel.JobIcd"></DxTextBox>
+                            </DxFormLayoutItem>
+
+
+                            <DxFormLayoutItem Caption="DO NO">
+                                <DxTextBox @bind-Text="EditModel.JobDoNo" />
+                            </DxFormLayoutItem>
+
+                            <DxFormLayoutItem Caption="DO Date">
+                                <DxDateEdit @bind-Date="EditModel.JobDoDate" DisplayFormat="dd/MM/yyyy" />
+                            </DxFormLayoutItem>
+
+                            <DxFormLayoutItem Caption="DO (%)">
+                            <DxSpinEdit @bind-value="EditModel.JobDoPer" ShowSpinButtons=false />
+                            </DxFormLayoutItem>
+
+                            <DxFormLayoutItem Caption="ETD">
+                                <DxTextBox @bind-Text="EditModel.JobDoType"  />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="DO Valid Date">
+                                <DxDateEdit @bind-Date="EditModel.JobDoValid" DisplayFormat="dd/MM/yyyy" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Terminal">
+                                <DxTextBox @bind-Text="EditModel.JobTerminal" />
+                            </DxFormLayoutItem> 
+                            <DxFormLayoutItem Caption="IGM No">
+                                <DxTextBox @bind-Text="EditModel.JobIgmNo" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="IGM Date">
+                                <DxDateEdit @bind-Date="EditModel.JobIgmDate" DisplayFormat="dd/MM/yyyy" />
+                            </DxFormLayoutItem>
+
+
+                            <DxFormLayoutItem Caption="Marks & No" ColSpanMd="12">
+                                <DxMemo @bind-Text="EditModel.JobMarks" Rows="2" />
+                            </DxFormLayoutItem>
+
+                            <DxFormLayoutItem Caption="Empty Yard">
+                                <DxMemo @bind-Text="EditModel.JobEmptyYard" />
+                            </DxFormLayoutItem>
+
+                            <DxFormLayoutItem Caption="Forwarder">
+                                <DxTextBox @bind-Text="EditModel.JobForwarder" />
+                            </DxFormLayoutItem>
+
+                            <DxFormLayoutItem Caption="Surveyor">
+                                <DxTextBox @bind-Text="EditModel.Surveyor" />
+                            </DxFormLayoutItem>
+
+                            <DxFormLayoutItem Caption="Surveyor Address">
+                                <DxMemo @bind-Text="EditModel.SurveyorAddress" Rows="2" />
+                            </DxFormLayoutItem>
+
+
+                            <DxFormLayoutItem Caption="Free Days">
+                                <DxSpinEdit @bind-Value="EditModel.JobFreeDays" ShowSpinButtons=false/>
+                            </DxFormLayoutItem>
+
+                            <DxFormLayoutItem Caption="Volume">
+                                <DxTextBox @bind-Text="EditModel.JobVolume" />
+                            </DxFormLayoutItem>
+
+
+                            <DxFormLayoutItem Caption="Out of Charge Date">
+                                <DxDateEdit @bind-Date="EditModel.JobOutOfChargeDate" DisplayFormat="dd/MM/yyyy" />
+                            </DxFormLayoutItem>
+
+                            <DxFormLayoutItem Caption="Remarks 2">
+                                <DxMemo @bind-Text="EditModel.JobGoodsDesc1" Rows="2" />
+                            </DxFormLayoutItem>
+
+                            <DxFormLayoutItem Caption="Custom#2">
+                                <DxTextBox @bind-Text="EditModel.JobCust2" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Custom#3">
+                                <DxTextBox @bind-Text="EditModel.JobCust3" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Custom#4">
+                                <DxTextBox @bind-Text="EditModel.JobCust4" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Custom#5">
+                                <DxTextBox @bind-Text="EditModel.JobCust5" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Custom#6">
+                                <DxTextBox @bind-Text="EditModel.JobCust6" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Custom#7">
+                                <DxTextBox @bind-Text="EditModel.JobCust7" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Custom#8">
+                                <DxTextBox @bind-Text="EditModel.JobCust8" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Custom#9">
+                                <DxTextBox @bind-Text="EditModel.JobCust9" />
+                            </DxFormLayoutItem>
+                        </DxFormLayoutGroup>
+
+
+                    </DxFormLayoutTabPage>
+
+                    <DxFormLayoutTabPage Caption="Container">
+                    <DxFormLayoutGroup Decoration="FormLayoutGroupDecoration.None">
+                            <DxFormLayoutItem Caption="20FT Container">
+                                <DxMemo @bind-Text="EditModel.JobContainer20Ft" Rows="3"/>
+                            </DxFormLayoutItem>
+
+                            <DxFormLayoutItem Caption="40FT Container">
+                                <DxMemo @bind-Text="EditModel.JobContainer40Ft" Rows="3"/>
+                            </DxFormLayoutItem>
+
+                            <DxFormLayoutItem Caption="Count(20 Ft)"> 
+                                <DxTextBox @bind-Text="EditModel.Job20Ft"></DxTextBox>
+                            </DxFormLayoutItem>                     
+                            <DxFormLayoutItem Caption="Count(40 Ft)"> 
+                                <DxTextBox @bind-Text="EditModel.Job40Ft"></DxTextBox>
+                            </DxFormLayoutItem>
+                        </DxFormLayoutGroup>
+                    </DxFormLayoutTabPage>
+                </DxFormLayoutTabPages>
+
+            </DxFormLayout>
+
+            <div class="mt-3 text-end">
+                <DxButton RenderStyle="ButtonRenderStyle.Primary" Text="Save" SubmitFormOnClick="true" />
+                <DxButton Text="Cancel" Click="Cancel" CssClass="ms-2" />
+            </div>
+        </EditForm>
+    </DxPopup>
+
+    @code {
+        private bool Visible { get; set; }
+        private Job EditModel = new();
+        private bool IsEdit = false;
+
+        [Parameter] public EventCallback OnSaved { get; set; }
+    [Parameter] public string JobType { get; set; } = "IMPORT";
+
+        private string PopupTitle => IsEdit ? "Edit Job" : "Add Job";
+        string[] weightUnits = new string[] { "NOS", "KGS", "MTS", "PKG", "BOX", "CTN" };
+        string[] stuslist = new string[] { "Complete", "Cancel", "Pending" };
+
+        private List<Account> parties = new();
+        private List<Vessel> vessels = new();
+        private List<Cargo> cargos = new();
+        private List<Notify> shippers = new();
+        private List<Notify> lines = new();
+        private List<Notify> consignees = new();
+        private List<Notify> consignor = new();
+        private List<Notify> agent = new();
+        private List<Notify> chaList = new();
+        private List<Location> locationList = new();
+        private List<Country> countryList = new();
+        public List<Currency> Currencies { get; set; } = new List<Currency>();
+
+        public void Show(Job model)
+        {
+            IsEdit = model.JobId > 0;
+            EditModel = model;
+            Visible = true;
+            StateHasChanged();
+        }
+
+        protected override async Task OnInitializedAsync()
+        {
+            parties = await AccountService.GetAllAsync();
+            vessels = await VesselService.GetAllAsync();
+            countryList = await CountryService.GetAllAsync();
+            Currencies = await CurrencyService.GetAllAsync();
+            if (Currencies.Any())
+            {
+                EditModel.JobDefCurrId = Currencies.FirstOrDefault().CurrencyId;
+            }
+            var locationlist = await LocationService.GetAllAsync();
+            locationList = locationlist.Where(l => l.LocationType == "PORT").ToList();
+
+
+            var allNotify = await NotifyService.GetAllAsync();
+
+            // Separate lists by type
+            shippers = allNotify.Where(n => n.NotifyType == "SHIPPER").ToList();
+            lines = allNotify.Where(n => n.NotifyType == "LINE").ToList();
+            consignees = allNotify.Where(n => n.NotifyType == "CONSIGNEE").ToList();
+            consignor = allNotify.Where(n => n.NotifyType == "CONSIGNOR").ToList();
+            agent = allNotify.Where(n => n.NotifyType == "AGENT").ToList();
+            chaList = allNotify.Where(n => n.NotifyType == "CHA").ToList();
+
+
+            StateHasChanged();
+        }
+
+        private async Task HandleValidSubmit()
+
+         {
+        EditModel.JobType = JobType;
+        EditModel.JobYearId = YearStatechangeService.SelectedYearId.ToString();
+            if (!IsEdit)
+            {
+                await JobService.CreateAsync(EditModel);
+                ToastService.Success("Import Job created successfully.");
+            }
+            else
+            {
+                await JobService.UpdateAsync(EditModel);
+                ToastService.Success("Import Job updated successfully.");
+            }
+
+            Visible = false;
+            await OnSaved.InvokeAsync();
+        }
+
+        private void Cancel()
+        {
+            Visible = false;
+        }
+
+    }

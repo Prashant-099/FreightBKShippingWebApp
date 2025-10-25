@@ -12,6 +12,7 @@
         @ref="MyGrid"
         KeyFieldName="AccountId"
         ShowSearchBox="true"
+        
         PageSize="10"
         PageSizeSelectorVisible="true"
         ShowGroupPanel="true"
@@ -59,6 +60,9 @@
 <ConfirmationDialog />
 
 @code {
+
+
+
     DxGrid MyGrid;
     private List<Account> accountList = [];
     private List<Account> SelectedAccounts = new();
@@ -121,6 +125,17 @@
 
             ToastService.Success($"{SelectedAccounts.Count} account(s) deleted successfully.");
             await LoadAccountsAsync();
+        }
+    }
+
+
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && MyGrid != null)
+        {
+            // Ab safely access kar sakte ho
+            var columns = MyGrid.GetVisibleColumns();
         }
     }
 }

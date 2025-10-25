@@ -1,0 +1,140 @@
+﻿@page "/jobimport"
+@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Services
+@inject JobService JobService
+@inject ToasteService ToastService
+@inject LoadingService LoadingService
+@inject ConfirmationDialogService ConfirmDialogService
+
+<DxGrid TItem="Job"
+        Data="@jobList"
+        @ref="MyGrid"
+        KeyFieldName="JobId"
+        ShowSearchBox="true"
+        PageSize="10"
+        PageSizeSelectorVisible="true"
+        ShowGroupPanel="true"
+        FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always"
+        FocusedRowEnabled="true"
+        SelectionMode="GridSelectionMode.Multiple"
+        SelectedDataItems="@SelectedJobs"
+        SelectedDataItemsChanged="OnSelectedJobsChanged">
+
+    <ToolbarTemplate>
+        <DxToolbar>
+            <TitleTemplate Context="ctxjob">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-briefcase-fill"></i>
+                    <span class="fs-5"> Job Import</span>
+                </div>
+            </TitleTemplate>
+            <Items>
+                <DxToolbarItem Text="Add" IconCssClass="bi bi-plus-circle" Click="OnCreateNew" />
+                <DxToolbarItem Text="Edit" IconCssClass="bi bi-pencil-square" Click="OnEdit" />
+                <DxToolbarItem Text="Delete" IconCssClass="bi bi-trash" Click="OnDelete" />
+                <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="LoadJobsAsync" />
+            </Items>
+        </DxToolbar>
+    </ToolbarTemplate>
+
+    <Columns>
+        <DxGridSelectionColumn Width="30" />
+
+        <DxGridDataColumn FieldName="JobNo" Caption="Job No" MinWidth="120" />
+        <DxGridDataColumn FieldName="JobDate" Caption="Job Date" DisplayFormat="d" MinWidth="130" />
+        <DxGridDataColumn FieldName="JobType" Caption="Job Type" MinWidth="130" />
+        <DxGridDataColumn FieldName="JobBlNo" Caption="B/L No" MinWidth="150" />
+        <DxGridDataColumn FieldName="JobBlDate" Caption="B/L Date" DisplayFormat="d" MinWidth="130" />
+        <DxGridDataColumn FieldName="JobVesselId" Caption="Vessel" MinWidth="150" />
+        <DxGridDataColumn FieldName="JobPolId" Caption="POL" MinWidth="120" />
+        <DxGridDataColumn FieldName="JobPodId" Caption="POD" MinWidth="120" />
+        <DxGridDataColumn FieldName="JobFreightBy" Caption="Freight By" MinWidth="150" />
+        <DxGridDataColumn FieldName="JobGrossWt" Caption="Gross Weight" MinWidth="140" />
+        <DxGridDataColumn FieldName="JobNetWt" Caption="Net Weight" MinWidth="140" />
+        <DxGridDataColumn FieldName="JobVolume" Caption="Volume / CBM" MinWidth="160" />
+        <DxGridDataColumn FieldName="JobQty" Caption="Quantity" MinWidth="120" />
+        <DxGridDataColumn FieldName="JobQtyUnit" Caption="Qty Unit" MinWidth="120" />
+        <DxGridDataColumn FieldName="JobShipperId" Caption="Shipper" MinWidth="180" />
+        <DxGridDataColumn FieldName="JobConsigneeId" Caption="Consignee" MinWidth="180" />
+        <DxGridDataColumn FieldName="JobNotifyAddress" Caption="Notify Party" MinWidth="200" />
+        <DxGridDataColumn FieldName="JobChaId" Caption="Customs Agent" MinWidth="160" />
+        <DxGridDataColumn FieldName="JobRemarks" Caption="Remarks" MinWidth="200" />
+
+    </Columns>
+
+</DxGrid>
+
+<JobAddEditPage @ref="popup" OnSaved="LoadJobsAsync" JobType="Import" />
+<ConfirmationDialog />
+
+@code {
+    DxGrid MyGrid;
+    private List<Job> jobList = new();
+    private List<Job> SelectedJobs = new();
+    private JobAddEditPage popup;
+    private string JobType = "IMPORT";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadJobsAsync();
+    }
+
+    private async Task LoadJobsAsync()
+    {
+        LoadingService.Show();
+        try
+        {
+            var allJobs = await JobService.GetAllAsync();
+            jobList = allJobs
+                .Where(j => j.JobType != null && j.JobType.Equals(JobType, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+
+    private void OnSelectedJobsChanged(IEnumerable<object> jobs)
+    {
+        SelectedJobs = jobs.Cast<Job>().ToList();
+    }
+
+    private void OnCreateNew(ToolbarItemClickEventArgs e)
+    {
+        popup.Show(new Job());
+    }
+
+    private void OnEdit(ToolbarItemClickEventArgs e)
+    {
+        var job = MyGrid.GetFocusedDataItem() as Job;
+        if (job != null)
+            popup.Show(job);
+        else
+            ToastService.Warning("Please select a job to edit.");
+    }
+
+    private async Task OnDelete(ToolbarItemClickEventArgs e)
+    {
+        if (SelectedJobs == null || SelectedJobs.Count == 0)
+        {
+            ToastService.Warning("Please select at least one job to delete.");
+            return;
+        }
+
+        var confirm = await ConfirmDialogService.ShowAsync(
+            $"Are you sure you want to delete {SelectedJobs.Count} selected job(s)?");
+
+        if (confirm)
+        {
+            foreach (var job in SelectedJobs)
+            {
+                await JobService.DeleteAsync(job.JobId);
+            }
+
+            ToastService.Success($"{SelectedJobs.Count} job(s) deleted successfully.");
+            await LoadJobsAsync();
+        }
+    }
+}
