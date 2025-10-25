@@ -426,7 +426,10 @@ namespace FreightBKShippingWebApp.Model
         [InverseProperty(nameof(BillDetail.Bill))]
         public ICollection<BillDetail>? BillDetails { get; set; }
 
-  
-      //  public ICollection<BillRefDetail>? BillRefDetails { get; set; }
+
+        //  public ICollection<BillRefDetail>? BillRefDetails { get; set; }
+        //NOT MAPPED IN DB    
+        public string? partyname { get; set; }
+        public string? posname { get; set; }
     }
 }

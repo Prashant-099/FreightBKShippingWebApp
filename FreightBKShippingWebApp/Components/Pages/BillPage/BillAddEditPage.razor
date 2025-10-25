@@ -20,6 +20,7 @@
 @inject CompanyService CompanyService
 @inject RateMasterService RateMasterService
 @inject YearStatechangeService YearStatechangeService
+@inject BranchService BranchService
 <style>
     .popup-footer {
         position: sticky;
@@ -45,6 +46,18 @@
          margin-top: 8px;
     }
 
+    .bill-footer {
+        background-color: #f5f8fb;
+        min-height: 48px;
+    }
+
+    .total-amount-box {
+        background-color: #ccf6ff !important; /* light cyan like in your image */
+        font-weight: bold;
+    }
+    .jobdetails{
+    margin-top: 6px;
+    }
 </style>
 
 <DxPopup @bind-Visible="Visible" ShowCloseButton="true" HeaderText="@Title" CloseOnOutsideClick="false" MaxWidth="1700px" Width="90%"
@@ -134,143 +147,7 @@
                                 SearchFilterCondition="ListSearchFilterCondition.StartsWith" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
                 </ChildContent>
             </DxFormLayoutItem>
-            <DxFormLayoutGroup Caption="Tax Details" Expanded="true" Decoration="FormLayoutGroupDecoration.Card"
-                               ExpandButtonDisplayMode="GroupExpandButtonDisplayMode.Start" ColSpanMd="12">
-
-                <DxFormLayoutItem Caption="POL" ColSpanMd="3">
-                    <DxComboBox TData="Location" TValue="int"
-                                Data="@locationList"
-                                TextFieldName="LocationName"
-                                ValueFieldName="LocationId"
-                                AllowUserInput="true"
-                                NullText="-- Select POL --"
-                                @bind-Value="EditModel.BillPolId"
-                                SearchMode="ListSearchMode.AutoSearch"
-                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
-                </DxFormLayoutItem>
-
-                <DxFormLayoutItem Caption="Consignee" ColSpanMd="3">
-                    <DxComboBox TData="Notify" TValue="int"
-                                Data="@ConsigneeList"
-                                TextFieldName="NotifyName"
-                                ValueFieldName="NotifyId"
-                                AllowUserInput="true"
-                                NullText="-- Select Consignee --"
-                                @bind-Value="EditModel.BillConsigneeId"
-                                SearchMode="ListSearchMode.AutoSearch"
-                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
-                </DxFormLayoutItem>
-                <DxFormLayoutItem Caption="SB/BE No" ColSpanMd="2">
-                    <DxTextBox @bind-Text="EditModel.BillSbNo" />
-                </DxFormLayoutItem>
-                <DxFormLayoutItem Caption="Date" ColSpanMd="2">
-                    <DxDateEdit @bind-Date="EditModel.BillSbDate" />
-                </DxFormLayoutItem>
-                <DxFormLayoutItem Caption="QTY" ColSpanMd="2">
-                    <DxSpinEdit @bind-Value="EditModel.BillQty" ShowSpinButtons="false" />
-                </DxFormLayoutItem>
-                <DxFormLayoutItem Caption="POD" ColSpanMd="3">
-                    <DxComboBox TData="Location" TValue="int"
-                                Data="@locationList"
-                                TextFieldName="LocationName"
-                                ValueFieldName="LocationId"
-                                AllowUserInput="true"
-                                NullText="-- Select POD --"
-                                @bind-Value="EditModel.BillPodId"
-                                SearchMode="ListSearchMode.AutoSearch"
-                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
-                </DxFormLayoutItem>
-                <DxFormLayoutItem Caption="Cargo" ColSpanMd="3">
-                    <DxComboBox TData="Cargo" TValue="int"
-                                Data="@CargoList"
-                                TextFieldName="CargoName"
-                                ValueFieldName="CargoId"
-                                AllowUserInput="true"
-                                NullText="-- Select Cargo --"
-                                @bind-Value="EditModel.BillCargoId"
-                                SearchMode="ListSearchMode.AutoSearch"
-                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
-                </DxFormLayoutItem>
-                <DxFormLayoutItem Caption="BL No" ColSpanMd="2">
-                    <DxTextBox @bind-Text="EditModel.BillBlNo" />
-                </DxFormLayoutItem>
-                <DxFormLayoutItem Caption="Date" ColSpanMd="2">
-                    <DxDateEdit @bind-Date="EditModel.BillBlDate" />
-                </DxFormLayoutItem>
-                <DxFormLayoutItem Caption="Gross WT" ColSpanMd="2">
-                    <DxSpinEdit @bind-Value="EditModel.BillGrossWt" ShowSpinButtons="false" />
-                </DxFormLayoutItem>
-
-                <DxFormLayoutItem Caption="Vessel" ColSpanMd="3">
-                    <DxComboBox TData="Vessel" TValue="int"
-                                Data="@VesselList"
-                                TextFieldName="VesselName"
-                                ValueFieldName="VesselId"
-                                AllowUserInput="true"
-                                NullText="-- Select Vessel --"
-                                @bind-Value="EditModel.BillVesselId"
-                                SearchMode="ListSearchMode.AutoSearch"
-                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
-                </DxFormLayoutItem>
-                <DxFormLayoutItem Caption="Shipper" ColSpanMd="3">
-                    <DxComboBox TData="Notify" TValue="int"
-                                Data="@ShipperList"
-                                TextFieldName="NotifyName"
-                                ValueFieldName="NotifyId"
-                                AllowUserInput="true"
-                                NullText="-- Select Shipper --"
-                                @bind-Value="EditModel.BillShipperId"
-                                SearchMode="ListSearchMode.AutoSearch"
-                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
-                </DxFormLayoutItem>
-                <DxFormLayoutItem Caption="S.Inv." ColSpanMd="2">
-                    <DxTextBox @bind-Text="EditModel.BillShipperInvNo" />
-                </DxFormLayoutItem>
-                <DxFormLayoutItem Caption="Date" ColSpanMd="2">
-                    <DxDateEdit @bind-Date="EditModel.BillShipperInvDate" />
-                </DxFormLayoutItem>
-                <DxFormLayoutItem Caption="Net WT" ColSpanMd="2">
-                    <DxSpinEdit @bind-Value="EditModel.BillNetWt" ShowSpinButtons="false" />
-                </DxFormLayoutItem>
-                <DxFormLayoutItem Caption="Line" ColSpanMd="3">
-                    <DxComboBox TData="Notify" TValue="int"
-                                Data="@LineList"
-                                TextFieldName="NotifyName"
-                                ValueFieldName="NotifyId"
-                                AllowUserInput="true"
-                                NullText="-- Select Line --"
-                                @bind-Value="EditModel.BillLineId"
-                                SearchMode="ListSearchMode.AutoSearch"
-                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
-                </DxFormLayoutItem>
-                <DxFormLayoutItem Caption="Cont 20 FT" ColSpanMd="2">
-                    <DxTextBox @bind-Text="EditModel.Bill20Ft" />
-                </DxFormLayoutItem>
-                <DxFormLayoutItem Caption="Cont 40 FT" ColSpanMd="2">
-                    <DxTextBox @bind-Text="EditModel.Bill40Ft" />
-                </DxFormLayoutItem>
-                <DxFormLayoutItem Caption="Ex. Rate" ColSpanMd="3">
-                    <div class="d-flex gap-1">
-                        <DxComboBox TData="Currency" TValue="int"
-                                    Data="@CurrList"
-                                    TextFieldName="CurrencyName"
-                                    ValueFieldName="CurrencyId"
-                                    AllowUserInput="true"
-                                    NullText="-- Select Currency --"
-                                    @bind-Value="EditModel.BillDefaultCurrencyId"
-                                    SearchMode="ListSearchMode.AutoSearch"
-                                    SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
-                        <DxSpinEdit @bind-Value="EditModel.BillExchRate" ShowSpinButtons="false" />
-                    </div>
-                </DxFormLayoutItem>
-
-                <DxFormLayoutItem Caption="HBL No" ColSpanMd="2">
-                    <DxTextBox @bind-Text="EditModel.BillHblNo" />
-                </DxFormLayoutItem>
-                <DxFormLayoutItem Caption="CBM" ColSpanMd="2">
-                    <DxSpinEdit @bind-Value="EditModel.BillCbmQty" ShowSpinButtons="false" />
-                </DxFormLayoutItem>
-            </DxFormLayoutGroup>
+          
         </DxFormLayout>
 
         <DxFormLayout>
@@ -480,21 +357,224 @@
                             </TotalSummary>
                         </DxGrid>
 
-                        <div class="mt-2 d-flex justify-content-between align-items-center border-top pt-2">
+                       @* <div class="mt-2 d-flex justify-content-between align-items-center border-top pt-2">
                             <div class="w-75">
                                 <label>Remarks</label>
                                 <DxTextBox @bind-Text="EditModel.BillRemarks" Width="100%" />
+                          
                             </div>
                             <div class="text-end pe-3">
-                                <label class="fw-bold me-2">Total Amount:</label>
-                                <DxSpinEdit @bind-Value="EditModel.BillNetAmount" ReadOnly="true" Format="N2" Width="150px" />
+                            <label >Branch</label>
+                            <DxComboBox Data="@branchList"
+                                        TextFieldName="BranchName"
+                                        ValueFieldName="BranchId"
+                                        @bind-Value="EditModel.BillBranchId"></DxComboBox>
+                               
                             </div>
+                        <div class="text-end pe-3">
+                            <label>is RCM Applicable</label>
+                            <DxCheckBox @bind-Checked="EditModel.BillIsRcm" Text="is RCM Applicable" />
+
                         </div>
+                        <div class="text-end pe-3">
+                            <label>is Round Off</label>
+                            <DxCheckBox @bind-Checked="EditModel.BillIsRoundOff" Text="is Round Off" />
+
+                        </div>
+                        <div class="text-end pe-3">
+                            <label class="fw-bold me-2">Total Amount:</label>
+                            <DxSpinEdit @bind-Value="EditModel.BillNetAmount" ReadOnly="true" Format="N2" Width="150px" />
+                        </div>
+                        </div> *@
+                    <div class="bill-footer d-flex align-items-center border-top pt-2 px-2">
+                        <!-- Remarks -->
+                        <div class="flex-grow-1 me-3">
+                            <label class="fw-bold d-block mb-1">Remarks</label>
+                            <DxMemo @bind-Text="EditModel.BillRemarks" Width="100%" />
+                        </div>
+
+                        <!-- Branch -->
+                        <div class="me-3 text-end">
+                            <label class="fw-bold d-block mb-1">Branch</label>
+                            <DxComboBox Data="@branchList"
+                                        TextFieldName="BranchName"
+                                        ValueFieldName="BranchId"
+                                        @bind-Value="EditModel.BillBranchId"
+                                        Width="160px" />
+                        </div>
+
+                        <!-- Is RCM Applicable -->
+                        <div class="me-3 text-end">
+                            <DxCheckBox @bind-Checked="EditModel.BillIsRcm" Text="Is RCM Applicable" />
+                            <label class="fw-bold d-block mb-1">Is RCM Applicable</label>
+                        </div>
+
+                        <!-- Is Round Off -->
+                        <div class="me-3 text-end d-flex align-items-center">
+                            <DxCheckBox @bind-Checked="EditModel.BillIsRoundOff" Text="Is Round Off" />
+                            <label class="fw-bold d-block mb-1">Is Round Off</label>
+                            <DxSpinEdit @bind-Value="EditModel.BillRoundAmt"
+                                        Format="N2"
+                                        Width="80px"
+                                        CssClass="ms-1"
+                                        NullText="0.00" />
+                        </div>
+
+                        <!-- Total Amount -->
+                        <div class="text-end">
+                            <label class="fw-bold me-2">Total Amount:</label>
+                            <DxSpinEdit @bind-Value="EditModel.BillNetAmount"
+                                        ReadOnly="true"
+                                        Format="N2"
+                                        Width="100px"
+                                        CssClass="total-amount-box" />
+                        </div>
+                    </div>
 
 
 
 
                     </DxFormLayoutTabPage>
+                    <DxFormLayoutTabPage Caption="Job Details">
+        <DxFormLayout>
+                   
+
+                        <DxFormLayoutItem Caption="POL" ColSpanMd="3" CssClass="jobdetails">
+                            <DxComboBox TData="Location" TValue="int"
+                                        Data="@locationList"
+                                        TextFieldName="LocationName"
+                                        ValueFieldName="LocationId"
+                                        AllowUserInput="true"
+                                        NullText="-- Select POL --"
+                                        @bind-Value="EditModel.BillPolId"
+                                        SearchMode="ListSearchMode.AutoSearch"
+                                        SearchFilterCondition="ListSearchFilterCondition.StartsWith"  CssClass="jobdetails"/>
+                        </DxFormLayoutItem>
+
+                        <DxFormLayoutItem Caption="Consignee" ColSpanMd="3" CssClass="jobdetails">
+                            <DxComboBox TData="Notify" TValue="int"
+                                        Data="@ConsigneeList"
+                                        TextFieldName="NotifyName"
+                                        ValueFieldName="NotifyId"
+                                        AllowUserInput="true"
+                                        NullText="-- Select Consignee --"
+                                        @bind-Value="EditModel.BillConsigneeId"
+                                        SearchMode="ListSearchMode.AutoSearch"
+                                        SearchFilterCondition="ListSearchFilterCondition.StartsWith"  CssClass="jobdetails"/>
+                        </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="SB/BE No" ColSpanMd="2" CssClass="jobdetails">
+                            <DxTextBox @bind-Text="EditModel.BillSbNo"  CssClass="jobdetails"/>
+                        </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="Date" ColSpanMd="2" CssClass="jobdetails">
+                            <DxDateEdit @bind-Date="EditModel.BillSbDate" CssClass="jobdetails" />
+                        </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="QTY" ColSpanMd="2" CssClass="jobdetails">
+                            <DxSpinEdit @bind-Value="EditModel.BillQty" ShowSpinButtons="false" CssClass="jobdetails" />
+                        </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="POD" ColSpanMd="3">
+                            <DxComboBox TData="Location" TValue="int"
+                                        Data="@locationList"
+                                        TextFieldName="LocationName"
+                                        ValueFieldName="LocationId"
+                                        AllowUserInput="true"
+                                        NullText="-- Select POD --"
+                                        @bind-Value="EditModel.BillPodId"
+                                        SearchMode="ListSearchMode.AutoSearch"
+                                        SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+                        </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="Cargo" ColSpanMd="3">
+                            <DxComboBox TData="Cargo" TValue="int"
+                                        Data="@CargoList"
+                                        TextFieldName="CargoName"
+                                        ValueFieldName="CargoId"
+                                        AllowUserInput="true"
+                                        NullText="-- Select Cargo --"
+                                        @bind-Value="EditModel.BillCargoId"
+                                        SearchMode="ListSearchMode.AutoSearch"
+                                        SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+                        </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="BL No" ColSpanMd="2">
+                            <DxTextBox @bind-Text="EditModel.BillBlNo" />
+                        </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="Date" ColSpanMd="2">
+                            <DxDateEdit @bind-Date="EditModel.BillBlDate" />
+                        </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="Gross WT" ColSpanMd="2">
+                            <DxSpinEdit @bind-Value="EditModel.BillGrossWt" ShowSpinButtons="false" />
+                        </DxFormLayoutItem>
+
+                        <DxFormLayoutItem Caption="Vessel" ColSpanMd="3">
+                            <DxComboBox TData="Vessel" TValue="int"
+                                        Data="@VesselList"
+                                        TextFieldName="VesselName"
+                                        ValueFieldName="VesselId"
+                                        AllowUserInput="true"
+                                        NullText="-- Select Vessel --"
+                                        @bind-Value="EditModel.BillVesselId"
+                                        SearchMode="ListSearchMode.AutoSearch"
+                                        SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+                        </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="Shipper" ColSpanMd="3">
+                            <DxComboBox TData="Notify" TValue="int"
+                                        Data="@ShipperList"
+                                        TextFieldName="NotifyName"
+                                        ValueFieldName="NotifyId"
+                                        AllowUserInput="true"
+                                        NullText="-- Select Shipper --"
+                                        @bind-Value="EditModel.BillShipperId"
+                                        SearchMode="ListSearchMode.AutoSearch"
+                                        SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+                        </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="S.Inv." ColSpanMd="2">
+                            <DxTextBox @bind-Text="EditModel.BillShipperInvNo" />
+                        </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="Date" ColSpanMd="2">
+                            <DxDateEdit @bind-Date="EditModel.BillShipperInvDate" />
+                        </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="Net WT" ColSpanMd="2">
+                            <DxSpinEdit @bind-Value="EditModel.BillNetWt" ShowSpinButtons="false" />
+                        </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="Line" ColSpanMd="3">
+                            <DxComboBox TData="Notify" TValue="int"
+                                        Data="@LineList"
+                                        TextFieldName="NotifyName"
+                                        ValueFieldName="NotifyId"
+                                        AllowUserInput="true"
+                                        NullText="-- Select Line --"
+                                        @bind-Value="EditModel.BillLineId"
+                                        SearchMode="ListSearchMode.AutoSearch"
+                                        SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+                        </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="Cont 20 FT" ColSpanMd="2">
+                            <DxTextBox @bind-Text="EditModel.Bill20Ft" />
+                        </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="Cont 40 FT" ColSpanMd="2">
+                            <DxTextBox @bind-Text="EditModel.Bill40Ft" />
+                        </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="Ex. Rate" ColSpanMd="3">
+                            <div class="d-flex gap-1">
+                                <DxComboBox TData="Currency" TValue="int"
+                                            Data="@CurrList"
+                                            TextFieldName="CurrencyName"
+                                            ValueFieldName="CurrencyId"
+                                            AllowUserInput="true"
+                                            NullText="-- Select Currency --"
+                                            @bind-Value="EditModel.BillDefaultCurrencyId"
+                                            SearchMode="ListSearchMode.AutoSearch"
+                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+                                <DxSpinEdit @bind-Value="EditModel.BillExchRate" ShowSpinButtons="false" />
+                            </div>
+                        </DxFormLayoutItem>
+
+                        <DxFormLayoutItem Caption="HBL No" ColSpanMd="2">
+                            <DxTextBox @bind-Text="EditModel.BillHblNo" />
+                        </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="CBM" ColSpanMd="2">
+                            <DxSpinEdit @bind-Value="EditModel.BillCbmQty" ShowSpinButtons="false" />
+                        </DxFormLayoutItem>
+                    
+        </DxFormLayout>
+                        </DxFormLayoutTabPage>
                     <DxFormLayoutTabPage Caption="Extra Details">
                         <DxFormLayout>
                         <DxFormLayoutGroup Caption="Shipping Address" ColSpanMd="5">
@@ -554,25 +634,6 @@
                                 <DxTextBox @bind-Text="EditModel.BillCust3" />
                             </DxFormLayoutItem>
 
-                            <DxFormLayoutItem Caption="Dem To" ColSpanMd="12">
-                                <DxTextBox @bind-Text="EditModel.BillCust4" />
-                            </DxFormLayoutItem>
-
-                            <DxFormLayoutItem Caption="Payment Dt/Gr From" ColSpanMd="12">
-                                <DxTextBox @bind-Text="EditModel.BillCust5" />
-                            </DxFormLayoutItem>
-
-                            <DxFormLayoutItem Caption="DO Dt/Gr To" ColSpanMd="12">
-                                <DxTextBox @bind-Text="EditModel.BillCust6" />
-                            </DxFormLayoutItem>
-
-                            <DxFormLayoutItem Caption="OBL/BG DT" ColSpanMd="12">
-                                <DxTextBox @bind-Text="EditModel.BillCust7" />
-                            </DxFormLayoutItem>
-
-                            <DxFormLayoutItem Caption="Custom O.C" ColSpanMd="12">
-                                    <DxTextBox @bind-Text="EditModel.BillCust8" />
-                                </DxFormLayoutItem>
                         </DxFormLayoutGroup>
                     
 
@@ -587,12 +648,7 @@
                                 <DxTextBox @bind-Text="EditModel.BillAckDate" />
                         </DxFormLayoutItem>
 
-                            <DxFormLayoutItem Caption="Custom 9" ColSpanMd="12">
-                                <DxTextBox @bind-Text="EditModel.BillCust9" />
-                            </DxFormLayoutItem>
-                            <DxFormLayoutItem Caption="Custom 10" ColSpanMd="12">
-                                <DxTextBox @bind-Text="EditModel.BillCust10" />
-                            </DxFormLayoutItem>
+                            
                          </DxFormLayoutGroup>
                        
 
@@ -600,7 +656,7 @@
                      
                    
                         <DxFormLayoutItem Caption="Goods Description" ColSpanMd="12">
-                            <DxMemo @bind-Text="EditModel.BillRemarks" />
+                            <DxMemo @bind-Text="EditModel.BillRemarksDefault" />
                         </DxFormLayoutItem>
                         <DxFormLayoutItem Caption="Container No. " ColSpanMd="12">
                             <DxMemo @bind-Text="EditModel.BillContainerNo" />
@@ -659,6 +715,7 @@
     private List<Company> CompanyList = new();
     private List<State> StateList = new();
     private List<RateMaster> RateMasterList = new();
+     private List<Branch> branchList = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -683,7 +740,7 @@
             CompanyList = await CompanyService.GetAllAsync();
             StateList = await StateService.GetStatesAsync();
             RateMasterList = await RateMasterService.GetAllAsync();
-
+            branchList = await BranchService.GetAllAsync();
             var allNotify = await NotifyService.GetAllAsync();
             ConsigneeList = allNotify.Where(n => n.NotifyType == "CONSIGNEE").ToList();
             ShipperList = allNotify.Where(n => n.NotifyType == "SHIPPER").ToList();
