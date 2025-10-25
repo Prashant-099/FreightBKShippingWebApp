@@ -54,6 +54,7 @@ builder.Services.AddScoped<RateMasterService>();
 builder.Services.AddScoped<JobService>();
 
 builder.Services.AddScoped<BillService>();
+builder.Services.AddScoped<GridLayoutService>();
 builder.Services.AddHttpClient<ApiClient>(client =>
 {
     client.BaseAddress = new Uri("http://localhost:5004/");

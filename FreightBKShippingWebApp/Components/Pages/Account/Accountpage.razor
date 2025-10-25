@@ -1,4 +1,4 @@
-﻿@page "/account"
+﻿@* @page "/account"
 @using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Services
 @using FreightBKShippingWebApp.Components.Pages
@@ -136,6 +136,400 @@
         {
             // Ab safely access kar sakte ho
             var columns = MyGrid.GetVisibleColumns();
+        }
+    }
+}
+ *@
+
+
+        @page "/account"
+@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Services
+@using FreightBKShippingWebApp.Components.Pages
+@inject AccountService AccountService
+@inject ToasteService ToastService
+@inject LoadingService LoadingService
+@inject ConfirmationDialogService ConfirmDialogService
+@inject GridLayoutService GridLayoutService
+
+<DxGrid TItem="Account"
+        Data="@accountList"
+        @ref="MyGrid"
+        KeyFieldName="AccountId"
+        ShowSearchBox="true"
+        PageSize="10"
+        PageSizeSelectorVisible="true"
+        ShowGroupPanel="true"
+        FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always"
+        FocusedRowEnabled="true"
+        SelectionMode="GridSelectionMode.Multiple"
+        SelectedDataItems="@SelectedAccounts"
+        SelectedDataItemsChanged="OnSelectedAccountsChanged" VirtualScrollingEnabled="true" >
+
+    <ToolbarTemplate>
+        <DxToolbar>
+            <TitleTemplate Context="titleContext">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-person-lines-fill me-2"></i>
+                    <span class="fs-5">Accounts</span>
+                </div>
+            </TitleTemplate>
+            <Items>
+                <DxToolbarItem Text="Add" IconCssClass="bi bi-plus-circle" Click="OnCreateNew" />
+                <DxToolbarItem Text="Edit" IconCssClass="bi bi-pencil-square" Click="OnEdit" />
+                <DxToolbarItem Text="Delete" IconCssClass="bi bi-trash" Click="OnDelete" />
+                <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="LoadAccountsAsync" />
+                
+                @* Layout Management - Simple Approach *@
+                 <DxToolbarItem BeginGroup="true">
+                    <Template Context="layoutContext">
+                        <div class="d-flex align-items-center gap-2">
+                            <DxComboBox Data="@availableLayouts"
+                                        Value="@selectedLayoutId"
+                                        ValueExpression="@(() => selectedLayoutId)"
+                                        ValueChanged="@((int? value) => OnLayoutSelectedAsync(value))"
+                                        ValueFieldName="GridLayoutId"
+                                        TextFieldName="GridLayoutName"
+                                        NullText="-- Select Layout --"
+                                        CssClass="me-2"
+                                        Width="200px" />
+
+
+                            
+                            <button class="btn btn-outline-secondary btn-sm" @onclick="ShowSaveLayoutDialog">
+                                <i class="bi bi-floppy me-1"></i>Save View
+                            </button>
+                            
+                            <button class="btn btn-outline-secondary btn-sm" @onclick="ShowNewLayoutDialog">
+                                <i class="bi bi-plus-square me-1"></i>New View
+                            </button>
+                        </div>
+                    </Template>
+                </DxToolbarItem>
+            </Items>
+        </DxToolbar>
+    </ToolbarTemplate>
+
+    <Columns>
+        <DxGridDataColumn FieldName="AccountId" Caption="ID" Visible="@GetColumnVisibility("AccountId")" MinWidth="80" />
+        <DxGridSelectionColumn Width="30" />
+        <DxGridDataColumn FieldName="AccountName" Caption="Name" Visible="@GetColumnVisibility("AccountName")" MinWidth="120" />
+        <DxGridDataColumn FieldName="AccountContactPerson" Caption="Contact Person" Visible="@GetColumnVisibility("AccountContactPerson")" MinWidth="150" />
+        <DxGridDataColumn FieldName="AccountMobile" Caption="Mobile" Visible="@GetColumnVisibility("AccountMobile")" MinWidth="100" />
+        <DxGridDataColumn FieldName="AccountEmail" Caption="Email" Visible="@GetColumnVisibility("AccountEmail")" MinWidth="150" />
+        <DxGridDataColumn FieldName="AccountCity" Caption="City" Visible="@GetColumnVisibility("AccountCity")" MinWidth="100" />
+        <DxGridDataColumn FieldName="AccountCountry" Caption="Country" Visible="@GetColumnVisibility("AccountCountry")" MinWidth="100" />
+        <DxGridDataColumn FieldName="AccountStatus" Caption="Active" Visible="@GetColumnVisibility("AccountStatus")" MinWidth="80" />
+    </Columns>
+</DxGrid>
+
+<AccountAddEditPage @ref="popup" OnSaved="LoadAccountsAsync" />
+
+@* Simple Modal for Layout Name *@
+@if (showLayoutDialog)
+{
+    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5)">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@dialogTitle</h5>
+                    <button type="button" class="btn-close" @onclick="CloseLayoutDialog"></button>
+                </div>
+                <div class="modal-body">
+                    <label class="form-label">Layout Name:</label>
+                    <input type="text" class="form-control" @bind="newLayoutName" placeholder="Enter layout name..." />
+                    
+                    <div class="mt-3">
+                        <label class="form-label">Visible Columns:</label>
+                        <div class="row">
+                            @foreach (var col in allColumns)
+                            {
+                                <div class="col-md-6 mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" 
+                                               @bind="col.Visible" id="col_@col.FieldName">
+                                        <label class="form-check-label" for="col_@col.FieldName">
+                                            @col.Caption
+                                        </label>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseLayoutDialog">Cancel</button>
+                    <button type="button" class="btn btn-primary" @onclick="SaveCurrentLayout">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<ConfirmationDialog />
+
+@code {
+    DxGrid MyGrid = null!;
+    private List<Account> accountList = [];
+    private List<Account> SelectedAccounts = [];
+    private AccountAddEditPage popup = null!;
+    
+    // Layout Management
+    private List<GridLayoutDto> availableLayouts = [];
+    private int? selectedLayoutId;
+    private bool showLayoutDialog = false;
+    private string newLayoutName = "";
+    private string dialogTitle = "";
+    private bool isEditMode = false;
+    private const string VOUCHER_TYPE = "Account";
+    
+    // All possible columns
+    private List<GridColumnLayout> allColumns = [];
+    private List<GridColumnLayout> currentLayout = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        InitializeColumns();
+        await LoadAccountsAsync();
+        await LoadAvailableLayouts();
+        await LoadDefaultLayout();
+    }
+
+    private void InitializeColumns()
+    {
+        allColumns = new List<GridColumnLayout>
+        {
+            new() { FieldName = "AccountId", Caption = "ID", Visible = false, Width = 80, DisplayIndex = 0 },
+            new() { FieldName = "AccountName", Caption = "Name", Visible = true, Width = 120, DisplayIndex = 1 },
+            new() { FieldName = "AccountContactPerson", Caption = "Contact Person", Visible = true, Width = 150, DisplayIndex = 2 },
+            new() { FieldName = "AccountMobile", Caption = "Mobile", Visible = true, Width = 100, DisplayIndex = 3 },
+            new() { FieldName = "AccountEmail", Caption = "Email", Visible = true, Width = 150, DisplayIndex = 4 },
+            new() { FieldName = "AccountCity", Caption = "City", Visible = true, Width = 100, DisplayIndex = 5 },
+            new() { FieldName = "AccountCountry", Caption = "Country", Visible = true, Width = 100, DisplayIndex = 6 },
+            new() { FieldName = "AccountStatus", Caption = "Active", Visible = true, Width = 80, DisplayIndex = 7 }
+        };
+        currentLayout = allColumns.ToList(); // Copy default layout
+    } 
+
+    private bool GetColumnVisibility(string fieldName)
+    {
+        var col = currentLayout.FirstOrDefault(x => x.FieldName == fieldName);
+        return col?.Visible ?? true;
+    }
+
+    private async Task LoadAccountsAsync()
+    {
+        accountList = await AccountService.GetAllAsync();
+    }
+
+
+    private async Task LoadAvailableLayouts()
+    {
+        availableLayouts = await GridLayoutService.GetLayoutsByVoucherTypeAsync(VOUCHER_TYPE);
+    }
+
+
+    private async Task LoadDefaultLayout()
+    {
+        var defaultLayout = await GridLayoutService.GetDefaultLayoutAsync(VOUCHER_TYPE);
+        if (defaultLayout != null)
+        {
+            selectedLayoutId = defaultLayout.GridLayoutId;
+            await ApplyLayout(defaultLayout);
+        }
+    }
+
+    private async Task OnLayoutSelectedAsync(int? layoutId)
+    {
+        selectedLayoutId = layoutId;
+
+        if (layoutId.HasValue)
+        {
+            var layout = await GridLayoutService.GetByIdAsync(layoutId.Value);
+            if (layout != null)
+            {
+                await ApplyLayout(layout);
+            }
+        }
+        else
+        {
+            InitializeColumns(); // Reset to default
+            StateHasChanged();
+        }
+    }
+
+    // Alternative for HTML select
+    private async Task OnLayoutSelected(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int layoutId) && layoutId > 0)
+        {
+            selectedLayoutId = layoutId;
+            var layout = await GridLayoutService.GetByIdAsync(layoutId);
+            if (layout != null)
+            {
+                await ApplyLayout(layout);
+            }
+        }
+        else
+        {
+            selectedLayoutId = null;
+            InitializeColumns();
+            StateHasChanged();
+        }
+    }
+
+
+    private async Task ApplyLayout(GridLayoutDto layout)
+    {
+        if (!string.IsNullOrEmpty(layout.GridLayoutData))
+        {
+            var savedLayout = GridLayoutService.DeserializeColumnLayout(layout.GridLayoutData);
+            if (savedLayout != null)
+            {
+                currentLayout = savedLayout;
+                // Update allColumns for dialog
+                foreach (var saved in savedLayout)
+                {
+                    var existing = allColumns.FirstOrDefault(x => x.FieldName == saved.FieldName);
+                    if (existing != null)
+                    {
+                        existing.Visible = saved.Visible;
+                        existing.Width = saved.Width;
+                        existing.DisplayIndex = saved.DisplayIndex;
+                    }
+                }
+                StateHasChanged();
+            }
+        }
+    }
+
+    private void ShowSaveLayoutDialog()
+    {
+        if (selectedLayoutId.HasValue)
+        {
+            var layout = availableLayouts.FirstOrDefault(x => x.GridLayoutId == selectedLayoutId.Value);
+            if (layout != null)
+            {
+                newLayoutName = layout.GridLayoutName ?? "";
+                isEditMode = true;
+                dialogTitle = "Update Layout";
+            }
+        }
+        else
+        {
+            ShowNewLayoutDialog();
+            return;
+        }
+        showLayoutDialog = true;
+    }
+
+    private async Task SaveCurrentLayout()
+    {
+        if (string.IsNullOrWhiteSpace(newLayoutName))
+        {
+            ToastService.Warning("Please enter a layout name.");
+            return;
+        }
+
+        // Update current layout from dialog selections
+        currentLayout = allColumns.ToList();
+        var configJson = GridLayoutService.SerializeColumnLayout(currentLayout);
+
+        bool success = false;
+
+        if (isEditMode && selectedLayoutId.HasValue)
+        {
+            // Update existing layout
+            var updateRequest = new SaveGridLayoutRequest
+                {
+                    GridLayoutName = newLayoutName,
+                    GridLayoutVoucherType = VOUCHER_TYPE,
+                    GridLayoutData = configJson,
+                    GridLayoutDefault = false
+                };
+            success = await GridLayoutService.UpdateAsync(selectedLayoutId.Value, updateRequest);
+        }
+        else
+        {
+            // Create new layout
+            var newLayoutRequest = new SaveGridLayoutRequest
+                {
+                    GridLayoutName = newLayoutName,
+                    GridLayoutVoucherType = VOUCHER_TYPE,
+                    GridLayoutData = configJson,
+                    GridLayoutDefault = false
+                };
+            success = await GridLayoutService.CreateAsync(newLayoutRequest);
+        }
+
+        if (success)
+        {
+            ToastService.Success($"Layout {(isEditMode ? "updated" : "created")} successfully!");
+            await LoadAvailableLayouts();
+            CloseLayoutDialog();
+            StateHasChanged();
+        }
+        else
+        {
+            ToastService.Error($"Failed to {(isEditMode ? "update" : "create")} layout.");
+        }
+    }
+    private void ShowNewLayoutDialog()
+    {
+        newLayoutName = "";
+        isEditMode = false;
+        dialogTitle = "Create New Layout";
+        showLayoutDialog = true;
+    }
+
+    private void CloseLayoutDialog()
+    {
+        showLayoutDialog = false;
+        newLayoutName = "";
+    }
+
+   
+
+    // Rest of the existing methods...
+    private void OnSelectedAccountsChanged(IEnumerable<object> accounts)
+    {
+        SelectedAccounts = accounts.Cast<Account>().ToList();
+    }
+
+    private void OnCreateNew(ToolbarItemClickEventArgs e)
+    {
+        popup.Show(new Account());
+    }
+
+    private void OnEdit(ToolbarItemClickEventArgs e)
+    {
+        var account = MyGrid.GetFocusedDataItem() as Account;
+        if (account != null)
+            popup.Show(account);
+        else
+            ToastService.Warning("Please select an account to edit.");
+    }
+
+    private async Task OnDelete(ToolbarItemClickEventArgs e)
+    {
+        if (SelectedAccounts == null || SelectedAccounts.Count == 0)
+        {
+            ToastService.Warning("Please select at least one account to delete.");
+            return;
+        }
+
+        var confirm = await ConfirmDialogService.ShowAsync(
+            $"Are you sure you want to delete {SelectedAccounts.Count} selected account(s)?");
+
+        if (confirm)
+        {
+            foreach (var account in SelectedAccounts)
+            {
+                await AccountService.DeleteAsync(account.AccountId);
+            }
+
+            ToastService.Success($"{SelectedAccounts.Count} account(s) deleted successfully.");
+            await LoadAccountsAsync();
         }
     }
 }
