@@ -1,4 +1,10 @@
-﻿@using FreightBKShipping.Models
+
+﻿  
+
+
+@using FreightBKShippingWebApp.Components.Pages.HSNSACPage
+@using FreightBKShippingWebApp.Components.Pages.UnitPage
+@using FreightBKShippingWebApp.Components.Pages.Account
 @using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Models
 @using FreightBKShippingWebApp.Services
@@ -9,7 +15,50 @@
 @inject HsnSacService HsnSacService
 @inject UnitService UnitService
 @inject AccountService AccountService
-<DxPopup @bind-Visible="Visible" ShowCloseButton="true" HeaderText="@Title" Width="600px" CloseOnOutsideClick="false">
+@inject VoucherService VoucherService
+
+
+
+<style>
+    .hsn-field-wrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .acc-combobox {
+    flex: 1;
+    min-width: 0; /* Critical: allows flex item to shrink below content size */
+    max-width: 100%;
+}
+    .hsn-combobox {
+        flex: 1;
+    }
+
+    .custom-plus-button {
+        font-size: 0.9rem;
+        width: 28px;
+        height: 28px;
+        padding: 0;
+        border-radius: 50%;
+        line-height: 26px;
+        text-align: center;
+        font-weight: bold;
+        background-color: #7976ff;
+        color: white;
+        box-shadow: 0 0 3px rgba(0,0,0,0.2);
+        border: none;
+        cursor: pointer;
+        flex-shrink: 0;
+    }
+
+        .custom-plus-button:hover {
+            background-color: #5f5ce6;
+        }
+</style>
+<DxPopup @bind-Visible="Visible" ShowCloseButton="true" HeaderText="@Title" CloseOnOutsideClick="false" MaxWidth="650px" Width="90%"
+         horizontalAlignment="HorizontalAlignment.Center"
+         verticalAlignment="VerticalAlignment.Center">
     <EditForm Model="@EditModel" OnValidSubmit="HandleValidSubmit" Context="CXservice">
         <DataAnnotationsValidator />
         <ValidationSummary />
@@ -18,9 +67,11 @@
             <DxFormLayoutItem Caption="Service Name" ColSpanMd="12">
                 <DxTextBox @bind-Text="EditModel.ServiceName" />
             </DxFormLayoutItem>
+
             <DxFormLayoutItem Caption="Print Name" ColSpanMd="12">
                 <DxTextBox @bind-Text="EditModel.ServicePrintName" />
             </DxFormLayoutItem>
+
             <DxFormLayoutItem Caption="Type" ColSpanMd="12">
                 <DxComboBox TData="ServiceGroup" TValue="int?"
                             Data="@GroupList"
@@ -34,6 +85,7 @@
                             SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
             </DxFormLayoutItem>
             <DxFormLayoutItem Caption="HSN">
+                <div class="hsn-field-wrapper">
                 <DxComboBox TData="HsnSac" TValue="int?"
                             Data="@HsnSacList"
                             TextFieldName="HsnName"
@@ -44,11 +96,16 @@
                             @bind-Value="EditModel.ServiceHsnId"
                             SearchMode="ListSearchMode.AutoSearch"
                             SearchFilterCondition="ListSearchFilterCondition.StartsWith" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
-            </DxFormLayoutItem>
+                    <DxButton Click="@ShowHsnPopup"
+                              Text="+"
+                              CssClass="custom-plus-button" />
+                </div>
+                        </DxFormLayoutItem>
             <DxFormLayoutItem Caption="Purchase Rate">
                 <DxSpinEdit @bind-Value="EditModel.ServicePRate" />
             </DxFormLayoutItem>
             <DxFormLayoutItem Caption="Unit">
+                 <div class="hsn-field-wrapper">
                 <DxComboBox TData="Unit" TValue="int?"
                             Data="@UnitList"
                             TextFieldName="UnitName"
@@ -59,9 +116,13 @@
                             @bind-Value="EditModel.ServiceUnitId"
                             SearchMode="ListSearchMode.AutoSearch"
                             SearchFilterCondition="ListSearchFilterCondition.StartsWith" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
-            </DxFormLayoutItem>
+                <DxButton Click="@ShowUnitPopup"
+                          Text="+"
+                          CssClass="custom-plus-button" />
+                </div>
+                        </DxFormLayoutItem>
             <DxFormLayoutItem Caption="Sale Rate">
-                <DxSpinEdit @bind-Value="EditModel.ServiceSRate" />
+                <DxSpinEdit @bind-Value="EditModel.ServiceSRate" ShowSpinButtons="false" />
             </DxFormLayoutItem>
             <DxFormLayoutItem Caption="Charges Type">
                 <DxComboBox Data="@ChargeTypeList"
@@ -73,7 +134,7 @@
                             SearchMode="ListSearchMode.AutoSearch" SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
             </DxFormLayoutItem>
             <DxFormLayoutItem Caption="Add. Charge">
-                <DxSpinEdit @bind-Value="EditModel.ServiceExtraCharge" />
+                <DxSpinEdit @bind-Value="EditModel.ServiceExtraCharge" ShowSpinButtons="false" />
             </DxFormLayoutItem>
             <DxFormLayoutItem Caption="Add/Deduct">
                 <DxComboBox Data="@AddDeductList"
@@ -87,11 +148,24 @@
 
            
             <DxFormLayoutItem Caption="Voucher Type">
-                <DxSpinEdit @bind-Value="EditModel.ServiceVoucherId" />
+                 <DxComboBox TData="Voucher" TValue="int?"
+                            Data="@VoucherList"
+                            TextFieldName="VoucherName"
+                            ValueFieldName="VoucherId"
+                            ClearButtonVisible="true"
+                            AllowUserInput="false"
+                            NullText="-- Select Voucher --"
+                            @bind-Value="EditModel.ServiceVoucherId"
+                            SearchMode="ListSearchMode.AutoSearch"
+                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+          
+                <DxSpinEdit @bind-Value="EditModel.ServiceVoucherId" ShowSpinButtons="false" />
             </DxFormLayoutItem>
-            <DxFormLayoutItem Caption="Account Name" ColSpanMd="12">
+            <DxFormLayoutItem Caption="Account Name" ColSpanMd="10">
+                   <div class="hsn-field-wrapper">
                 <DxComboBox TData="Account" TValue="int?"
                             Data="@AccountList"
+                            CssClass="acc-combobox"
                             TextFieldName="AccountName"
                             ValueFieldName="AccountId"
                             ClearButtonVisible="true"
@@ -100,6 +174,10 @@
                             @bind-Value="EditModel.ServiceAccountId"
                             SearchMode="ListSearchMode.AutoSearch"
                             SearchFilterCondition="ListSearchFilterCondition.StartsWith" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                             <DxButton Click="@ShowAccountPopup"
+                          Text="+"
+                          CssClass="custom-plus-button" />
+                          </div>
             </DxFormLayoutItem>
 
             <DxFormLayoutItem Caption="Is Goods">
@@ -116,7 +194,9 @@
         </div>
     </EditForm>
 </DxPopup>
-
+<UnitAddEditPage @ref="Unitpopup" OnSaved="RefreshList" />
+<HsnSacAddEditPage @ref="popup" OnSaved="RefreshList" />
+<AccountAddEditPage @ref="Accountpopup" OnSaved="RefreshList" />
 @code {
     [Parameter] public EventCallback OnSaved { get; set; }
 
@@ -127,12 +207,20 @@
     private List<HsnSac> HsnSacList = new();
     private List<Unit> UnitList = new();
     private List<Account> AccountList = new();
+     private List<Voucher> VoucherList = new();
     protected override async Task OnInitializedAsync()
     {
         GroupList = await ServiceGroupService.GetAllAsync();
         HsnSacList = await HsnSacService.GetAllAsync();
         UnitList = await UnitService.GetAllAsync();
-        AccountList = await AccountService.GetAllAsync();
+ VoucherList = await VoucherService.GetAllAsync();
+        // Fetch all accounts
+        var allAccounts = await AccountService.GetAllAsync();
+
+        // Filter only Sales & Purchase Accounts (group id 22, 23)
+        AccountList = allAccounts
+            .Where(a => a.AccountGroupId == 22 || a.AccountGroupId == 23)
+            .ToList();
 
     }
     public class SelectItem
@@ -151,26 +239,57 @@
 {
     new SelectItem { Text = "ABSOLUTE", Value = "ABSOLUTE" },
     new SelectItem { Text = "PER UNIT", Value = "PERUNIT" }
+
 };
+   private AccountAddEditPage Accountpopup;
+    private UnitAddEditPage Unitpopup;
+    private HsnSacAddEditPage popup;
+    private void ShowHsnPopup(MouseEventArgs e)
+    {
+        popup.Show(new HsnSac() { HsnStatus = true });
+    }
+    private void ShowUnitPopup(MouseEventArgs e)
+    {
+        Unitpopup.Show(new Unit() { UnitStatus = true, UnitCreated = DateTime.Now });
+    }
+    
+    private void ShowAccountPopup(MouseEventArgs e)
+    {
+        Accountpopup.Show(new Account());
+    }
+    private async Task RefreshList()
+    {
+        HsnSacList = await HsnSacService.GetAllAsync();
+        UnitList = await UnitService.GetAllAsync();
+        // Fetch all accounts
+        var allAccounts = await AccountService.GetAllAsync();
+
+        // Filter only Sales & Purchase Accounts (group id 22, 23)
+        AccountList = allAccounts
+            .Where(a => a.AccountGroupId == 22 || a.AccountGroupId == 23)
+            .ToList();
+        StateHasChanged();
+    }
+
+
     public void Show(Service model)
     {
-        EditModel = model != null ? new Service
+        if (model != null && model.ServiceId > 0)
         {
-            ServiceId = model.ServiceId,
-            ServiceName = model.ServiceName,
-            ServiceCode = model.ServiceCode,
-            ServiceSRate = model.ServiceSRate,
-            ServicePRate = model.ServicePRate,
-            ServiceStatus = model.ServiceStatus,
-            ServiceRemarks = model.ServiceRemarks
-        } : new Service
+            // Edit mode – bind directly to the selected object
+            EditModel = model;
+            Title = "Edit Service";
+        }
+        else
         {
-            ServiceStatus = true
-        };
+            // Add mode – create new object
+            EditModel = new Service { ServiceStatus = true };
+            Title = "Add Service";
+        }
 
-        Title = model?.ServiceId > 0 ? "Edit Service" : "Add Service";
         Visible = true;
     }
+
 
     private void Hide() => Visible = false;
 

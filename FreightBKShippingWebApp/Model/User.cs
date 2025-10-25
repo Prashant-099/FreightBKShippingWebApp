@@ -2,7 +2,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace FreightBKShipping.Models
+namespace FreightBKShippingWebApp.Model
 {
     [Table("users")]
     public class User
@@ -16,7 +16,7 @@ namespace FreightBKShipping.Models
         public string? UserRoleId { get; set; }
 
         [Column("user_parent_id")]
-        public string UserParentId { get; set; } 
+        public string? UserParentId { get; set; } 
 
         [Required]
         [Column("user_first_name")]
@@ -29,7 +29,7 @@ namespace FreightBKShipping.Models
         [Column("user_email")]
         public string UserEmail { get; set; }
 
-        [Required]
+
         [Column("user_password")]
         public string UserPassword { get; set; }
 
@@ -146,14 +146,5 @@ namespace FreightBKShipping.Models
         public PaginationInfo Pagination { get; set; }
        
     }
-
-    public class PaginationInfo
-    {
-        public int Page { get; set; }
-        public int PageSize { get; set; }
-        public int TotalRecords { get; set; }
-        public int TotalPages { get; set; }
-    }
-
    
 }

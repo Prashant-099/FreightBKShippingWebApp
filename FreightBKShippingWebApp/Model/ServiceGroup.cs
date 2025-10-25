@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace FreightBKShipping.Models
+namespace FreightBKShippingWebApp.Model
 {
     [Table("service_groups")]
     public class ServiceGroup
@@ -11,7 +11,6 @@ namespace FreightBKShipping.Models
         public int ServiceGroupsId { get; set; }
 
         [Column("service_groups_name")]
-      
         public string ServiceGroupsName { get; set; } = string.Empty;
 
         [Column("service_groups_status")]

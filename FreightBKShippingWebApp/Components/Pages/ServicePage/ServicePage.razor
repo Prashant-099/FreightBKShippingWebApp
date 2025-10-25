@@ -1,6 +1,6 @@
 ﻿@page "/service"
 
-@using FreightBKShipping.Models
+
 @using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Services
 @using FreightBKShippingWebApp.Components.Pages
@@ -42,14 +42,17 @@
         <DxGridDataColumn FieldName="ServiceId" Caption="ID" Visible="false" />
         <DxGridSelectionColumn Width="30" />
         <DxGridDataColumn FieldName="ServiceName" Caption="Service Name" />
-        <DxGridDataColumn FieldName="ServiceGroupId" Caption="Group" />
+        <DxGridDataColumn FieldName="GroupName" Caption="Group" />
         <DxGridDataColumn FieldName="ServiceType" Caption="Type" />
         <DxGridDataColumn FieldName="ServiceSRate" Caption="Sale Rate" DisplayFormat="N2" />
         <DxGridDataColumn FieldName="ServicePRate" Caption="Purchase Rate" DisplayFormat="N2" />
         <DxGridDataColumn FieldName="ServiceChargeType" Caption="Charge Type" />
-        <DxGridDataColumn FieldName="ServiceHsnId" Caption="SAC" />
+        <DxGridDataColumn FieldName="HsnName" Caption="SAC" />
+        <DxGridDataColumn FieldName="HsnGstPer" Caption="GST Per(%)" />
+        <DxGridDataColumn FieldName="ServicePrintName" Caption="Print Name" />
+        <DxGridDataColumn FieldName="AccountName" Caption="Account" />
         <DxGridDataColumn FieldName="ServiceStatus" Caption="Active" />
-        <DxGridDataColumn FieldName="ServiceRemarks" Caption="Remarks" />
+        
     </Columns>
 </DxGrid>
 
@@ -82,7 +85,10 @@
 
     private void OnSelectedServicesChanged(IEnumerable<object> items)
     {
-        SelectedServices = items.Cast<Service>().ToList();
+        var selectedIds = items.Cast<Service>().Select(x => x.ServiceId).ToList();
+        SelectedServices = serviceList
+            .Where(s => selectedIds.Contains(s.ServiceId))
+            .ToList();
     }
 
     private void OnCreateNew(ToolbarItemClickEventArgs e)

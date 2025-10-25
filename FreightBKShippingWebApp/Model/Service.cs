@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace FreightBKShipping.Models
+namespace FreightBKShippingWebApp.Model
 {
     [Table("services")]
     public class Service
@@ -97,5 +97,11 @@ namespace FreightBKShipping.Models
         // 🔹 Add navigation property
         [ForeignKey("ServiceGroupId")]
         public virtual ServiceGroup? ServiceGroup { get; set; }
+
+        // ✅ Extra unmapped fields for frontend
+        public string? GroupName { get; set; }
+        public string? HsnName { get; set; }
+        public float? HsnGstPer { get; set; }
+        public string? AccountName { get; set; }
     }
 }

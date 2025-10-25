@@ -6,9 +6,9 @@ namespace FreightBKShippingWebApp.Services
     public class YearStatechangeService
     {
         private readonly YearService _yearService;
-        private readonly VoucherConfigService _VoucherConfigService;
+        private readonly VoucherService _VoucherConfigService;
 
-        public YearStatechangeService(YearService yearService, VoucherConfigService VoucherConfigService)
+        public YearStatechangeService(YearService yearService, VoucherService VoucherConfigService)
         {
             _yearService = yearService;
             _VoucherConfigService = VoucherConfigService;
@@ -60,49 +60,64 @@ namespace FreightBKShippingWebApp.Services
             return ValidationResult.Success;
         }
 
-        public List<VoucherConfig> VoucherConfigs { get; set; } = new();
+        public List<Voucher> VoucherConfigs { get; set; } = new();
 
 
-        public async Task<(string prefix, int number, string suffix)> GenerateCertiNoAsync(int branchId, int finYearId, string phyto, string certitype)
-        {
-            VoucherConfigs = await _VoucherConfigService.GetAllAsync();
-                      var config = VoucherConfigs
-                .FirstOrDefault(x => x.VoucherConfig_Branch_Id == branchId &&
-                                     x.VoucherConfig_FinYear_Id == finYearId &&
-                                     x.VoucherConfig_ProdType == certitype &&
-                                  string.Equals(x.VoucherConfig_Phyto?.Trim(), phyto?.Trim(), StringComparison.OrdinalIgnoreCase));
-
-            if (config == null)
-               // throw new Exception($"Voucher configuration not found for Branch={branchId}, Year={finYearId}, Phyto='{phyto}'");
-              throw new Exception("Voucher configuration not found!");
-
-            int nextNo = config.VoucherConfig_LastVoucherNo + 1;
-
-            // update last no
-           // config.VoucherConfig_LastVoucherNo = nextNo;
-
-            // return pieces
-            return (config.VoucherConfig_Prefix ?? string.Empty,
-                    nextNo,
-                    config.VoucherConfig_Suffix ?? string.Empty);
-        }
-
-        //public async Task<int> GenerateCertiNo(int branchId, int finYearId , string phyto)
+        //public async Task<(string prefix, int number, string suffix)> GenerateCertiNoAsync(int branchId, int finYearId, string phyto, string certitype)
         //{
-        //    VoucherConfigs= await _VoucherConfigService.GetAllAsync();
-        //    var config = VoucherConfigs
-        //        .FirstOrDefault(x => x.VoucherConfig_Branch_Id == branchId && x.VoucherConfig_FinYear_Id == finYearId && x.VoucherConfig_Phyto == phyto);
+        //    VoucherConfigs = await _VoucherConfigService.GetAllAsync();
+        //              var config = VoucherConfigs
+        //        .FirstOrDefault(x => x.VoucherConfig_Branch_Id == branchId &&
+        //                             x.VoucherConfig_FinYear_Id == finYearId &&
+        //                             x.VoucherConfig_ProdType == certitype &&
+        //                          string.Equals(x.VoucherConfig_Phyto?.Trim(), phyto?.Trim(), StringComparison.OrdinalIgnoreCase));
 
         //    if (config == null)
-        //        throw new Exception("Voucher configuration not found!");
+        //       // throw new Exception($"Voucher configuration not found for Branch={branchId}, Year={finYearId}, Phyto='{phyto}'");
+        //      throw new Exception("Voucher configuration not found!");
 
         //    int nextNo = config.VoucherConfig_LastVoucherNo + 1;
 
         //    // update last no
-        //    config.VoucherConfig_LastVoucherNo = nextNo;
+        //   // config.VoucherConfig_LastVoucherNo = nextNo;
 
-        //    return nextNo;
+        //    // return pieces
+        //    return (config.VoucherConfig_Prefix ?? string.Empty,
+        //            nextNo,
+        //            config.VoucherConfig_Suffix ?? string.Empty);
         //}
+
+        public async Task<(string prefix, string number, string suffix)> GeneratebillNoAsync(int?voucherId, int finYearId)
+        {
+            if (!voucherId.HasValue)
+                throw new ArgumentNullException(nameof(voucherId));
+
+            // Load voucher configurations (each Voucher may contain multiple VoucherDetail entries)
+            VoucherConfigs = await _VoucherConfigService.GetAllAsync();
+
+            // Find the requested voucher by id
+            var voucher = VoucherConfigs.FirstOrDefault(v => v.VoucherId == voucherId.Value);
+            if (voucher == null)
+                throw new Exception("Voucher configuration not found!");
+
+            // Find the voucher detail that matches the financial year and is active
+            var detail = voucher.VoucherDetails?
+                .FirstOrDefault(d => d.VoucherDetailYearId == finYearId && d.VoucherDetailStatus);
+
+            if (detail == null)
+                throw new Exception("Voucher not found!");
+
+
+            int nextNo = detail.VoucherDetailLastNo + 1;
+
+            // update last no
+            // config.VoucherConfig_LastVoucherNo = nextNo;
+
+            // return pieces
+            return (detail.VoucherDetailPrefix ?? string.Empty,
+                   nextNo.ToString(),
+                   detail.VoucherDetailSufix ?? string.Empty);
+        }
 
         //public string GenerateCertiNo(int branchId, int finYearId)
         //{

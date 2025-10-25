@@ -27,7 +27,6 @@ builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<CompanyService>();
 builder.Services.AddScoped<LoadingService>();
 builder.Services.AddScoped<ToasteService>();
-builder.Services.AddScoped<VoucherConfigService>();
 builder.Services.AddScoped<YearService>();
 builder.Services.AddScoped<YearStatechangeService>();
 builder.Services.AddScoped<ConfirmationDialogService>();
@@ -51,7 +50,9 @@ builder.Services.AddScoped<AccountTypeService>();
 builder.Services.AddScoped<AccountGroupService>();
 builder.Services.AddScoped<UnitService>();
 builder.Services.AddScoped<VesselService>();
+builder.Services.AddScoped<RateMasterService>();
 
+builder.Services.AddScoped<BillService>();
 builder.Services.AddHttpClient<ApiClient>(client =>
 {
     client.BaseAddress = new Uri("http://localhost:5004/");

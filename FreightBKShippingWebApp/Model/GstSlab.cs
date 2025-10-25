@@ -2,7 +2,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace FreightBKShipping.Models
+namespace FreightBKShippingWebApp.Model
 {
     [Table("gstslabs")]
     public class GstSlab
@@ -19,8 +19,8 @@ namespace FreightBKShipping.Models
         public int? GstSlabYearId { get; set; }
 
         [Column("gstslab_addedby_user_id")]
-       
-        public string? GstSlabAddedByUserId { get; set; }
+
+        public string? GstSlabAddedByUserId { get; set; } = string.Empty;
 
         [Column("gstslab_updatedby_user_id")]
      

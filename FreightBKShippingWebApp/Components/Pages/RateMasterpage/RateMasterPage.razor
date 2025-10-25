@@ -1,0 +1,122 @@
+﻿@page "/ratemaster"
+@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Services
+@inject RateMasterService RateMasterService
+@inject ToasteService ToastService
+@inject LoadingService LoadingService
+@inject ConfirmationDialogService ConfirmDialogService
+@inject AccountService AccountService
+@inject ServiceService ServiceService
+
+<DxGrid TItem="RateMaster"
+        Data="@rateMasterList"
+        @ref="MyGrid"
+        KeyFieldName="RateMasterId"
+        ShowSearchBox="true"
+        PageSize="10"
+        PageSizeSelectorVisible="true"
+        ShowGroupPanel="true"
+        FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always"
+        FocusedRowEnabled="true"
+        SelectionMode="GridSelectionMode.Multiple"
+        SelectedDataItems="@SelectedRates"
+        SelectedDataItemsChanged="OnSelectedRatesChanged">
+
+    <ToolbarTemplate>
+        <DxToolbar>
+            <TitleTemplate Context="ratemasterpagectx"> 
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-currency-exchange"></i>
+                    <span class="fs-5">Rate Master</span>
+                </div>
+            </TitleTemplate>
+            <Items>
+                <DxToolbarItem Text="Add" IconCssClass="bi bi-plus-circle" Click="OnCreateNew" />
+                <DxToolbarItem Text="Edit" IconCssClass="bi bi-pencil-square" Click="OnEdit" />
+                <DxToolbarItem Text="Delete" IconCssClass="bi bi-trash" Click="OnDelete" />
+                <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="LoadRatesAsync" />
+            </Items>
+        </DxToolbar>
+    </ToolbarTemplate>
+
+    <Columns>
+        <DxGridDataColumn FieldName="RateMasterId" Caption="ID" Visible="false" />
+        <DxGridSelectionColumn Width="30" />
+        <DxGridDataColumn FieldName="RateMasterApplicableDt" Caption="Applicable Date" DisplayFormat="d" MinWidth="120" />
+     <DxGridDataColumn FieldName="PartyName" Caption="Party Name" MinWidth="150" />
+<DxGridDataColumn FieldName="ServiceName" Caption="Service Name" MinWidth="150" />
+        <DxGridDataColumn FieldName="RateMasterSaleRate" Caption="Sale Rate" MinWidth="100" />
+        <DxGridDataColumn FieldName="RateMasterPurchaseRate" Caption="Purchase Rate" MinWidth="100" />
+    </Columns>
+</DxGrid>
+
+<RateMasterAddEditPage @ref="popup" OnSaved="LoadRatesAsync" />
+
+<ConfirmationDialog />
+
+@code {
+    DxGrid MyGrid;
+    private List<RateMaster> rateMasterList = new();
+    private List<RateMaster> SelectedRates = new();
+    private RateMasterAddEditPage popup;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadRatesAsync();
+    }
+
+    private async Task LoadRatesAsync()
+    {
+        LoadingService.Show();
+        try
+        {
+            rateMasterList = await RateMasterService.GetAllAsync();
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+
+    private void OnSelectedRatesChanged(IEnumerable<object> rates)
+    {
+        SelectedRates = rates.Cast<RateMaster>().ToList();
+    }
+
+    private void OnCreateNew(ToolbarItemClickEventArgs e)
+    {
+        popup.Show(new RateMaster());
+    }
+
+    private void OnEdit(ToolbarItemClickEventArgs e)
+    {
+        var rate = MyGrid.GetFocusedDataItem() as RateMaster;
+        if (rate != null)
+            popup.Show(rate);
+        else
+            ToastService.Warning("Please select a rate to edit.");
+    }
+
+    private async Task OnDelete(ToolbarItemClickEventArgs e)
+    {
+        if (SelectedRates == null || SelectedRates.Count == 0)
+        {
+            ToastService.Warning("Please select at least one rate to delete.");
+            return;
+        }
+
+        var confirm = await ConfirmDialogService.ShowAsync(
+            $"Are you sure you want to delete {SelectedRates.Count} selected rate(s)?");
+
+        if (confirm)
+        {
+            foreach (var rate in SelectedRates)
+            {
+                await RateMasterService.DeleteAsync(rate.RateMasterId);
+            }
+
+            ToastService.Success($"{SelectedRates.Count} rate(s) deleted successfully.");
+            await LoadRatesAsync();
+        }
+    }
+}

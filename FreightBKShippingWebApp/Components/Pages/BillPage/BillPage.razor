@@ -1,0 +1,159 @@
+﻿@page "/bill"
+@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Services
+@using FreightBKShippingWebApp.Components.Pages
+@inject BillService BillService
+@inject ToasteService ToastService
+@inject LoadingService LoadingService
+@inject ConfirmationDialogService ConfirmDialogService
+
+<DxGrid TItem="Bill"
+        Data="@billList"
+        @ref="MyGrid"
+        KeyFieldName="BillId"
+        ShowSearchBox="true"
+        PageSize="10"
+        PageSizeSelectorVisible="true"
+        ShowGroupPanel="true"
+        FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always"
+        FocusedRowEnabled="true"
+        SelectionMode="GridSelectionMode.Multiple"
+        SelectedDataItems="@SelectedBills"
+        SelectedDataItemsChanged="OnSelectedBillsChanged">
+
+    <ToolbarTemplate>
+        <DxToolbar>
+            <TitleTemplate Context="tl">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-receipt-cutoff"></i>
+                    <span class="fs-5">Sale Invoice</span>
+                </div>
+            </TitleTemplate>
+            <Items>
+                <DxToolbarItem Text="Add" IconCssClass="bi bi-plus-circle" Click="OnCreateNew" />
+                <DxToolbarItem Text="Edit" IconCssClass="bi bi-pencil-square" Click="OnEdit" />
+                <DxToolbarItem Text="Delete" IconCssClass="bi bi-trash" Click="OnDelete" />
+                <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="@(async (_) => await LoadBillsAsync())" />
+            </Items>
+        </DxToolbar>
+    </ToolbarTemplate>
+
+    <Columns>
+        <DxGridDataColumn FieldName="BillId" Caption="ID" Visible="false" />
+        <DxGridSelectionColumn Width="30" />
+        <DxGridDataColumn FieldName="BillLockedBy" Caption="Locked" Width="120" />
+        <DxGridDataColumn FieldName="BillAckNo" Caption="AKNO" Width="120" />
+        <DxGridDataColumn FieldName="BillNo" Caption="Invoice No" Width="120" />
+        <DxGridDataColumn FieldName="BillDate" Caption="Invoice Date" DisplayFormat="d" Width="120" />
+        <DxGridDataColumn FieldName="BillDueDate" Caption="Due Date" Width="120" />
+        <DxGridDataColumn FieldName="BillJobNo" Caption="Job No" Width="120" />
+        <DxGridDataColumn FieldName="BillJobType" Caption="Job Type" Width="120" />
+        <DxGridDataColumn FieldName="partyname" Caption="Customer" Width="180" />
+        <DxGridDataColumn FieldName="BillVoucherId" Caption="Voucher Type" Width="120" />
+        <DxGridDataColumn FieldName="BillBlNo" Caption="BL_No" Width="120" />
+        <DxGridDataColumn FieldName="BillGstNo" Caption="GST No" Width="120" />
+        <DxGridDataColumn FieldName="posname" Caption="Place of Supply" Width="120" />
+        <DxGridDataColumn FieldName="Bill20Ft" Caption="C_20FT" Width="120" />
+        <DxGridDataColumn FieldName="Bill40Ft" Caption="C_40FT" Width="120" />
+        <DxGridDataColumn FieldName="BillSbNo" Caption="SB_No" Width="120" />
+        <DxGridDataColumn FieldName="BillSbDate" Caption="SB_Date" Width="120" />
+        <DxGridDataColumn FieldName="BillTotal" Caption="Basic Amount" Width="120" />
+        <DxGridDataColumn FieldName="BillCgst" Caption="CGST" Width="120" />
+        <DxGridDataColumn FieldName="BillSgst" Caption="SGST" Width="120" />
+        <DxGridDataColumn FieldName="BillIgst" Caption="IGST" Width="120" />
+        <DxGridDataColumn FieldName="BillNetAmount" Caption="Total Amount" Width="120" />
+        <DxGridDataColumn FieldName="BillSupplyType" Caption="Supply Type" Width="120" />
+        <DxGridDataColumn FieldName="BillShipParty" Caption="Ship To" Width="120" />
+        <DxGridDataColumn FieldName="BillCreated" Caption="Created At" Width="120" />
+        <DxGridDataColumn FieldName="BillUpdated" Caption="Updated At" Width="120" />
+        <DxGridDataColumn FieldName="BillStatus" Caption="Status" Width="100" Visible="false" />
+    </Columns>
+</DxGrid>
+
+<BillAddEditPage @ref="popup" OnSaved="LoadBillsAsync" />
+
+<ConfirmationDialog />
+
+@code {
+    DxGrid MyGrid;
+    private List<Bill> billList = [];
+    private List<Bill> SelectedBills = new();
+    private BillAddEditPage popup;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadBillsAsync();
+    }
+
+    private async Task LoadBillsAsync()
+    {
+        LoadingService.Show();
+        try
+        {
+            billList = await BillService.GetAllAsync();
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+
+    private void OnSelectedBillsChanged(IEnumerable<object> bills)
+    {
+        SelectedBills = bills.Cast<Bill>().ToList();
+    }
+
+    private void OnCreateNew(ToolbarItemClickEventArgs e)
+    {
+        popup.Show(new Bill
+        {
+            BillDate = DateTime.Now,
+            BillStatus = true
+        });
+    }
+
+    private void OnEdit(ToolbarItemClickEventArgs e)
+    {
+        var bill = MyGrid.GetFocusedDataItem() as Bill;
+        if (bill != null)
+            popup.Show(bill);
+        else
+            ToastService.Warning("Please select a bill to edit.");
+    }
+
+    private async Task OnDelete(ToolbarItemClickEventArgs e)
+    {
+        if (SelectedBills == null || SelectedBills.Count == 0)
+        {
+            ToastService.Warning("Please select at least one bill to delete.");
+            return;
+        }
+
+        var confirm = await ConfirmDialogService.ShowAsync(
+            $"Are you sure you want to delete {SelectedBills.Count} selected bill(s)?");
+
+        if (!confirm)
+            return;
+
+        int successCount = 0;
+        int failCount = 0;
+
+        foreach (var bill in SelectedBills)
+        {
+            var result = await BillService.DeleteAsync(bill.BillId);
+
+            if (result)
+                successCount++;
+            else
+                failCount++;
+        }
+
+        if (successCount > 0)
+            ToastService.Success($"{successCount} Bill(s) Deleted Successfully.");
+
+        if (failCount > 0)
+            ToastService.Error($"{failCount} Bill(s) Failed To Delete.");
+
+        await LoadBillsAsync();
+    }
+}

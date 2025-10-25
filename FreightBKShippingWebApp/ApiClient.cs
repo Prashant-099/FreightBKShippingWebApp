@@ -41,8 +41,8 @@ namespace FreightBKShippingWebApp
                 // Token expired → logout
                 if (sessionState.tokenExp <= now)
                 {
-                    //await ((CustomAuthStateProvider)authStateProvider).MarkUserAsLoggedOut();
-                    //navigationManager.NavigateTo("/login");
+                    await ((CustomAuthStateProvider)authStateProvider).MarkUserAsLoggedOut();
+                    navigationManager.NavigateTo("/login");
                     return;
                 }
 
@@ -102,17 +102,16 @@ namespace FreightBKShippingWebApp
                 navigationManager.NavigateTo("/login");
             }
         }
-
         public async Task<T?> GetFromJsonAsync<T>(string path)
         {
             await SetAuthorizeHeader();
+
             Console.WriteLine("=== HTTP Request ===");
             Console.WriteLine("Path: " + path);
             Console.WriteLine("Auth Header: " + httpClient.DefaultRequestHeaders.Authorization);
 
             try
             {
-                //return await httpClient.GetFromJsonAsync<T>(path, _jsonOptions);
                 var res = await httpClient.GetAsync(path);
 
                 Console.WriteLine("=== HTTP Response ===");
@@ -122,25 +121,58 @@ namespace FreightBKShippingWebApp
                 Console.WriteLine("Raw JSON Response:");
                 Console.WriteLine(content);
 
-                res.EnsureSuccessStatusCode(); // throws HttpRequestException for non-success codes
+                res.EnsureSuccessStatusCode(); // Throws HttpRequestException for non-success codes
 
-                return System.Text.Json.JsonSerializer.Deserialize<T>(content, _jsonOptions);
+                if (string.IsNullOrWhiteSpace(content))
+                {
+                    Console.WriteLine("⚠️ Response content is empty.");
+                    return default;
+                }
 
+                try
+                {
+                    using var doc = System.Text.Json.JsonDocument.Parse(content);
+
+                    // Handle paged responses with "data" property
+                    if (doc.RootElement.ValueKind == System.Text.Json.JsonValueKind.Object &&
+                        doc.RootElement.TryGetProperty("data", out var dataProp))
+                    {
+                        var rawData = dataProp.GetRawText();
+
+                        // If T is a paged wrapper, deserialize the full response
+                        if (typeof(T).IsGenericType &&
+                            typeof(T).GetGenericTypeDefinition() == typeof(PagedResponseDto<>))
+                        {
+                            return System.Text.Json.JsonSerializer.Deserialize<T>(content, _jsonOptions);
+                        }
+
+                        // Otherwise, deserialize only the "data" array
+                        return System.Text.Json.JsonSerializer.Deserialize<T>(rawData, _jsonOptions);
+                    }
+
+                    // Fallback: deserialize full content (plain array or object)
+                    return System.Text.Json.JsonSerializer.Deserialize<T>(content, _jsonOptions);
+                }
+                catch (System.Text.Json.JsonException ex)
+                {
+                    throw new Exception($"Invalid JSON from '{path}': {ex.Message}\nRaw content:\n{content}", ex);
+                }
             }
             catch (HttpRequestException ex)
             {
-                // network error, 4xx, 5xx, etc.
                 throw new Exception($"Request to '{path}' failed: {ex.Message}", ex);
             }
             catch (NotSupportedException ex)
             {
-                // content type isn’t valid JSON
                 throw new Exception($"Unsupported content type when calling '{path}'", ex);
             }
             catch (System.Text.Json.JsonException ex)
             {
-                // invalid JSON, can’t map to T
-                throw new Exception($"Invalid JSON from '{path}'", ex);
+                throw new Exception($"JSON deserialization error from '{path}': {ex.Message}", ex);
+            }
+            catch (Exception ex)
+            {
+                    throw new Exception($"Unexpected error when calling '{path}': {ex.Message}", ex);
             }
         }
 
@@ -179,7 +211,7 @@ namespace FreightBKShippingWebApp
             }
 
             if (typeof(T1) == typeof(string))
-            {
+            {      
                 return (T1)(object)content;
             }
 
@@ -278,7 +310,7 @@ namespace FreightBKShippingWebApp
                 var response = await httpClient.PutAsJsonAsync(path, postModel, _jsonOptions);
                 var content = await response.Content.ReadAsStringAsync();
 
-                Console.WriteLine($"📤 PUT {path} => {response.StatusCode}");
+                            Console.WriteLine($"📤 PUT {path} => {response.StatusCode}");
                 Console.WriteLine($"📥 Content: '{content}'");
 
                 if (response.IsSuccessStatusCode)
