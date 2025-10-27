@@ -431,5 +431,6 @@ namespace FreightBKShippingWebApp.Model
         //NOT MAPPED IN DB    
         public string? partyname { get; set; }
         public string? posname { get; set; }
+        public string? Vouchname { get; set; }
     }
 }

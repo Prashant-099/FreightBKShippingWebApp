@@ -21,12 +21,21 @@
 @inject RateMasterService RateMasterService
 @inject YearStatechangeService YearStatechangeService
 @inject BranchService BranchService
+@inject JobService JobService
 <style>
     .popup-footer {
         position: sticky;
         bottom: 0;
         background-color: #fff; /* or use your popup background color */
         padding: 10px 20px;
+        text-align: right;
+        border-top: 1px solid #ddd;
+        z-index: 100;
+    }
+    .popup-footer2 {
+        position: sticky;
+        bottom: 0;
+        background-color: #fff; /* or use your popup background color */
         text-align: right;
         border-top: 1px solid #ddd;
         z-index: 100;
@@ -57,6 +66,10 @@
     }
     .jobdetails{
     margin-top: 6px;
+    }
+
+    .jobdetailslabel {
+        padding-top: 6px;
     }
 </style>
 
@@ -100,15 +113,25 @@
             </DxFormLayoutItem>
             <DxFormLayoutItem Caption="Job Type" ColSpanMd="3">
                 <DxComboBox Data="@JobTypeList"
-                            @bind-Value="EditModel.BillJobType"
                             TextFieldName="Text"
                             ValueFieldName="Value"
                             ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
                             AllowUserInput="true"
-                            SearchMode="ListSearchMode.AutoSearch" SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+                            SearchMode="ListSearchMode.AutoSearch" SearchFilterCondition="ListSearchFilterCondition.StartsWith" 
+                             Value="@EditModel.BillJobType"
+                                ValueChanged="@((string jobtype) => OnJobTypeChanged( jobtype))"
+                                ValueExpression="@( () => EditModel.BillJobType )"/>
             </DxFormLayoutItem>
             <DxFormLayoutItem Caption="Job No" ColSpanMd="3">
-                <DxTextBox @bind-Text="EditModel.BillJobNo" />
+                <DxComboBox Data="@FilteredJobList"
+                            TextFieldName="JobNo"
+                            ValueFieldName="JobNo"
+                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                            AllowUserInput="true"
+                            SearchMode="ListSearchMode.AutoSearch" SearchFilterCondition="ListSearchFilterCondition.StartsWith"
+                             Value="@EditModel.BillJobNo"
+                            ValueChanged="@((string jobno) => OnJobDetailsChanged(jobno))"
+                                ValueExpression="@( () => EditModel.BillJobNo )"/>
             </DxFormLayoutItem>
           
             <DxFormLayoutItem Caption="Supply Type" ColSpanMd="3">
@@ -272,7 +295,7 @@
                                     <DxToolbarItem Type="Spacer" />
                                     <DxToolbarItem Text="Clear All" IconCssClass="bi bi-trash" RenderStyle="ButtonRenderStyle.Danger" Click="Revert_Click" />
                                     <DxToolbarItem Type="Spacer" /> 
-                                    <DxToolbarItem Text="Column Chooser" RenderStyle="ButtonRenderStyle.Primary" IconCssClass="bi bi-list-columns" Click="ColumnChooserButton_Click" />
+                                    <DxToolbarItem Text="" RenderStyle="ButtonRenderStyle.Primary" IconCssClass="bi bi-list-columns" Click="ColumnChooserButton_Click" />
 
                                 </Items>
                             </DxToolbar>
@@ -353,7 +376,11 @@
 
                             <TotalSummary>
                                 <DxGridSummaryItem FieldName="BillDetailAmount" SummaryType="GridSummaryItemType.Sum" DisplayText="Total: {0:N2}" />
-                                <DxGridSummaryItem FieldName="BillDetailTotal" SummaryType="GridSummaryItemType.Sum" DisplayText="Grand Total: {0:N2}" />
+                            <DxGridSummaryItem FieldName="BillDetailIgst" SummaryType="GridSummaryItemType.Sum" />
+                            <DxGridSummaryItem FieldName="BillDetailCgst" SummaryType="GridSummaryItemType.Sum"  />
+                            <DxGridSummaryItem FieldName="BillDetailSgst" SummaryType="GridSummaryItemType.Sum" />
+                                <DxGridSummaryItem FieldName="BillDetailTotal" SummaryType="GridSummaryItemType.Sum" DisplayText="Grand Total: {0:N2}"/>
+                     
                             </TotalSummary>
                         </DxGrid>
 
@@ -386,51 +413,7 @@
                             <DxSpinEdit @bind-Value="EditModel.BillNetAmount" ReadOnly="true" Format="N2" Width="150px" />
                         </div>
                         </div> *@
-                    <div class="bill-footer d-flex align-items-center border-top pt-2 px-2">
-                        <!-- Remarks -->
-                        <div class="flex-grow-1 me-3">
-                            <label class="fw-bold d-block mb-1">Remarks</label>
-                            <DxMemo @bind-Text="EditModel.BillRemarks" Width="100%" />
-                        </div>
-
-                        <!-- Branch -->
-                        <div class="me-3 text-end">
-                            <label class="fw-bold d-block mb-1">Branch</label>
-                            <DxComboBox Data="@branchList"
-                                        TextFieldName="BranchName"
-                                        ValueFieldName="BranchId"
-                                        @bind-Value="EditModel.BillBranchId"
-                                        Width="160px" />
-                        </div>
-
-                        <!-- Is RCM Applicable -->
-                        <div class="me-3 text-end">
-                            <DxCheckBox @bind-Checked="EditModel.BillIsRcm" Text="Is RCM Applicable" />
-                            <label class="fw-bold d-block mb-1">Is RCM Applicable</label>
-                        </div>
-
-                        <!-- Is Round Off -->
-                        <div class="me-3 text-end d-flex align-items-center">
-                            <DxCheckBox @bind-Checked="EditModel.BillIsRoundOff" Text="Is Round Off" />
-                            <label class="fw-bold d-block mb-1">Is Round Off</label>
-                            <DxSpinEdit @bind-Value="EditModel.BillRoundAmt"
-                                        Format="N2"
-                                        Width="80px"
-                                        CssClass="ms-1"
-                                        NullText="0.00" />
-                        </div>
-
-                        <!-- Total Amount -->
-                        <div class="text-end">
-                            <label class="fw-bold me-2">Total Amount:</label>
-                            <DxSpinEdit @bind-Value="EditModel.BillNetAmount"
-                                        ReadOnly="true"
-                                        Format="N2"
-                                        Width="100px"
-                                        CssClass="total-amount-box" />
-                        </div>
-                    </div>
-
+                    
 
 
 
@@ -439,7 +422,7 @@
         <DxFormLayout>
                    
 
-                        <DxFormLayoutItem Caption="POL" ColSpanMd="3" CssClass="jobdetails">
+                        <DxFormLayoutItem Caption="POL" ColSpanMd="3" CssClass="jobdetailslabel">
                             <DxComboBox TData="Location" TValue="int"
                                         Data="@locationList"
                                         TextFieldName="LocationName"
@@ -451,7 +434,7 @@
                                         SearchFilterCondition="ListSearchFilterCondition.StartsWith"  CssClass="jobdetails"/>
                         </DxFormLayoutItem>
 
-                        <DxFormLayoutItem Caption="Consignee" ColSpanMd="3" CssClass="jobdetails">
+                        <DxFormLayoutItem Caption="Consignee" ColSpanMd="3" CssClass="jobdetailslabel">
                             <DxComboBox TData="Notify" TValue="int"
                                         Data="@ConsigneeList"
                                         TextFieldName="NotifyName"
@@ -462,13 +445,13 @@
                                         SearchMode="ListSearchMode.AutoSearch"
                                         SearchFilterCondition="ListSearchFilterCondition.StartsWith"  CssClass="jobdetails"/>
                         </DxFormLayoutItem>
-                        <DxFormLayoutItem Caption="SB/BE No" ColSpanMd="2" CssClass="jobdetails">
+                        <DxFormLayoutItem Caption="SB/BE No" ColSpanMd="2" CssClass="jobdetailslabel">
                             <DxTextBox @bind-Text="EditModel.BillSbNo"  CssClass="jobdetails"/>
                         </DxFormLayoutItem>
-                        <DxFormLayoutItem Caption="Date" ColSpanMd="2" CssClass="jobdetails">
+                        <DxFormLayoutItem Caption="Date" ColSpanMd="2" CssClass="jobdetailslabel">
                             <DxDateEdit @bind-Date="EditModel.BillSbDate" CssClass="jobdetails" />
                         </DxFormLayoutItem>
-                        <DxFormLayoutItem Caption="QTY" ColSpanMd="2" CssClass="jobdetails">
+                        <DxFormLayoutItem Caption="QTY" ColSpanMd="2" CssClass="jobdetailslabel">
                             <DxSpinEdit @bind-Value="EditModel.BillQty" ShowSpinButtons="false" CssClass="jobdetails" />
                         </DxFormLayoutItem>
                         <DxFormLayoutItem Caption="POD" ColSpanMd="3">
@@ -586,7 +569,9 @@
                                                 ClearButtonVisible="true"
                                                 AllowUserInput="false"
                                                 NullText="-- Select Account --"
-                                                @bind-Value="EditModel.BillShipPartyId"
+                                                Value="@EditModel.BillShipPartyId"
+                                ValueChanged="@((int shippartyId) => shippartydetails(shippartyId))"
+                                ValueExpression="@( () => EditModel.BillShipPartyId )"
                                                 SearchMode="ListSearchMode.AutoSearch"
                                                 SearchFilterCondition="ListSearchFilterCondition.StartsWith" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
                             </DxFormLayoutItem>
@@ -671,6 +656,52 @@
                 </DxFormLayoutTabPages>
             
         </DxFormLayout>
+        <div class="popup-footer2">
+            <div class="bill-footer d-flex align-items-center border-top pt-2 px-2">
+                <!-- Remarks -->
+                <div class="flex-grow-1 me-3">
+                    <label class="fw-bold d-block mb-1">Remarks</label>
+                    <DxMemo @bind-Text="EditModel.BillRemarks" Width="100%" />
+                </div>
+
+                <!-- Branch -->
+                <div class="me-3 text-end">
+                    <label class="fw-bold d-block mb-1">Branch</label>
+                    <DxComboBox Data="@branchList"
+                                TextFieldName="BranchName"
+                                ValueFieldName="BranchId"
+                                @bind-Value="EditModel.BillBranchId"
+                                Width="160px" />
+                </div>
+
+                <!-- Is RCM Applicable -->
+                <div class="me-3 text-end">
+                    <DxCheckBox @bind-Checked="EditModel.BillIsRcm" Text="Is RCM Applicable" />
+                    <label class="fw-bold d-block mb-1">Is RCM Applicable</label>
+                </div>
+
+                <!-- Is Round Off -->
+                <div class="me-3 text-end d-flex align-items-center">
+                    <DxCheckBox @bind-Checked="EditModel.BillIsRoundOff" Text="Is Round Off" />
+                    <label class="fw-bold d-block mb-1">Is Round Off</label>
+                    <DxSpinEdit @bind-Value="EditModel.BillRoundAmt"
+                                Format="N2"
+                                Width="80px"
+                                CssClass="ms-1"
+                                NullText="0.00" />
+                </div>
+
+                <!-- Total Amount -->
+                <div class="text-end">
+                    <label class="fw-bold me-2">Total Amount:</label>
+                    <DxSpinEdit @bind-Value="EditModel.BillNetAmount"
+                                ReadOnly="true"
+                                Format="N2"
+                                Width="100px"
+                                CssClass="total-amount-box" />
+                </div>
+            </div>
+        </div>
         <div class="popup-footer">
             <DxButton Text="Save" RenderStyle="ButtonRenderStyle.Primary" SubmitFormOnClick="true" />
             <DxButton Text="Cancel" RenderStyle="ButtonRenderStyle.Secondary" Click="Hide" />
@@ -715,8 +746,9 @@
     private List<Company> CompanyList = new();
     private List<State> StateList = new();
     private List<RateMaster> RateMasterList = new();
-     private List<Branch> branchList = new();
-
+    private List<Branch> branchList = new();
+    private List<Job> JobList = new();
+    private List<Job> FilteredJobList = new();
     protected override async Task OnInitializedAsync()
     {
         await LoadBillsDataAsync();
@@ -741,6 +773,9 @@
             StateList = await StateService.GetStatesAsync();
             RateMasterList = await RateMasterService.GetAllAsync();
             branchList = await BranchService.GetAllAsync();
+            JobList = await JobService.GetAllAsync();
+            FilteredJobList = JobList;
+
             var allNotify = await NotifyService.GetAllAsync();
             ConsigneeList = allNotify.Where(n => n.NotifyType == "CONSIGNEE").ToList();
             ShipperList = allNotify.Where(n => n.NotifyType == "SHIPPER").ToList();
@@ -754,8 +789,80 @@
             LoadingService.Hide();
         }
     }  
+    private void OnJobDetailsChanged(string selectedjobno)
+    {
+        EditModel.BillJobNo = selectedjobno;
+        var selectedjobdetails = JobList.FirstOrDefault(j => j.JobNo == selectedjobno);
+        if (selectedjobno != null)
+        {
+            EditModel.BillPartyId = selectedjobdetails.JobPartyId ?? 0;
+            EditModel.BillSupplyType = "B2B";
+            EditModel.BillCargoId = selectedjobdetails.JobCargoId ?? 0;
+            EditModel.BillShipPartyId = EditModel.BillPartyId;
+            EditModel.BillRemarksDefault = selectedjobdetails.JobGoodsDesc ;
+            EditModel.BillVesselId = selectedjobdetails.JobVesselId ??0;
+            EditModel.BillLineId = selectedjobdetails.JobLineId ??0;
+            EditModel.BillDefaultCurrencyId = selectedjobdetails.JobDefCurrId ??0;
+            EditModel.BillHblNo = selectedjobdetails.JobHblNo ;
+            EditModel.BillShipperInvNo = selectedjobdetails.JobShipperInvNo ;
+            EditModel.BillShipperInvDate = selectedjobdetails.JobShipperInvDate ;
+            EditModel.BillGrossWt = selectedjobdetails.JobGrossWt ??0;
+            EditModel.BillNetWt = selectedjobdetails.JobNetWt??0;
+            EditModel.BillQty = selectedjobdetails.JobQty ??0;
+            EditModel.BillPolId = selectedjobdetails.JobPolId??0;
+            EditModel.BillPodId = selectedjobdetails.JobPodId??0;
+            EditModel.BillConsigneeId = selectedjobdetails.JobConsigneeId??0;
+            EditModel.BillShipperId = selectedjobdetails.JobShipperId??0;
+            EditModel.BillExchRate = selectedjobdetails.JobExchRate??0;
+            EditModel.BillCbmQty = selectedjobdetails.JobCbm??0;
+            // EditModel.BillCust1 = selectedjobdetails.JobEtd??0;
+            //EditModel.BillCust2 = selectedjobdetails.JobEta??0;
+            EditModel.Bill20Ft = selectedjobdetails.Job20Ft;
+            EditModel.Bill40Ft = selectedjobdetails.Job40Ft;
+            EditModel.BillContainerNo = selectedjobdetails.JobContainer20Ft +" , "+selectedjobdetails.JobContainer40Ft;
+            EditModel.BillBlNo = selectedjobdetails.JobBlNo;
+            EditModel.BillBlDate = selectedjobdetails.JobBlDate;
+            EditModel.BillSbNo = selectedjobdetails.JobSbNo;
+            EditModel.BillSbDate = selectedjobdetails.JobSbDate;
+            EditModel.BillCust3 = selectedjobdetails.JobNo;
 
+            var selectedparty = AccountList.FirstOrDefault(s => s.AccountId == EditModel.BillShipPartyId);
+            EditModel.BillAddress1 = selectedparty.AccountAddress1;
+            EditModel.BillContactNo = selectedparty.AccountMobile;
+            EditModel.BillGstNo = selectedparty.AccountGstNo;
+            EditModel.BillPincode = selectedparty.AccountPincode;
+            EditModel.BillCity = selectedparty.AccountCity;
+            EditModel.BillPlaceOfSupply = selectedparty.AccountStateId??0;
+            EditModel.BillStateId = selectedparty.AccountStateId ?? 0;
 
+            var Duedate = selectedparty.AccountCreditDays??30;
+            EditModel.BillDueDate = DateTime.Now.AddDays(Duedate);
+
+        }
+    }
+    private void shippartydetails(int shippartydetails)
+    {
+        EditModel.BillShipPartyId = shippartydetails;
+        var selectedshipparty = AccountList.FirstOrDefault(s => s.AccountId == shippartydetails);
+        if (selectedshipparty != null)
+        {
+            EditModel.BillAddress1 = selectedshipparty.AccountAddress1;
+            EditModel.BillContactNo = selectedshipparty.AccountMobile;
+            EditModel.BillGstNo = selectedshipparty.AccountGstNo;
+            EditModel.BillPincode = selectedshipparty.AccountPincode;
+            EditModel.BillCity = selectedshipparty.AccountCity;
+            EditModel.BillStateId = selectedshipparty.AccountStateId ?? 0;
+        }
+    }
+    private void OnJobTypeChanged(string selectedType)
+    {
+        EditModel.BillJobType = selectedType;
+        FilteredJobList = JobList
+            .Where(j => j.JobType == selectedType) // assuming each job has Type
+            .ToList();
+
+        EditModel.BillJobNo = null; // clear previous selection
+    }
     private async Task OnvoucherChanged(Bill model, int? voucherId)
     {
         if (voucherId == null || voucherId == 0)
@@ -854,6 +961,7 @@
 
             }
             nextSNo = BillDetails.Count + 1;
+            OnJobTypeChanged(EditModel.BillJobType);
             Title = "Edit Bill";
         }
         else
@@ -861,7 +969,7 @@
             EditModel = new Bill
             {
                 BillDate = DateTime.Now,
-                BillDueDate = DateTime.Now.AddDays(30),
+               // BillDueDate = DateTime.Now.AddDays(30),
                 BillStatus = true,
                 BillDetails = new List<BillDetail>()
             };
@@ -1222,25 +1330,76 @@
                     {
                         int companyStateId = companyState.StateId;
 
-                        if (companyStateId == EditModel.BillPlaceOfSupply)
+                        // if (companyStateId == EditModel.BillPlaceOfSupply)
+                        // {
+                        //     // Intra-state → CGST + SGST
+                        //     item.BillDetailIgst = 0;
+                        //     item.BillDetailIgstPer = 0;
+                        //     item.BillDetailCgstPer = item.BillDetailGstPer / 2;
+                        //     item.BillDetailSgstPer = item.BillDetailGstPer / 2;
+                        //     item.BillDetailCgst = item.BillDetailTaxableAmt * (item.BillDetailCgstPer / 100);
+                        //     item.BillDetailSgst = item.BillDetailTaxableAmt * (item.BillDetailSgstPer / 100);
+                        // }
+                        // else
+                        // {
+                        //     // Inter-state → IGST only
+                        //     item.BillDetailCgstPer = 0;
+                        //     item.BillDetailSgstPer = 0;
+                        //     item.BillDetailCgst = 0;
+                        //     item.BillDetailSgst = 0;
+                        //     item.BillDetailIgstPer = item.BillDetailGstPer;
+                        //     item.BillDetailIgst = item.BillDetailTaxableAmt * (item.BillDetailIgstPer / 100);
+                        // }
+
+
+
+                        string supplyType = EditModel.BillSupplyType ?? "B2B";
+
+                        switch (supplyType)
                         {
-                            // Intra-state → CGST + SGST
-                            item.BillDetailIgst = 0;
-                            item.BillDetailIgstPer = 0;
-                            item.BillDetailCgstPer = item.BillDetailGstPer / 2;
-                            item.BillDetailSgstPer = item.BillDetailGstPer / 2;
-                            item.BillDetailCgst = item.BillDetailTaxableAmt * (item.BillDetailCgstPer / 100);
-                            item.BillDetailSgst = item.BillDetailTaxableAmt * (item.BillDetailSgstPer / 100);
-                        }
-                        else
-                        {
-                            // Inter-state → IGST only
-                            item.BillDetailCgstPer = 0;
-                            item.BillDetailSgstPer = 0;
-                            item.BillDetailCgst = 0;
-                            item.BillDetailSgst = 0;
-                            item.BillDetailIgstPer = item.BillDetailGstPer;
-                            item.BillDetailIgst = item.BillDetailTaxableAmt * (item.BillDetailIgstPer / 100);
+                            case "B2B":
+                            case "B2CS":
+                                // Normal GST logic (domestic)
+                                if (companyStateId == EditModel.BillPlaceOfSupply)
+                                {
+                                    // Intra-state → CGST + SGST
+                                    item.BillDetailIgst = 0;
+                                    item.BillDetailIgstPer = 0;
+                                    item.BillDetailCgstPer = item.BillDetailGstPer / 2;
+                                    item.BillDetailSgstPer = item.BillDetailGstPer / 2;
+                                    item.BillDetailCgst = item.BillDetailTaxableAmt * (item.BillDetailCgstPer / 100);
+                                    item.BillDetailSgst = item.BillDetailTaxableAmt * (item.BillDetailSgstPer / 100);
+                                }
+                                else
+                                {
+                                    // Inter-state → IGST
+                                    item.BillDetailCgstPer = 0;
+                                    item.BillDetailSgstPer = 0;
+                                    item.BillDetailIgstPer = item.BillDetailGstPer;
+                                    item.BillDetailIgst = item.BillDetailTaxableAmt * (item.BillDetailIgstPer / 100);
+                                }
+                                break;
+
+                            case "SEZWP":
+                            case "EXPWP":
+                            case "DEXP":
+                                // ✅ Export or SEZ with payment → only IGST
+                                item.BillDetailCgstPer = 0;
+                                item.BillDetailSgstPer = 0;
+                                item.BillDetailIgstPer = item.BillDetailGstPer;
+                                item.BillDetailIgst = item.BillDetailTaxableAmt * (item.BillDetailIgstPer / 100);
+                                break;
+
+                            case "SEZWOP":
+                            case "EXPWOP":
+                                // ✅ Export or SEZ without payment → no GST
+                                item.BillDetailIgst = 0;
+                                item.BillDetailCgst = 0;
+                                item.BillDetailSgst = 0;
+                                item.BillDetailIgstPer = 0;
+                                item.BillDetailCgstPer = 0;
+                                item.BillDetailSgstPer = 0;
+                                break;
                         }
                     }
 
