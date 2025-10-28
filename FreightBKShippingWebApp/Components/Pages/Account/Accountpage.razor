@@ -142,6 +142,7 @@
  *@
 
 
+
 @page "/account"
 @using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Services
@@ -164,7 +165,7 @@
         FocusedRowEnabled="true"
         SelectionMode="GridSelectionMode.Multiple"
         SelectedDataItems="@SelectedAccounts"
-        SelectedDataItemsChanged="OnSelectedAccountsChanged" VirtualScrollingEnabled="true" >
+        SelectedDataItemsChanged="OnSelectedAccountsChanged" VirtualScrollingEnabled="true">
 
     <ToolbarTemplate>
         <DxToolbar>
@@ -179,9 +180,9 @@
                 <DxToolbarItem Text="Edit" IconCssClass="bi bi-pencil-square" Click="OnEdit" />
                 <DxToolbarItem Text="Delete" IconCssClass="bi bi-trash" Click="OnDelete" />
                 <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="LoadAccountsAsync" />
-                
+
                 @* Layout Management - Simple Approach *@
-                 <DxToolbarItem BeginGroup="true">
+                <DxToolbarItem BeginGroup="true">
                     <Template Context="layoutContext">
                         <div class="d-flex align-items-center gap-2">
                             <DxComboBox Data="@availableLayouts"
@@ -195,11 +196,11 @@
                                         Width="200px" />
 
 
-                            
+
                             <button class="btn btn-outline-secondary btn-sm" @onclick="ShowSaveLayoutDialog">
                                 <i class="bi bi-floppy me-1"></i>Save View
                             </button>
-                            
+
                             <button class="btn btn-outline-secondary btn-sm" @onclick="ShowNewLayoutDialog">
                                 <i class="bi bi-plus-square me-1"></i>New View
                             </button>
@@ -238,7 +239,7 @@
                 <div class="modal-body">
                     <label class="form-label">Layout Name:</label>
                     <input type="text" class="form-control" @bind="newLayoutName" placeholder="Enter layout name..." />
-                    
+
                     <div class="mt-3">
                         <label class="form-label">Visible Columns:</label>
                         <div class="row">
@@ -246,7 +247,7 @@
                             {
                                 <div class="col-md-6 mb-2">
                                     <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" 
+                                        <input class="form-check-input" type="checkbox"
                                                @bind="col.Visible" id="col_@col.FieldName">
                                         <label class="form-check-label" for="col_@col.FieldName">
                                             @col.Caption
@@ -273,7 +274,7 @@
     private List<Account> accountList = [];
     private List<Account> SelectedAccounts = [];
     private AccountAddEditPage popup = null!;
-    
+
     // Layout Management
     private List<GridLayoutDto> availableLayouts = [];
     private int? selectedLayoutId;
@@ -282,7 +283,7 @@
     private string dialogTitle = "";
     private bool isEditMode = false;
     private const string VOUCHER_TYPE = "Account";
-    
+
     // All possible columns
     private List<GridColumnLayout> allColumns = [];
     private List<GridColumnLayout> currentLayout = [];
@@ -309,7 +310,7 @@
             new() { FieldName = "AccountStatus", Caption = "Active", Visible = true, Width = 80, DisplayIndex = 7 }
         };
         currentLayout = allColumns.ToList(); // Copy default layout
-    } 
+    }
 
     private bool GetColumnVisibility(string fieldName)
     {
@@ -488,7 +489,7 @@
         newLayoutName = "";
     }
 
-   
+
 
     // Rest of the existing methods...
     private void OnSelectedAccountsChanged(IEnumerable<object> accounts)
