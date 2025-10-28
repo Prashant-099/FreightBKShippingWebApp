@@ -6,7 +6,9 @@
 @inject ToasteService ToastService
 @inject LoadingService LoadingService
 @inject ConfirmationDialogService ConfirmDialogService
-
+@inject NavigationManager Navigation
+@inject ReportService ReportService
+@inject ReportDataService ReportDataService
 <DxGrid TItem="Bill"
         Data="@billList"
         @ref="MyGrid"
@@ -33,6 +35,7 @@
                 <DxToolbarItem Text="Add" IconCssClass="bi bi-plus-circle" Click="OnCreateNew" />
                 <DxToolbarItem Text="Edit" IconCssClass="bi bi-pencil-square" Click="OnEdit" />
                 <DxToolbarItem Text="Delete" IconCssClass="bi bi-trash" Click="OnDelete" />
+                <DxToolbarItem Text="Print" IconCssClass="bi bi-printer" Click="@((_) => PreviewMergedReports())"></DxToolbarItem>
                 <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="@(async (_) => await LoadBillsAsync())" />
             </Items>
         </DxToolbar>
@@ -155,5 +158,51 @@
             ToastService.Error($"{failCount} Bill(s) Failed To Delete.");
 
         await LoadBillsAsync();
+    }
+
+
+
+    private int ReportId = 1;  // Har page mein isko change kar dena: 1, 2, 3
+
+    private async Task PreviewMergedReports()
+    {
+        var billList = SelectedBills.ToList();
+        if (!billList.Any())
+        {
+            ToastService.Warning("Select at least one Bill.");
+            return;
+        }
+
+        LoadingService.Show("Building merged report...");   
+        try
+        {
+            var layoutBytes = await ReportDataService.GetLayoutBytesAsync(ReportId);
+            if (layoutBytes == null || layoutBytes.Length == 0)
+            {
+                ToastService.Error("Failed to load report layout.");
+                return;
+            }
+
+            var dtoList = new List<PrintBillFullDto?>();
+            foreach (var bill in billList)
+            {
+                var dto = await BillService.GetPrintableBillAsync(bill.BillId);
+                dtoList.Add(dto);
+            }
+
+            var dtoDict = billList.Select((bill, i) => new { bill, dto = dtoList[i] })
+                                  .ToDictionary(x => x.bill, x => x.dto);
+
+            await ReportService.CreateMergedReportAsync(
+                billList,
+                bill => dtoDict.ContainsKey(bill) ? dtoDict[bill] : null,
+                layoutBytes);
+
+            Navigation.NavigateTo("/reportviewer");
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
     }
 }

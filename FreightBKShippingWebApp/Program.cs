@@ -19,6 +19,10 @@ builder.Services.AddMvc();
 builder.Services.AddAuthenticationCore();
 builder.Services.AddCascadingAuthenticationState();
 
+builder.Services.AddDevExpressServerSideBlazorReportViewer();
+
+//reportdesigner and report viewer
+
 
 builder.Services.AddOutputCache();
 builder.Services.AddScoped<ApiClient>();
@@ -52,7 +56,8 @@ builder.Services.AddScoped<UnitService>();
 builder.Services.AddScoped<VesselService>();
 builder.Services.AddScoped<RateMasterService>();
 builder.Services.AddScoped<JobService>();
-
+builder.Services.AddScoped<ReportDataService>(); 
+builder.Services.AddScoped<ReportService>();
 builder.Services.AddScoped<BillService>();
 builder.Services.AddScoped<GridLayoutService>();
 builder.Services.AddHttpClient<ApiClient>(client =>

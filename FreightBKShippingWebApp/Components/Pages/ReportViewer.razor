@@ -1,0 +1,34 @@
+﻿@page "/reportviewer"
+@using FreightBKShippingWebApp.Services
+@inject ReportService ReportService
+@using DevExpress.Blazor.Reporting
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+@using DevExpress.XtraReports.UI
+@inject IJSRuntime JS
+<link href="_content/DevExpress.Blazor.Reporting.Viewer/css/dx-blazor-reporting-components.bs5.css" rel="stylesheet" />
+
+
+@if (ReportService.MergedReport != null)
+{
+    <div class="mb-3">
+        <button class="btn btn-secondary" @onclick="GoBack">← Back</button>
+    </div>
+    <DxReportViewer Report="@ReportService.MergedReport" Zoom="1" />
+}
+else
+{
+    <div>No merged report available. Please return and select.</div>
+}
+@code {
+    // DxReportViewer? viewer;
+
+    private async Task GoBack()
+    {
+        // Option 1: use NavigationManager
+        // Navigation.NavigateTo("/certi", forceLoad: false);
+        // Option 2: browser back history
+        await JS.InvokeVoidAsync("history.back");
+    }
+}

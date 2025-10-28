@@ -129,6 +129,18 @@ namespace FreightBKShippingWebApp.Services
                 return new List<BillDetail>();
             }
         }
+        public async Task<PrintBillFullDto?> GetPrintableBillAsync(int id)
+        {
+            try
+            {
+                return await _api.GetFromJsonAsync<PrintBillFullDto>($"api/Bills/print/{id}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Error fetching printable bill {id}: {ex.Message}");
+                return null;
+            }
+        }
 
 
 
