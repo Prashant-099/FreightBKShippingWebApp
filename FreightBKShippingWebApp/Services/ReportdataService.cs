@@ -45,10 +45,10 @@ namespace FreightBKShippingWebApp.Services
         {
             try
             {
-                var response = await _apiClient.GetFromJsonAsync<ApiListResponse<ReportData>>(
+                var response = await _apiClient.GetFromJsonAsync<List<ReportData>>(
                     $"api/ReportData?page={page}&pageSize={pageSize}");
 
-                return response?.Data ?? new List<ReportData>();
+                return response ?? new();
             }
             catch (Exception ex)
             {

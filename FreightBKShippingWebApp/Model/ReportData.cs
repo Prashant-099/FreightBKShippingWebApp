@@ -34,7 +34,7 @@ namespace FreightBKShippingWebApp.Model
         public int CompanyId { get; set; }
 
         [Column("reportdata_status")]
-        public byte? Status { get; set; }
+        public bool? Status { get; set; }
 
         [Column("reportdata_create_uid")]
         [StringLength(60)]
