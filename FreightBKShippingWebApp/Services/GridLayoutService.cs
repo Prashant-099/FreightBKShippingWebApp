@@ -6,18 +6,17 @@ namespace FreightBKShippingWebApp.Services
     public class GridLayoutService
     {
         private readonly ApiClient _api;
-        private readonly LoadingService _loadingService;
+         
 
-        public GridLayoutService(ApiClient api, LoadingService loadingService)
+        public GridLayoutService(ApiClient api )
         {
             _api = api;
-            _loadingService = loadingService;
+            
         }
 
         // Get all layouts
         public async Task<List<GridLayoutDto>> GetAllAsync(int page = 1, int pageSize = 1000)
         {
-            _loadingService.Show("Loading grid layouts...");
             try
             {
                 var response = await _api.GetFromJsonAsync<List<GridLayoutDto>>(
@@ -29,16 +28,13 @@ namespace FreightBKShippingWebApp.Services
                 Console.WriteLine($"❌ Error loading grid layouts: {ex.Message}");
                 return new();
             }
-            finally
-            {
-                _loadingService.Hide();
-            }
+           
+           
         }
 
         // Get layout by ID
         public async Task<GridLayoutDto?> GetByIdAsync(int id)
         {
-            _loadingService.Show("Loading grid layout...");
             try
             {
                 return await _api.GetFromJsonAsync<GridLayoutDto>($"api/GridLayout/{id}");
@@ -48,10 +44,8 @@ namespace FreightBKShippingWebApp.Services
                 Console.WriteLine($"❌ Error fetching grid layout {id}: {ex.Message}");
                 return null;
             }
-            finally
-            {
-                _loadingService.Hide();
-            }
+           
+            
         }
 
         // Get layouts by voucher type
@@ -88,7 +82,6 @@ namespace FreightBKShippingWebApp.Services
         // Create new layout
         public async Task<bool> CreateAsync(SaveGridLayoutRequest layout)
         {
-            _loadingService.Show("Creating grid layout...");
             try
             {
                 var result = await _api.PostAsync<bool, SaveGridLayoutRequest>("api/GridLayout", layout);
@@ -99,16 +92,13 @@ namespace FreightBKShippingWebApp.Services
                 Console.WriteLine($"❌ Error creating grid layout: {ex.Message}");
                 return false;
             }
-            finally
-            {
-                _loadingService.Hide();
-            }
+           
+           
         }
 
         // Update existing layout
         public async Task<bool> UpdateAsync(int layoutId, SaveGridLayoutRequest layout)
         {
-            _loadingService.Show("Updating grid layout...");
             try
             {
                 var result = await _api.PutAsync<bool, SaveGridLayoutRequest>(
@@ -120,16 +110,13 @@ namespace FreightBKShippingWebApp.Services
                 Console.WriteLine($"❌ Error updating grid layout: {ex.Message}");
                 return false;
             }
-            finally
-            {
-                _loadingService.Hide();
-            }
+           
+            
         }
 
         // Set layout as default
         public async Task<bool> SetAsDefaultAsync(int layoutId)
         {
-            _loadingService.Show("Setting default layout...");
             try
             {
                 var result = await _api.PutAsync<bool, object>(
@@ -141,16 +128,12 @@ namespace FreightBKShippingWebApp.Services
                 Console.WriteLine($"❌ Error setting default layout: {ex.Message}");
                 return false;
             }
-            finally
-            {
-                _loadingService.Hide();
-            }
+           
         }
 
         // Delete layout
         public async Task<bool> DeleteAsync(int layoutId)
         {
-            _loadingService.Show("Deleting grid layout...");
             try
             {
                 var result = await _api.DeleteAsync<bool>($"api/GridLayout/{layoutId}");
@@ -161,10 +144,8 @@ namespace FreightBKShippingWebApp.Services
                 Console.WriteLine($"❌ Error deleting grid layout: {ex.Message}");
                 return false;
             }
-            finally
-            {
-                _loadingService.Hide();
-            }
+           
+           
         }
 
         // Helper: Serialize column layout to JSON

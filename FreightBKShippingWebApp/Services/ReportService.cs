@@ -68,7 +68,7 @@ namespace FreightBKShippingWebApp.Services
                 MergedReport = null;
                 Console.WriteLine("Merge error: " + ex.Message);
             }
-            finally
+           
             {
             }
         }

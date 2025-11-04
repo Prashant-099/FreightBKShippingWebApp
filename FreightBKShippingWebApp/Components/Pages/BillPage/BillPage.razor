@@ -110,6 +110,7 @@
     DxGrid MyGrid;
     private List<Bill> billList = [];
     private List<Bill> SelectedBills = new();
+    private List<ReportData> ReportDataList = new();
     private BillAddEditPage popup;
 
     protected override async Task OnInitializedAsync()
@@ -123,8 +124,9 @@
         try
         {
             billList = await BillService.GetAllAsync();
+            ReportDataList = await ReportDataService.GetAllAsync();
         }
-        finally
+       finally
         {
             LoadingService.Hide();
         }
@@ -228,8 +230,11 @@
                 layoutBytes);
 
             Navigation.NavigateTo("/reportviewer");
+        }catch (Exception ex)
+        {
+            ToastService.Error($"Failed to generate report: {ex.Message}");
         }
-        finally
+       finally
         {
             LoadingService.Hide();
         }
@@ -241,15 +246,15 @@
     private int? SelectedReportId;
  
 
-    private List<ReportData> ReportDataList = new();
+  
 
    
     private async Task ShowReportPopup()
     {
-        LoadingService.Show();
+      
         try
         {
-            ReportDataList = await ReportDataService.GetAllAsync();
+           
             if (ReportDataList?.Any() != true)
             {
                 ToastService.Warning("No reports available.");
@@ -263,7 +268,7 @@
         {
             ToastService.Error($"Failed to load report list: {ex.Message}");
         }
-        LoadingService.Hide();
+        
     }
 
     private async Task ConfirmReportSelection()

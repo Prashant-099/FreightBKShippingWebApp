@@ -5,17 +5,16 @@ namespace FreightBKShippingWebApp.Services
     public class AccountService
     {
         private readonly ApiClient _api;
-        private readonly LoadingService _loadingService;
+         
 
-        public AccountService(ApiClient api, LoadingService loadingService)
+        public AccountService(ApiClient api )
         {
             _api = api;
-            _loadingService = loadingService;
+            
         }
 
         public async Task<List<Account>> GetAllAsync(int page = 1, int pageSize = 1000)
         {
-            _loadingService.Show("Loading accounts...");
             try
             {
                 var response = await _api.GetFromJsonAsync<List<Account>>(
@@ -27,15 +26,12 @@ namespace FreightBKShippingWebApp.Services
                 Console.WriteLine($"❌ Error loading accounts: {ex.Message}");
                 return new();
             }
-            finally
-            {
-                _loadingService.Hide();
-            }
+           
         }
 
         public async Task<Account?> GetByIdAsync(int id)
         {
-            _loadingService.Show("Loading account...");
+           
             try
             {
                 return await _api.GetFromJsonAsync<Account>($"api/Accounts/{id}");
@@ -45,15 +41,13 @@ namespace FreightBKShippingWebApp.Services
                 Console.WriteLine($"❌ Error fetching account {id}: {ex.Message}");
                 return null;
             }
-            finally
-            {
-                _loadingService.Hide();
-            }
+           
+           
         }
 
         public async Task<bool> CreateAsync(Account account)
         {
-            _loadingService.Show("Creating account...");
+          
             try
             {
                 var result = await _api.PostAsync<bool, Account>("api/Accounts", account);
@@ -64,15 +58,13 @@ namespace FreightBKShippingWebApp.Services
                 Console.WriteLine($"❌ Error creating account: {ex.Message}");
                 return false;
             }
-            finally
-            {
-                _loadingService.Hide();
-            }
+           
+            
         }
 
         public async Task<bool> UpdateAsync(Account account)
         {
-            _loadingService.Show("Updating account...");
+           
             try
             {
                 var result = await _api.PutAsync<bool, Account>(
@@ -84,15 +76,13 @@ namespace FreightBKShippingWebApp.Services
                 Console.WriteLine($"❌ Error updating account: {ex.Message}");
                 return false;
             }
-            finally
-            {
-                _loadingService.Hide();
-            }
+           
+           
         }
 
         public async Task<bool> DeleteAsync(int accountId)
         {
-            _loadingService.Show("Deleting account...");
+            
             try
             {
                 var result = await _api.DeleteAsync<bool>($"api/Accounts/{accountId}");
@@ -103,10 +93,8 @@ namespace FreightBKShippingWebApp.Services
                 Console.WriteLine($"❌ Error deleting account: {ex.Message}");
                 return false;
             }
-            finally
-            {
-                _loadingService.Hide();
-            }
+           
+            
         }
     }
 }

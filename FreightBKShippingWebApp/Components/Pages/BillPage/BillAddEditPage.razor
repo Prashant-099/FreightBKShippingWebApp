@@ -28,6 +28,21 @@
 @inject NavigationManager Navigation
 @inject GridLayoutService GridLayoutService
 <style>
+    .modal-xl {
+        max-width: 900px;
+    }
+
+    .sticky-top {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background-color: #f8f9fa;
+    }
+
+    .table-responsive {
+        border: 1px solid #dee2e6;
+        border-radius: 0.25rem;
+    }
     .layout-toolbar {
         display: flex;
         align-items: center;
@@ -197,7 +212,9 @@
             </DxFormLayoutItem>
 
             <DxFormLayoutItem Caption="Is RCM Applicable" ColSpanMd="4">
-            <DxCheckBox @bind-Checked="EditModel.BillIsRcm"  />
+            <DxCheckBox  
+             Checked="@EditModel.BillIsRcm"
+                            CheckedChanged="@((bool isChecked) => ApplyRcmLogic(isChecked))" CheckedExpression="() => EditModel.BillIsRcm" />
             </DxFormLayoutItem>
 
         </DxFormLayout>
@@ -369,7 +386,7 @@
                         <Columns>
 
                                 <!-- Action Buttons Column -->
-                            <DxGridCommandColumn Width="@($"{GetGridColumnWidth("Actions")}px")"  NewButtonVisible="false" Visible="@GetGridColumnVisibility("Actions")">
+                            <DxGridCommandColumn Width="@GetGridColumnWidth("Actions")" NewButtonVisible="false" Visible="@GetGridColumnVisibility("Actions")">
                                     <HeaderCaptionTemplate>Actions</HeaderCaptionTemplate>
                                     <CellDisplayTemplate>
                                         @{
@@ -401,9 +418,13 @@
 
                                 </DxGridCommandColumn>
 
-                            <DxGridDataColumn FieldName="SNo" Caption="SNo" Width="@($"{GetGridColumnWidth("SNo")}px")" ReadOnly="true" Visible="@GetGridColumnVisibility("SNo")" />
+                            <DxGridDataColumn FieldName="SNo" Caption="SNo" Width="@GetGridColumnWidth("SNo")" ReadOnly="true" Visible="@GetGridColumnVisibility("SNo")" >
+                                <EditSettings>
+                                    <DxSpinEditSettings ShowSpinButtons="false" />
+                                </EditSettings>
+                            </DxGridDataColumn>
 
-                            <DxGridDataColumn FieldName="BillDetailProductId" Caption="Service Name" Width="200px" Visible="@GetGridColumnVisibility("BillDetailProductId")">
+                            <DxGridDataColumn FieldName="BillDetailProductId" Caption="Service Name" Width="@GetGridColumnWidth("BillDetailProductId")" Visible="@GetGridColumnVisibility("BillDetailProductId")">
                                 <EditSettings>
                                         <DxComboBoxSettings Data="@ServiceList"
                                                             TextFieldName="ServiceName"
@@ -414,14 +435,30 @@
                                     </EditSettings>
                                 </DxGridDataColumn>
 
-                            <DxGridDataColumn FieldName="BillDetailHsnCode" Caption="SAC" Width="100px" ReadOnly="true" Visible="@GetGridColumnVisibility("BillDetailHsnCode")" />
-                            <DxGridDataColumn FieldName="BillDetailUnit" Caption="Unit" Width="80px" ReadOnly="true" Visible="@GetGridColumnVisibility("BillDetailUnit")" />
-                            <DxGridDataColumn FieldName="BillDetailRate" Caption="Rate" Width="100px" Visible="@GetGridColumnVisibility("BillDetailRate")" />
-                            <DxGridDataColumn FieldName="BillDetailQty" Caption="Qty" Width="100px" Visible="@GetGridColumnVisibility("BillDetailQty")" />
-                            <DxGridDataColumn FieldName="BillDetailAmount" Caption="Amount" Width="120px" ReadOnly="true" Visible="@GetGridColumnVisibility("BillDetailAmount")" />
-                            <DxGridDataColumn FieldName="BillDetailExchRate" Caption="Ex. Rate" Width="100px" Visible="@GetGridColumnVisibility("BillDetailExchRate")" />
+                            <DxGridDataColumn FieldName="BillDetailHsnCode" Caption="SAC" Width="@GetGridColumnWidth("BillDetailHsnCode")" ReadOnly="true" Visible="@GetGridColumnVisibility("BillDetailHsnCode")" />
+                            <DxGridDataColumn FieldName="BillDetailUnit" Caption="Unit" Width="@GetGridColumnWidth("BillDetailUnit")" ReadOnly="true" Visible="@GetGridColumnVisibility("BillDetailUnit")" />
+                            <DxGridDataColumn FieldName="BillDetailRate" Caption="Rate" Width="@GetGridColumnWidth("BillDetailRate")" Visible="@GetGridColumnVisibility("BillDetailRate")" >
+                                <EditSettings>
+                                    <DxSpinEditSettings ShowSpinButtons="false" />
+                                </EditSettings>
+                            </DxGridDataColumn>
+                            <DxGridDataColumn FieldName="BillDetailQty" Caption="Qty" Width="@GetGridColumnWidth("BillDetailQty")" Visible="@GetGridColumnVisibility("BillDetailQty")" >
+                                <EditSettings>
+                                    <DxSpinEditSettings ShowSpinButtons="false" />
+                                </EditSettings>
+                            </DxGridDataColumn>
+                            <DxGridDataColumn FieldName="BillDetailAmount" Caption="Amount" Width="@GetGridColumnWidth("BillDetailAmount")" ReadOnly="true" Visible="@GetGridColumnVisibility("BillDetailAmount")" >
+                                <EditSettings>
+                                    <DxSpinEditSettings ShowSpinButtons="false" />
+                                </EditSettings>
+                            </DxGridDataColumn>
+                            <DxGridDataColumn FieldName="BillDetailExchRate" Caption="Ex. Rate" Width="@GetGridColumnWidth("BillDetailExchRate")" Visible="@GetGridColumnVisibility("BillDetailExchRate")" >
+                                <EditSettings>
+                                    <DxSpinEditSettings ShowSpinButtons="false" />
+                                </EditSettings>
+                            </DxGridDataColumn>
 
-                            <DxGridDataColumn FieldName="BillDetailCurrencyId" Caption="Curr." Width="80px" Visible="@GetGridColumnVisibility("BillDetailCurrencyId")">
+                            <DxGridDataColumn FieldName="BillDetailCurrencyId" Caption="Curr." Width="@GetGridColumnWidth("BillDetailCurrencyId")" Visible="@GetGridColumnVisibility("BillDetailCurrencyId")">
                                     <EditSettings>
                                         <DxComboBoxSettings Data="@CurrList"
                                                             TextFieldName="CurrencyName"
@@ -429,15 +466,47 @@
                                     </EditSettings>
                                 </DxGridDataColumn>
 
-                            <DxGridDataColumn FieldName="BillDetailTaxableAmt" Caption="Taxable" Width="100px" Visible="@GetGridColumnVisibility("BillDetailTaxableAmt")" />
-                            <DxGridDataColumn FieldName="Taxcode" Caption="Tax Code" Width="100px" Visible="@GetGridColumnVisibility("Taxcode")" />
-                            <DxGridDataColumn FieldName="BillDetailIgstPer" Caption="IGST %" Width="80px" Visible="@GetGridColumnVisibility("BillDetailIgstPer")" />
-                            <DxGridDataColumn FieldName="BillDetailIgst" Caption="IGST" Width="80px" Visible="@GetGridColumnVisibility("BillDetailIgst")" />
-                            <DxGridDataColumn FieldName="BillDetailCgstPer" Caption="CGST %" Width="80px" Visible="@GetGridColumnVisibility("BillDetailCgstPer")" />
-                            <DxGridDataColumn FieldName="BillDetailCgst" Caption="CGST" Width="80px" Visible="@GetGridColumnVisibility("BillDetailCgst")" />
-                            <DxGridDataColumn FieldName="BillDetailSgstPer" Caption="SGST %" Width="80px" Visible="@GetGridColumnVisibility("BillDetailSgstPer")" />
-                            <DxGridDataColumn FieldName="BillDetailSgst" Caption="SGST" Width="80px" Visible="@GetGridColumnVisibility("BillDetailSgst")" />
-                            <DxGridDataColumn FieldName="BillDetailTotal" Caption="Total" Width="120px" ReadOnly="true" Visible="@GetGridColumnVisibility("BillDetailTotal")" />
+                            <DxGridDataColumn FieldName="BillDetailTaxableAmt" Caption="Taxable" Width="@GetGridColumnWidth("BillDetailTaxableAmt")" Visible="@GetGridColumnVisibility("BillDetailTaxableAmt")" >
+                                <EditSettings>
+                                    <DxSpinEditSettings ShowSpinButtons="false" />
+                                </EditSettings>
+                            </DxGridDataColumn>
+                            <DxGridDataColumn FieldName="Taxcode" Caption="Tax Code" Width="@GetGridColumnWidth("Taxcode")" Visible="@GetGridColumnVisibility("Taxcode")" />
+                            <DxGridDataColumn FieldName="BillDetailIgstPer" Caption="IGST %" Width="@GetGridColumnWidth("BillDetailIgstPer")" Visible="@GetGridColumnVisibility("BillDetailIgstPer")" >
+                                <EditSettings>
+                                    <DxSpinEditSettings ShowSpinButtons="false" />
+                                </EditSettings>
+                            </DxGridDataColumn>
+                            <DxGridDataColumn FieldName="BillDetailIgst" Caption="IGST" Width="@GetGridColumnWidth("BillDetailIgst")" Visible="@GetGridColumnVisibility("BillDetailIgst")" >
+                                <EditSettings>
+                                    <DxSpinEditSettings ShowSpinButtons="false" />
+                                </EditSettings>
+                            </DxGridDataColumn>
+                            <DxGridDataColumn FieldName="BillDetailCgstPer" Caption="CGST %" Width="@GetGridColumnWidth("BillDetailCgstPer")" Visible="@GetGridColumnVisibility("BillDetailCgstPer")" >
+                                <EditSettings>
+                                    <DxSpinEditSettings ShowSpinButtons="false" />
+                                </EditSettings>
+                            </DxGridDataColumn>
+                            <DxGridDataColumn FieldName="BillDetailCgst" Caption="CGST" Width="@GetGridColumnWidth("BillDetailCgst")" Visible="@GetGridColumnVisibility("BillDetailCgst")" >
+                                <EditSettings>
+                                    <DxSpinEditSettings ShowSpinButtons="false" />
+                                </EditSettings>
+                            </DxGridDataColumn>
+                            <DxGridDataColumn FieldName="BillDetailSgstPer" Caption="SGST %" Width="@GetGridColumnWidth("BillDetailSgstPer")" Visible="@GetGridColumnVisibility("BillDetailSgstPer")" >
+                                <EditSettings>
+                                    <DxSpinEditSettings ShowSpinButtons="false" />
+                                </EditSettings>
+                            </DxGridDataColumn>
+                            <DxGridDataColumn FieldName="BillDetailSgst" Caption="SGST" Width="@GetGridColumnWidth("BillDetailSgst")" Visible="@GetGridColumnVisibility("BillDetailSgst")" >
+                                <EditSettings>
+                                    <DxSpinEditSettings ShowSpinButtons="false" />
+                                </EditSettings>
+                            </DxGridDataColumn>
+                            <DxGridDataColumn FieldName="BillDetailTotal" Caption="Total" Width="@GetGridColumnWidth("BillDetailTotal")" ReadOnly="true" Visible="@GetGridColumnVisibility("BillDetailTotal")" >
+                                <EditSettings>
+                                    <DxSpinEditSettings ShowSpinButtons="false" />
+                                </EditSettings>
+                            </DxGridDataColumn>
 
 
                             </Columns>
@@ -724,7 +793,7 @@
                 </DxFormLayoutTabPages>
             
         </DxFormLayout>
-        <div class="popup-footer2">
+        
              <DxFormLayout>
                  
             <div class="d-flex gap-1">
@@ -739,7 +808,9 @@
                
                 <DxFormLayoutItem Caption="Is Round Off" ColSpanMd="4">
                      <div class="d-flex gap-1">
-                    <DxCheckBox @bind-Checked="EditModel.BillIsRoundOff" Text="Is Round Off" />
+                        <DxCheckBox Checked="@EditModel.BillIsRoundOff"
+                                    CheckedChanged="@((bool isChecked) => ApplyRoundOff(isChecked))" CheckedExpression="() => EditModel.BillIsRoundOff" 
+                                    Text="Is Round Off" />
                    
                     <DxSpinEdit @bind-Value="EditModel.BillRoundAmt"
                                 Format="N2"
@@ -759,12 +830,12 @@
                     </DxFormLayoutItem>
               
             </div>
-            
+
             </DxFormLayout>
-        </div>
+       <DxFormLayout>
         <div class="popup-footer">
              <div class="d-flex gap-1">
-                <label class="fw-bold me-2">Bank:</label>
+ <DxFormLayoutItem Caption="Bank" ColSpanMd="4" >
                     <DxComboBox TData="Account" TValue="int"
                                 Data="@BankList"
                                 TextFieldName="AccountName"
@@ -775,7 +846,9 @@
                                 SearchMode="ListSearchMode.AutoSearch"
                                 SearchFilterCondition="ListSearchFilterCondition.StartsWith"
                                 ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
-                <label class="fw-bold me-2">Print Report:</label>
+</DxFormLayoutItem>
+                <DxFormLayoutItem Caption="Print Report:" ColSpanMd="4">
+               
                     <DxComboBox TData="ReportData" TValue="int"
                                 Data="@ReportDataList"
                                 TextFieldName="FormatName"
@@ -786,28 +859,39 @@
                                 SearchMode="ListSearchMode.AutoSearch"
                                 SearchFilterCondition="ListSearchFilterCondition.StartsWith"
                                 ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
-             <div class="me-3 text-end">
-            <DxButton Text="Save" RenderStyle="ButtonRenderStyle.Primary" SubmitFormOnClick="true" />
-            <DxButton Text="Cancel" RenderStyle="ButtonRenderStyle.Secondary" Click="Hide" />
+             </DxFormLayoutItem>
+                    <DxButton Text="Save" RenderStyle="ButtonRenderStyle.Primary" SubmitFormOnClick="true" />
+                    <DxButton Text="Cancel" RenderStyle="ButtonRenderStyle.Secondary" Click="Hide" />
+
                 </div>
             </div>
-        </div>
+        </DxFormLayout>
+           
+        
        
     </EditForm>
     <ConfirmationDialog />
     @if (showGridLayoutDialog)
     {
-        <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5); z-index: 10000;" @onclick="@(() => { })">
-            <div class="modal-dialog modal-lg" @onclick:stopPropagation="true">
+        <div class="modal fade show d-block"
+             style="background-color: rgba(0, 0, 0, 0.5); z-index: 10000;"
+             @onclick="@(() => { })">
+            <div class="modal-dialog modal-xl" @onclick:stopPropagation="true">
                 <div class="modal-content">
 
+                    <!-- Header -->
                     <div class="modal-header">
                         <h5 class="modal-title">@gridLayoutDialogTitle</h5>
-                        <button type="button" class="btn-close" @onclick="CloseGridLayoutDialog" aria-label="Close"></button>
+                        <button type="button"
+                                class="btn-close"
+                                @onclick="CloseGridLayoutDialog"
+                                aria-label="Close"></button>
                     </div>
 
+                    <!-- Body -->
                     <div class="modal-body">
 
+                        <!-- Layout Name -->
                         <div class="mb-3">
                             <label class="form-label fw-bold">Layout Name:</label>
                             <input type="text"
@@ -818,6 +902,7 @@
                                    maxlength="100" />
                         </div>
 
+                        <!-- Default Layout Checkbox -->
                         <div class="mb-3">
                             <div class="form-check">
                                 <input class="form-check-input"
@@ -830,34 +915,70 @@
                             </div>
                         </div>
 
+                        <!-- Column Configuration -->
                         <div class="mt-3">
-                            <label class="form-label fw-bold mb-2">Visible Columns:</label>
-                            <div class="row g-2">
-                                @foreach (var col in allGridColumns)
-                                {
-                                    <div class="col-md-6">
-                                        <div class="form-check">
-                                            <input class="form-check-input"
-                                                   type="checkbox"
-                                                   @bind="col.Visible"
-                                                   id="gridcol_@col.FieldName" />
-                                            <label class="form-check-label" for="gridcol_@col.FieldName">
-                                                @col.Caption
-                                            </label>
-                                        </div>
-                                    </div>
-                                }
+                            <label class="form-label fw-bold mb-2">Column Configuration:</label>
+                            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                                <table class="table table-sm table-bordered">
+                                    <thead class="table-light sticky-top">
+                                        <tr>
+                                            <th style="width: 50px;">Visible</th>
+                                            <th style="width: 200px;">Column Name</th>
+                                            <th style="width: 150px;">Width (px)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var col in allGridColumns)
+                                        {
+                                            <tr>
+                                                <td class="text-center">
+                                                    <input class="form-check-input"
+                                                           type="checkbox"
+                                                           @bind="col.Visible"
+                                                           id="gridcol_@col.FieldName" />
+                                                </td>
+                                                <td>
+                                                    <label class="mb-0" for="gridcol_@col.FieldName">
+                                                        @col.Caption
+                                                    </label>
+                                                </td>
+                                                <td>
+                                                    <input type="number"
+                                                           class="form-control form-control-sm"
+                                                           @bind="col.Width"
+                                                           @bind:event="oninput"
+                                                           min="50"
+                                                           max="500"
+                                                           step="10"
+                                                           placeholder="Width" />
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
                             </div>
+                        </div>
+
+                        <!-- Info Note -->
+                        <div class="alert alert-info mt-3">
+                            <i class="bi bi-info-circle me-2"></i>
+                            <strong>Note:</strong>
+                            Adjust column widths here manually. The widths will be saved and applied when you load this layout.
                         </div>
 
                     </div>
 
+                    <!-- Footer -->
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" @onclick="CloseGridLayoutDialog">
+                        <button type="button"
+                                class="btn btn-secondary"
+                                @onclick="CloseGridLayoutDialog">
                             Cancel
                         </button>
 
-                        <button type="button" class="btn btn-primary" @onclick="SaveCurrentGridLayout">
+                        <button type="button"
+                                class="btn btn-primary"
+                                @onclick="SaveCurrentGridLayout">
                             <i class="bi bi-floppy me-1"></i>
                             @(isEditGridLayoutMode ? "Update" : "Create") Layout
                         </button>
@@ -867,6 +988,7 @@
             </div>
         </div>
     }
+
 
 </DxPopup>
 
@@ -884,41 +1006,61 @@
     private List<GridColumnLayout> allGridColumns = [];
     private List<GridColumnLayout> currentGridLayout = [];
 
-    // Add this method to capture column width changes
-    // Replaced the unavailable DevExpress event args type with a loose handler using dynamic.
-    private void Grid_ColumnResizing(object args)
+    private string ConvertNumberToWords(decimal number)
     {
-        try
+        if (EditModel == null)
+            return string.Empty;
+
+        if (number == 0)
         {
-            dynamic e = args;
-            string fieldName = e?.Column?.FieldName;
-            int width = 0;
-
-            try
-            {
-                // Try direct cast first, fall back to Convert if necessary.
-                width = (int)e.Width;
-            }
-            catch
-            {
-                try { width = Convert.ToInt32(e.Width); } catch { width = 0; }
-            }
-
-            if (!string.IsNullOrEmpty(fieldName))
-            {
-                var allCol = allGridColumns.FirstOrDefault(c => c.FieldName == fieldName);
-                if (allCol != null)
-                    allCol.Width = width;
-
-                var currentCol = currentGridLayout.FirstOrDefault(c => c.FieldName == fieldName);
-                if (currentCol != null)
-                    currentCol.Width = width;
-            }
+            EditModel.BillAmountInWord = "Zero Rupees Only";
+            return EditModel.BillAmountInWord;
         }
-        catch
+
+        string[] unitsMap = { "Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen" };
+        string[] tensMap = { "Zero", "Ten", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety" };
+
+        string ConvertIntPart(long n)
         {
-            // Best-effort: silently ignore if runtime shape is different.
+            if (n == 0)
+                return "";
+            if (n < 20)
+                return unitsMap[n];
+            if (n < 100)
+                return tensMap[n / 10] + (n % 10 > 0 ? " " + unitsMap[n % 10] : "");
+            if (n < 1000)
+                return unitsMap[n / 100] + " Hundred" + (n % 100 > 0 ? " and " + ConvertIntPart(n % 100) : "");
+            if (n < 100000)
+                return ConvertIntPart(n / 1000) + " Thousand" + (n % 1000 > 0 ? " " + ConvertIntPart(n % 1000) : "");
+            if (n < 10000000)
+                return ConvertIntPart(n / 100000) + " Lakh" + (n % 100000 > 0 ? " " + ConvertIntPart(n % 100000) : "");
+            return ConvertIntPart(n / 10000000) + " Crore" + (n % 10000000 > 0 ? " " + ConvertIntPart(n % 10000000) : "");
         }
+
+        long intPart = (long)Math.Floor(number);
+        int decimalPart = (int)((number - intPart) * 100);
+
+        string words = ConvertIntPart(intPart) + " Rupees";
+        if (decimalPart > 0)
+            words += " and " + ConvertIntPart(decimalPart) + " Paise";
+
+        EditModel.BillAmountInWord = words + " Only";
+        return EditModel.BillAmountInWord;
+    }
+
+    // Keep ParseWidth helper for loading saved widths
+    private int ParseWidth(string width)
+    {
+        if (string.IsNullOrEmpty(width))
+            return 100;
+
+        // Remove "px" suffix if present
+        width = width.Replace("px", "").Trim();
+
+        if (int.TryParse(width, out int result))
+            return result;
+
+        return 100; // default
     }
 
     // Enhanced InitializeGridColumns with proper width values
@@ -956,28 +1098,28 @@
         }).ToList();
     }
 
-    // Enhanced GetGridColumnWidth method
-    private int GetGridColumnWidth(string fieldName)
+    // Enhanced GetGridColumnWidth method - returns string for DevExpress
+    private string GetGridColumnWidth(string fieldName)
     {
         if (currentGridLayout == null || !currentGridLayout.Any())
         {
             var defaultCol = allGridColumns.FirstOrDefault(x => x.FieldName == fieldName);
-            return defaultCol?.Width ?? 100;
+            return $"{defaultCol?.Width ?? 100}px";
         }
 
         var col = currentGridLayout.FirstOrDefault(x => x.FieldName == fieldName);
-        return col?.Width ?? 100;
+        return $"{col?.Width ?? 100}px";
     }
+
     private bool GetGridColumnVisibility(string fieldName)
     {
-        // Check if we have a current layout
         if (currentGridLayout == null || !currentGridLayout.Any())
         {
-            return true; // Show all columns if no layout
+            return true;
         }
 
         var col = currentGridLayout.FirstOrDefault(x => x.FieldName == fieldName);
-        return col?.Visible ?? true; // Default to visible if not found
+        return col?.Visible ?? true;
     }
 
     private async Task LoadAvailableGridLayouts()
@@ -995,6 +1137,7 @@
         }
     }
 
+    // Fixed OnGridLayoutSelectedAsync
     private async Task OnGridLayoutSelectedAsync(int? layoutId)
     {
         selectedGridLayoutId = layoutId;
@@ -1011,7 +1154,6 @@
         {
             // Reset to default when cleared
             InitializeGridColumns();
-           // currentGridLayout = allGridColumns.ToList();
             await InvokeAsync(StateHasChanged);
         }
     }
@@ -1067,7 +1209,6 @@
             }
         }
 
-        // If no layout selected, show new dialog
         ShowNewGridLayoutDialog();
     }
 
@@ -1089,11 +1230,11 @@
             return;
         }
 
-        LoadingService.Show();
+         
         try
         {
             // Sync currentGridLayout with allGridColumns before saving
-            // This ensures any width changes are captured
+            // This ensures any width changes from the dialog are captured
             foreach (var col in allGridColumns)
             {
                 var current = currentGridLayout.FirstOrDefault(c => c.FieldName == col.FieldName);
@@ -1181,7 +1322,7 @@
             ToastService.Error($"Error saving layout: {ex.Message}");
             Console.WriteLine($"Layout save error: {ex}");
         }
-        finally
+       
         {
             LoadingService.Hide();
         }
@@ -1196,7 +1337,7 @@
 
         if (!griddeleteconfirm) return;
 
-        LoadingService.Show();
+         
         try
         {
             var success = await GridLayoutService.DeleteAsync(selectedGridLayoutId.Value);
@@ -1205,14 +1346,11 @@
             {
                 ToastService.Success("Grid layout deleted successfully!");
 
-                // Reset to default
                 selectedGridLayoutId = null;
                 InitializeGridColumns();
                 currentGridLayout = allGridColumns.ToList();
 
-                // Reload available layouts
                 await LoadAvailableGridLayouts();
-
                 await InvokeAsync(StateHasChanged);
             }
             else
@@ -1224,7 +1362,7 @@
         {
             ToastService.Error($"Error deleting layout: {ex.Message}");
         }
-        finally
+       
         {
             LoadingService.Hide();
         }
@@ -1307,14 +1445,13 @@
     {
         await LoadBillsDataAsync();
         InitializeGridColumns();
-        await LoadBillsDataAsync();
         await LoadAvailableGridLayouts();
         await LoadDefaultGridLayout();
     }
 
     private async Task LoadBillsDataAsync()
     {
-        LoadingService.Show();
+         
         try
         {
             ServiceList = await ServiceService.GetAllAsync();
@@ -1343,11 +1480,13 @@
             var allAccounts = await AccountService.GetAllAsync();
             AccountList = allAccounts.Where(a => a.AccountTypeId == 14 || a.AccountTypeId == 18).ToList();
             BankList = allAccounts.Where(a => a.AccountTypeId == 10).ToList();
-        }
-        finally
+        }catch (Exception ex)
         {
-            LoadingService.Hide();
+            ToastService.Error("Error loading data: " + ex.Message);
         }
+       
+ 
+       
     }  
     private void OnJobDetailsChanged(string selectedjobno)
     {
@@ -1499,6 +1638,7 @@
             BillDetailTotal = source.BillDetailTotal,
             BillDetailIgstPer = source.BillDetailIgstPer,
             BillDetailCgstPer = source.BillDetailCgstPer,
+            Taxcode  =source.Taxcode,
             BillDetailSgstPer = source.BillDetailSgstPer
 
         };
@@ -1530,7 +1670,7 @@
             EditModel = new Bill
             {
                 BillDate = DateTime.Now,
-               // BillDueDate = DateTime.Now.AddDays(30),
+                // BillDueDate = DateTime.Now.AddDays(30),
                 BillStatus = true,
                 BillDetails = new List<BillDetail>()
             };
@@ -1634,7 +1774,7 @@
     }
     async Task Submit_Click()
     {
-        LoadingService.Show();
+         
         try
         {
             foreach (var unsavedChange in UnsavedChanges)
@@ -1664,7 +1804,7 @@
         {
             ToastService.Error($"Error applying changes: {ex.Message}");
         }
-        finally
+       
         {
             LoadingService.Hide();
         }
@@ -1912,56 +2052,70 @@
                         //     item.BillDetailIgst = item.BillDetailTaxableAmt * (item.BillDetailIgstPer / 100);
                         // }
 
-
-
-                        string supplyType = EditModel.BillSupplyType ?? "B2B";
-
-                        switch (supplyType)
+                        if (EditModel.BillIsRcm)
                         {
-                            case "B2B":
-                            case "B2CS":
-                                // Normal GST logic (domestic)
-                                if (companyStateId == EditModel.BillPlaceOfSupply)
-                                {
-                                    // Intra-state → CGST + SGST
-                                    item.BillDetailIgst = 0;
-                                    item.BillDetailIgstPer = 0;
-                                    item.BillDetailCgstPer = item.BillDetailGstPer / 2;
-                                    item.BillDetailSgstPer = item.BillDetailGstPer / 2;
-                                    item.BillDetailCgst = item.BillDetailTaxableAmt * (item.BillDetailCgstPer / 100);
-                                    item.BillDetailSgst = item.BillDetailTaxableAmt * (item.BillDetailSgstPer / 100);
-                                }
-                                else
-                                {
-                                    // Inter-state → IGST
+                            // ✅ RCM: No GST charged
+                            item.BillDetailIgst = 0;
+                            item.BillDetailCgst = 0;
+                            item.BillDetailSgst = 0;
+                            item.BillDetailIgstPer = 0;
+                            item.BillDetailCgstPer = 0;
+                            item.BillDetailSgstPer = 0;
+                            item.Taxcode = "RCM";
+                        }
+                        else
+                        {
+
+                            string supplyType = EditModel.BillSupplyType ?? "B2B";
+
+                            switch (supplyType)
+                            {
+                                case "B2B":
+                                case "B2CS":
+                                    // Normal GST logic (domestic)
+                                    if (companyStateId == EditModel.BillPlaceOfSupply)
+                                    {
+                                        // Intra-state → CGST + SGST
+                                        item.BillDetailIgst = 0;
+                                        item.BillDetailIgstPer = 0;
+                                        item.BillDetailCgstPer = item.BillDetailGstPer / 2;
+                                        item.BillDetailSgstPer = item.BillDetailGstPer / 2;
+                                        item.BillDetailCgst = item.BillDetailTaxableAmt * (item.BillDetailCgstPer / 100);
+                                        item.BillDetailSgst = item.BillDetailTaxableAmt * (item.BillDetailSgstPer / 100);
+                                    }
+                                    else
+                                    {
+                                        // Inter-state → IGST
+                                        item.BillDetailCgstPer = 0;
+                                        item.BillDetailSgstPer = 0;
+                                        item.BillDetailIgstPer = item.BillDetailGstPer;
+                                        item.BillDetailIgst = item.BillDetailTaxableAmt * (item.BillDetailIgstPer / 100);
+                                    }
+                                    break;
+
+                                case "SEZWP":
+                                case "EXPWP":
+                                case "DEXP":
+                                    // ✅ Export or SEZ with payment → only IGST
                                     item.BillDetailCgstPer = 0;
                                     item.BillDetailSgstPer = 0;
                                     item.BillDetailIgstPer = item.BillDetailGstPer;
                                     item.BillDetailIgst = item.BillDetailTaxableAmt * (item.BillDetailIgstPer / 100);
-                                }
-                                break;
+                                    break;
 
-                            case "SEZWP":
-                            case "EXPWP":
-                            case "DEXP":
-                                // ✅ Export or SEZ with payment → only IGST
-                                item.BillDetailCgstPer = 0;
-                                item.BillDetailSgstPer = 0;
-                                item.BillDetailIgstPer = item.BillDetailGstPer;
-                                item.BillDetailIgst = item.BillDetailTaxableAmt * (item.BillDetailIgstPer / 100);
-                                break;
-
-                            case "SEZWOP":
-                            case "EXPWOP":
-                                // ✅ Export or SEZ without payment → no GST
-                                item.BillDetailIgst = 0;
-                                item.BillDetailCgst = 0;
-                                item.BillDetailSgst = 0;
-                                item.BillDetailIgstPer = 0;
-                                item.BillDetailCgstPer = 0;
-                                item.BillDetailSgstPer = 0;
-                                break;
+                                case "SEZWOP":
+                                case "EXPWOP":
+                                    // ✅ Export or SEZ without payment → no GST
+                                    item.BillDetailIgst = 0;
+                                    item.BillDetailCgst = 0;
+                                    item.BillDetailSgst = 0;
+                                    item.BillDetailIgstPer = 0;
+                                    item.BillDetailCgstPer = 0;
+                                    item.BillDetailSgstPer = 0;
+                                    break;
+                            }
                         }
+
                     }
 
 
@@ -1983,6 +2137,7 @@
             EditModel.BillNetAmount = (float)BillDetails
                 .Where(d => !UnsavedChanges.ContainsKey(d) || UnsavedChanges[d].Type != DataChangeType.Delete)
                 .Sum(d => d.BillDetailTotal);
+            ApplyRoundOff(EditModel.BillIsRoundOff);
         }
     }
 
@@ -2007,10 +2162,91 @@
 
         return changedFields;
     }
+    private void ApplyRcmLogic(bool isChecked)
+    {
+        EditModel.BillIsRcm = isChecked;
+        if (EditModel.BillIsRcm)
+        {
+            // Under RCM, NO GST is charged on invoice
+            foreach (var detail in BillDetails)
+            {
+                detail.BillDetailIgst = 0;
+                detail.BillDetailCgst = 0;
+                detail.BillDetailSgst = 0;
+                detail.BillDetailIgstPer = 0;
+                detail.BillDetailCgstPer = 0;
+                detail.BillDetailSgstPer = 0;
 
+                // Total = Taxable amount only (no GST added)
+                detail.BillDetailTotal = detail.BillDetailTaxableAmt;
+            }
+
+            // Update bill totals
+            EditModel.BillIgst = 0;
+            EditModel.BillCgst = 0;
+            EditModel.BillSgst = 0;
+
+            // Add remark for RCM
+            if (!EditModel.BillRemarks?.Contains("RCM") ?? true)
+            {
+                EditModel.BillRemarks = (EditModel.BillRemarks ?? "") +
+                    "Tax is payable under Reverse Charge Mechanism by the recipient as per Section 9(3) of CGST Act 2017.";
+            }
+        }
+        else
+        {
+            // Remove RCM remark
+            EditModel.BillRemarks = EditModel.BillRemarks?.Replace(
+                "Tax is payable under Reverse Charge Mechanism by the recipient as per Section 9(3) of CGST Act 2017.", "");
+
+            // Recalculate GST for all rows
+            foreach (var detail in BillDetails)
+            {
+                UpdateRowAmounts(detail);
+            }
+        }
+
+        // Recalculate totals
+        var baseTotal = (float)BillDetails
+            .Where(d => !UnsavedChanges.ContainsKey(d) || UnsavedChanges[d].Type != DataChangeType.Delete)
+            .Sum(d => d.BillDetailTotal);
+
+        EditModel.BillNetAmount = baseTotal;
+        ApplyRoundOff(EditModel.BillIsRoundOff);
+
+        StateHasChanged();
+    }
+    private void ApplyRoundOff(bool isChecked)
+    {
+        EditModel.BillIsRoundOff = isChecked;
+        // Calculate base amount (sum of all line items)
+        var baseAmount = (float)BillDetails
+            .Where(d => !UnsavedChanges.ContainsKey(d) || UnsavedChanges[d].Type != DataChangeType.Delete)
+            .Sum(d => d.BillDetailTotal);
+
+        if (EditModel.BillIsRoundOff)
+        {
+            // Round to nearest whole number
+            var roundedAmount = (float)Math.Round(baseAmount, 0);
+
+            // Calculate round-off difference
+            EditModel.BillRoundAmt = roundedAmount - baseAmount;
+
+            // Set final amount
+            EditModel.BillNetAmount = roundedAmount;
+        }
+        else
+        {
+            // No rounding - reset
+            EditModel.BillRoundAmt = 0;
+            EditModel.BillNetAmount = baseAmount;
+        }
+        ConvertNumberToWords((decimal)EditModel.BillNetAmount);
+        StateHasChanged();
+    }
     private async Task HandleValidSubmit()
     {
-        LoadingService.Show();
+         
         try
         {
             // --- STEP 1: Apply Unsaved Changes ---
@@ -2107,7 +2343,7 @@
             ToastService.Error($"Error saving bill: {ex.Message}");
             Console.WriteLine($"❌ Full error: {ex}");
         }
-        finally
+       
         {
             LoadingService.Hide();
         }
@@ -2150,7 +2386,7 @@
 
             Navigation.NavigateTo("/reportviewer");
         }
-        finally
+       finally
         {
             LoadingService.Hide();
         }

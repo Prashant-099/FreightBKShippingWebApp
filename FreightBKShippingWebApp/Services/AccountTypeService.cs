@@ -5,17 +5,16 @@ namespace FreightBKShippingWebApp.Services
     public class AccountTypeService
     {
         private readonly ApiClient _api;
-        private readonly LoadingService _loadingService;
+         
 
-        public AccountTypeService(ApiClient api, LoadingService loadingService)
+        public AccountTypeService(ApiClient api )
         {
             _api = api;
-            _loadingService = loadingService;
+            
         }
 
         public async Task<List<AccountType>> GetAllAsync()
         {
-            _loadingService.Show("Loading account types...");
             try
             {
                 var response = await _api.GetFromJsonAsync<List<AccountType>>("api/AccountTypes?page=1&pageSize=1000");
@@ -26,15 +25,13 @@ namespace FreightBKShippingWebApp.Services
                 Console.WriteLine($"❌ Error loading account types: {ex.Message}");
                 return new();
             }
-            finally
-            {
-                _loadingService.Hide();
-            }
+           
+           
         }
 
         public async Task<AccountType?> GetByIdAsync(int id)
         {
-            _loadingService.Show("Loading account type...");
+           
             try
             {
                 return await _api.GetFromJsonAsync<AccountType>($"api/AccountTypes/{id}");
@@ -44,15 +41,12 @@ namespace FreightBKShippingWebApp.Services
                 Console.WriteLine($"❌ Error fetching account type {id}: {ex.Message}");
                 return null;
             }
-            finally
-            {
-                _loadingService.Hide();
-            }
+           
+           
         }
 
         public async Task<bool> CreateAsync(AccountType accountType)
         {
-            _loadingService.Show("Creating account type...");
             try
             {
                 return await _api.PostAsync<bool, AccountType>("api/AccountTypes", accountType);
@@ -62,15 +56,11 @@ namespace FreightBKShippingWebApp.Services
                 Console.WriteLine($"❌ Error creating account type: {ex.Message}");
                 return false;
             }
-            finally
-            {
-                _loadingService.Hide();
-            }
+          
         }
 
         public async Task<bool> UpdateAsync(AccountType accountType)
         {
-            _loadingService.Show("Updating account type...");
             try
             {
                 return await _api.PutAsync<bool, AccountType>($"api/AccountTypes/{accountType.AccountTypeId}", accountType);
@@ -80,15 +70,12 @@ namespace FreightBKShippingWebApp.Services
                 Console.WriteLine($"❌ Error updating account type: {ex.Message}");
                 return false;
             }
-            finally
-            {
-                _loadingService.Hide();
-            }
+           
+
         }
 
         public async Task<bool> DeleteAsync(int accountTypeId)
         {
-            _loadingService.Show("Deleting account type...");
             try
             {
                 return await _api.DeleteAsync<bool>($"api/AccountTypes/{accountTypeId}");
@@ -98,10 +85,8 @@ namespace FreightBKShippingWebApp.Services
                 Console.WriteLine($"❌ Error deleting account type: {ex.Message}");
                 return false;
             }
-            finally
-            {
-                _loadingService.Hide();
-            }
+           
+            
         }
     }
 }

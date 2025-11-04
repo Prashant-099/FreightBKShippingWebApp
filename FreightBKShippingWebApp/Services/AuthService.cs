@@ -19,7 +19,7 @@ namespace FreightBKShippingWebApp.Services
         private readonly ProtectedLocalStorage _localStorage;
         private readonly NavigationManager _navigationManager;
         private readonly AuthenticationStateProvider _authStateProvider;
-        private readonly LoadingService _loadingService;
+         
 
         public AuthService(
         
@@ -33,7 +33,7 @@ namespace FreightBKShippingWebApp.Services
             _navigationManager = navigationManager;
             _authStateProvider = authStateProvider;
             _api = apiClient;
-            _loadingService = loadingService;
+            
         }
 
      
@@ -43,7 +43,7 @@ namespace FreightBKShippingWebApp.Services
         
             try
             {
-                _loadingService.Show();
+ 
                 if (model == null || string.IsNullOrWhiteSpace(model.UserEmail) || string.IsNullOrWhiteSpace(model.UserPassword))
                 {
                     Console.WriteLine("⚠️ Invalid login model: email or password is empty.");
@@ -89,10 +89,8 @@ namespace FreightBKShippingWebApp.Services
                 Console.WriteLine($"🔥 LoginAsync Exception: {ex.Message}");
                 return null;
             }
-            finally
-            {
-                _loadingService.Hide();
-            }
+           
+         
         }
 
 
