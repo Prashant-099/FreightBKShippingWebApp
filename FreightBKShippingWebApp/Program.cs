@@ -1,8 +1,9 @@
-using FreightBKShippingWebApp;
+﻿using FreightBKShippingWebApp;
 using FreightBKShippingWebApp.Authentication;
 using FreightBKShippingWebApp.Components;
 using FreightBKShippingWebApp.Services;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.ResponseCompression;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,6 +21,24 @@ builder.Services.AddAuthenticationCore();
 builder.Services.AddCascadingAuthenticationState();
 
 builder.Services.AddDevExpressServerSideBlazorReportViewer();
+// ✅ Add response compression
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+    options.Providers.Add<GzipCompressionProvider>();
+    options.Providers.Add<BrotliCompressionProvider>();
+});
+
+builder.Services.Configure<GzipCompressionProviderOptions>(options =>
+{
+    options.Level = System.IO.Compression.CompressionLevel.Fastest;
+});
+
+builder.Services.Configure<BrotliCompressionProviderOptions>(options =>
+{
+    options.Level = System.IO.Compression.CompressionLevel.Fastest;
+});
+
 
 //reportdesigner and report viewer
 
@@ -60,15 +79,19 @@ builder.Services.AddScoped<ReportDataService>();
 builder.Services.AddScoped<ReportService>();
 builder.Services.AddScoped<BillService>();
 builder.Services.AddScoped<GridLayoutService>();
+//builder.Services.AddHttpClient<ApiClient>(client =>
+//{
+//    client.BaseAddress = new Uri("http://localhost:5003/");
+//});
 builder.Services.AddHttpClient<ApiClient>(client =>
 {
-    client.BaseAddress = new Uri("http://localhost:5003/");
+    client.BaseAddress = new Uri("https://localhost:5003/");
 });
-
 builder.Services.AddLocalization();
 builder.Services.AddControllers();
 var app = builder.Build();
-
+// ✅ Use compression middleware (place BEFORE UseEndpoints)
+app.UseResponseCompression();
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {

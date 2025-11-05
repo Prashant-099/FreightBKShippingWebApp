@@ -14,6 +14,12 @@ namespace FreightBKShippingWebApp
 {
     public class ApiClient(HttpClient httpClient, ProtectedLocalStorage localStorage, NavigationManager navigationManager, AuthenticationStateProvider authStateProvider)
     {
+        // ✅ In-memory cache for dropdown data
+        private readonly Dictionary<string, (object Data, DateTime CachedAt)> _cache = new();
+        private readonly TimeSpan _cacheExpiry = TimeSpan.FromMinutes(5);
+        private bool _isRefreshing = false; // Prevent concurrent refresh attempts
+        private readonly SemaphoreSlim _refreshSemaphore = new(1, 1);
+
         private readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true,
@@ -22,7 +28,14 @@ namespace FreightBKShippingWebApp
         };
 
         public async Task SetAuthorizeHeader()
-        {
+        { // Enable compression
+            if (!httpClient.DefaultRequestHeaders.AcceptEncoding.Any())
+            {
+                httpClient.DefaultRequestHeaders.AcceptEncoding.Add(
+                    new System.Net.Http.Headers.StringWithQualityHeaderValue("gzip"));
+                httpClient.DefaultRequestHeaders.AcceptEncoding.Add(
+                    new System.Net.Http.Headers.StringWithQualityHeaderValue("deflate"));
+            }
             try
             {
                 var result = await localStorage.GetAsync<LoginResponseModel>("sessionState");
@@ -38,89 +51,158 @@ namespace FreightBKShippingWebApp
 
                 var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
-                // Token expired → logout
-                if (sessionState.tokenExp <= now)
-                {
-                    await ((CustomAuthStateProvider)authStateProvider).MarkUserAsLoggedOut();
-                    navigationManager.NavigateTo("/login");
-                    return;
-                }
-
-                // Token will expire in < 5 minutes → refresh
-                if (sessionState.tokenExp - now < 300)
-                {
-                    var res = await httpClient.PostAsJsonAsync("api/Auth/refresh-token", new
-                    {
-                        refreshToken = sessionState.RefreshToken
-                    });
-
-                    if (res.IsSuccessStatusCode)
-                    {
-                        var newSession = await res.Content.ReadFromJsonAsync<LoginResponseModel>();
-                        if (newSession != null && !string.IsNullOrEmpty(newSession.Token))
-                        {
-                            await ((CustomAuthStateProvider)authStateProvider).MarkUserAsAuthenticated(newSession);
-                            httpClient.DefaultRequestHeaders.Authorization =
-                                new AuthenticationHeaderValue("Bearer", newSession.Token);
-
-                            await localStorage.SetAsync("sessionState", newSession);
-                        }
-                    }
-                    else
-                    {
-                        //await ((CustomAuthStateProvider)authStateProvider).MarkUserAsLoggedOut();
-                        //navigationManager.NavigateTo("/login");
-                        return;
-                    }
-                }
-                else
-                {
-                    // Token still valid
-                    httpClient.DefaultRequestHeaders.Authorization =
-                        new AuthenticationHeaderValue("Bearer", sessionState.Token);
-                }
-                // Check refresh token expiration
                 var refreshExpUnix = new DateTimeOffset(sessionState.RefreshtokenExp).ToUnixTimeSeconds();
                 if (refreshExpUnix <= now)
                 {
-                    // Refresh token expired → clear everything & go to login
-                    //await ((CustomAuthStateProvider)authStateProvider).MarkUserAsLoggedOut();
-                    //navigationManager.NavigateTo("/login");
+                    Console.WriteLine("🔴 Refresh token expired, logging out");
+                    await ((CustomAuthStateProvider)authStateProvider).MarkUserAsLoggedOut();
+                    navigationManager.NavigateTo("/login", true);
+                    return;
+                }
+                // 2. Check if access token is expired
+                if (sessionState.tokenExp <= now)
+                {
+                    Console.WriteLine("🔄 Access token expired, attempting refresh");
+                    await RefreshAccessToken(sessionState);
                     return;
                 }
 
+                // 3. Proactively refresh if expiring soon (< 5 minutes)
+                if (sessionState.tokenExp - now < 300)
+                {
+                    Console.WriteLine($"⚠️ Access token expiring soon ({(sessionState.tokenExp - now) / 60:F1} min), refreshing...");
+                    await RefreshAccessToken(sessionState);
+                    return;
+                }
+
+                // 4. Token is still valid, set authorization header
+                httpClient.DefaultRequestHeaders.Authorization =
+                    new AuthenticationHeaderValue("Bearer", sessionState.Token);
+
                 // Add culture info
-                var requestCulture = new RequestCulture(CultureInfo.CurrentCulture, CultureInfo.CurrentUICulture);
-                var cultureCookieValue = CookieRequestCultureProvider.MakeCookieValue(requestCulture);
-                httpClient.DefaultRequestHeaders.Add(
-                    "Cookie",
-                    $"{CookieRequestCultureProvider.DefaultCookieName}={cultureCookieValue}"
-                );
+                AddCultureHeader();
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Console.WriteLine($"❌ Error in SetAuthorizeHeader: {ex.Message}");
                 navigationManager.NavigateTo("/login");
             }
         }
 
-        public async Task<T?> GetFromJsonAsync<T>(string path)
+        private async Task RefreshAccessToken(LoginResponseModel sessionState)
+        {
+            // Use semaphore to prevent concurrent refresh attempts
+            if (!await _refreshSemaphore.WaitAsync(0))
+            {
+                Console.WriteLine("⏳ Already refreshing, waiting...");
+                await _refreshSemaphore.WaitAsync(); // Wait for the ongoing refresh
+                _refreshSemaphore.Release();
+
+                // Re-fetch session after refresh completes
+                var result = await localStorage.GetAsync<LoginResponseModel>("sessionState");
+                if (result.Success && result.Value != null)
+                {
+                    httpClient.DefaultRequestHeaders.Authorization =
+                        new AuthenticationHeaderValue("Bearer", result.Value.Token);
+                }
+                return;
+            }
+
+            try
+            {
+                Console.WriteLine("🔄 Sending refresh token request");
+
+                // Create a new HttpClient instance without auth header for refresh
+                using var refreshClient = new HttpClient { BaseAddress = httpClient.BaseAddress };
+
+                var refreshRequest = new { refreshToken = sessionState.RefreshToken };
+                var response = await refreshClient.PostAsJsonAsync("api/Auth/refresh-token", refreshRequest, _jsonOptions);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var content = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"✅ Refresh successful");
+
+                    var newSession = System.Text.Json.JsonSerializer.Deserialize<LoginResponseModel>(content, _jsonOptions);
+
+                    if (newSession != null && !string.IsNullOrEmpty(newSession.Token))
+                    {
+                        // Update session state in storage
+                        await ((CustomAuthStateProvider)authStateProvider).UpdateSession(newSession);
+
+                        // Update auth state provider
+                        await ((CustomAuthStateProvider)authStateProvider).MarkUserAsAuthenticated(newSession);
+
+                        // Set new authorization header
+                        httpClient.DefaultRequestHeaders.Authorization =
+                            new AuthenticationHeaderValue("Bearer", newSession.Token);
+
+                        var expiresAt = DateTimeOffset.FromUnixTimeSeconds(newSession.tokenExp);
+                        Console.WriteLine($"✅ New token expires at: {expiresAt:yyyy-MM-dd HH:mm:ss} UTC");
+                    }
+                }
+                else
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"❌ Refresh failed: {response.StatusCode} - {errorContent}");
+
+                    await ((CustomAuthStateProvider)authStateProvider).MarkUserAsLoggedOut();
+                    navigationManager.NavigateTo("/login", true);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Refresh token error: {ex.Message}");
+                await ((CustomAuthStateProvider)authStateProvider).MarkUserAsLoggedOut();
+                navigationManager.NavigateTo("/login", true);
+            }
+            finally
+            {
+                _refreshSemaphore.Release();
+            }
+        }
+
+        private void AddCultureHeader()
+        {
+            // Remove existing Cookie header if present
+            httpClient.DefaultRequestHeaders.Remove("Cookie");
+
+            var requestCulture = new RequestCulture(CultureInfo.CurrentCulture, CultureInfo.CurrentUICulture);
+            var cultureCookieValue = CookieRequestCultureProvider.MakeCookieValue(requestCulture);
+            httpClient.DefaultRequestHeaders.Add(
+                "Cookie",
+                $"{CookieRequestCultureProvider.DefaultCookieName}={cultureCookieValue}"
+            );
+        }
+        public async Task<T?> GetFromJsonAsync<T>(string path, bool useCache = false)
         {
             await SetAuthorizeHeader();
 
             Console.WriteLine("=== HTTP Request ===");
             Console.WriteLine("Path: " + path);
             Console.WriteLine("Auth Header: " + httpClient.DefaultRequestHeaders.Authorization);
+            // ✅ Check cache first
+            if (useCache && _cache.TryGetValue(path, out var cached))
+            {
+                if (DateTime.UtcNow - cached.CachedAt < _cacheExpiry)
+                {
+                    Console.WriteLine($"✅ Cache hit: {path}");
+                    return (T)cached.Data;
+                }
+                _cache.Remove(path); // Expired
+            }
 
+            Console.WriteLine($"🔍 GET {path}");
             try
             {
                 var res = await httpClient.GetAsync(path);
 
-                Console.WriteLine("=== HTTP Response ===");
-                Console.WriteLine("Status Code: " + res.StatusCode);
+               // Console.WriteLine("=== HTTP Response ===");
+               // Console.WriteLine("Status Code: " + res.StatusCode);
 
                 var content = await res.Content.ReadAsStringAsync();
-                Console.WriteLine("Raw JSON Response:");
-                Console.WriteLine(content);
+              //  Console.WriteLine("Raw JSON Response:");
+              //  Console.WriteLine(content);
 
                 res.EnsureSuccessStatusCode(); // Throws HttpRequestException for non-success codes
 
@@ -144,19 +226,44 @@ namespace FreightBKShippingWebApp
                         if (typeof(T).IsGenericType &&
                             typeof(T).GetGenericTypeDefinition() == typeof(PagedResponseDto<>))
                         {
-                            return System.Text.Json.JsonSerializer.Deserialize<T>(content, _jsonOptions);
+                            var result = System.Text.Json.JsonSerializer.Deserialize<T>(content, _jsonOptions);
+
+                            // ✅ Cache result
+                            if (useCache && result != null)
+                            {
+                                _cache[path] = (result, DateTime.UtcNow);
+                            }
+
+                            return result;
                         }
 
                         // Otherwise, deserialize only the "data" array
-                        return System.Text.Json.JsonSerializer.Deserialize<T>(rawData, _jsonOptions);
+                        var dataResult = System.Text.Json.JsonSerializer.Deserialize<T>(rawData, _jsonOptions);
+
+                        // ✅ Cache result
+                        if (useCache && dataResult != null)
+                        {
+                            _cache[path] = (dataResult, DateTime.UtcNow);
+                        }
+
+                        return dataResult;
                     }
 
                     // Fallback: deserialize full content (plain array or object)
-                    return System.Text.Json.JsonSerializer.Deserialize<T>(content, _jsonOptions);
+                    var finalResult = System.Text.Json.JsonSerializer.Deserialize<T>(content, _jsonOptions);
+
+                    // ✅ Cache result
+                    if (useCache && finalResult != null)
+                    {
+                        _cache[path] = (finalResult, DateTime.UtcNow);
+                    }
+
+                    return finalResult;
                 }
-                catch (System.Text.Json.JsonException ex)
+                catch (Exception ex)
                 {
-                    throw new Exception($"Invalid JSON from '{path}': {ex.Message}\nRaw content:\n{content}", ex);
+                    Console.WriteLine($"❌ Error: {ex.Message}");
+                    throw;
                 }
             }
             catch (HttpRequestException ex)
@@ -173,11 +280,20 @@ namespace FreightBKShippingWebApp
             }
             catch (Exception ex)
             {
-                    throw new Exception($"Unexpected error when calling '{path}': {ex.Message}", ex);
+                throw new Exception($"Unexpected error when calling '{path}': {ex.Message}", ex);
             }
         }
 
+        // ✅ Clear cache (call on logout or data changes)
+        public void ClearCache()
+        {
+            _cache.Clear();
+        }
 
+        public void ClearCache(string path)
+        {
+            _cache.Remove(path);
+        }
         public async Task<T1?> PostAsync<T1, T2>(string path, T2 postModel)
             {
             await SetAuthorizeHeader();

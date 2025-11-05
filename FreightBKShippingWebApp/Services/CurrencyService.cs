@@ -17,7 +17,7 @@ namespace FreightBKShippingWebApp.Services
         {
             try
             {
-                var response = await _api.GetFromJsonAsync<List<Currency>>("api/Currency?page=1&pageSize=1000");
+                var response = await _api.GetFromJsonAsync<List<Currency>>("api/Currency?page=1&pageSize=1000", useCache: true);
                 return response ?? new List<Currency>();
             }
             catch (Exception ex)

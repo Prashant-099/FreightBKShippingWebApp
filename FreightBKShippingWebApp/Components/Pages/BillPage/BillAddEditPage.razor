@@ -1230,7 +1230,7 @@
             return;
         }
 
-         
+
         try
         {
             // Sync currentGridLayout with allGridColumns before saving
@@ -1322,7 +1322,7 @@
             ToastService.Error($"Error saving layout: {ex.Message}");
             Console.WriteLine($"Layout save error: {ex}");
         }
-       
+
         {
             LoadingService.Hide();
         }
@@ -1337,7 +1337,7 @@
 
         if (!griddeleteconfirm) return;
 
-         
+
         try
         {
             var success = await GridLayoutService.DeleteAsync(selectedGridLayoutId.Value);
@@ -1362,7 +1362,7 @@
         {
             ToastService.Error($"Error deleting layout: {ex.Message}");
         }
-       
+
         {
             LoadingService.Hide();
         }
@@ -1419,6 +1419,7 @@
     private int nextSNo = 1;
 
     // Dropdown lists
+    private List<Bill> bill =  [];
     private List<Voucher> VoucherList = new();
     private List<Account> AccountList = new();
     private List<State> stateList = new();
@@ -1443,7 +1444,7 @@
     private List<Job> FilteredJobList = new();
     protected override async Task OnInitializedAsync()
     {
-        await LoadBillsDataAsync();
+        // await LoadBillsDataAsync();
         InitializeGridColumns();
         await LoadAvailableGridLayouts();
         await LoadDefaultGridLayout();
@@ -1451,40 +1452,75 @@
 
     private async Task LoadBillsDataAsync()
     {
-         
+
         try
         {
-            ServiceList = await ServiceService.GetAllAsync();
-            VoucherList = await VoucherService.GetAllAsync();
-            stateList = await StateService.GetStatesAsync();
-            locationList = await LocationService.GetAllAsync();
-            CargoList = await CargoService.GetAllAsync();
-            CurrList = await CurrencyService.GetAllAsync();
-            VesselList = await VesselService.GetAllAsync();
-            UnitList = await UnitService.GetAllAsync();
-            HsnList = await HsnSacService.GetAllAsync();
-            GstslabList = await GstSlabService.GetAllAsync();
-            CompanyList = await CompanyService.GetAllAsync();
-            StateList = await StateService.GetStatesAsync();
-            RateMasterList = await RateMasterService.GetAllAsync();
-            branchList = await BranchService.GetAllAsync();
-            ReportDataList = await ReportDataService.GetAllAsync();
-            JobList = await JobService.GetAllAsync();
-            FilteredJobList = JobList;
+            // ✅ Fire ALL API calls simultaneously (no awaits until WhenAll)
+            var billList =  BillService.GetAllAsync();
+            var serviceTask = ServiceService.GetAllAsync();
+            var voucherTask = VoucherService.GetAllAsync();
+            var stateTask = StateService.GetStatesAsync();
+            var locationTask = LocationService.GetAllAsync();
+            var cargoTask = CargoService.GetAllAsync();
+            var currTask = CurrencyService.GetAllAsync();
+            var vesselTask = VesselService.GetAllAsync();
+            var unitTask = UnitService.GetAllAsync();
+            var hsnTask = HsnSacService.GetAllAsync();
+            var gstTask = GstSlabService.GetAllAsync();
+            var companyTask = CompanyService.GetAllAsync();
+            var branchTask = BranchService.GetAllAsync();
+            var reportTask = ReportDataService.GetAllAsync();
+            var jobTask = JobService.GetAllAsync();
+            var notifyTask = NotifyService.GetAllAsync();
+            var accountTask = AccountService.GetAllAsync();
+            var rateMasterTask = RateMasterService.GetAllAsync();
 
-            var allNotify = await NotifyService.GetAllAsync();
+            // ✅ Wait for ALL tasks to complete together
+            await Task.WhenAll(
+                serviceTask,billList, voucherTask, stateTask, locationTask, cargoTask,
+                currTask, vesselTask, unitTask, hsnTask, gstTask,
+                companyTask, branchTask, reportTask, jobTask,
+                notifyTask, accountTask, rateMasterTask
+            );
+
+            // ✅ Now assign results (all are already completed)
+            bill = billList.Result;
+            ServiceList = serviceTask.Result;
+            VoucherList = voucherTask.Result;
+            stateList = stateTask.Result;
+            StateList = stateTask.Result; // ✅ Reuse same result
+            locationList = locationTask.Result;
+            CargoList = cargoTask.Result;
+            CurrList = currTask.Result;
+            VesselList = vesselTask.Result;
+            UnitList = unitTask.Result;
+            HsnList = hsnTask.Result;
+            GstslabList = gstTask.Result;
+            CompanyList = companyTask.Result;
+            branchList = branchTask.Result;
+            ReportDataList = reportTask.Result;
+            JobList = jobTask.Result;
+            FilteredJobList = JobList; // ✅ Direct assignment
+
+            // ✅ Filter Notify lists (in-memory, fast)
+            var allNotify = notifyTask.Result;
             ConsigneeList = allNotify.Where(n => n.NotifyType == "CONSIGNEE").ToList();
             ShipperList = allNotify.Where(n => n.NotifyType == "SHIPPER").ToList();
             LineList = allNotify.Where(n => n.NotifyType == "LINE").ToList();
 
-            var allAccounts = await AccountService.GetAllAsync();
+            // ✅ Filter Account lists (in-memory, fast)
+            var allAccounts = accountTask.Result;
             AccountList = allAccounts.Where(a => a.AccountTypeId == 14 || a.AccountTypeId == 18).ToList();
             BankList = allAccounts.Where(a => a.AccountTypeId == 10).ToList();
-        }catch (Exception ex)
+
+            RateMasterList = rateMasterTask.Result;
+         
+        }
+        catch (Exception ex)
         {
             ToastService.Error("Error loading data: " + ex.Message);
+            Console.WriteLine($"❌ LoadBillsDataAsync error: {ex}");
         }
-       
  
        
     }  
@@ -1646,6 +1682,7 @@
 
     public async void Show(Bill bill)
     {
+        var loadTask = EnsureDataLoadedAsync();
         if (bill?.BillId > 0)
         {
             EditModel = bill;
@@ -1684,8 +1721,26 @@
         UnsavedChanges.Clear();
         Visible = true;
         StateHasChanged();
+        // ✅ Wait for data to finish loading
+        await loadTask;
     }
+    // ✅ Cache dropdown data (load once, reuse)
+    private bool _dataLoaded = false;
+    private async Task EnsureDataLoadedAsync()
+    {
+        if (_dataLoaded) return; // ✅ Already loaded
 
+        LoadingService.Show("Loading form data...");
+        try
+        {
+            await LoadBillsDataAsync();
+            _dataLoaded = true;
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
     private void Hide()
     {
         Visible = false;

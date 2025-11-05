@@ -16,7 +16,7 @@ namespace FreightBKShippingWebApp.Services
             try
             {
                 var response = await _api.GetFromJsonAsync<List<RateMaster>>(
-                    $"api/RateMaster?page={page}&pageSize={pageSize}");
+                    $"api/RateMaster?page={page}&pageSize={pageSize}", useCache: true);
                 return response ?? new();
             }
             catch (Exception ex)

@@ -46,7 +46,7 @@ namespace FreightBKShippingWebApp.Services
             try
             {
                 var response = await _apiClient.GetFromJsonAsync<List<ReportData>>(
-                    $"api/ReportData?page={page}&pageSize={pageSize}");
+                    $"api/ReportData?page={page}&pageSize={pageSize}", useCache: true);
 
                 return response ?? new();
             }

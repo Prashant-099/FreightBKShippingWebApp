@@ -19,7 +19,7 @@ namespace FreightBKShippingWebApp.Services
             try
             {
                 var response = await _api.GetFromJsonAsync<List<Job>>(
-                    $"api/Job?page={page}&pageSize={pageSize}");
+                    $"api/Job?page={page}&pageSize={pageSize}", useCache: true);
                 return response ?? new List<Job>();
             }
             catch (Exception ex)

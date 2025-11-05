@@ -115,21 +115,30 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadBillsAsync();
+        _ = LoadBillsAsync();
     }
 
     private async Task LoadBillsAsync()
     {
-        LoadingService.Show();
+        
         try
-        {
-            billList = await BillService.GetAllAsync();
-            ReportDataList = await ReportDataService.GetAllAsync();
-        }
-       finally
-        {
+    {
+            LoadingService.Show();
+        // ✅ Load bills first (most important)
+        billList = await BillService.GetAllAsync();
             LoadingService.Hide();
-        }
+        await InvokeAsync(StateHasChanged); // ✅ Update UI immediately
+        
+        // ✅ Load report data in background (less critical)
+        ReportDataList = await ReportDataService.GetAllAsync();
+        await InvokeAsync(StateHasChanged);
+          
+    }
+    catch (Exception ex)
+    {
+        ToastService.Error($"Error loading bills: {ex.Message}");
+    }
+      
     }
 
     private void OnSelectedBillsChanged(IEnumerable<object> bills)
