@@ -14,7 +14,7 @@ namespace FreightBKShippingWebApp.Services
         // Get all states
         public async Task<List<State>?> GetStatesAsync()
         {
-            return await _apiClient.GetFromJsonAsync<List<State>>("/api/states", useCache: true);
+            return await _apiClient.GetFromJsonAsync<List<State>>("/api/states");
         }
 
         // Get state by Id
