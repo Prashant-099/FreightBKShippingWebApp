@@ -198,19 +198,14 @@
     private async Task HandleValidSubmit()
     {
         LoadingService.Show("Saving notify...");
-
         try
         {
+            bool result;
             if (EditModel.NotifyId == 0)
             {
-                // Create new notify
-                var created = await NotifyService.CreateAsync(EditModel);
-
-                if (created != null)
-                {
+                result = await NotifyService.CreateAsync(EditModel);
+                if (result)
                     ToastService.Success("Notify created successfully!");
-                    EditModel.NotifyId = created.NotifyId; // ✅ assign the new ID
-                }
                 else
                 {
                     ToastService.Error("Failed to create notify!");
@@ -219,10 +214,8 @@
             }
             else
             {
-                // Update existing notify
-                bool updated = await NotifyService.UpdateAsync(EditModel);
-
-                if (updated)
+                result = await NotifyService.UpdateAsync(EditModel);
+                if (result)
                     ToastService.Success("Notify updated successfully!");
                 else
                 {
@@ -231,7 +224,6 @@
                 }
             }
 
-            // Hide dialog and refresh parent list
             Visible = false;
             await OnSaved.InvokeAsync();
         }
@@ -239,10 +231,9 @@
         {
             ToastService.Error($"Error saving notify: {ex.Message}");
         }
-        finally
+       finally
         {
             LoadingService.Hide();
         }
     }
-
 }

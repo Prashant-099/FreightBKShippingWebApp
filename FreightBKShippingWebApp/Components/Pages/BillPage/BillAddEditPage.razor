@@ -322,7 +322,7 @@
                         <DxGrid Data="@BillDetails"
                                 TItem="BillDetail"
                                 @ref="DetailGrid"
-                                KeyFieldName="SNo"
+                            KeyFieldName="BillDetailSno"
                                 EditMode="GridEditMode.EditCell"
                                 EditOnKeyPress="true"
                                 ShowAddNewButton="false"
@@ -390,7 +390,7 @@
                                     <HeaderCaptionTemplate>Actions</HeaderCaptionTemplate>
                                     <CellDisplayTemplate>
                                         @{
-                                            var rowIndex = BillDetails.FindIndex(x => x.SNo == ((BillDetail)context.DataItem).SNo);
+                                            var rowIndex = BillDetails.FindIndex(x => x.BillDetailSno == ((BillDetail)context.DataItem).BillDetailSno);
                                         }
                                          <div class="btn-group btn-group-sm">
                                             @* <button type="button"
@@ -418,7 +418,7 @@
 
                                 </DxGridCommandColumn>
 
-                            <DxGridDataColumn FieldName="SNo" Caption="SNo" Width="@GetGridColumnWidth("SNo")" ReadOnly="true" Visible="@GetGridColumnVisibility("SNo")" >
+                            <DxGridDataColumn FieldName="BillDetailSno" Caption="SNo" Width="@GetGridColumnWidth("BillDetailSno")" ReadOnly="true" Visible="@GetGridColumnVisibility("BillDetailSno")">
                                 <EditSettings>
                                     <DxSpinEditSettings ShowSpinButtons="false" />
                                 </EditSettings>
@@ -434,7 +434,7 @@
                                                         SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
                                     </EditSettings>
                                 </DxGridDataColumn>
-
+                            <DxGridDataColumn FieldName="BillDetailRemarks" Caption="Desc." Width="@GetGridColumnWidth("BillDetailRemarks")"  Visible="@GetGridColumnVisibility("BillDetailRemarks")" />
                             <DxGridDataColumn FieldName="BillDetailHsnCode" Caption="SAC" Width="@GetGridColumnWidth("BillDetailHsnCode")" ReadOnly="true" Visible="@GetGridColumnVisibility("BillDetailHsnCode")" />
                             <DxGridDataColumn FieldName="BillDetailUnit" Caption="Unit" Width="@GetGridColumnWidth("BillDetailUnit")" ReadOnly="true" Visible="@GetGridColumnVisibility("BillDetailUnit")" />
                             <DxGridDataColumn FieldName="BillDetailRate" Caption="Rate" Width="@GetGridColumnWidth("BillDetailRate")" Visible="@GetGridColumnVisibility("BillDetailRate")" >
@@ -461,17 +461,21 @@
                             <DxGridDataColumn FieldName="BillDetailCurrencyId" Caption="Curr." Width="@GetGridColumnWidth("BillDetailCurrencyId")" Visible="@GetGridColumnVisibility("BillDetailCurrencyId")">
                                     <EditSettings>
                                         <DxComboBoxSettings Data="@CurrList"
-                                                            TextFieldName="CurrencyName"
+                                                        TextFieldName="CurrencySymbol"
                                                             ValueFieldName="CurrencyId" />
                                     </EditSettings>
                                 </DxGridDataColumn>
-
+                            <DxGridDataColumn FieldName="BillDetailExtraChrg" Caption="ExtraCharge" Width="@GetGridColumnWidth("BillDetailExtraChrg")" Visible="@GetGridColumnVisibility("BillDetailExtraChrg")">
+                                <EditSettings>
+                                    <DxSpinEditSettings ShowSpinButtons="false" />
+                                </EditSettings>
+                            </DxGridDataColumn>
                             <DxGridDataColumn FieldName="BillDetailTaxableAmt" Caption="Taxable" Width="@GetGridColumnWidth("BillDetailTaxableAmt")" Visible="@GetGridColumnVisibility("BillDetailTaxableAmt")" >
                                 <EditSettings>
                                     <DxSpinEditSettings ShowSpinButtons="false" />
                                 </EditSettings>
                             </DxGridDataColumn>
-                            <DxGridDataColumn FieldName="Taxcode" Caption="Tax Code" Width="@GetGridColumnWidth("Taxcode")" Visible="@GetGridColumnVisibility("Taxcode")" />
+                            <DxGridDataColumn FieldName="BillDetailSlabId" Caption="Tax Code" Width="@GetGridColumnWidth("BillDetailSlabId")" Visible="@GetGridColumnVisibility("BillDetailSlabId")" />
                             <DxGridDataColumn FieldName="BillDetailIgstPer" Caption="IGST %" Width="@GetGridColumnWidth("BillDetailIgstPer")" Visible="@GetGridColumnVisibility("BillDetailIgstPer")" >
                                 <EditSettings>
                                     <DxSpinEditSettings ShowSpinButtons="false" />
@@ -1069,24 +1073,26 @@
         allGridColumns = new List<GridColumnLayout>
     {
         new() { FieldName = "Actions", Caption = "Actions", Visible = true, Width = 120, DisplayIndex = 0 },
-        new() { FieldName = "SNo", Caption = "SNo", Visible = true, Width = 60, DisplayIndex = 1 },
+        new() { FieldName = "BillDetailSno", Caption = "BillDetailSno", Visible = true, Width = 60, DisplayIndex = 1 },
         new() { FieldName = "BillDetailProductId", Caption = "Service Name", Visible = true, Width = 200, DisplayIndex = 2 },
-        new() { FieldName = "BillDetailHsnCode", Caption = "SAC", Visible = true, Width = 100, DisplayIndex = 3 },
-        new() { FieldName = "BillDetailUnit", Caption = "Unit", Visible = true, Width = 80, DisplayIndex = 4 },
-        new() { FieldName = "BillDetailRate", Caption = "Rate", Visible = true, Width = 100, DisplayIndex = 5 },
-        new() { FieldName = "BillDetailQty", Caption = "Qty", Visible = true, Width = 100, DisplayIndex = 6 },
-        new() { FieldName = "BillDetailAmount", Caption = "Amount", Visible = true, Width = 120, DisplayIndex = 7 },
-        new() { FieldName = "BillDetailExchRate", Caption = "Ex. Rate", Visible = true, Width = 100, DisplayIndex = 8 },
-        new() { FieldName = "BillDetailCurrencyId", Caption = "Curr.", Visible = true, Width = 80, DisplayIndex = 9 },
-        new() { FieldName = "BillDetailTaxableAmt", Caption = "Taxable", Visible = true, Width = 100, DisplayIndex = 10 },
-        new() { FieldName = "Taxcode", Caption = "Tax Code", Visible = true, Width = 100, DisplayIndex = 11 },
-        new() { FieldName = "BillDetailIgstPer", Caption = "IGST %", Visible = true, Width = 80, DisplayIndex = 12 },
-        new() { FieldName = "BillDetailIgst", Caption = "IGST", Visible = true, Width = 80, DisplayIndex = 13 },
-        new() { FieldName = "BillDetailCgstPer", Caption = "CGST %", Visible = true, Width = 80, DisplayIndex = 14 },
-        new() { FieldName = "BillDetailCgst", Caption = "CGST", Visible = true, Width = 80, DisplayIndex = 15 },
-        new() { FieldName = "BillDetailSgstPer", Caption = "SGST %", Visible = true, Width = 80, DisplayIndex = 16 },
-        new() { FieldName = "BillDetailSgst", Caption = "SGST", Visible = true, Width = 80, DisplayIndex = 17 },
-        new() { FieldName = "BillDetailTotal", Caption = "Total", Visible = true, Width = 120, DisplayIndex = 18 }
+         new() { FieldName = "BillDetailRemarks", Caption = "Desc.", Visible = true, Width = 100, DisplayIndex = 3 },
+        new() { FieldName = "BillDetailHsnCode", Caption = "SAC", Visible = true, Width = 100, DisplayIndex = 4 },
+        new() { FieldName = "BillDetailUnit", Caption = "Unit", Visible = true, Width = 80, DisplayIndex = 5 },
+        new() { FieldName = "BillDetailRate", Caption = "Rate", Visible = true, Width = 100, DisplayIndex = 6 },
+        new() { FieldName = "BillDetailQty", Caption = "Qty", Visible = true, Width = 100, DisplayIndex = 7 },
+        new() { FieldName = "BillDetailAmount", Caption = "Amount", Visible = true, Width = 120, DisplayIndex = 8 },
+        new() { FieldName = "BillDetailExchRate", Caption = "Ex. Rate", Visible = true, Width = 100, DisplayIndex = 9 },
+        new() { FieldName = "BillDetailCurrencyId", Caption = "Curr.", Visible = true, Width = 80, DisplayIndex = 10 },
+         new() { FieldName = "BillDetailExtraChrg", Caption = "ExtraCharge", Visible = true, Width = 80, DisplayIndex = 11 },
+        new() { FieldName = "BillDetailTaxableAmt", Caption = "Taxable", Visible = true, Width = 100, DisplayIndex = 12 },
+        new() { FieldName = "BillDetailSlabId", Caption = "BillDetailSlabId", Visible = true, Width = 100, DisplayIndex = 13 },
+        new() { FieldName = "BillDetailIgstPer", Caption = "IGST %", Visible = true, Width = 80, DisplayIndex = 14 },
+        new() { FieldName = "BillDetailIgst", Caption = "IGST", Visible = true, Width = 80, DisplayIndex = 15 },
+        new() { FieldName = "BillDetailCgstPer", Caption = "CGST %", Visible = true, Width = 80, DisplayIndex = 16 },
+        new() { FieldName = "BillDetailCgst", Caption = "CGST", Visible = true, Width = 80, DisplayIndex = 17 },
+        new() { FieldName = "BillDetailSgstPer", Caption = "SGST %", Visible = true, Width = 80, DisplayIndex = 18 },
+        new() { FieldName = "BillDetailSgst", Caption = "SGST", Visible = true, Width = 80, DisplayIndex = 19 },
+        new() { FieldName = "BillDetailTotal", Caption = "Total", Visible = true, Width = 120, DisplayIndex = 20 }
     };
         currentGridLayout = allGridColumns.Select(c => new GridColumnLayout
         {
@@ -1514,15 +1520,15 @@
             BankList = allAccounts.Where(a => a.AccountTypeId == 10).ToList();
 
             RateMasterList = rateMasterTask.Result;
-         
+
         }
         catch (Exception ex)
         {
             ToastService.Error("Error loading data: " + ex.Message);
             Console.WriteLine($"❌ LoadBillsDataAsync error: {ex}");
         }
- 
-       
+
+
     }  
     private void OnJobDetailsChanged(string selectedjobno)
     {
@@ -1530,6 +1536,7 @@
         var selectedjobdetails = JobList.FirstOrDefault(j => j.JobNo == selectedjobno);
         if (selectedjobno != null)
         {
+            EditModel.BillJobId = selectedjobdetails.JobId;
             EditModel.BillPartyId = selectedjobdetails.JobPartyId ?? 0;
             EditModel.BillSupplyType = "B2B";
             EditModel.BillCargoId = selectedjobdetails.JobCargoId ?? 0;
@@ -1613,7 +1620,7 @@
                 model.BillPrefix = result.prefix;
                 model.BillNo = result.prefix + result.number + result.suffix;
                 model.BillPostfix = result.suffix;
-
+                model.BillVchNo =int.Parse(result.number);
                 StateHasChanged();
             }
             catch (Exception ex)
@@ -1654,19 +1661,24 @@
 
         return new BillDetail
         {
-            SNo = source.SNo,
+            BillDetailSno = source.BillDetailSno,
             BillDetailId = source.BillDetailId,
             BillDetailBillId = source.BillDetailBillId,
             BillDetailProductId = source.BillDetailProductId,
             BillDetailHsnCode = source.BillDetailHsnCode,
             BillDetailUnit = source.BillDetailUnit,
             BillDetailUnitId = source.BillDetailUnitId,
+            BillDetailExchRate = source.BillDetailExchRate,
             BillDetailRate = source.BillDetailRate,
             BillDetailQty = source.BillDetailQty,
             BillDetailAmount = source.BillDetailAmount,
             BillDetailExtraChrg = source.BillDetailExtraChrg,
             BillDetailCurrencyId = source.BillDetailCurrencyId,
             BillDetailTaxableAmt = source.BillDetailTaxableAmt,
+             BillDetailAccountId = source.BillDetailAccountId,
+            BillDetailSgstAcId = source.BillDetailSgstAcId,
+            BillDetailCgstAcId = source.BillDetailCgstAcId,
+            BillDetailIgstAcId = source.BillDetailIgstAcId,
             BillDetailGstPer = source.BillDetailGstPer,
             BillDetailIgst = source.BillDetailIgst,
             BillDetailCgst = source.BillDetailCgst,
@@ -1674,7 +1686,8 @@
             BillDetailTotal = source.BillDetailTotal,
             BillDetailIgstPer = source.BillDetailIgstPer,
             BillDetailCgstPer = source.BillDetailCgstPer,
-            Taxcode  =source.Taxcode,
+            BillDetailSlabId  =source.BillDetailSlabId,
+             BillDetailRemarks  =source.BillDetailRemarks,
             BillDetailSgstPer = source.BillDetailSgstPer
 
         };
@@ -1692,7 +1705,7 @@
 
             for (int i = 0; i < BillDetails.Count; i++)
             {
-                BillDetails[i].SNo = i + 1;
+                BillDetails[i].BillDetailSno = i + 1;
 
 
 
@@ -1761,14 +1774,14 @@
             .Where(d => !UnsavedChanges.ContainsKey(d) || UnsavedChanges[d].Type != DataChangeType.Delete)
             .ToList();
 
-        int nextAvailableSNo = activeDetails.Count > 0 
-            ? activeDetails.Max(d => d.SNo) + 1 
+        int? nextAvailableSNo = activeDetails.Count > 0 
+            ? activeDetails.Max(d => d.BillDetailSno) + 1 
             : 1;
 
         // Create a new BillDetail with defaults
         var newItem = new BillDetail
         {
-            SNo = nextAvailableSNo,
+            BillDetailSno = nextAvailableSNo,
             BillDetailQty = 1,
             BillDetailRate = 0,
             BillDetailAmount = 0,
@@ -1782,8 +1795,8 @@
             BillDetailIgst = 0,
             BillDetailTotal = 0,
             BillDetailExchRate = EditModel?.BillExchRate ?? 1,
-            BillDetailCurrencyId = EditModel?.BillDefaultCurrencyId ?? 0,
-        Taxcode = string.Empty,
+            BillDetailCurrencyId = EditModel.BillDefaultCurrencyId ,
+            BillDetailSlabId = string.Empty,
         BillDetailStatus = true
         };
 
@@ -1813,10 +1826,10 @@
             {
                 BillDetails.Add(new BillDetail 
             { 
-                SNo = i, 
+                    BillDetailSno = i,
                 BillDetailId = 0,
                 BillDetailExchRate = EditModel?.BillExchRate ?? 1,
-                BillDetailCurrencyId = EditModel?.BillDefaultCurrencyId ?? 0
+                BillDetailCurrencyId = EditModel.BillDefaultCurrencyId
             });
             }
 
@@ -1829,7 +1842,7 @@
     }
     async Task Submit_Click()
     {
-         
+
         try
         {
             foreach (var unsavedChange in UnsavedChanges)
@@ -1859,7 +1872,7 @@
         {
             ToastService.Error($"Error applying changes: {ex.Message}");
         }
-       
+
         {
             LoadingService.Hide();
         }
@@ -1890,7 +1903,7 @@
         if (e.IsNew)
         {
             var newDetail = (BillDetail)e.EditModel;
-            newDetail.SNo = nextSNo++;
+            newDetail.BillDetailSno = nextSNo++;
             newDetail.BillDetailId = 0;
             newDetail.BillDetailCurrencyId = EditModel.BillDefaultCurrencyId;
         }
@@ -1907,7 +1920,7 @@
             UnsavedChanges[editableDetail] = new(DataChangeType.Addition, new());
             // Initialize defaults for new row
             editableDetail.BillDetailExchRate = EditModel?.BillExchRate ?? 1;
-            editableDetail.BillDetailCurrencyId = EditModel?.BillDefaultCurrencyId ?? 0;
+            editableDetail.BillDetailCurrencyId = EditModel.BillDefaultCurrencyId;
         }
         else
         {
@@ -1962,13 +1975,13 @@
         // Reindex SNo after deletion (only for non-deleted items)
         var activeDetails = BillDetails
             .Where(d => !UnsavedChanges.ContainsKey(d) || UnsavedChanges[d].Type != DataChangeType.Delete)
-            .OrderBy(d => d.SNo)
+            .OrderBy(d => d.BillDetailSno)
             .ToList();
 
         int sn = 1;
         foreach (var d in activeDetails)
         {
-            d.SNo = sn++;
+            d.BillDetailSno = sn++;
         }
 
         // Update totals
@@ -1986,7 +1999,7 @@
        .ToList();
         for (int i = 0; i < BillDetails.Count; i++)
         {
-            BillDetails[i].SNo = i + 1;
+            BillDetails[i].BillDetailSno = i + 1;
         }
         nextSNo = BillDetails.Count + 1;
         await InvokeAsync(StateHasChanged);
@@ -2003,9 +2016,9 @@
             {
                 item.BillDetailStatus = true;
                 item.BillDetailHsnCode = selectedService.HsnName;
-                var unitName = UnitList.FirstOrDefault(u => u.UnitId == selectedService.ServiceUnitId)?.UnitName;
-                item.BillDetailUnit = unitName ?? string.Empty;
-
+                var unitName = UnitList.FirstOrDefault(u => u.UnitId == selectedService.ServiceUnitId);
+                item.BillDetailUnit = unitName.UnitName;
+                item.BillDetailUnitId = unitName.UnitId;
                 if (item.BillDetailRate == 0 || item.BillDetailRate == default(double))
                 {
                     var applicableRate = RateMasterList?
@@ -2059,16 +2072,35 @@
                         ? 1
                         : EditModel.BillExchRate;
                 }
-
+                var selectedCurr = CurrList.FirstOrDefault(h => h.CurrencyId == EditModel.BillDefaultCurrencyId);
+                item.BillDetailCurrencyId = selectedCurr.CurrencyId; 
+                item.BillDetailExchUnit = selectedCurr.CurrencyName; 
                 var selectedHsn = HsnList.FirstOrDefault(h => h.HsnName == selectedService.HsnName);
                 var selectedGstslab = GstslabList.FirstOrDefault(h => h.GstSlabIgstPer == selectedService.HsnGstPer);
+                var billdetailsabid = GstslabList.FirstOrDefault(h => h.GstSlabId == selectedHsn.HsnGstSlabId);
+                var vouchergroup = VoucherList.FirstOrDefault(v => v.VoucherId == EditModel.BillVoucherId);
+
+                if (vouchergroup.VoucherGroup == "SALES")
+                {
+                    item.BillDetailAccountId = selectedGstslab.GstSlabSalesAccountId;
+                    item.BillDetailIgstAcId = selectedGstslab.GstSlabIgstAccountId;
+                    item.BillDetailCgstAcId = selectedGstslab.GstSlabCgstAccountId;
+                    item.BillDetailSgstAcId = selectedGstslab.GstSlabSgstAccountId;
+                }
+                 else if (vouchergroup.VoucherGroup == "PURCHASE")
+                {
+                    item.BillDetailAccountId = selectedGstslab.GstSlabPurchaseAccountId;
+                    item.BillDetailIgstAcId = selectedGstslab.GstSlabPigstAccountId;
+                    item.BillDetailCgstAcId = selectedGstslab.GstSlabPcgstAccountId;
+                    item.BillDetailSgstAcId = selectedGstslab.GstSlabPsgstAccountId;
+                }
                 if (selectedHsn != null)
                 {
-
-
+                    item.BillDetailHsnId = selectedHsn.HsnId;
+                    item.BillDetailSlabId = billdetailsabid.GstSlabName;
                     // Map GST % from slab — if your HSN table has GST percentage
                     item.BillDetailGstPer = selectedHsn.HsnGstPer; // ✅ You said this ID corresponds to percentage
-                    item.Taxcode = selectedGstslab.GstSlabName; // ✅ Not mapped to DB but used in grid
+                   // item.Taxcode = selectedGstslab.GstSlabName; // ✅ Not mapped to DB but used in grid
                 }
                 var selectedCompany = CompanyList?.FirstOrDefault(c => c.Status == true);
                 var selectedpos = StateList.FirstOrDefault(h => h.StateId == EditModel.BillPlaceOfSupply);
@@ -2116,7 +2148,7 @@
                             item.BillDetailIgstPer = 0;
                             item.BillDetailCgstPer = 0;
                             item.BillDetailSgstPer = 0;
-                            item.Taxcode = "RCM";
+                            item.BillDetailSlabId = "RCM";
                         }
                         else
                         {
@@ -2184,7 +2216,7 @@
 
         // Calculate amounts
         item.BillDetailAmount = item.BillDetailQty * item.BillDetailRate;
-        item.BillDetailTaxableAmt = item.BillDetailAmount * item.BillDetailExchRate;
+        item.BillDetailTaxableAmt = item.BillDetailAmount * item.BillDetailExchRate + item.BillDetailExtraChrg;
         item.BillDetailTotal = item.BillDetailTaxableAmt +item.BillDetailIgst +item.BillDetailCgst +item.BillDetailSgst;
         // Update main bill total
         if (EditModel != null)
@@ -2192,6 +2224,18 @@
             EditModel.BillNetAmount = (float)BillDetails
                 .Where(d => !UnsavedChanges.ContainsKey(d) || UnsavedChanges[d].Type != DataChangeType.Delete)
                 .Sum(d => d.BillDetailTotal);
+
+            EditModel.BillTotalUsd = (float)BillDetails
+           .Where(d => !UnsavedChanges.ContainsKey(d) || UnsavedChanges[d].Type != DataChangeType.Delete)
+           .Sum(d => d.BillDetailAmount);
+            // ✅ Calculate Non-Taxable Amount (only HSN with 0% GST)
+            EditModel.BillNonTaxable = (float)BillDetails
+        .Where(d =>
+            (!UnsavedChanges.ContainsKey(d) || UnsavedChanges[d].Type != DataChangeType.Delete)
+            && (d.BillDetailGstPer == 0)
+        )
+        .Sum(d => d.BillDetailTaxableAmt);
+
             ApplyRoundOff(EditModel.BillIsRoundOff);
         }
     }
@@ -2203,7 +2247,7 @@
 
         foreach (var prop in properties)
         {
-            if (prop.Name == "SNo" || prop.Name == "BillDetailId") continue;
+            if (prop.Name == "BillDetailSno" || prop.Name == "BillDetailId") continue;
 
             var sourceValue = prop.GetValue(source);
             var targetValue = prop.GetValue(target);
@@ -2335,7 +2379,7 @@
                 .ToList();
 
             // --- STEP 3: Recalculate Bill Totals ---
-            EditModel.BillNetAmount = (float)activeDetails.Sum(d => d.BillDetailTotal);
+            //EditModel.BillNetAmount = (float)activeDetails.Sum(d => d.BillDetailTotal);
             EditModel.BillAmount = activeDetails.Sum(d => d.BillDetailAmount);
             EditModel.BillTaxableAmt = activeDetails.Sum(d => d.BillDetailTaxableAmt);
             EditModel.BillIgst = activeDetails.Sum(d => d.BillDetailIgst);
@@ -2344,6 +2388,7 @@
             EditModel.BillTotal = EditModel.BillNetAmount;
             EditModel.BillYearId = YearStatechangeService.SelectedYearId;
             EditModel.BillNo = EditModel.BillNo;
+
             // --- STEP 4: Filter only valid detail lines ---
             var validDetails = activeDetails
                 .Where(d => d.BillDetailProductId > 0 || !string.IsNullOrEmpty(d.BillDetailHsnCode))
@@ -2355,6 +2400,7 @@
             bool result;
             if (EditModel.BillId == 0)
             {
+                EditModel.BillTime = DateTime.Now.ToString("hh:mm tt");
                 result = await BillService.CreateAsync(EditModel);
                 if (result)
                     ToastService.Success("Bill created successfully!");

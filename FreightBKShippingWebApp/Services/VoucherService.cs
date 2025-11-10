@@ -18,7 +18,7 @@ namespace FreightBKShippingWebApp.Services
         {
             try
             {
-                var response = await _api.GetFromJsonAsync<List<Voucher>>("api/Vouchers", useCache: true);
+                var response = await _api.GetFromJsonAsync<List<Voucher>>("api/Vouchers");
                 return response ?? new();
             }
             catch (Exception ex)

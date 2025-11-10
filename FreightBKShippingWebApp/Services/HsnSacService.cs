@@ -18,7 +18,7 @@ namespace FreightBKShippingWebApp.Services
         {
             try
             {
-                var response = await _api.GetFromJsonAsync<List<HsnSac>>("api/HsnSac?page=1&pageSize=1000", useCache: true);
+                var response = await _api.GetFromJsonAsync<List<HsnSac>>("api/HsnSac?page=1&pageSize=1000");
                 return response ?? new();
             }
             catch (Exception ex)
