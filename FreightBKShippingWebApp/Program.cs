@@ -79,14 +79,14 @@ builder.Services.AddScoped<ReportDataService>();
 builder.Services.AddScoped<ReportService>();
 builder.Services.AddScoped<BillService>();
 builder.Services.AddScoped<GridLayoutService>();
-//builder.Services.AddHttpClient<ApiClient>(client =>
-//{
-//    client.BaseAddress = new Uri("http://localhost:5003/");
-//});
 builder.Services.AddHttpClient<ApiClient>(client =>
 {
-    client.BaseAddress = new Uri("https://localhost:5003/");
+    client.BaseAddress = new Uri("http://localhost:5003/");
 });
+//builder.Services.AddHttpClient<ApiClient>(client =>
+//{
+//    client.BaseAddress = new Uri("https://localhost:5003/");
+//});
 builder.Services.AddLocalization();
 builder.Services.AddControllers();
 var app = builder.Build();

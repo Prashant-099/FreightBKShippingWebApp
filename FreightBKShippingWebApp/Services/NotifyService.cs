@@ -48,17 +48,17 @@ namespace FreightBKShippingWebApp.Services
         }
 
         // Create notify
-        public async Task<bool> CreateAsync(Notify notify)
+        public async Task<Notify?> CreateAsync(Notify notify)
         {
             try
             {
-                var result = await _api.PostAsync<bool, Notify>("api/Notifies", notify);
+                var result = await _api.PostAsync<Notify, Notify>("api/Notifies", notify);
                 return result;
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Error creating notify: {ex.Message}");
-                return false;
+                return null;
             }
            
         }

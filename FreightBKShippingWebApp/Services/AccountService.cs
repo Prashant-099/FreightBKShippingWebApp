@@ -45,40 +45,39 @@ namespace FreightBKShippingWebApp.Services
            
         }
 
-        public async Task<bool> CreateAsync(Account account)
+        public async Task<Account?> CreateAsync(Account account)
         {
           
             try
             {
-                var result = await _api.PostAsync<bool, Account>("api/Accounts", account);
-                return result;
+                var created = await _api.PostAsync<Account, Account>("api/Accounts", account);
+                return created;
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Error creating account: {ex.Message}");
-                return false;
+                return null;
             }
            
             
         }
 
-        public async Task<bool> UpdateAsync(Account account)
+        public async Task<Account?> UpdateAsync(Account account)
         {
-           
             try
             {
-                var result = await _api.PutAsync<bool, Account>(
+                var result = await _api.PutAsync<Account, Account>(
                     $"api/Accounts/{account.AccountId}", account);
-                return result;
+
+                return result; // return updated account object
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Error updating account: {ex.Message}");
-                return false;
+                return null;
             }
-           
-           
         }
+
 
         public async Task<bool> DeleteAsync(int accountId)
         {

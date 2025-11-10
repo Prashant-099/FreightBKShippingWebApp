@@ -128,7 +128,7 @@ namespace FreightBKShippingWebApp
                     if (newSession != null && !string.IsNullOrEmpty(newSession.Token))
                     {
                         // Update session state in storage
-                        await ((CustomAuthStateProvider)authStateProvider).UpdateSession(newSession);
+                        //await ((CustomAuthStateProvider)authStateProvider).UpdateSession(newSession);
 
                         // Update auth state provider
                         await ((CustomAuthStateProvider)authStateProvider).MarkUserAsAuthenticated(newSession);
@@ -183,7 +183,7 @@ namespace FreightBKShippingWebApp
             Console.WriteLine("Auth Header: " + httpClient.DefaultRequestHeaders.Authorization);
             // ✅ Check cache first
             if (useCache && _cache.TryGetValue(path, out var cached))
-            {
+            { 
                 if (DateTime.UtcNow - cached.CachedAt < _cacheExpiry)
                 {
                     Console.WriteLine($"✅ Cache hit: {path}");
