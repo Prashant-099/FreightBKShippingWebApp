@@ -1,10 +1,15 @@
-﻿@* @page "/jobexport" *@
+﻿@page "/jobexport"
 @using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Services
+@using FreightBKShippingWebApp.Services.PdfReaderAndHelperService
+
 @inject JobService JobService
 @inject ToasteService ToastService
 @inject LoadingService LoadingService
 @inject ConfirmationDialogService ConfirmDialogService
+@inject YearStatechangeService YearStatechangeService
+@inject ExportPdfExtractorService ExportExtractorService
+@inject ExportJobBuilderService ExportJobBuilder
 
 <DxGrid TItem="Job"
         Data="@jobList"
@@ -32,6 +37,7 @@
                 <DxToolbarItem Text="Add" IconCssClass="bi bi-plus-circle" Click="OnCreateNew" />
                 <DxToolbarItem Text="Edit" IconCssClass="bi bi-pencil-square" Click="OnEdit" />
                 <DxToolbarItem Text="Delete" IconCssClass="bi bi-trash" Click="OnDelete" />
+                <DxToolbarItem Text="Import PDF" IconCssClass="bi bi-file-pdf-fill" Click="OnImportPDF" />
                 <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="LoadJobsAsync" />
             </Items>
         </DxToolbar>
@@ -39,7 +45,6 @@
 
     <Columns>
         <DxGridSelectionColumn Width="30" />
-
         <DxGridDataColumn FieldName="JobNo" Caption="Job No" MinWidth="120" />
         <DxGridDataColumn FieldName="JobDate" Caption="Job Date" DisplayFormat="d" MinWidth="130" />
         <DxGridDataColumn FieldName="JobType" Caption="Job Type" MinWidth="130" />
@@ -50,33 +55,49 @@
         <DxGridDataColumn FieldName="JobPodId" Caption="POD" MinWidth="120" />
         <DxGridDataColumn FieldName="JobFreightBy" Caption="Freight By" MinWidth="150" />
         <DxGridDataColumn FieldName="JobGrossWt" Caption="Gross Weight" MinWidth="140" />
-        <DxGridDataColumn FieldName="JobNetWt" Caption="Net Weight" MinWidth="140" />
         <DxGridDataColumn FieldName="JobVolume" Caption="Volume / CBM" MinWidth="160" />
         <DxGridDataColumn FieldName="JobQty" Caption="Quantity" MinWidth="120" />
-        <DxGridDataColumn FieldName="JobQtyUnit" Caption="Qty Unit" MinWidth="120" />
-        <DxGridDataColumn FieldName="JobShipperId" Caption="Shipper" MinWidth="180" />
-        <DxGridDataColumn FieldName="JobConsigneeId" Caption="Consignee" MinWidth="180" />
-        <DxGridDataColumn FieldName="JobNotifyAddress" Caption="Notify Party" MinWidth="200" />
         <DxGridDataColumn FieldName="JobChaId" Caption="Customs Agent" MinWidth="160" />
         <DxGridDataColumn FieldName="JobRemarks" Caption="Remarks" MinWidth="200" />
-
     </Columns>
-
 </DxGrid>
 
 <JobAddEditPage @ref="popup" OnSaved="LoadJobsAsync" JobType="@JobType" />
 <ConfirmationDialog />
+
+<!-- ✅ REUSABLE PDF IMPORT MODAL (with green styling for Export) -->
+<PdfImportModal ShowModal="@showPdfImportDialog"
+                OnModalClose="ClosePdfDialog"
+                OnDataExtracted="OnPdfDataExtracted"
+                JobType="@JobType"
+                ModalTitle="Import Export Jobs from PDF"
+                ProcessButtonText="Import & Create Export Job"
+                HeaderClass="bg-success"
+                ButtonClass="btn-success"
+                SpinnerClass="text-success"
+                SuccessCardClass="border-success" />
 
 @code {
     DxGrid MyGrid;
     private List<Job> jobList = new();
     private List<Job> SelectedJobs = new();
     private JobAddEditPage popup;
-    private string JobType = "EXPORT"; // or "Export"
+    private string JobType = "EXPORT";
+    private int? CurrentYearId { get; set; }
+
+    private bool showPdfImportDialog = false;
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadJobsAsync();
+        try
+        {
+            CurrentYearId = YearStatechangeService.SelectedYearId;
+            await LoadJobsAsync();
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error("Failed to load export jobs");
+        }
     }
 
     private async Task LoadJobsAsync()
@@ -85,18 +106,95 @@
         try
         {
             var allJobs = await JobService.GetAllAsync();
-
-            // Filter only Importer jobs
             jobList = allJobs
                 .Where(j => j.JobType != null && j.JobType.Equals(JobType, StringComparison.OrdinalIgnoreCase))
                 .ToList();
-
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error("Failed to load export jobs");
         }
         finally
         {
             LoadingService.Hide();
         }
     }
+
+    // ==================== PDF MODAL HANDLERS ====================
+
+    private async Task OnImportPDF()
+    {
+        showPdfImportDialog = true;
+        await Task.CompletedTask;
+    }
+
+    private async Task ClosePdfDialog()
+    {
+        showPdfImportDialog = false;
+        await Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// ✅ Called when PDF data is extracted and user clicks "Import & Create Export Job"
+    /// 
+    /// Flow:
+    /// 1. ExportPdfExtractorService extracts 72 fields from PDF
+    /// 2. ExportJobBuilderService builds Job object from extracted data
+    /// 3. Job is saved to database
+    /// </summary>
+    private async Task OnPdfDataExtracted(Dictionary<string, string> extractedData)
+    {
+        try
+        {
+            LoadingService.Show();
+
+            // ==================== STEP 1: EXTRACT PDF DATA ====================
+            // ExportPdfExtractorService already extracted the data in PdfImportModal
+            // extractedData contains all 72 fields
+            
+
+            // ==================== STEP 2: BUILD JOB FROM EXTRACTED DATA ====================
+            // Use ExportJobBuilderService to map all extracted fields to Job model
+            var job = await ExportJobBuilder.BuildExportJobAsync(
+                extractedData,
+                CurrentYearId);
+
+            if (job == null)
+            {
+                ToastService.Error("Failed to build export job from extracted data");
+                return;
+            }
+
+
+            // ==================== STEP 3: SAVE JOB TO DATABASE ====================
+            var created = await JobService.CreateAsync(job);
+
+            if (created)
+            {
+                ToastService.Success($"✅ Export job '{job.JobNo}' created successfully!");
+                
+                // Refresh grid
+                await LoadJobsAsync();
+                
+                // Close modal
+                showPdfImportDialog = false;
+            }
+            else
+            {
+                ToastService.Error("Failed to save export job to database");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Processing failed: {ex.Message}");
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+
+    // ==================== GRID HANDLERS ====================
 
     private void OnSelectedJobsChanged(IEnumerable<object> jobs)
     {
@@ -130,13 +228,21 @@
 
         if (confirm)
         {
-            foreach (var job in SelectedJobs)
+            LoadingService.Show();
+            try
             {
-                await JobService.DeleteAsync(job.JobId);
-            }
+                foreach (var job in SelectedJobs)
+                {
+                    await JobService.DeleteAsync(job.JobId);
+                }
 
-            ToastService.Success($"{SelectedJobs.Count} job(s) deleted successfully.");
-            await LoadJobsAsync();
+                ToastService.Success($"{SelectedJobs.Count} job(s) deleted successfully.");
+                await LoadJobsAsync();
+            }
+            finally
+            {
+                LoadingService.Hide();
+            }
         }
     }
 }
