@@ -231,16 +231,78 @@ public class JobDataCreationService
         }
     }
 
+    //public async Task<int?> GetOrCreateAccountIdAsync(string name, Dictionary<string, string> data = null, string prefix = "")
+    //{
+    //    if (string.IsNullOrWhiteSpace(name)) return null;
+
+    //    try
+    //    {
+    //        var all = await _accountService.GetAllAsync();
+    //        var existing = all.FirstOrDefault(x =>
+    //            string.Equals(x.AccountName?.Trim(), name.Trim(), StringComparison.OrdinalIgnoreCase));
+
+    //        if (existing != null)
+    //            return existing.AccountId;
+
+    //        var defaultGroupId = await GetDefaultAccountGroupIdAsync();
+    //        if (defaultGroupId == null)
+    //            return null;
+
+    //        var newAcc = new Account
+    //        {
+    //            AccountName = name.Trim(),
+    //            AccountGroupId = defaultGroupId.Value,
+    //            AccountPrintName = name.Trim(),
+    //            AccountTypeId = 18
+    //        };
+
+    //        if (data != null)
+    //        {
+    //            var addressKey = string.IsNullOrEmpty(prefix) ? "Address" : $"{prefix} Address";
+    //            var phoneKey = string.IsNullOrEmpty(prefix) ? "Phone" : $"{prefix} Phone";
+    //            var emailKey = string.IsNullOrEmpty(prefix) ? "Email" : $"{prefix} Email";
+    //            var gstinKey = string.IsNullOrEmpty(prefix) ? "GSTIN" : $"{prefix} GSTIN";
+    //            var panKey = string.IsNullOrEmpty(prefix) ? "PAN" : $"{prefix} PAN";
+    //            var codeKey = string.IsNullOrEmpty(prefix) ? "Code" : $"{prefix} Code";
+
+    //            if (data.TryGetValue(addressKey, out var addr))
+    //                newAcc.AccountAddress1 = _cleanupService.CleanValue(addr?.ToString());
+
+    //            if (data.TryGetValue(phoneKey, out var phone))
+    //                newAcc.AccountPhone = _cleanupService.CleanValue(phone?.ToString());
+
+    //            if (data.TryGetValue(emailKey, out var email))
+    //                newAcc.AccountEmail = _cleanupService.CleanValue(email?.ToString());
+
+    //            if (data.TryGetValue(gstinKey, out var gstin))
+    //                newAcc.AccountGstNo = _cleanupService.CleanValue(gstin?.ToString());
+
+    //            if (data.TryGetValue(panKey, out var pan))
+    //                newAcc.AccountPan = _cleanupService.CleanValue(pan?.ToString());
+
+    //            if (data.TryGetValue(codeKey, out var code))
+    //                newAcc.AccountCode = _cleanupService.CleanValue(code?.ToString());
+    //        }
+
+    //        var createdAcc = await _accountService.CreateAsync(newAcc);
+    //        return createdAcc?.AccountId;
+    //    }
+    //    catch (Exception ex)
+    //    {
+    //        _logger.LogError($"Error creating account '{name}': {ex.Message}");
+    //        return null;
+    //    }
+    //}
+
+    // ==================== CHA METHODS ====================
     public async Task<int?> GetOrCreateAccountIdAsync(string name, Dictionary<string, string> data = null, string prefix = "")
     {
         if (string.IsNullOrWhiteSpace(name)) return null;
-
         try
         {
             var all = await _accountService.GetAllAsync();
             var existing = all.FirstOrDefault(x =>
                 string.Equals(x.AccountName?.Trim(), name.Trim(), StringComparison.OrdinalIgnoreCase));
-
             if (existing != null)
                 return existing.AccountId;
 
@@ -258,43 +320,77 @@ public class JobDataCreationService
 
             if (data != null)
             {
-                var addressKey = string.IsNullOrEmpty(prefix) ? "Address" : $"{prefix} Address";
+                // ==================== BUILD COMPLETE ADDRESS FROM MULTIPLE LINES ====================
+                var addressParts = new List<string>();
+
+                // Try single address field (old format)
+                var singleAddressKey = string.IsNullOrEmpty(prefix) ? "Address" : $"{prefix} Address";
+                if (data.TryGetValue(singleAddressKey, out var singleAddr) && !string.IsNullOrWhiteSpace(singleAddr))
+                {
+                    addressParts.Add(singleAddr.Trim());
+                    _logger.LogInformation($"✅ Found single address: {singleAddr}");
+                }
+
+                // Try multi-line address fields (new format: "Exporter Address Line 1", "Exporter Address Line 2", etc.)
+                int addressLineNum = 1;
+                while (true)
+                {
+                    var multiAddressKey = string.IsNullOrEmpty(prefix)
+                        ? $"Address Line {addressLineNum}"
+                        : $"{prefix} Address Line {addressLineNum}";
+
+                    if (data.TryGetValue(multiAddressKey, out var multiAddr) && !string.IsNullOrWhiteSpace(multiAddr))
+                    {
+                        addressParts.Add(multiAddr.Trim());
+                        _logger.LogInformation($"✅ Found address line {addressLineNum}: {multiAddr}");
+                        addressLineNum++;
+                    }
+                    else
+                    {
+                        break; // No more address lines
+                    }
+                }
+
+                // Join all address lines
+                if (addressParts.Count > 0)
+                {
+                    var fullAddress = string.Join(", ", addressParts);
+                    newAcc.AccountAddress1 = _cleanupService.CleanValue(fullAddress);
+                    _logger.LogInformation($"✅ Final address: {newAcc.AccountAddress1}");
+                }
+
+                // ==================== EXTRACT OTHER FIELDS ====================
                 var phoneKey = string.IsNullOrEmpty(prefix) ? "Phone" : $"{prefix} Phone";
-                var emailKey = string.IsNullOrEmpty(prefix) ? "Email" : $"{prefix} Email";
-                var gstinKey = string.IsNullOrEmpty(prefix) ? "GSTIN" : $"{prefix} GSTIN";
-                var panKey = string.IsNullOrEmpty(prefix) ? "PAN" : $"{prefix} PAN";
-                var codeKey = string.IsNullOrEmpty(prefix) ? "Code" : $"{prefix} Code";
-
-                if (data.TryGetValue(addressKey, out var addr))
-                    newAcc.AccountAddress1 = _cleanupService.CleanValue(addr?.ToString());
-
                 if (data.TryGetValue(phoneKey, out var phone))
                     newAcc.AccountPhone = _cleanupService.CleanValue(phone?.ToString());
 
+                var emailKey = string.IsNullOrEmpty(prefix) ? "Email" : $"{prefix} Email";
                 if (data.TryGetValue(emailKey, out var email))
                     newAcc.AccountEmail = _cleanupService.CleanValue(email?.ToString());
 
+                var gstinKey = string.IsNullOrEmpty(prefix) ? "GSTIN" : $"{prefix} GSTIN";
                 if (data.TryGetValue(gstinKey, out var gstin))
                     newAcc.AccountGstNo = _cleanupService.CleanValue(gstin?.ToString());
 
+                var panKey = string.IsNullOrEmpty(prefix) ? "PAN" : $"{prefix} PAN";
                 if (data.TryGetValue(panKey, out var pan))
                     newAcc.AccountPan = _cleanupService.CleanValue(pan?.ToString());
 
+                var codeKey = string.IsNullOrEmpty(prefix) ? "Code" : $"{prefix} Code";
                 if (data.TryGetValue(codeKey, out var code))
                     newAcc.AccountCode = _cleanupService.CleanValue(code?.ToString());
             }
 
             var createdAcc = await _accountService.CreateAsync(newAcc);
+            _logger.LogInformation($"✅ Account created: {name} (ID: {createdAcc?.AccountId})");
             return createdAcc?.AccountId;
         }
         catch (Exception ex)
         {
-            _logger.LogError($"Error creating account '{name}': {ex.Message}");
+            _logger.LogError($"❌ Error creating account '{name}': {ex.Message}");
             return null;
         }
     }
-
-    // ==================== CHA METHODS ====================
     public async Task<int?> GetOrCreateChaIdAsync(string name, Dictionary<string, string> data = null)
     {
         if (string.IsNullOrWhiteSpace(name)) return null;

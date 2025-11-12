@@ -86,15 +86,18 @@ namespace FreightBKShippingWebApp.Services.PdfReaderAndHelperService
                     if (exporterId.HasValue)
                         job.JobPartyId = exporterId.Value;
                 }
+                var addressParts = new List<string>();
 
-                if (TryGetValue(extractedData, "Exporter Address Line 1", out var exportAddr1))
-                    job.JobShipperAddress = _cleanupService.CleanValue(exportAddr1);
-
-                if (TryGetValue(extractedData, "Exporter Address Line 2", out var exportAddr2))
+                foreach (var key in new[] { "Exporter Address Line 1", "Exporter Address Line 2", "Exporter Address Line 3" })
                 {
-                    var addr = job.JobShipperAddress + ", " + _cleanupService.CleanValue(exportAddr2);
-                    job.JobShipperAddress = addr.Length > 300 ? job.JobShipperAddress : addr;
+                    if (TryGetValue(extractedData, key, out var line))
+                        addressParts.Add(_cleanupService.CleanValue(line));
                 }
+
+                var fullAddress = string.Join(", ", addressParts);
+                if (fullAddress.Length <= 300)
+                    job.JobPartyAddress = fullAddress;
+
 
                 if (TryGetValue(extractedData, "Exporter Type", out var exporterType))
                     job.JobRemarks = _cleanupService.CleanValue(exporterType);

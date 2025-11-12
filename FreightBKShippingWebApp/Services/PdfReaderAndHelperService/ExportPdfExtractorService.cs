@@ -122,45 +122,144 @@ namespace FreightBKShippingWebApp.Services.PdfReaderAndHelperService
             }
         }
 
-        // ==================== 3. EXPORTER DETAILS ====================
+        // ==================== 3.   DETAILS ====================
         private void ExtractExporterDetails(string text, Dictionary<string, string> data)
         {
             try
             {
-                // Extract Exporter Code & Name
-                var exporterMatch = Regex.Match(text, @"EXPORTER DETAILS\s*:\s*(\d+)\s*\n(.*?)(?=Branch Sr|Type of)", RegexOptions.Singleline);
-                if (exporterMatch.Success)
+                _logger.LogInformation("🔍 Starting exporter details extraction (TWO-COLUMN FORMAT)");
+
+                // ==================== EXTRACT LEFT COLUMN (EXPORTER) ====================
+                var exporterMatch = Regex.Match(text,
+                    @"EXPORTER\s+DETAILS\s*:.*?\n(.*?)(?=GSN|Type of Exporter)",
+                    RegexOptions.Singleline | RegexOptions.IgnoreCase);
+
+                if (!exporterMatch.Success)
                 {
-                    data["Exporter Code"] = exporterMatch.Groups[1].Value.Trim();
-                    var nameLines = exporterMatch.Groups[2].Value.Trim().Split('\n');
-                    if (nameLines.Length > 0)
-                        data["Exporter Name"] = nameLines[0].Trim();
+                    _logger.LogError("❌ Could not extract exporter section");
+                    return;
                 }
 
-                // Extract Address Lines
-                var addressMatch = Regex.Match(text, @"EXPORTER DETAILS\s*:.*?\n\d+\s+\n(.*?)(?=Branch Sr)", RegexOptions.Singleline);
-                if (addressMatch.Success)
+                string exporterText = exporterMatch.Groups[1].Value;
+                _logger.LogInformation($"📝 Raw exporter text:\n{exporterText}");
+
+                // Split into lines and clean
+                var exporterLines = exporterText
+                    .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(l => l.Trim())
+                    .Where(l => !string.IsNullOrWhiteSpace(l) && l.Length > 0)
+                    .ToList();
+
+                _logger.LogInformation($"📋 Exporter lines count: {exporterLines.Count}");
+                for (int i = 0; i < exporterLines.Count; i++)
                 {
-                    var lines = addressMatch.Groups[1].Value.Split('\n').Where(l => !string.IsNullOrWhiteSpace(l)).ToList();
-                    if (lines.Count >= 2)
+                    _logger.LogInformation($"   [{i}]: '{exporterLines[i]}'");
+                }
+
+                // ==================== PARSE EXPORTER LINES ====================
+                int lineIndex = 0;
+
+                // Line 0: Exporter Code (LEFT SIDE ONLY)
+                if (lineIndex < exporterLines.Count)
+                {
+                    var firstLine = exporterLines[lineIndex];
+                    var parts = Regex.Split(firstLine, @"\s{2,}");
+                    var exporterCode = parts[0].Trim();
+
+                    if (long.TryParse(exporterCode, out _))
                     {
-                        data["Exporter Address Line 1"] = lines[1].Trim();
+                        data["Exporter Code"] = exporterCode;
+                        _logger.LogInformation($"✅ Exporter Code: {exporterCode}");
                     }
-                    if (lines.Count >= 3)
+                    lineIndex++;
+                }
+
+                // Line 1: Exporter Name (LEFT SIDE ONLY)
+                if (lineIndex < exporterLines.Count)
+                {
+                    var secondLine = exporterLines[lineIndex];
+                    var parts = Regex.Split(secondLine, @"\s{2,}");
+                    var exporterName = parts[0].Trim();
+
+                    if (!string.IsNullOrWhiteSpace(exporterName) && !exporterName.Contains(":"))
                     {
-                        data["Exporter Address Line 2"] = lines[2].Trim();
+                        data["Exporter Name"] = exporterName;
+                        _logger.LogInformation($"✅ Exporter Name: {exporterName}");
+                    }
+                    lineIndex++;
+                }
+
+                // ==================== COLLECT ADDRESS LINES (SKIP "Branch Sr." AND DUPLICATES) ====================
+                var addressLines = new List<string>();
+
+                while (lineIndex < exporterLines.Count)
+                {
+                    var currentLine = exporterLines[lineIndex];
+                    lineIndex++;
+
+                    // Skip "Branch Sr. No." lines
+                    if (currentLine.Contains("Branch Sr", StringComparison.OrdinalIgnoreCase) ||
+                        currentLine.Contains("Br.Slno", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _logger.LogInformation($"   [SKIP]: '{currentLine}' - Branch line skipped");
+                        continue;
+                    }
+
+                    // Skip lines that contain colons (these are key-value pairs like "Type of Exporter:")
+                    if (currentLine.Contains(":") && !currentLine.Contains(","))
+                    {
+                        _logger.LogInformation($"   [STOP]: '{currentLine}' - Field definition found, stopping address extraction");
+                        break;
+                    }
+
+                    // Skip very short lines
+                    if (currentLine.Length < 3)
+                    {
+                        _logger.LogInformation($"   [SKIP]: '{currentLine}' - Too short");
+                        continue;
+                    }
+
+                    // Split by double spaces if it exists (to get LEFT column only in two-column layout)
+                    var parts = Regex.Split(currentLine, @"\s{2,}");
+                    var addressPart = parts[0].Trim();
+
+                    // Skip if it's a duplicate of the name or empty
+                    if (!string.IsNullOrWhiteSpace(addressPart) &&
+                        addressPart != data.GetValueOrDefault("Exporter Name", "") &&
+                        addressPart.Length > 2)
+                    {
+                        addressLines.Add(addressPart);
+                        _logger.LogInformation($"   ✅ Address candidate: '{addressPart}'");
                     }
                 }
 
-                TryExtract(text, data, "Exporter Type", @"Type of Exporter\s*:\[([^\]]+)\]");
+                // Save address lines
+                for (int i = 0; i < addressLines.Count; i++)
+                {
+                    var key = $"Exporter Address Line {i + 1}";
+                    data[key] = addressLines[i];
+                    _logger.LogInformation($"✅ {key}: {addressLines[i]}");
+                }
+
+                if (addressLines.Count == 0)
+                {
+                    _logger.LogWarning("⚠️ No address lines found for exporter");
+                }
+
+                // ==================== EXTRACT TYPE OF EXPORTER ====================
+                TryExtract(text, data, "Exporter Type", @"Type\s+of\s+Exporter\s*:\s*([^\n]+)");
+
+                // ==================== EXTRACT ADCODE ====================
                 TryExtract(text, data, "Adcode", @"Adcode\s*:(\d+)");
-                TryExtract(text, data, "Forex Bank Account", @"Forex Bank A/c No\s*:(\d+)");
 
-                _logger.LogInformation("✅ Exporter details extracted");
+                // ==================== EXTRACT FOREX BANK ACCOUNT ====================
+                TryExtract(text, data, "Forex Bank Account", @"Forex\s+Bank\s+A/c\s+No\s*:(\d+)");
+
+                _logger.LogInformation("✅ Exporter details extraction completed");
             }
             catch (Exception ex)
             {
-                _logger.LogError($"❌ Exporter extraction: {ex.Message}");
+                _logger.LogError($"❌ Exporter extraction error: {ex.Message}\n{ex.StackTrace}");
             }
         }
 

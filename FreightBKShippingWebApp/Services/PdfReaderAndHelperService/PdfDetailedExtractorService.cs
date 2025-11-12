@@ -869,40 +869,75 @@ namespace FreightBKShippingWebApp.Services.PdfReaderAndHelperService
         {
             try
             {
+                // 1. Importer Code (Yeh pehle jaisa hi hai)
                 var importerCodeMatch = Regex.Match(text, @"Importer Details\s*:\s*([A-Z0-9]+)\s*\n");
                 if (importerCodeMatch.Success)
                     data["Importer Code"] = importerCodeMatch.Groups[1].Value.Trim();
 
+                // 2. Importer PAN (Yeh bhi pehle jaisa hai)
                 var panMatch = Regex.Match(text, @"Br\.Slno\s*:\s*0\s*PAN\s*:\s*([A-Z0-9]+)");
+
                 if (panMatch.Success)
-                    data["Importer PAN"] = panMatch.Groups[1].Value.Trim();
-
-                var importerNameMatch = Regex.Match(text,
-                    @"PAN\s*:\s*[A-Z0-9]+\s*\n(?:.*?\s)?([A-Z]+\s+[A-Z]+\s+COMPANY)",
-                    RegexOptions.Singleline);
-
-                if (importerNameMatch.Success)
-                    data["Importer Name"] = importerNameMatch.Groups[1].Value.Trim();
-
-                var addressMatch = Regex.Match(text,
-                    @"COMPANY\s*\n(.*?)(?=GUJARAT-\d{6})",
-                    RegexOptions.Singleline);
-
-                if (addressMatch.Success)
                 {
-                    var addressLines = addressMatch.Groups[1].Value
-                        .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
-                        .Select(line => line.Trim())
-                        .Where(line => !string.IsNullOrWhiteSpace(line))
-                        .ToList();
+                    data["Importer PAN"] = panMatch.Groups[1].Value.Trim();
+                    string pan = data["Importer PAN"];
 
-                    if (addressLines.Any())
+                    // 3. NAYA LOGIC: Importer Name aur Address ko PAN/GSTIN se dhoondo
+                    // Hum PAN ka istemal karke GSTIN line ko dhoondenge aur usse upar ka data nikalenge.
+
+                    var blockRegex = new Regex(
+                        // Group 1: Importer Name (Puri line jisme "COMPANY" ho)
+                        @"^([^\r\n]*?COMPANY[^\r\n]*)\s*\r?\n" +
+                        // Group 2: Address ki beech ki lines
+                        @"(.*?)" +
+                        // Group 3: Address ki aakhri line (GUJARAT-PIN)
+                        @"(GUJARAT-\d{6})\s*\r?\n" +
+                        // Anchor: Woh line jismein PAN wala GSTIN ho
+                        // Regex.Escape(pan) yeh PAN number ko safe banata hai
+                        @".*GSTIN\s*:\s*\d{2}" + Regex.Escape(pan) + @"\w{3}",
+
+                        // Options: MultiLine (^) line ki shuruwaat ke liye, SingleLine (.) newline ko match karne ke liye
+                        RegexOptions.Multiline | RegexOptions.Singleline
+                    );
+
+                    var blockMatch = blockRegex.Match(text);
+
+                    if (blockMatch.Success)
+                    {
+                        // Group 1: Importer Name
+                        data["Importer Name"] = blockMatch.Groups[1].Value.Trim(); // Jaise: "OM MARBLE COMPANY"
+
+                        // Group 2: Beech ki address lines
+                        var addressLines = blockMatch.Groups[2].Value
+                            .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                            .Select(line => line.Trim())
+                            .Where(line => !string.IsNullOrWhiteSpace(line))
+                            .ToList();
+
+                        // Group 3: GUJARAT-PIN wali line ko bhi add karo
+                        addressLines.Add(blockMatch.Groups[3].Value.Trim()); // Jaise: "GUJARAT-360110"
+
+                        // Sabhi address lines ko jod do
                         data["Importer Address"] = string.Join(", ", addressLines);
+                    }
+                    else
+                    {
+                        // Agar naya regex fail hota hai (jo nahi hona chahiye), toh log karo
+                        // _logger.LogWarning($"Importer Name/Address block nahi mila PAN: {pan} ke liye.");
+                    }
                 }
+                else
+                {
+                    // _logger.LogWarning("Importer PAN nahi mila.");
+                }
+
+                // PURANA, GALT LOGIC (ab remove kar diya gaya hai)
+                // var importerNameMatch = ... 
+                // var addressMatch = ...
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Importer extraction error: {ex.Message}");
+                // _logger.LogError($"Importer extraction error: {ex.Message}");
             }
         }
 
