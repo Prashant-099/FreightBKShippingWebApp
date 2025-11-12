@@ -1,4 +1,4 @@
-﻿@page "/jobimport"
+﻿@* @page "/jobimport" *@
 @using iText.Kernel.Pdf
 @using iText.Kernel.Pdf.Canvas.Parser
 @using iText.Kernel.Pdf.Canvas.Parser.Listener
@@ -388,16 +388,18 @@ SelectedDataItemsChanged="OnSelectedJobsChanged">
         TryExtract(text, data, "IGM Number", @"IGM NO\s*:\s*(\d+)\s*/");
         TryExtract(text, data, "IGM Date", @"IGM NO\s*:\s*\d+\s*/\s*\d+\s*/\s*(\d{1,2}-\d{1,2}-\d{4})");
         TryExtract(text, data, "MBL/MAWB", @"MBL/MAWB\s*:\s*([A-Z0-9]+)");
-        TryExtract(text, data, "MBL Date", @"MBL/MAWB\s*:.*?Date\s*:\s*(\d{1,2}/\d{1,2}/\d{4})");
         TryExtract(text, data, "HBL/HAWB", @"HBL/HAWB\s*:\s*([A-Z0-9]+)");
-        TryExtract(text, data, "HBL Date", @"HBL/HAWB\s*:.*?Date\s*:\s*(\d{1,2}/\d{1,2}/\d{4})");
+        TryExtract(text, data, "BL Date", @"MBL/MAWB\s*:\s*[^\n]*\n\s*Date\s*:\s*(\d{1,2}/\d{1,2}/\d{4})");
 
+        // HBL Date: Look for "Date :" on the line immediately after HBL/HAWB
+        TryExtract(text, data, "HBL Date", @"HBL/HAWB\s*:\s*[A-Z0-9]+\s*\n\s*Date\s*:\s*(\d{1,2}/\d{1,2}/\d{4})");
         // ==================== PACKAGE & WEIGHT ====================
         TryExtract(text, data, "No of Pkgs", @"No\.\s*of\s*Pkgs\s*:\s*(\d+)");
         TryExtract(text, data, "Package Type", @"No\.\s*of\s*Pkgs\s*:\s*\d+\s*([A-Z]+)");
         TryExtract(text, data, "Gross Weight", @"Gross Weight\s*:\s*([\d,\.]+)");
-        TryExtract(text, data, "Weight Unit", @"Gross Weight\s*:\s*[\d,\.]+\s*([A-Z]+)");
         TryExtract(text, data, "Marks & Nos", @"Marks & Nos\s*:\s*([^\n-]+)");
+        TryExtract(text, data, "Qty Unit", @"No\.?\s*of\s*(?:Packages|Pkgs?)\s*:\s*\d+\s+([A-Z]+)");
+        TryExtract(text, data, "Weight Unit", @"Gross\s*Weight\s*:\s*[\d,\.]+\s*([A-Z]{3})");
 
         // ==================== INVOICE DETAILS ====================
         TryExtract(text, data, "Invoice No", @"Inv\.No\s*:\s*([^\n]+)");
@@ -415,13 +417,19 @@ SelectedDataItemsChanged="OnSelectedJobsChanged">
         TryExtract(text, data, "AD Code", @"AD Code\s*:\s*(\d+)");
         TryExtract(text, data, "GSTIN", @"GSTIN\s*:\s*(\d{2}[A-Z]{5}\d{4}[A-Z]\d[A-Z\d]{3})");
         TryExtract(text, data, "PAN", @"PAN:\s*([A-Z]{5}\d{4}[A-Z])");
+        TryExtract(text, data, "HSN Code", @"RITC\s*:\s*(\d+)");
 
         // ==================== EXTRACT DETAILED SECTIONS ====================
      
-        TryExtract(text, data, "Vessel Name", @"Vessel\s*:\s*([^\n]+)");
-        TryExtract(text, data, "Shipping Line", @"Line\s*:\s*([^\n]+)");
         TryExtract(text, data, "Cargo Type", @"Cargo\s*:\s*([^\n]+)");
         TryExtract(text, data, "Consignee Name", @"Consignee\s*:\s*([^\n]+)");
+        TryExtract(text, data, "Total Customs Duty", @"Total Customs Duty\s*:\s*([\d,\.]+)");
+        TryExtract(text, data, "Total IGST Duty", @"Total IGST Duty\s*:\s*([\d,\.]+)");
+        TryExtract(text, data, "Assessable Value", @"Net Amt\.Rs\.\s*([\d,\.]+)");
+        // TryExtract(text, data, "Freight", @"Freight\s*:\s*([\d,\.]+)\s*([A-Z]{3})");
+        // TryExtract(text, data, "Freight Currency", @"Freight\s*:\s*[\d,\.]+\s*([A-Z]{3})");
+        TryExtract(text, data, "Insurance", @"Insurance\s*:\s*([\d\.]+)%");
+        TryExtract(text, data, "State", @"STATE\s*:\s*(\d+-[A-Z]+)");
 
         ExtractCHADetails(text, data);
         ExtractImporterDetails(text, data);
@@ -462,7 +470,6 @@ SelectedDataItemsChanged="OnSelectedJobsChanged">
                     data["CHA Name"] = nameMatch.Groups[1].Value.Trim();
                 }
 
-                // CHA Address: Extract address lines after M/S name, before importer details
                 var addressMatch = Regex.Match(chaSection,
                     @"M/S\s+[^\n]+\n(.*?)(?=OM MARBLE|GUJARAT-\d{6})",
                     RegexOptions.Singleline);
@@ -495,17 +502,38 @@ SelectedDataItemsChanged="OnSelectedJobsChanged">
     {
         try
         {
-            // Extract from Br.Slno to GUJARAT pin code
-            var importerMatch = Regex.Match(text,
-                @"Br\.Slno\s*:0\s*PAN:\s*([A-Z0-9]+)\s*\n([^\n]+?COMPANY)\s*\n(.*?)(?=GUJARAT-\d{6})",
+            // Extract Importer Details code (before PAN)
+            var importerCodeMatch = Regex.Match(text, @"Importer Details\s*:\s*([A-Z0-9]+)\s*\n");
+            if (importerCodeMatch.Success)
+            {
+                data["Importer Code"] = importerCodeMatch.Groups[1].Value.Trim();
+            }
+
+            // Extract PAN
+            var panMatch = Regex.Match(text, @"Br\.Slno\s*:\s*0\s*PAN\s*:\s*([A-Z0-9]+)");
+            if (panMatch.Success)
+            {
+                data["Importer PAN"] = panMatch.Groups[1].Value.Trim();
+            }
+
+            // Extract ONLY Importer Name (word ending with COMPANY, not M/S part)
+            var importerNameMatch = Regex.Match(text,
+                @"PAN\s*:\s*[A-Z0-9]+\s*\n(?:.*?\s)?([A-Z]+\s+[A-Z]+\s+COMPANY)",
                 RegexOptions.Singleline);
 
-            if (importerMatch.Success)
+            if (importerNameMatch.Success)
             {
-                data["Importer PAN"] = importerMatch.Groups[1].Value.Trim();
-                data["Importer Name"] = importerMatch.Groups[2].Value.Trim();
+                data["Importer Name"] = importerNameMatch.Groups[1].Value.Trim();
+            }
 
-                var addressLines = importerMatch.Groups[3].Value
+            // Extract Address (after COMPANY until GUJARAT)
+            var addressMatch = Regex.Match(text,
+                @"COMPANY\s*\n(.*?)(?=GUJARAT-\d{6})",
+                RegexOptions.Singleline);
+
+            if (addressMatch.Success)
+            {
+                var addressLines = addressMatch.Groups[1].Value
                     .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
                     .Select(line => line.Trim())
                     .Where(line => !string.IsNullOrWhiteSpace(line))
@@ -516,25 +544,20 @@ SelectedDataItemsChanged="OnSelectedJobsChanged">
                     data["Importer Address"] = string.Join(", ", addressLines);
                 }
             }
-
-            // Also extract Importer Details code (before PAN)
-            var importerCodeMatch = Regex.Match(text, @"Importer Details\s*:\s*([A-Z0-9]+)\s*\n");
-            if (importerCodeMatch.Success)
-            {
-                data["Importer Code"] = importerCodeMatch.Groups[1].Value.Trim();
-            }
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Importer extraction error: {ex.Message}");
         }
     }
+
+
+
     // ==================== SUPPLIER DETAILS (FIXED) ====================
     private void ExtractSupplierDetails(string text, Dictionary<string, string> data)
     {
         try
         {
-            Console.WriteLine("===== DEBUGGING SUPPLIER EXTRACTION =====");
 
             // METHOD 1: Extract section and process line by line
             var supplierSection = Regex.Match(text,
@@ -860,11 +883,6 @@ SelectedDataItemsChanged="OnSelectedJobsChanged">
             Console.WriteLine($"Extract error for {key}: {ex.Message}");
         }
     }
- 
-
-  
-
- 
 
     private async Task<int?> GetOrCreateLocationIdAsync(string name)
     {
@@ -1024,9 +1042,10 @@ SelectedDataItemsChanged="OnSelectedJobsChanged">
         return null;
     }
   
-    private async Task<int?> GetOrCreateAccountIdAsync(string name)
+    private async Task<int?> GetOrCreateAccountIdAsync(string name, Dictionary<string, string> data = null, string prefix = "")
     {
-        if (string.IsNullOrWhiteSpace(name)) return null;
+        if (string.IsNullOrWhiteSpace(name))
+            return null;
 
         try
         {
@@ -1034,25 +1053,54 @@ SelectedDataItemsChanged="OnSelectedJobsChanged">
             var existing = all.FirstOrDefault(x =>
                 string.Equals(x.AccountName?.Trim(), name.Trim(), StringComparison.OrdinalIgnoreCase));
 
-            if (existing != null) return existing.AccountId;
+            if (existing != null)
+                return existing.AccountId;
 
-            // Get default account group ID
             var defaultGroupId = await GetDefaultAccountGroupIdAsync();
-
             if (defaultGroupId == null)
             {
                 Console.WriteLine("Warning: No default account group found. Skipping account creation.");
                 return null;
             }
 
+            // Create new Account with ALL available details
             var newAcc = new Account
                 {
                     AccountName = name.Trim(),
-                    AccountGroupId = defaultGroupId.Value,  // ✅ Set group ID
+                    AccountGroupId = defaultGroupId.Value,
                     AccountPrintName = name.Trim(),
-                    AccountTypeId=18,
-
+                    AccountTypeId = 18
                 };
+
+            // Add extra fields if data dictionary is provided
+            if (data != null)
+            {
+                // Use prefix to differentiate (e.g., "Importer Address", "Supplier Address")
+                var addressKey = string.IsNullOrEmpty(prefix) ? "Address" : $"{prefix} Address";
+                var phoneKey = string.IsNullOrEmpty(prefix) ? "Phone" : $"{prefix} Phone";
+                var emailKey = string.IsNullOrEmpty(prefix) ? "Email" : $"{prefix} Email";
+                var gstinKey = string.IsNullOrEmpty(prefix) ? "GSTIN" : $"{prefix} GSTIN";
+                var panKey = string.IsNullOrEmpty(prefix) ? "PAN" : $"{prefix} PAN";
+                var codeKey = string.IsNullOrEmpty(prefix) ? "Code" : $"{prefix} Code";
+
+                if (data.TryGetValue(addressKey, out var addr))
+                    newAcc.AccountAddress1 = CleanValue(addr);
+
+                if (data.TryGetValue(phoneKey, out var phone))
+                    newAcc.AccountPhone = CleanValue(phone);
+
+                if (data.TryGetValue(emailKey, out var email))
+                    newAcc.AccountEmail = CleanValue(email);
+
+                if (data.TryGetValue(gstinKey, out var gstin))
+                    newAcc.AccountGstNo = CleanValue(gstin);
+
+                if (data.TryGetValue(panKey, out var pan))
+                    newAcc.AccountPan = CleanValue(pan);
+
+                if (data.TryGetValue(codeKey, out var code))
+                    newAcc.AccountCode = CleanValue(code);
+            }
 
             var createdAcc = await AccountService.CreateAsync(newAcc);
             return createdAcc?.AccountId;
@@ -1098,7 +1146,7 @@ SelectedDataItemsChanged="OnSelectedJobsChanged">
         }
     }
 
-    private async Task<int?> GetOrCreateChaIdAsync(string name)
+    private async Task<int?> GetOrCreateChaIdAsync(string name, Dictionary<string, string> data = null)
     {
         if (string.IsNullOrWhiteSpace(name))
             return null;
@@ -1108,29 +1156,47 @@ SelectedDataItemsChanged="OnSelectedJobsChanged">
             // Check if CHA already exists
             var all = await NotifyService.GetAllAsync();
             var existing = all.FirstOrDefault(x =>
-                string.Equals(x.NotifyName?.Trim(), name.Trim(), StringComparison.OrdinalIgnoreCase));
+                string.Equals(x.NotifyName?.Trim(), name.Trim(), StringComparison.OrdinalIgnoreCase)
+                && x.NotifyType == "CHA");
 
             if (existing != null)
                 return existing.NotifyId;
 
-            // Create new CHA entry
+            // Create new CHA with ALL available details
             var newCha = new Notify
                 {
                     NotifyName = name.Trim(),
                     NotifyType = "CHA"
                 };
 
-            // Create via API
-            var created = await NotifyService.CreateAsync(newCha);
+            // Add extra fields if data dictionary is provided
+            if (data != null)
+            {
+                if (data.TryGetValue("CHA Address", out var addr))
+                    newCha.NotifyAddress1 = CleanValue(addr);
 
-            // If successfully created, return its ID directly (from response)
+                if (data.TryGetValue("CHA Phone", out var phone))
+                    newCha.NotifyContactNo = CleanValue(phone);
+
+                if (data.TryGetValue("CHA Email", out var email))
+                    newCha.NotifyEmail = CleanValue(email);
+
+                if (data.TryGetValue("CHA GSTIN", out var gstin))
+                    newCha.NotifyGstNo = CleanValue(gstin);
+
+                if (data.TryGetValue("CHA PAN", out var pan))
+                    newCha.NotifyPan = CleanValue(pan);
+            }
+
+            var created = await NotifyService.CreateAsync(newCha);
             if (created != null)
                 return created.NotifyId;
 
-            // fallback (rarely needed, only if API doesn't return ID properly)
+            // Fallback
             var refreshed = await NotifyService.GetAllAsync();
             return refreshed.FirstOrDefault(x =>
-                string.Equals(x.NotifyName?.Trim(), name.Trim(), StringComparison.OrdinalIgnoreCase))?.NotifyId;
+                string.Equals(x.NotifyName?.Trim(), name.Trim(), StringComparison.OrdinalIgnoreCase)
+                && x.NotifyType == "CHA")?.NotifyId;
         }
         catch (Exception ex)
         {
@@ -1182,47 +1248,58 @@ SelectedDataItemsChanged="OnSelectedJobsChanged">
         return null;
     }
 
-    private async Task<int?> GetOrCreateLineIdAsync(string name)
+    private async Task<int?> GetOrCreateLineIdAsync(string name, Dictionary<string, string> data = null)
     {
         if (string.IsNullOrWhiteSpace(name))
             return null;
 
         try
         {
-            // Check if already exists
             var all = await NotifyService.GetAllAsync();
             var existing = all.FirstOrDefault(x =>
-                string.Equals(x.NotifyName?.Trim(), name.Trim(), StringComparison.OrdinalIgnoreCase));
+                string.Equals(x.NotifyName?.Trim(), name.Trim(), StringComparison.OrdinalIgnoreCase)
+                && x.NotifyType == "LINE");
 
             if (existing != null)
                 return existing.NotifyId;
 
-            // Create new line
+            // Create new line with ALL available details
             var newLine = new Notify
                 {
                     NotifyName = name.Trim(),
                     NotifyType = "LINE"
                 };
 
-            // Create via API (returns Notify object now)
-            var created = await NotifyService.CreateAsync(newLine);
+            // Add extra fields if data dictionary is provided
+            if (data != null)
+            {
+                if (data.TryGetValue("Line Address", out var addr))
+                    newLine.NotifyAddress1 = CleanValue(addr);
 
+                if (data.TryGetValue("Line Phone", out var phone))
+                    newLine.NotifyContactNo = CleanValue(phone);
+
+                if (data.TryGetValue("Line Email", out var email))
+                    newLine.NotifyEmail = CleanValue(email);
+
+          
+            }
+
+            var created = await NotifyService.CreateAsync(newLine);
             if (created != null)
                 return created.NotifyId;
 
-            // Fallback: force refresh and find again (rarely needed)
             var refreshed = await NotifyService.GetAllAsync();
             return refreshed.FirstOrDefault(x =>
-                string.Equals(x.NotifyName?.Trim(), name.Trim(), StringComparison.OrdinalIgnoreCase))?.NotifyId;
+                string.Equals(x.NotifyName?.Trim(), name.Trim(), StringComparison.OrdinalIgnoreCase)
+                && x.NotifyType == "LINE")?.NotifyId;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"⚠️ Error creating line '{name}': {ex.Message}");
-            // fallback to Account if Notify creation fails
-            return await GetOrCreateAccountIdAsync(name);
+            return await GetOrCreateAccountIdAsync(name, data);
         }
     }
-
 
     private async Task<Job> BuildJobFromExtractedDataAsync(Dictionary<string, string> d)
     {
@@ -1268,17 +1345,17 @@ SelectedDataItemsChanged="OnSelectedJobsChanged">
         if (d.TryGetValue("Gross Weight", out var gw) && double.TryParse(CleanValue(gw)?.Replace(",", ""), out var grossWt))
             j.JobGrossWt = grossWt;
 
-        if (d.TryGetValue("Net Weight", out var nw) && double.TryParse(CleanValue(nw)?.Replace(",", ""), out var netWt))
-            j.JobNetWt = netWt;
+        if (d.TryGetValue("Item RITC", out var hsn))
+            j.JobHsnCode = CleanValue(hsn);
+
 
         if (d.TryGetValue("No of Pkgs", out var pkgs) && double.TryParse(CleanValue(pkgs)?.Replace(",", ""), out var qty))
             j.JobQty = qty;
 
-        if (d.TryGetValue("Gross Unit", out var grossUnit))
+        if (d.TryGetValue("Weight Unit", out var grossUnit))
             j.JobGrossUnit = CleanValue(grossUnit);
 
-        if (d.TryGetValue("Net Unit", out var netUnit))
-            j.JobNetUnit = CleanValue(netUnit);
+
 
         if (d.TryGetValue("Qty Unit", out var qtyUnit))
             j.JobQtyUnit = CleanValue(qtyUnit);
@@ -1319,11 +1396,7 @@ SelectedDataItemsChanged="OnSelectedJobsChanged">
         if (d.TryGetValue("Country Discharge", out var countryDisch))
             j.JobCountryDischarge = CleanValue(countryDisch);
 
-        if (d.TryGetValue("Place of Receipt", out var por))
-            j.JobPlaceOfReceipt = CleanValue(por);
-
-        if (d.TryGetValue("Place of Delivery", out var pod))
-            j.JobPlaceOfDelivery = CleanValue(pod);
+   
 
         if (d.TryGetValue("ICD", out var icd))
             j.JobIcd = CleanValue(icd);
@@ -1348,12 +1421,22 @@ SelectedDataItemsChanged="OnSelectedJobsChanged">
         if (d.TryGetValue("Shipper Address", out var shipperAddr))
             j.JobShipperAddress = CleanValue(shipperAddr);
 
-        if (d.TryGetValue("Importer Name", out var importer))
+        if (d.TryGetValue("Importer Name", out var importerName))
         {
-            var aid = await GetOrCreateAccountIdAsync(CleanValue(importer));
-            if (aid.HasValue)
-                j.JobPartyId = aid.Value;
+            var importerAddr = "";
+            d.TryGetValue("Importer Address", out importerAddr);  // Get address too
+
+            var importerId = await GetOrCreateAccountIdAsync(
+                CleanValue(importerName), d, "Importer");
+
+            if (importerId.HasValue)
+            {
+                j.JobPartyId = importerId.Value;                  // ✅ Set ONCE
+                j.JobPartyAddress = CleanValue(importerAddr);     // ✅ Store address
+            }
         }
+
+
 
         if (d.TryGetValue("Consignee Name", out var consignee))
         {
@@ -1376,7 +1459,7 @@ SelectedDataItemsChanged="OnSelectedJobsChanged">
 
         if (d.TryGetValue("Supplier Name", out var supplier))
         {
-            var aid = await GetOrCreateAccountIdAsync(CleanValue(supplier));
+            var aid = await GetOrCreateAccountIdAsync(CleanValue(supplier), d, "Supplier");
             if (aid.HasValue)
                 j.JobSupplierId = aid.Value;
         }
@@ -1407,17 +1490,12 @@ SelectedDataItemsChanged="OnSelectedJobsChanged">
             j.JobSealNo = CleanValue(sealNo);
 
         // ==================== CUSTOMS & DOCUMENTATION ====================
-        if (d.TryGetValue("SB No", out var sbNo))
-            j.JobSbNo = CleanValue(sbNo);
+      
 
-        if (d.TryGetValue("SB Date", out var sbDate) && DateTime.TryParse(CleanValue(sbDate), out var sbParsed))
-            j.JobSbDate = sbParsed;
 
-        if (d.TryGetValue("BE No", out var beNo))
-            j.JobBeNo = CleanValue(beNo);
+     
 
-        if (d.TryGetValue("BE Date", out var beDate) && DateTime.TryParse(CleanValue(beDate), out var beParsed))
-            j.JobBeDate = beParsed;
+       
 
         if (d.TryGetValue("IGM No", out var igmNo))
             j.JobIgmNo = CleanValue(igmNo);
@@ -1425,11 +1503,7 @@ SelectedDataItemsChanged="OnSelectedJobsChanged">
         if (d.TryGetValue("IGM Date", out var igmDate) && DateTime.TryParse(CleanValue(igmDate), out var igmParsed))
             j.JobIgmDate = igmParsed;
 
-        if (d.TryGetValue("DO No", out var doNo))
-            j.JobDoNo = CleanValue(doNo);
-
-        if (d.TryGetValue("DO Date", out var doDate) && DateTime.TryParse(CleanValue(doDate), out var doParsed))
-            j.JobDoDate = doParsed;
+  
 
         if (d.TryGetValue("DO Type", out var doType))
             j.JobDoType = CleanValue(doType);
@@ -1545,26 +1619,27 @@ SelectedDataItemsChanged="OnSelectedJobsChanged">
         if (d.TryGetValue("Surveyor Address", out var surveyorAddr))
             j.SurveyorAddress = CleanValue(surveyorAddr);
 
-        // ==================== DATES & LOGISTICS ====================
-        if (d.TryGetValue("ETA", out var eta) && DateTime.TryParse(CleanValue(eta), out var etaParsed))
-            j.JobEta = etaParsed;
-
-        if (d.TryGetValue("ETD", out var etd) && DateTime.TryParse(CleanValue(etd), out var etdParsed))
-            j.JobEtd = etdParsed;
-
+     
         // ==================== REMARKS & NOTES ====================
         if (d.TryGetValue("Remarks", out var remarks))
             j.JobRemarks = CleanValue(remarks);
 
-        if (d.TryGetValue("CHA Name", out var chaText))
+        if (d.TryGetValue("Shipping Line", out var line))
         {
-            var chaId = await GetOrCreateChaIdAsync(CleanValue(chaText));
+            var lineId = await GetOrCreateLineIdAsync(CleanValue(line), d);
+            if (lineId.HasValue)
+                j.JobLineId = lineId.Value;
+        }
+
+       if (d.TryGetValue("CHA Name", out var chaText))
+        {
+            var chaId = await GetOrCreateChaIdAsync(CleanValue(chaText), d);
             if (chaId.HasValue)
-                j.JobChaId = chaId.Value;
+            j.JobChaId = chaId.Value;
         }
 
         return j;
-
+       
     }
 
     private async Task SaveExtractedJobs()

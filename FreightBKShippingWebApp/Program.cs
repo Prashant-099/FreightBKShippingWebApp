@@ -4,6 +4,7 @@ using FreightBKShippingWebApp.Components;
 using FreightBKShippingWebApp.Services;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.ResponseCompression;
+using FreightBKShippingWebApp.Services.PdfReaderAndHelperService;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -79,6 +80,17 @@ builder.Services.AddScoped<ReportDataService>();
 builder.Services.AddScoped<ReportService>();
 builder.Services.AddScoped<BillService>();
 builder.Services.AddScoped<GridLayoutService>();
+
+//pdfreder services
+builder.Services.AddScoped<DataCleanupService>();
+//builder.Services.AddScoped<PdfExtractionService>();
+builder.Services.AddScoped<FreightBKShippingWebApp.Services.PdfReaderAndHelperService.ExportJobBuilderService>();
+builder.Services.AddScoped<FreightBKShippingWebApp.Services.PdfReaderAndHelperService.ExportPdfExtractorService>(); // ✅ Add this line
+
+builder.Services.AddScoped<FreightBKShippingWebApp.Services.PdfReaderAndHelperService.PdfDetailedExtractorService>();
+builder.Services.AddScoped<JobDataCreationService>();
+builder.Services.AddScoped<JobBuilderService>();
+
 builder.Services.AddHttpClient<ApiClient>(client =>
 {
     client.BaseAddress = new Uri("http://localhost:5003/");

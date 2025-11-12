@@ -64,17 +64,17 @@ namespace FreightBKShippingWebApp.Services
         }
 
         // Update notify
-        public async Task<bool> UpdateAsync(Notify notify)
+        public async Task<Notify?> UpdateAsync(Notify notify)
         {
             try
             {
-                var result = await _api.PutAsync<bool, Notify>($"api/Notifies/{notify.NotifyId}", notify);
+                var result = await _api.PutAsync<Notify, Notify>($"api/Notifies/{notify.NotifyId}", notify);
                 return result;
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Error updating notify: {ex.Message}");
-                return false;
+                return null;
             }
            
            

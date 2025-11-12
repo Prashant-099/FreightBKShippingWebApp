@@ -295,7 +295,7 @@ namespace FreightBKShippingWebApp
             _cache.Remove(path);
         }
         public async Task<T1?> PostAsync<T1, T2>(string path, T2 postModel)
-            {
+        {
             await SetAuthorizeHeader();
 
             var res = await httpClient.PostAsJsonAsync(path, postModel, _jsonOptions);
