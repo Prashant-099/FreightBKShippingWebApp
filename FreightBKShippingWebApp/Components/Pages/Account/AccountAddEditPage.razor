@@ -350,29 +350,39 @@ verticalAlignment="VerticalAlignment.Center"
 
     private async Task HandleValidSubmit()
     {
-        LoadingService.Show();
+        LoadingService.Show("Saving account...");
+
         try
         {
+            Account? result;
 
             if (EditModel.AccountId == 0)
             {
-                var result = await AccountService.CreateAsync(EditModel);
-                if (result)
-                    ToastService.Success("Account created successfully!");
+                // Create new account
+                result = await AccountService.CreateAsync(EditModel);
+
+                if (result != null)
+                {
+                    ToastService.Success("✅ Account created successfully!");
+                }
                 else
                 {
-                    ToastService.Error("Account failed to create!");
+                    ToastService.Error("❌ Failed to create account!");
                     return;
                 }
             }
             else
             {
-                var result = await AccountService.UpdateAsync(EditModel);
-                if (result)
-                    ToastService.Success("Account updated successfully!");
+                // Update existing account
+                result = await AccountService.UpdateAsync(EditModel);
+
+                if (result != null)
+                {
+                    ToastService.Success("✅ Account updated successfully!");
+                }
                 else
                 {
-                    ToastService.Error("Account failed to update!");
+                    ToastService.Error("❌ Failed to update account!");
                     return;
                 }
             }
@@ -382,11 +392,13 @@ verticalAlignment="VerticalAlignment.Center"
         }
         catch (Exception ex)
         {
-            ToastService.Error($"Error saving account: {ex.Message}");
+            ToastService.Error($"⚠️ Error saving account: {ex.Message}");
         }
-       
+        finally
         {
             LoadingService.Hide();
         }
     }
+
+
 }

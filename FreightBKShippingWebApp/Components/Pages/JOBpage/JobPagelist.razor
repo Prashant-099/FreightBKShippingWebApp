@@ -1,24 +1,39 @@
-﻿@page "/jobimport"
+﻿@* @page "/jobimport" *@
+@using iText.Kernel.Pdf
+@using iText.Kernel.Pdf.Canvas.Parser
+@using iText.Kernel.Pdf.Canvas.Parser.Listener
 @using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Services
+@using System.Text.RegularExpressions
+@using System.Text
+
 @inject JobService JobService
+@inject LocationService LocationService
+@inject AccountService AccountService
+@inject NotifyService NotifyService
 @inject ToasteService ToastService
 @inject LoadingService LoadingService
 @inject ConfirmationDialogService ConfirmDialogService
+@inject YearStatechangeService YearStatechangeService
+@inject IJSRuntime JSRuntime
+@inject CargoService CargoService
+@inject VesselService VesselService
+@inject CountryService CountryService
+@inject AccountGroupService AccountGroupService
 
 <DxGrid TItem="Job"
-        Data="@jobList"
-        @ref="MyGrid"
-        KeyFieldName="JobId"
-        ShowSearchBox="true"
-        PageSize="10"
-        PageSizeSelectorVisible="true"
-        ShowGroupPanel="true"
-        FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always"
-        FocusedRowEnabled="true"
-        SelectionMode="GridSelectionMode.Multiple"
-        SelectedDataItems="@SelectedJobs"
-        SelectedDataItemsChanged="OnSelectedJobsChanged">
+Data="@jobList"
+@ref="MyGrid"
+KeyFieldName="JobId"
+ShowSearchBox="true"
+PageSize="10"
+PageSizeSelectorVisible="true"
+ShowGroupPanel="true"
+FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always"
+FocusedRowEnabled="true"
+SelectionMode="GridSelectionMode.Multiple"
+SelectedDataItems="@SelectedJobs"
+SelectedDataItemsChanged="OnSelectedJobsChanged">
 
     <ToolbarTemplate>
         <DxToolbar>
@@ -32,6 +47,7 @@
                 <DxToolbarItem Text="Add" IconCssClass="bi bi-plus-circle" Click="OnCreateNew" />
                 <DxToolbarItem Text="Edit" IconCssClass="bi bi-pencil-square" Click="OnEdit" />
                 <DxToolbarItem Text="Delete" IconCssClass="bi bi-trash" Click="OnDelete" />
+                <DxToolbarItem Text="Import PDF" IconCssClass="bi bi-file-pdf-fill" Click="OnImportPDF" />
                 <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="LoadJobsAsync" />
             </Items>
         </DxToolbar>
@@ -39,33 +55,187 @@
 
     <Columns>
         <DxGridSelectionColumn Width="30" />
-
         <DxGridDataColumn FieldName="JobNo" Caption="Job No" MinWidth="120" />
         <DxGridDataColumn FieldName="JobDate" Caption="Job Date" DisplayFormat="d" MinWidth="130" />
         <DxGridDataColumn FieldName="JobType" Caption="Job Type" MinWidth="130" />
         <DxGridDataColumn FieldName="JobBlNo" Caption="B/L No" MinWidth="150" />
         <DxGridDataColumn FieldName="JobBlDate" Caption="B/L Date" DisplayFormat="d" MinWidth="130" />
-        <DxGridDataColumn FieldName="JobVesselId" Caption="Vessel" MinWidth="150" />
-        <DxGridDataColumn FieldName="JobPolId" Caption="POL" MinWidth="120" />
-        <DxGridDataColumn FieldName="JobPodId" Caption="POD" MinWidth="120" />
-        <DxGridDataColumn FieldName="JobFreightBy" Caption="Freight By" MinWidth="150" />
-        <DxGridDataColumn FieldName="JobGrossWt" Caption="Gross Weight" MinWidth="140" />
-        <DxGridDataColumn FieldName="JobNetWt" Caption="Net Weight" MinWidth="140" />
-        <DxGridDataColumn FieldName="JobVolume" Caption="Volume / CBM" MinWidth="160" />
-        <DxGridDataColumn FieldName="JobQty" Caption="Quantity" MinWidth="120" />
-        <DxGridDataColumn FieldName="JobQtyUnit" Caption="Qty Unit" MinWidth="120" />
-        <DxGridDataColumn FieldName="JobShipperId" Caption="Shipper" MinWidth="180" />
-        <DxGridDataColumn FieldName="JobConsigneeId" Caption="Consignee" MinWidth="180" />
-        <DxGridDataColumn FieldName="JobNotifyAddress" Caption="Notify Party" MinWidth="200" />
         <DxGridDataColumn FieldName="JobChaId" Caption="Customs Agent" MinWidth="160" />
-        <DxGridDataColumn FieldName="JobRemarks" Caption="Remarks" MinWidth="200" />
-
+        <DxGridDataColumn FieldName="Job20Ft" Caption="20ft Count" MinWidth="100" />
+        <DxGridDataColumn FieldName="Job40Ft" Caption="40ft Count" MinWidth="100" />
     </Columns>
-
 </DxGrid>
 
 <JobAddEditPage @ref="popup" OnSaved="LoadJobsAsync" JobType="@JobType" />
 <ConfirmationDialog />
+
+@if (showPdfImportDialog)
+{
+    <div class="modal fade show d-block" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-file-pdf-fill me-2"></i>Import Jobs from PDF
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="ClosePdfDialog"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <label class="form-label fw-bold">
+                                <i class="bi bi-cloud-upload me-2"></i>Select PDF File
+                            </label>
+                            <InputFile OnChange="HandlePdfUpload" accept=".pdf" class="form-control form-control-lg" />
+                            <div class="form-text">
+                                <i class="bi bi-info-circle me-1"></i>Maximum file size: 10 MB
+                            </div>
+                        </div>
+                    </div>
+
+                    @if (isProcessing)
+                    {
+                        <div class="text-center py-5">
+                            <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <h6 class="text-muted">Extracting data from PDF...</h6>
+                            <p class="small">This may take a few moments</p>
+                        </div>
+                    }
+
+                    @if (extractedPdfData.Any())
+                    {
+                        <div class="card border-success">
+                            <div class="card-header bg-success text-white">
+                                <h6 class="mb-0">
+                                    <i class="bi bi-check-circle me-2"></i>
+                                    Extracted Fields (@extractedPdfData.Count)
+                                </h6>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive" style="max-height: 500px;">
+                                    <table class="table table-hover table-sm mb-0">
+                                        <thead class="table-light sticky-top">
+                                            <tr>
+                                                <th style="width: 25%;"><i class="bi bi-tag me-1"></i>PDF Field</th>
+                                                <th style="width: 40%;"><i class="bi bi-file-text me-1"></i>Extracted Value</th>
+                                                <th style="width: 25%;"><i class="bi bi-arrow-right me-1"></i>Maps To</th>
+                                                <th style="width: 10%;" class="text-center"><i class="bi bi-clipboard"></i></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var field in extractedPdfData.OrderBy(x => GetFieldCategory(x.Key)).ThenBy(x => x.Key))
+                                            {
+                                                <tr class="@GetRowClass(field.Key)">
+                                                    <td>
+                                                        <strong class="text-primary">@field.Key</strong><br />
+                                                        <small class="text-muted">@GetFieldCategory(field.Key)</small>
+                                                    </td>
+                                                    <td>
+                                                        <code class="text-dark" style="white-space: pre-wrap; font-size: 0.85rem;">@field.Value</code>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge bg-info text-dark">@GetMappingInfo(field.Key)</span>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <button class="btn btn-outline-primary btn-sm" @onclick="() => CopyToClipboard(field.Value)">
+                                                            <i class="bi bi-clipboard"></i>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mt-3">
+                            <div class="col-md-3">
+                                <div class="card text-center border-primary">
+                                    <div class="card-body py-2">
+                                        <h5 class="mb-0 text-primary">@extractedPdfData.Count</h5>
+                                        <small class="text-muted">Fields Extracted</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-center border-success">
+                                    <div class="card-body py-2">
+                                        <h5 class="mb-0 text-success">@GetMappedFieldsCount()</h5>
+                                        <small class="text-muted">Fields Mapped</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-center border-info">
+                                    <div class="card-body py-2">
+                                        <h5 class="mb-0 text-info">@GetPartyCount()</h5>
+                                        <small class="text-muted">Parties Detected</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-center border-warning">
+                                    <div class="card-body py-2">
+                                        <h5 class="mb-0 text-warning">@GetContainerCount()</h5>
+                                        <small class="text-muted">Containers</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(extractionError))
+                    {
+                        <div class="alert alert-danger d-flex align-items-center">
+                            <i class="bi bi-exclamation-triangle-fill me-2 fs-4"></i>
+                            <div>
+                                <strong>Extraction Error:</strong><br />@extractionError
+                            </div>
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" @onclick="ClosePdfDialog">
+                        <i class="bi bi-x-circle me-1"></i> Cancel
+                    </button>
+                    <button type="button" class="btn btn-primary btn-lg" @onclick="SaveExtractedJobs"
+                    disabled="@((!extractedPdfData.Any()) || isProcessing)">
+                        <i class="bi bi-check-circle me-1"></i> Import Job
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+<style>
+    .modal.show {
+    display: block;
+    background-color: rgba(0,0,0,0.5);
+    }
+
+    .sticky-top {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .table-hover tbody tr:hover {
+    background-color: rgba(0, 123, 255, 0.05);
+    }
+
+    code {
+    background-color: #f8f9fa;
+    padding: 2px 6px;
+    border-radius: 3px;
+    border: 1px solid #dee2e6;
+    }
+</style>
 
 @code {
     DxGrid MyGrid;
@@ -73,6 +243,11 @@
     private List<Job> SelectedJobs = new();
     private JobAddEditPage popup;
     private string JobType = "IMPORT";
+
+    private bool showPdfImportDialog = false;
+    private bool isProcessing = false;
+    private Dictionary<string, string> extractedPdfData = new();
+    private string extractionError = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -87,54 +262,1502 @@
             var allJobs = await JobService.GetAllAsync();
             jobList = allJobs
                 .Where(j => j.JobType != null && j.JobType.Equals(JobType, StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(j => j.JobDate)
                 .ToList();
-
         }
-        finally
-        {
-            LoadingService.Hide();
-        }
+        finally { LoadingService.Hide(); }
     }
 
-    private void OnSelectedJobsChanged(IEnumerable<object> jobs)
-    {
-        SelectedJobs = jobs.Cast<Job>().ToList();
-    }
-
-    private void OnCreateNew(ToolbarItemClickEventArgs e)
-    {
-        popup.Show(new Job());
-    }
-
+    private void OnSelectedJobsChanged(IEnumerable<object> jobs) => SelectedJobs = jobs.Cast<Job>().ToList();
+    private void OnCreateNew(ToolbarItemClickEventArgs e) => popup.Show(new Job());
     private void OnEdit(ToolbarItemClickEventArgs e)
     {
         var job = MyGrid.GetFocusedDataItem() as Job;
-        if (job != null)
-            popup.Show(job);
-        else
-            ToastService.Warning("Please select a job to edit.");
+        if (job != null) popup.Show(job);
+        else ToastService.Warning("Please select a job to edit.");
     }
 
     private async Task OnDelete(ToolbarItemClickEventArgs e)
     {
-        if (SelectedJobs == null || SelectedJobs.Count == 0)
+        if (!SelectedJobs.Any())
         {
             ToastService.Warning("Please select at least one job to delete.");
             return;
         }
 
-        var confirm = await ConfirmDialogService.ShowAsync(
-            $"Are you sure you want to delete {SelectedJobs.Count} selected job(s)?");
+        var confirm = await ConfirmDialogService.ShowAsync($"Are you sure you want to delete {SelectedJobs.Count} job(s)?");
+        if (!confirm) return;
 
-        if (confirm)
+        LoadingService.Show();
+        try
         {
             foreach (var job in SelectedJobs)
-            {
                 await JobService.DeleteAsync(job.JobId);
-            }
 
             ToastService.Success($"{SelectedJobs.Count} job(s) deleted successfully.");
             await LoadJobsAsync();
         }
+        finally { LoadingService.Hide(); }
     }
+
+    private void OnImportPDF(ToolbarItemClickEventArgs e)
+    {
+        showPdfImportDialog = true;
+        extractedPdfData.Clear();
+        extractionError = string.Empty;
+    }
+
+    private void ClosePdfDialog()
+    {
+        showPdfImportDialog = false;
+        extractedPdfData.Clear();
+        extractionError = string.Empty;
+    }
+
+    private async Task HandlePdfUpload(InputFileChangeEventArgs e)
+    {
+        isProcessing = true;
+        extractionError = string.Empty;
+        extractedPdfData.Clear();
+
+        try
+        {
+            var file = e.File;
+            if (file == null || !file.Name.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+            {
+                extractionError = "Please select a valid PDF file.";
+                return;
+            }
+
+            using var memoryStream = new MemoryStream();
+            await file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024).CopyToAsync(memoryStream);
+            var pdfBytes = memoryStream.ToArray();
+
+            extractedPdfData = await Task.Run(() => ExtractAllFieldsFromPdf(pdfBytes));
+
+            if (!extractedPdfData.Any())
+                extractionError = "No data found in the PDF.";
+        }
+        catch (Exception ex)
+        {
+            extractionError = $"Error processing PDF: {ex.Message}";
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+
+    // ==================== PDF EXTRACTION (FIXED FOR YOUR PDF FORMAT) ====================
+    // ==================== COMPLETE FIXED EXTRACTION METHODS ====================
+
+    private Dictionary<string, string> ExtractAllFieldsFromPdf(byte[] pdfBytes)
+    {
+        var data = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        using var stream = new MemoryStream(pdfBytes);
+        using var reader = new PdfReader(stream);
+        using var pdf = new PdfDocument(reader);
+        var sb = new StringBuilder();
+
+        for (int i = 1; i <= pdf.GetNumberOfPages(); i++)
+        {
+            var page = pdf.GetPage(i);
+            var strategy = new LocationTextExtractionStrategy();
+            sb.AppendLine(PdfTextExtractor.GetTextFromPage(page, strategy));
+        }
+
+        var text = sb.ToString();
+        text = Regex.Replace(text, @"\r\n|\r", "\n");
+
+        // ==================== BASIC FIELDS ====================
+        TryExtract(text, data, "Job No", @"Job No & Date\s*:\s*(\d+)\s*&");
+        TryExtract(text, data, "Job Date", @"Job No & Date\s*:\s*\d+\s*&\s*(\d{1,2}/\d{1,2}/\d{4})");
+        TryExtract(text, data, "File No", @"File No\s*:\s*(\d+)");
+        TryExtract(text, data, "BE Type", @"BE Type\s*:\s*([^\n]+?)(?=\s+Green Channel)");
+        TryExtract(text, data, "Transport Mode", @"Transport Mode\s*:\s*([A-Z])(?=\s+Section)");
+
+        // ==================== PORT & SHIPPING ====================
+        TryExtract(text, data, "Port of Filing", @"Port Of Filing\s*:\s*([^,]+)");
+        TryExtract(text, data, "Port Origin", @"Port Origin\s*:\s*([^\n-]+)(?=-)");
+        TryExtract(text, data, "Port Shipment", @"Port Shipment\s*:\s*([^\n-]+)(?=-)");
+        TryExtract(text, data, "Country Origin", @"Country Origin\s*:\s*([^\n-]+)(?=-)");
+        TryExtract(text, data, "Country Consignment", @"Country Consnmnt\s*:\s*([^\n-]+)(?=-)");
+
+        // ==================== IGM & BL DETAILS ====================
+        TryExtract(text, data, "IGM Number", @"IGM NO\s*:\s*(\d+)\s*/");
+        TryExtract(text, data, "IGM Date", @"IGM NO\s*:\s*\d+\s*/\s*\d+\s*/\s*(\d{1,2}-\d{1,2}-\d{4})");
+        TryExtract(text, data, "MBL/MAWB", @"MBL/MAWB\s*:\s*([A-Z0-9]+)");
+        TryExtract(text, data, "HBL/HAWB", @"HBL/HAWB\s*:\s*([A-Z0-9]+)");
+        TryExtract(text, data, "BL Date", @"MBL/MAWB\s*:\s*[^\n]*\n\s*Date\s*:\s*(\d{1,2}/\d{1,2}/\d{4})");
+
+        // HBL Date: Look for "Date :" on the line immediately after HBL/HAWB
+        TryExtract(text, data, "HBL Date", @"HBL/HAWB\s*:\s*[A-Z0-9]+\s*\n\s*Date\s*:\s*(\d{1,2}/\d{1,2}/\d{4})");
+        // ==================== PACKAGE & WEIGHT ====================
+        TryExtract(text, data, "No of Pkgs", @"No\.\s*of\s*Pkgs\s*:\s*(\d+)");
+        TryExtract(text, data, "Package Type", @"No\.\s*of\s*Pkgs\s*:\s*\d+\s*([A-Z]+)");
+        TryExtract(text, data, "Gross Weight", @"Gross Weight\s*:\s*([\d,\.]+)");
+        TryExtract(text, data, "Marks & Nos", @"Marks & Nos\s*:\s*([^\n-]+)");
+        TryExtract(text, data, "Qty Unit", @"No\.?\s*of\s*(?:Packages|Pkgs?)\s*:\s*\d+\s+([A-Z]+)");
+        TryExtract(text, data, "Weight Unit", @"Gross\s*Weight\s*:\s*[\d,\.]+\s*([A-Z]{3})");
+
+        // ==================== INVOICE DETAILS ====================
+        TryExtract(text, data, "Invoice No", @"Inv\.No\s*:\s*([^\n]+)");
+        TryExtract(text, data, "Invoice Date", @"Inv\.Date\s*:\s*(\d{1,2}/\d{1,2}/\d{4})");
+        TryExtract(text, data, "Invoice Value", @"Inv\.Value\s*:\s*([\d,\.]+)");
+        TryExtract(text, data, "Invoice Currency", @"Inv\.Value\s*:\s*[\d,\.]+\s*([A-Z]{3})");
+        TryExtract(text, data, "Invoice Terms", @"Inv\.Terms\s*:\s*([^\n]+)");
+        TryExtract(text, data, "Freight", @"Freight\s*:\s*([\d,\.]+)");
+        TryExtract(text, data, "Freight Currency", @"Freight\s*:\s*[\d,\.]+\s*([A-Z]{3})");
+        TryExtract(text, data, "Insurance", @"Insurance\s*:\s*[\d\.]+%\(([^\)]+)\)");
+        TryExtract(text, data, "Exchange Rate", @"Exchange Rate\s*:\s*1\.00\s*[A-Z]{3}\s*=\s*([\d\.]+)");
+
+        // ==================== CODES & IDs ====================
+        TryExtract(text, data, "UCR Number", @"UCR Number\s*:\s*([^\s]+)");
+        TryExtract(text, data, "AD Code", @"AD Code\s*:\s*(\d+)");
+        TryExtract(text, data, "GSTIN", @"GSTIN\s*:\s*(\d{2}[A-Z]{5}\d{4}[A-Z]\d[A-Z\d]{3})");
+        TryExtract(text, data, "PAN", @"PAN:\s*([A-Z]{5}\d{4}[A-Z])");
+        TryExtract(text, data, "HSN Code", @"RITC\s*:\s*(\d+)");
+
+        // ==================== EXTRACT DETAILED SECTIONS ====================
+     
+        TryExtract(text, data, "Cargo Type", @"Cargo\s*:\s*([^\n]+)");
+        TryExtract(text, data, "Consignee Name", @"Consignee\s*:\s*([^\n]+)");
+        TryExtract(text, data, "Total Customs Duty", @"Total Customs Duty\s*:\s*([\d,\.]+)");
+        TryExtract(text, data, "Total IGST Duty", @"Total IGST Duty\s*:\s*([\d,\.]+)");
+        TryExtract(text, data, "Assessable Value", @"Net Amt\.Rs\.\s*([\d,\.]+)");
+        // TryExtract(text, data, "Freight", @"Freight\s*:\s*([\d,\.]+)\s*([A-Z]{3})");
+        // TryExtract(text, data, "Freight Currency", @"Freight\s*:\s*[\d,\.]+\s*([A-Z]{3})");
+        TryExtract(text, data, "Insurance", @"Insurance\s*:\s*([\d\.]+)%");
+        TryExtract(text, data, "State", @"STATE\s*:\s*(\d+-[A-Z]+)");
+
+        ExtractCHADetails(text, data);
+        ExtractImporterDetails(text, data);
+        ExtractSupplierDetails(text, data);
+        ExtractItemDetails(text, data);
+        ExtractContainerDetails(text, data);
+        ExtractDutyDetails(text, data);
+
+        return data;
+    }
+
+    // ==================== CHA DETAILS (FIXED) ====================
+    private void ExtractCHADetails(string text, Dictionary<string, string> data)
+    {
+        try
+        {
+            // Extract section from "CHA Details" to "UCR Number"
+            var chaMatch = Regex.Match(text, @"CHA Details.*?(?=UCR Number)",
+                RegexOptions.Singleline | RegexOptions.IgnoreCase);
+
+            if (chaMatch.Success)
+            {
+                var chaSection = chaMatch.Value;
+
+                // CHA Code: APZPS1092NCH001
+                var codeMatch = Regex.Match(chaSection, @"^([A-Z0-9]+CH\d+)\s+Br\.Slno",
+                    RegexOptions.Multiline);
+                if (codeMatch.Success)
+                {
+                    data["CHA Code"] = codeMatch.Groups[1].Value.Trim();
+                }
+
+                // CHA Name: M/S PREM KUMAR SINGH
+                var nameMatch = Regex.Match(chaSection, @"M/S\s+([^\n]+?)(?=\s*OFFICE|\s*OM MARBLE|\n)",
+                    RegexOptions.Multiline);
+                if (nameMatch.Success)
+                {
+                    data["CHA Name"] = nameMatch.Groups[1].Value.Trim();
+                }
+
+                var addressMatch = Regex.Match(chaSection,
+                    @"M/S\s+[^\n]+\n(.*?)(?=OM MARBLE|GUJARAT-\d{6})",
+                    RegexOptions.Singleline);
+
+                if (addressMatch.Success)
+                {
+                    var addressLines = addressMatch.Groups[1].Value
+                        .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                        .Select(line => line.Trim())
+                        .Where(line => !string.IsNullOrWhiteSpace(line) &&
+                                       !line.Contains("OM MARBLE") &&
+                                       !line.Contains("Br.Slno"))
+                        .ToList();
+
+                    if (addressLines.Any())
+                    {
+                        data["CHA Address"] = string.Join(", ", addressLines);
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"CHA extraction error: {ex.Message}");
+        }
+    }
+
+    // ==================== IMPORTER DETAILS (FIXED) ====================
+    private void ExtractImporterDetails(string text, Dictionary<string, string> data)
+    {
+        try
+        {
+            // Extract Importer Details code (before PAN)
+            var importerCodeMatch = Regex.Match(text, @"Importer Details\s*:\s*([A-Z0-9]+)\s*\n");
+            if (importerCodeMatch.Success)
+            {
+                data["Importer Code"] = importerCodeMatch.Groups[1].Value.Trim();
+            }
+
+            // Extract PAN
+            var panMatch = Regex.Match(text, @"Br\.Slno\s*:\s*0\s*PAN\s*:\s*([A-Z0-9]+)");
+            if (panMatch.Success)
+            {
+                data["Importer PAN"] = panMatch.Groups[1].Value.Trim();
+            }
+
+            // Extract ONLY Importer Name (word ending with COMPANY, not M/S part)
+            var importerNameMatch = Regex.Match(text,
+                @"PAN\s*:\s*[A-Z0-9]+\s*\n(?:.*?\s)?([A-Z]+\s+[A-Z]+\s+COMPANY)",
+                RegexOptions.Singleline);
+
+            if (importerNameMatch.Success)
+            {
+                data["Importer Name"] = importerNameMatch.Groups[1].Value.Trim();
+            }
+
+            // Extract Address (after COMPANY until GUJARAT)
+            var addressMatch = Regex.Match(text,
+                @"COMPANY\s*\n(.*?)(?=GUJARAT-\d{6})",
+                RegexOptions.Singleline);
+
+            if (addressMatch.Success)
+            {
+                var addressLines = addressMatch.Groups[1].Value
+                    .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(line => line.Trim())
+                    .Where(line => !string.IsNullOrWhiteSpace(line))
+                    .ToList();
+
+                if (addressLines.Any())
+                {
+                    data["Importer Address"] = string.Join(", ", addressLines);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Importer extraction error: {ex.Message}");
+        }
+    }
+
+
+
+    // ==================== SUPPLIER DETAILS (FIXED) ====================
+    private void ExtractSupplierDetails(string text, Dictionary<string, string> data)
+    {
+        try
+        {
+
+            // METHOD 1: Extract section and process line by line
+            var supplierSection = Regex.Match(text,
+                @"SUPPLIER DETAILS.*?\n-+\s*\n(.*?)(?=ITEM DETAILS|-{5,}.*?ITEM DETAILS)",
+                RegexOptions.Singleline | RegexOptions.IgnoreCase);
+
+            if (supplierSection.Success)
+            {
+                Console.WriteLine("✓ Supplier section found");
+                var section = supplierSection.Groups[1].Value;
+                Console.WriteLine($"Section preview: {section.Substring(0, Math.Min(100, section.Length))}...");
+
+                // Split into lines and filter empty ones
+                var lines = section.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(l => l.Trim())
+                    .Where(l => !string.IsNullOrWhiteSpace(l))
+                    .ToList();
+
+                Console.WriteLine($"Found {lines.Count} non-empty lines");
+
+                // Extract supplier info from right column
+                var supplierLines = new List<string>();
+
+                foreach (var line in lines)
+                {
+                    Console.WriteLine($"Processing line: {line}");
+
+                    // Split by 3 or more spaces (column separator)
+                    var parts = Regex.Split(line, @"\s{3,}");
+
+                    Console.WriteLine($"  Split into {parts.Length} parts");
+
+                    if (parts.Length >= 2)
+                    {
+                        var rightColumn = parts[parts.Length - 1].Trim();
+                        Console.WriteLine($"  Right column: '{rightColumn}'");
+
+                        // Filter out invoice-related content and empty strings
+                        if (!string.IsNullOrWhiteSpace(rightColumn) &&
+                            !rightColumn.Contains("Inv.") &&
+                            !rightColumn.Contains("Under SVB") &&
+                            !rightColumn.Contains("Freight") &&
+                            !rightColumn.Contains("Insurance") &&
+                            rightColumn.Length > 2)  // Ensure meaningful content
+                        {
+                            supplierLines.Add(rightColumn);
+                            Console.WriteLine($"  ✓ Added to supplier lines");
+                        }
+                    }
+                }
+
+                Console.WriteLine($"\nExtracted {supplierLines.Count} supplier lines:");
+                for (int i = 0; i < supplierLines.Count; i++)
+                {
+                    Console.WriteLine($"  [{i}]: {supplierLines[i]}");
+                }
+
+                // Build supplier data
+                if (supplierLines.Count >= 1)
+                {
+                    data["Supplier Name"] = supplierLines[0];
+
+                    if (supplierLines.Count >= 2)
+                    {
+                        // Remove "E " prefix if exists (common OCR artifact)
+                        var addressParts = supplierLines.Skip(1)
+                            .Select(a => Regex.Replace(a, @"^E\s+", "").Trim())
+                            .Where(a => !string.IsNullOrWhiteSpace(a));
+
+                        data["Supplier Address"] = string.Join(", ", addressParts);
+                    }
+
+                    Console.WriteLine($"\n✓ Supplier Name: {data.GetValueOrDefault("Supplier Name", "N/A")}");
+                    Console.WriteLine($"✓ Supplier Address: {data.GetValueOrDefault("Supplier Address", "N/A")}");
+                }
+                else
+                {
+                    Console.WriteLine("⚠ No supplier lines extracted, trying METHOD 2...");
+                    ExtractSupplierDetailsFallback(text, data);
+                }
+            }
+            else
+            {
+                Console.WriteLine("✗ Supplier section not found, trying METHOD 2...");
+                ExtractSupplierDetailsFallback(text, data);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"✗ Supplier extraction error: {ex.Message}");
+            Console.WriteLine($"Stack trace: {ex.StackTrace}");
+        }
+    }
+    // METHOD 2: Fallback - Direct line matching
+    private void ExtractSupplierDetailsFallback(string text, Dictionary<string, string> data)
+    {
+        try
+        {
+            Console.WriteLine("\n===== USING FALLBACK METHOD =====");
+
+            // Try to find supplier info directly after invoice fields
+            // Pattern: Match right side content after Inv.SlNo, Inv.No, Inv.Date
+            var nameMatch = Regex.Match(text,
+                @"Inv\.SlNo\s*:\s*\d+\s+(.+?)(?=\r?\n|$)",
+                RegexOptions.Multiline);
+
+            var addr1Match = Regex.Match(text,
+                @"Inv\.No\s*:\s*[^\s]+\s+(.+?)(?=\r?\n|$)",
+                RegexOptions.Multiline);
+
+            var addr2Match = Regex.Match(text,
+                @"Inv\.Date\s*:\s*[^\s]+\s+(.+?)(?=\r?\n|$)",
+                RegexOptions.Multiline);
+
+            if (nameMatch.Success)
+            {
+                var name = nameMatch.Groups[1].Value.Trim();
+                Console.WriteLine($"Found name: '{name}'");
+
+                // Ensure it's not just invoice data
+                if (!name.Contains("INVOICE") && name.Length > 3)
+                {
+                    data["Supplier Name"] = name;
+                }
+            }
+
+            var addressParts = new List<string>();
+
+            if (addr1Match.Success)
+            {
+                var addr1 = addr1Match.Groups[1].Value.Trim();
+                // Remove "E " prefix
+                addr1 = Regex.Replace(addr1, @"^E\s+", "").Trim();
+                Console.WriteLine($"Found address 1: '{addr1}'");
+                if (!string.IsNullOrWhiteSpace(addr1) && addr1.Length > 2)
+                {
+                    addressParts.Add(addr1);
+                }
+            }
+
+            if (addr2Match.Success)
+            {
+                var addr2 = addr2Match.Groups[1].Value.Trim();
+                Console.WriteLine($"Found address 2: '{addr2}'");
+                if (!string.IsNullOrWhiteSpace(addr2) && addr2.Length > 2)
+                {
+                    addressParts.Add(addr2);
+                }
+            }
+
+            if (addressParts.Count > 0)
+            {
+                data["Supplier Address"] = string.Join(", ", addressParts);
+            }
+
+            Console.WriteLine($"\nFallback results:");
+            Console.WriteLine($"  Supplier Name: {data.GetValueOrDefault("Supplier Name", "N/A")}");
+            Console.WriteLine($"  Supplier Address: {data.GetValueOrDefault("Supplier Address", "N/A")}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"✗ Fallback extraction error: {ex.Message}");
+        }
+    }
+
+
+    // ==================== ITEM DETAILS (NEW) ====================
+    private void ExtractItemDetails(string text, Dictionary<string, string> data)
+    {
+        try
+        {
+            // Extract from ITEM DETAILS section
+            var itemMatch = Regex.Match(text,
+                @"ITEM DETAILS.*?Slno\s+RITC\s+Description.*?\n\d+\s+(\d+)\s+([^\n]+?)\n([\d\.]+)\s+([\d\.]+)",
+                RegexOptions.Singleline);
+
+            if (itemMatch.Success)
+            {
+                data["Item RITC"] = itemMatch.Groups[1].Value.Trim();
+                data["Item Description"] = itemMatch.Groups[2].Value.Trim();
+                data["Item Quantity"] = itemMatch.Groups[3].Value.Trim();
+                data["Item Unit Price"] = itemMatch.Groups[4].Value.Trim();
+            }
+
+            // Extract Country of Origin from item section
+            var cooMatch = Regex.Match(text, @"Unit Price\s+COO.*?\n[\d\.]+\s+[\d\.]+\s+([A-Z]+)\s+",
+                RegexOptions.Multiline);
+            if (cooMatch.Success)
+            {
+                data["Item COO"] = cooMatch.Groups[1].Value.Trim();
+            }
+
+            // Extract Assessment Value
+            var assValueMatch = Regex.Match(text, @"Unit\s+Ass Value.*?\n[A-Z]+\s+([\d,\.]+)",
+                RegexOptions.Multiline);
+            if (assValueMatch.Success)
+            {
+                data["Assessable Value"] = assValueMatch.Groups[1].Value.Trim();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Item extraction error: {ex.Message}");
+        }
+    }
+
+    // ==================== CONTAINER DETAILS (FIXED) ====================
+    private void ExtractContainerDetails(string text, Dictionary<string, string> data)
+    {
+        try
+        {
+            // Extract from "CONTAINER DETAILS" to "GSTIN Details"
+            var containerSection = Regex.Match(text,
+                @"CONTAINER DETAILS.*?(?=GSTIN Details)",
+                RegexOptions.Singleline | RegexOptions.IgnoreCase);
+
+            if (containerSection.Success)
+            {
+                var section = containerSection.Value;
+
+                // Extract all container numbers (Format: FCIU5875052, FSCU7770208, etc)
+                // Pattern: IGM line followed by container number
+                var containerMatches = Regex.Matches(section,
+                    @"\d+\s*/\s*\d+\s+([A-Z]{4}\d{7})\s+[A-Z]\s+[A-Z]\s+(\d+)\s+Standard\s+Dry",
+                    RegexOptions.Multiline);
+
+                var containers = new List<string>();
+                var sizes = new List<int>();
+
+                foreach (Match match in containerMatches)
+                {
+                    var containerNo = match.Groups[1].Value;
+                    var size = int.Parse(match.Groups[2].Value);
+
+                    containers.Add(containerNo);
+                    sizes.Add(size);
+                }
+
+                if (containers.Any())
+                {
+                    // Store all container numbers
+                    data["Container Numbers"] = string.Join(", ", containers);
+                    data["Container Count"] = containers.Count.ToString();
+
+                    // Count by size
+                    var size20 = sizes.Count(s => s == 20);
+                    var size40 = sizes.Count(s => s == 40);
+                    var size45 = sizes.Count(s => s == 45);
+
+                    if (size20 > 0) data["Count 20 Ft"] = size20.ToString();
+                    if (size40 > 0) data["Count 40 Ft"] = size40.ToString();
+                    if (size45 > 0) data["Count 45 Ft"] = size45.ToString();
+
+                    // Also store size breakdown
+                    var sizeBreakdown = new List<string>();
+                    if (size20 > 0) sizeBreakdown.Add($"{size20} x 20ft");
+                    if (size40 > 0) sizeBreakdown.Add($"{size40} x 40ft");
+                    if (size45 > 0) sizeBreakdown.Add($"{size45} x 45ft");
+
+                    if (sizeBreakdown.Any())
+                        data["Container Size Breakdown"] = string.Join(", ", sizeBreakdown);
+                }
+            }
+            else
+            {
+                Console.WriteLine("Container section not found in PDF");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Container extraction error: {ex.Message}");
+        }
+    }
+
+
+    // ==================== DUTY DETAILS (NEW) ====================
+    private void ExtractDutyDetails(string text, Dictionary<string, string> data)
+    {
+        try
+        {
+            // Total Customs Duty
+            TryExtract(text, data, "Total Customs Duty", @"Total Customs Duty\s*:\s*([\d,\.]+)");
+
+            // Total IGST Duty
+            TryExtract(text, data, "Total IGST Duty", @"Total IGST Duty\s*:\s*([\d,\.]+)");
+
+            // Grand Total
+            TryExtract(text, data, "Grand Total Customs", @"Grand Total Custom Duty\s*:\s*([\d,\.]+)");
+            TryExtract(text, data, "Grand Total IGST", @"Grand Total IGST Duty\s*:\s*([\d,\.]+)");
+
+            // Net Amount
+            var netAmtMatch = Regex.Match(text, @"Net Amt\.Rs\.\s*([\d,\.]+)\s+([\d,\.]+)");
+            if (netAmtMatch.Success)
+            {
+                data["Assessable Value Total"] = netAmtMatch.Groups[1].Value.Trim();
+                data["Duty Payable"] = netAmtMatch.Groups[2].Value.Trim();
+            }
+
+            // Duty in Words
+            TryExtract(text, data, "Duty In Words", @"DUTY PAYABLE\s*:\s*Rupees\s+([^\n-]+)");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Duty extraction error: {ex.Message}");
+        }
+    }
+
+    // ==================== HELPER METHOD ====================
+    private void TryExtract(string text, Dictionary<string, string> data, string key, string pattern, int groupIndex = 1)
+    {
+        try
+        {
+            var match = Regex.Match(text, pattern, RegexOptions.IgnoreCase | RegexOptions.Multiline);
+            if (match.Success && match.Groups.Count > groupIndex)
+            {
+                var value = match.Groups[groupIndex].Value.Trim();
+                if (!string.IsNullOrWhiteSpace(value))
+                    data[key] = value;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Extract error for {key}: {ex.Message}");
+        }
+    }
+
+    private async Task<int?> GetOrCreateLocationIdAsync(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return null;
+        var all = await LocationService.GetAllAsync();
+        var existing = all.FirstOrDefault(x => string.Equals(x.LocationName?.Trim(), name.Trim(), StringComparison.OrdinalIgnoreCase));
+        if (existing != null) return existing.LocationId;
+
+        var newLoc = new Location { LocationName = name.Trim(), LocationType = "PORT" };
+        bool created = await LocationService.CreateAsync(newLoc);
+        if (created)
+        {
+            var refreshed = await LocationService.GetAllAsync();
+            return refreshed.FirstOrDefault(x => string.Equals(x.LocationName?.Trim(), name.Trim(), StringComparison.OrdinalIgnoreCase))?.LocationId;
+        }
+        return null;
+          }
+    private async Task<int?> GetOrCreateLocationWithCountryAsync(string portName, string countryName = null)
+    {
+        if (string.IsNullOrWhiteSpace(portName)) return null;
+
+        try
+        {
+            var all = await LocationService.GetAllAsync();
+            var existing = all.FirstOrDefault(x =>
+                string.Equals(x.LocationName?.Trim(), portName.Trim(), StringComparison.OrdinalIgnoreCase));
+
+            if (existing != null) return existing.LocationId;
+
+            // Try to get country from name (LA SPEZIA-ITSPE -> IT)
+            int? countryId = null;
+
+            if (!string.IsNullOrEmpty(countryName))
+            {
+                countryId = await GetOrCreateCountryIdAsync(countryName);
+            }
+            else
+            {
+                // Parse from port name (format: "LA SPEZIA-ITSPE" or "ITALY-IT")
+                var countryMatch = Regex.Match(portName, @"-([A-Z]{2})(?:[A-Z]{2,})?$");
+                if (countryMatch.Success)
+                {
+                    var countryCode = countryMatch.Groups[1].Value;
+                    countryId = await GetOrCreateCountryIdAsync(countryCode);
+                }
+            }
+
+            // Fallback to default country
+            if (countryId == null)
+            {
+                countryId = await GetDefaultCountryIdAsync();
+            }
+
+            if (countryId == null)
+            {
+                Console.WriteLine("Cannot create location without valid country");
+                return null;
+            }
+
+            var newLoc = new Location
+                {
+                    LocationName = portName.Trim(),
+                    LocationCode = portName.Trim(),
+                    LocationCountryId = countryId.Value
+                };
+
+            bool created = await LocationService.CreateAsync(newLoc);
+
+            if (created)
+            {
+                var refreshed = await LocationService.GetAllAsync();
+                return refreshed.FirstOrDefault(x =>
+                    string.Equals(x.LocationName?.Trim(), portName.Trim(), StringComparison.OrdinalIgnoreCase))?.LocationId;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error creating location: {ex.Message}");
+        }
+
+        return null;
+    }
+    private async Task<int?> GetDefaultCountryIdAsync()
+    {
+        try
+        {
+            // Option 1: Get India as default
+            var countries = await CountryService.GetAllAsync();
+            var india = countries.FirstOrDefault(c =>
+                c.CountryName?.Equals("India", StringComparison.OrdinalIgnoreCase) == true ||
+                c.CountryCode?.Equals("IN", StringComparison.OrdinalIgnoreCase) == true);
+
+            if (india != null) return india.CountryId;
+
+            // Option 2: Get first available country
+            var firstCountry = countries.FirstOrDefault();
+            if (firstCountry != null) return firstCountry.CountryId;
+
+            // Option 3: If no countries exist, create India
+            var newIndia = new Country
+                {
+                    CountryName = "India",
+                    CountryCode = "IN"
+                };
+
+            bool created = await CountryService.CreateAsync(newIndia);
+            if (created)
+            {
+                var refreshedCountries = await CountryService.GetAllAsync();
+                return refreshedCountries.FirstOrDefault()?.CountryId;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error getting default country: {ex.Message}");
+        }
+
+        return null;
+    }
+    private async Task<int?> GetOrCreateCountryIdAsync(string countryNameOrCode)
+    {
+        if (string.IsNullOrWhiteSpace(countryNameOrCode)) return null;
+
+        try
+        {
+            var countries = await CountryService.GetAllAsync();
+
+            // Check if exists by name or code
+            var existing = countries.FirstOrDefault(c =>
+                string.Equals(c.CountryName?.Trim(), countryNameOrCode.Trim(), StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(c.CountryCode?.Trim(), countryNameOrCode.Trim(), StringComparison.OrdinalIgnoreCase));
+
+            if (existing != null) return existing.CountryId;
+
+            // Create new country
+            var newCountry = new Country
+                {
+                    CountryName = countryNameOrCode.Trim(),
+                    CountryCode = countryNameOrCode.Length == 2 ? countryNameOrCode.ToUpper() : countryNameOrCode.Substring(0, 2).ToUpper(),
+                    
+                };
+
+            bool created = await CountryService.CreateAsync(newCountry);
+
+            if (created)
+            {
+                var refreshed = await CountryService.GetAllAsync();
+                return refreshed.FirstOrDefault(c =>
+                    string.Equals(c.CountryName?.Trim(), countryNameOrCode.Trim(), StringComparison.OrdinalIgnoreCase))?.CountryId;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error creating country: {ex.Message}");
+        }
+
+        return null;
+    }
+  
+    private async Task<int?> GetOrCreateAccountIdAsync(string name, Dictionary<string, string> data = null, string prefix = "")
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return null;
+
+        try
+        {
+            var all = await AccountService.GetAllAsync();
+            var existing = all.FirstOrDefault(x =>
+                string.Equals(x.AccountName?.Trim(), name.Trim(), StringComparison.OrdinalIgnoreCase));
+
+            if (existing != null)
+                return existing.AccountId;
+
+            var defaultGroupId = await GetDefaultAccountGroupIdAsync();
+            if (defaultGroupId == null)
+            {
+                Console.WriteLine("Warning: No default account group found. Skipping account creation.");
+                return null;
+            }
+
+            // Create new Account with ALL available details
+            var newAcc = new Account
+                {
+                    AccountName = name.Trim(),
+                    AccountGroupId = defaultGroupId.Value,
+                    AccountPrintName = name.Trim(),
+                    AccountTypeId = 18
+                };
+
+            // Add extra fields if data dictionary is provided
+            if (data != null)
+            {
+                // Use prefix to differentiate (e.g., "Importer Address", "Supplier Address")
+                var addressKey = string.IsNullOrEmpty(prefix) ? "Address" : $"{prefix} Address";
+                var phoneKey = string.IsNullOrEmpty(prefix) ? "Phone" : $"{prefix} Phone";
+                var emailKey = string.IsNullOrEmpty(prefix) ? "Email" : $"{prefix} Email";
+                var gstinKey = string.IsNullOrEmpty(prefix) ? "GSTIN" : $"{prefix} GSTIN";
+                var panKey = string.IsNullOrEmpty(prefix) ? "PAN" : $"{prefix} PAN";
+                var codeKey = string.IsNullOrEmpty(prefix) ? "Code" : $"{prefix} Code";
+
+                if (data.TryGetValue(addressKey, out var addr))
+                    newAcc.AccountAddress1 = CleanValue(addr);
+
+                if (data.TryGetValue(phoneKey, out var phone))
+                    newAcc.AccountPhone = CleanValue(phone);
+
+                if (data.TryGetValue(emailKey, out var email))
+                    newAcc.AccountEmail = CleanValue(email);
+
+                if (data.TryGetValue(gstinKey, out var gstin))
+                    newAcc.AccountGstNo = CleanValue(gstin);
+
+                if (data.TryGetValue(panKey, out var pan))
+                    newAcc.AccountPan = CleanValue(pan);
+
+                if (data.TryGetValue(codeKey, out var code))
+                    newAcc.AccountCode = CleanValue(code);
+            }
+
+            var createdAcc = await AccountService.CreateAsync(newAcc);
+            return createdAcc?.AccountId;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error creating account '{name}': {ex.Message}");
+        }
+
+        return null;
+    }
+
+    private async Task<int?> GetDefaultAccountGroupIdAsync()
+    {
+        try
+        {
+            // Check if AccountGroupService exists
+            if (AccountGroupService == null)
+            {
+                // Hardcode default group ID
+                return 12; // ⚠️ Update this to your actual default group ID
+            }
+
+            var groups = await AccountGroupService.GetAllAsync();
+
+            // Try to find "Sundry Debtors" or "General" group
+            var defaultGroup = groups.FirstOrDefault(g =>
+                g.AccountGroupName?.Contains("Sundry", StringComparison.OrdinalIgnoreCase) == true ||
+                g.AccountGroupName?.Contains("Debtor", StringComparison.OrdinalIgnoreCase) == true ||
+                g.AccountGroupName?.Contains("General", StringComparison.OrdinalIgnoreCase) == true ||
+                g.AccountGroupName?.Contains("Party", StringComparison.OrdinalIgnoreCase) == true);
+
+            if (defaultGroup != null) return defaultGroup.AccountGroupId;
+
+            // Return first available group
+            var firstGroup = groups.FirstOrDefault();
+            return firstGroup?.AccountGroupId ?? 12; 
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error getting default account group: {ex.Message}");
+            return 1; // Fallback to ID 1
+        }
+    }
+
+    private async Task<int?> GetOrCreateChaIdAsync(string name, Dictionary<string, string> data = null)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return null;
+
+        try
+        {
+            // Check if CHA already exists
+            var all = await NotifyService.GetAllAsync();
+            var existing = all.FirstOrDefault(x =>
+                string.Equals(x.NotifyName?.Trim(), name.Trim(), StringComparison.OrdinalIgnoreCase)
+                && x.NotifyType == "CHA");
+
+            if (existing != null)
+                return existing.NotifyId;
+
+            // Create new CHA with ALL available details
+            var newCha = new Notify
+                {
+                    NotifyName = name.Trim(),
+                    NotifyType = "CHA"
+                };
+
+            // Add extra fields if data dictionary is provided
+            if (data != null)
+            {
+                if (data.TryGetValue("CHA Address", out var addr))
+                    newCha.NotifyAddress1 = CleanValue(addr);
+
+                if (data.TryGetValue("CHA Phone", out var phone))
+                    newCha.NotifyContactNo = CleanValue(phone);
+
+                if (data.TryGetValue("CHA Email", out var email))
+                    newCha.NotifyEmail = CleanValue(email);
+
+                if (data.TryGetValue("CHA GSTIN", out var gstin))
+                    newCha.NotifyGstNo = CleanValue(gstin);
+
+                if (data.TryGetValue("CHA PAN", out var pan))
+                    newCha.NotifyPan = CleanValue(pan);
+            }
+
+            var created = await NotifyService.CreateAsync(newCha);
+            if (created != null)
+                return created.NotifyId;
+
+            // Fallback
+            var refreshed = await NotifyService.GetAllAsync();
+            return refreshed.FirstOrDefault(x =>
+                string.Equals(x.NotifyName?.Trim(), name.Trim(), StringComparison.OrdinalIgnoreCase)
+                && x.NotifyType == "CHA")?.NotifyId;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error creating CHA '{name}': {ex.Message}");
+            return null;
+        }
+    }
+
+
+    private async Task<int?> GetOrCreateCargoIdAsync(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return null;
+        try
+        {
+            var all = await CargoService.GetAllAsync();
+            var existing = all.FirstOrDefault(x => string.Equals(x.CargoName?.Trim(), name.Trim(), StringComparison.OrdinalIgnoreCase));
+            if (existing != null) return existing.CargoId;
+
+            var newCargo = new Cargo { CargoName = name.Trim() };
+            bool created = await CargoService.CreateAsync(newCargo);
+            if (created)
+            {
+                var refreshed = await CargoService.GetAllAsync();
+                return refreshed.FirstOrDefault(x => string.Equals(x.CargoName?.Trim(), name.Trim(), StringComparison.OrdinalIgnoreCase))?.CargoId;
+            }
+        }
+        catch { return await GetOrCreateAccountIdAsync(name); }
+        return null;
+    }
+
+    private async Task<int?> GetOrCreateVesselIdAsync(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return null;
+        try
+        {
+            var all = await VesselService.GetAllAsync();
+            var existing = all.FirstOrDefault(x => string.Equals(x.VesselName?.Trim(), name.Trim(), StringComparison.OrdinalIgnoreCase));
+            if (existing != null) return existing.VesselId;
+
+            var newVessel = new Vessel { VesselName = name.Trim() };
+            bool created = await VesselService.CreateAsync(newVessel);
+            if (created)
+            {
+                var refreshed = await VesselService.GetAllAsync();
+                return refreshed.FirstOrDefault(x => string.Equals(x.VesselName?.Trim(), name.Trim(), StringComparison.OrdinalIgnoreCase))?.VesselId;
+            }
+        }
+        catch { return await GetOrCreateAccountIdAsync(name); }
+        return null;
+    }
+
+    private async Task<int?> GetOrCreateLineIdAsync(string name, Dictionary<string, string> data = null)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return null;
+
+        try
+        {
+            var all = await NotifyService.GetAllAsync();
+            var existing = all.FirstOrDefault(x =>
+                string.Equals(x.NotifyName?.Trim(), name.Trim(), StringComparison.OrdinalIgnoreCase)
+                && x.NotifyType == "LINE");
+
+            if (existing != null)
+                return existing.NotifyId;
+
+            // Create new line with ALL available details
+            var newLine = new Notify
+                {
+                    NotifyName = name.Trim(),
+                    NotifyType = "LINE"
+                };
+
+            // Add extra fields if data dictionary is provided
+            if (data != null)
+            {
+                if (data.TryGetValue("Line Address", out var addr))
+                    newLine.NotifyAddress1 = CleanValue(addr);
+
+                if (data.TryGetValue("Line Phone", out var phone))
+                    newLine.NotifyContactNo = CleanValue(phone);
+
+                if (data.TryGetValue("Line Email", out var email))
+                    newLine.NotifyEmail = CleanValue(email);
+
+          
+            }
+
+            var created = await NotifyService.CreateAsync(newLine);
+            if (created != null)
+                return created.NotifyId;
+
+            var refreshed = await NotifyService.GetAllAsync();
+            return refreshed.FirstOrDefault(x =>
+                string.Equals(x.NotifyName?.Trim(), name.Trim(), StringComparison.OrdinalIgnoreCase)
+                && x.NotifyType == "LINE")?.NotifyId;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"⚠️ Error creating line '{name}': {ex.Message}");
+            return await GetOrCreateAccountIdAsync(name, data);
+        }
+    }
+
+    private async Task<Job> BuildJobFromExtractedDataAsync(Dictionary<string, string> d)
+    {
+        var j = new Job { JobType = JobType, JobDate = DateTime.Now, JobYearId = YearStatechangeService.SelectedYearId.ToString() };
+
+        // ==================== BASIC JOB INFO ====================
+        if (d.TryGetValue("Job No", out var jobNo))
+            j.JobNo = CleanValue(jobNo);
+
+        if (d.TryGetValue("Job Date", out var jdt) && DateTime.TryParse(CleanValue(jdt), out var parsed))
+            j.JobDate = parsed;
+
+        // ==================== BILL OF LADING INFO ====================
+        if (d.TryGetValue("MBL/MAWB", out var mbl))
+            j.JobBlNo = CleanValue(mbl);
+
+        if (d.TryGetValue("HBL/HAWB", out var hbl))
+            j.JobHblNo = CleanValue(hbl);
+
+        if (d.TryGetValue("BL Date", out var bldt) && DateTime.TryParse(CleanValue(bldt), out var blParsed))
+            j.JobBlDate = blParsed;
+
+        if (d.TryGetValue("HBL Date", out var hbldt) && DateTime.TryParse(CleanValue(hbldt), out var hblParsed))
+            j.JobHblDate = hblParsed;
+
+        if (d.TryGetValue("BL Type", out var blType))
+            j.JobBlType = CleanValue(blType);
+
+        if (d.TryGetValue("Voyage", out var voyage))
+            j.JobVoy = CleanValue(voyage);
+
+        if (d.TryGetValue("Booking No", out var bookingNo))
+            j.JobBookingNo = CleanValue(bookingNo);
+
+        // ==================== INVOICE INFO ====================
+        if (d.TryGetValue("Invoice No", out var invNo))
+            j.JobShipperInvNo = CleanValue(invNo);
+
+        if (d.TryGetValue("Invoice Date", out var invDt) && DateTime.TryParse(CleanValue(invDt), out var invParsed))
+            j.JobShipperInvDate = invParsed;
+
+        // ==================== WEIGHT & QUANTITY ====================
+        if (d.TryGetValue("Gross Weight", out var gw) && double.TryParse(CleanValue(gw)?.Replace(",", ""), out var grossWt))
+            j.JobGrossWt = grossWt;
+
+        if (d.TryGetValue("Item RITC", out var hsn))
+            j.JobHsnCode = CleanValue(hsn);
+
+
+        if (d.TryGetValue("No of Pkgs", out var pkgs) && double.TryParse(CleanValue(pkgs)?.Replace(",", ""), out var qty))
+            j.JobQty = qty;
+
+        if (d.TryGetValue("Weight Unit", out var grossUnit))
+            j.JobGrossUnit = CleanValue(grossUnit);
+
+
+
+        if (d.TryGetValue("Qty Unit", out var qtyUnit))
+            j.JobQtyUnit = CleanValue(qtyUnit);
+
+        if (d.TryGetValue("CBM", out var cbm) && float.TryParse(CleanValue(cbm)?.Replace(",", ""), out var cbmVal))
+            j.JobCbm = cbmVal;
+
+        if (d.TryGetValue("Volume", out var volume))
+            j.JobVolume = CleanValue(volume);
+
+        if (d.TryGetValue("Exchange Rate", out var exchRate) && double.TryParse(CleanValue(exchRate)?.Replace(",", ""), out var exRate))
+            j.JobExchRate = exRate;
+
+        // ==================== LOCATION/PORT INFO ====================
+        if (d.TryGetValue("Port Origin", out var portOrigin))
+        {
+            string countryOrigin = null;
+            d.TryGetValue("Country Origin", out countryOrigin);
+
+            var locId = await GetOrCreateLocationWithCountryAsync(CleanValue(portOrigin), CleanValue(countryOrigin));
+            if (locId.HasValue)
+                j.JobPolId = locId.Value;
+        }
+
+        if (d.TryGetValue("Port Shipment", out var portShipment))
+        {
+            string countryShip = null;
+            d.TryGetValue("Country Consignment", out countryShip);
+
+            var locId = await GetOrCreateLocationWithCountryAsync(CleanValue(portShipment), CleanValue(countryShip));
+            if (locId.HasValue)
+                j.JobPodId = locId.Value;
+        }
+
+        if (d.TryGetValue("Country Origin", out var country))
+            j.JobCountryOrigin = CleanValue(country);
+
+        if (d.TryGetValue("Country Discharge", out var countryDisch))
+            j.JobCountryDischarge = CleanValue(countryDisch);
+
+   
+
+        if (d.TryGetValue("ICD", out var icd))
+            j.JobIcd = CleanValue(icd);
+
+        if (d.TryGetValue("CFS", out var cfs))
+            j.JobCfs = CleanValue(cfs);
+
+        if (d.TryGetValue("Terminal", out var terminal))
+            j.JobTerminal = CleanValue(terminal);
+
+        if (d.TryGetValue("Empty Yard", out var emptyYard))
+            j.JobEmptyYard = CleanValue(emptyYard);
+
+        // ==================== SHIPPING PARTIES ====================
+        if (d.TryGetValue("Shipper Name", out var shipper))
+        {
+            var shipperId = await GetOrCreateAccountIdAsync(CleanValue(shipper));
+            if (shipperId.HasValue)
+                j.JobShipperId = shipperId.Value;
+        }
+
+        if (d.TryGetValue("Shipper Address", out var shipperAddr))
+            j.JobShipperAddress = CleanValue(shipperAddr);
+
+        if (d.TryGetValue("Importer Name", out var importerName))
+        {
+            var importerAddr = "";
+            d.TryGetValue("Importer Address", out importerAddr);  // Get address too
+
+            var importerId = await GetOrCreateAccountIdAsync(
+                CleanValue(importerName), d, "Importer");
+
+            if (importerId.HasValue)
+            {
+                j.JobPartyId = importerId.Value;                  // ✅ Set ONCE
+                j.JobPartyAddress = CleanValue(importerAddr);     // ✅ Store address
+            }
+        }
+
+
+
+        if (d.TryGetValue("Consignee Name", out var consignee))
+        {
+            var consigneeId = await GetOrCreateAccountIdAsync(CleanValue(consignee));
+            if (consigneeId.HasValue)
+                j.JobConsigneeId = consigneeId.Value;
+        }
+
+        if (d.TryGetValue("Consignee Address", out var consigneeAddr))
+            j.JobConsigneeAddress = CleanValue(consigneeAddr);
+
+        if (d.TryGetValue("Notify Party", out var notify))
+            j.JobNotifyAddress = CleanValue(notify);
+
+        if (d.TryGetValue("Agent Name", out var agent))
+            j.JobAgent = CleanValue(agent);
+
+        if (d.TryGetValue("Agent Address", out var agentAddr))
+            j.JobAgentAddress = CleanValue(agentAddr);
+
+        if (d.TryGetValue("Supplier Name", out var supplier))
+        {
+            var aid = await GetOrCreateAccountIdAsync(CleanValue(supplier), d, "Supplier");
+            if (aid.HasValue)
+                j.JobSupplierId = aid.Value;
+        }
+
+        if (d.TryGetValue("Forwarder Name", out var forwarder))
+            j.JobForwarder = CleanValue(forwarder);
+
+        if (d.TryGetValue("Forwarder Address", out var forwarderAddr))
+            j.JobForwarderAddress = CleanValue(forwarderAddr);
+
+        // ==================== CONTAINER INFO ====================
+        if (d.TryGetValue("Container Numbers", out var containerNumbers))
+            j.JobContainer20Ft = CleanValue(containerNumbers);
+
+        if (d.TryGetValue("Container 40 Ft", out var container40Ft))
+            j.JobContainer40Ft = CleanValue(container40Ft);
+
+        if (d.TryGetValue("Count 20 Ft", out var count20))
+            j.Job20Ft = CleanValue(count20);
+
+        if (d.TryGetValue("Count 40 Ft", out var count40))
+            j.Job40Ft = CleanValue(count40);
+
+        if (d.TryGetValue("Container Type", out var contType))
+            j.JobContainerType = CleanValue(contType);
+
+        if (d.TryGetValue("Seal No", out var sealNo))
+            j.JobSealNo = CleanValue(sealNo);
+
+        // ==================== CUSTOMS & DOCUMENTATION ====================
+      
+
+
+     
+
+       
+
+        if (d.TryGetValue("IGM No", out var igmNo))
+            j.JobIgmNo = CleanValue(igmNo);
+
+        if (d.TryGetValue("IGM Date", out var igmDate) && DateTime.TryParse(CleanValue(igmDate), out var igmParsed))
+            j.JobIgmDate = igmParsed;
+
+  
+
+        if (d.TryGetValue("DO Type", out var doType))
+            j.JobDoType = CleanValue(doType);
+
+        if (d.TryGetValue("DO Valid Till", out var doValid) && DateTime.TryParse(CleanValue(doValid), out var doValidParsed))
+            j.JobDoValid = doValidParsed;
+
+        if (d.TryGetValue("DO Percentage", out var doPer) && float.TryParse(CleanValue(doPer)?.Replace(",", ""), out var doPerVal))
+            j.JobDoPer = doPerVal;
+
+        if (d.TryGetValue("OBL Date", out var oblDate) && DateTime.TryParse(CleanValue(oblDate), out var oblParsed))
+            j.JobOblDate = oblParsed;
+
+        if (d.TryGetValue("OBG Date", out var obgDate) && DateTime.TryParse(CleanValue(obgDate), out var obgParsed))
+            j.JobObgDate = obgParsed;
+
+        if (d.TryGetValue("Out of Charge Date", out var outOfChargeDate) && DateTime.TryParse(CleanValue(outOfChargeDate), out var outCharParsed))
+            j.JobOutOfChargeDate = outCharParsed;
+
+        if (d.TryGetValue("Form AI Date", out var formAI) && DateTime.TryParse(CleanValue(formAI), out var formAIParsed))
+            j.JobFormAI = formAIParsed;
+
+        if (d.TryGetValue("Payment Received Date", out var paymentRecDate) && DateTime.TryParse(CleanValue(paymentRecDate), out var payParsed))
+            j.JobPaymentReceivedDate = payParsed;
+
+        if (d.TryGetValue("Complete Date", out var completeDate) && DateTime.TryParse(CleanValue(completeDate), out var completeParsed))
+            j.JobCompleteDate = completeParsed;
+
+        // ==================== CARGO DETAILS ====================
+        if (d.TryGetValue("Goods Description", out var goodsDesc))
+            j.JobGoodsDesc = CleanValue(goodsDesc);
+
+        if (d.TryGetValue("Goods Description 1", out var goodsDesc1))
+            j.JobGoodsDesc1 = CleanValue(goodsDesc1);
+
+        if (d.TryGetValue("Goods Description 2", out var goodsDesc2))
+            j.JobGoodsDesc2 = CleanValue(goodsDesc2);
+
+        if (d.TryGetValue("Goods Stuffed", out var goodsStuffed))
+            j.JobGoodsStuffed = CleanValue(goodsStuffed);
+
+        if (d.TryGetValue("Marks", out var marks))
+            j.JobMarks = CleanValue(marks);
+
+        if (d.TryGetValue("Brand", out var brand))
+            j.JobBrand = CleanValue(brand);
+
+        if (d.TryGetValue("HSN Code", out var hsnCode))
+            j.JobHsnCode = CleanValue(hsnCode);
+
+        if (d.TryGetValue("MTD No", out var mtdNo))
+            j.JobMtdNo = CleanValue(mtdNo);
+
+        if (d.TryGetValue("Measurement", out var measurement))
+            j.JobMeasurement = CleanValue(measurement);
+
+        if (d.TryGetValue("Certification of Origin", out var certiOrigin))
+            j.JobCertiOrigin = CleanValue(certiOrigin);
+
+        if (d.TryGetValue("Other Certificates", out var otherCert))
+            j.JobOtherCert = CleanValue(otherCert);
+
+        // ==================== SHIPPING TERMS & CONDITIONS ====================
+        if (d.TryGetValue("Pre-carried By", out var precarriedBy))
+            j.JobPrecarriedBy = CleanValue(precarriedBy);
+
+        if (d.TryGetValue("On Carries", out var onCarries))
+            j.JobOnCarries = CleanValue(onCarries);
+
+        if (d.TryGetValue("Transhipment", out var transhipment))
+            j.JobTranshipment = CleanValue(transhipment);
+
+        if (d.TryGetValue("Transhipment Time", out var transTime))
+            j.JobTransTime = CleanValue(transTime);
+
+        if (d.TryGetValue("PTA FTA", out var ptaFta))
+            j.JobPtaFta = CleanValue(ptaFta);
+
+        if (d.TryGetValue("Freight By", out var freightBy))
+            j.JobFreightBy = CleanValue(freightBy);
+
+        if (d.TryGetValue("Freight Remarks", out var freightRemarks))
+            j.JobFreightRemarks = CleanValue(freightRemarks);
+
+        if (d.TryGetValue("Issue Place", out var issuePlace))
+            j.JobIssuePlace = CleanValue(issuePlace);
+
+        if (d.TryGetValue("Number of BLs", out var noOfBl))
+            j.JobNoOfBl = CleanValue(noOfBl);
+
+        if (d.TryGetValue("Free Days", out var freeDays) && int.TryParse(CleanValue(freeDays), out var freeDaysVal))
+            j.JobFreeDays = freeDaysVal;
+
+        // ==================== CERTIFICATIONS & STATUS ====================
+        if (d.TryGetValue("Phyto Status", out var phytoStatus))
+            j.JobPhytoStatus = CleanValue(phytoStatus);
+
+        if (d.TryGetValue("Fumigation Status", out var fumigationStatus))
+            j.JobFumigationStatus = CleanValue(fumigationStatus);
+
+        if (d.TryGetValue("High Seas 1", out var highSeas1) && int.TryParse(CleanValue(highSeas1), out var hs1Val))
+            j.JobHighSeas1 = hs1Val;
+
+        if (d.TryGetValue("High Seas 2", out var highSeas2) && int.TryParse(CleanValue(highSeas2), out var hs2Val))
+            j.JobHighSeas2 = hs2Val;
+
+        if (d.TryGetValue("High Seas 1 Address", out var hs1Addr))
+            j.JobHighseas1Address = CleanValue(hs1Addr);
+
+        if (d.TryGetValue("Surveyor", out var surveyor))
+            j.Surveyor = CleanValue(surveyor);
+
+        if (d.TryGetValue("Surveyor Address", out var surveyorAddr))
+            j.SurveyorAddress = CleanValue(surveyorAddr);
+
+     
+        // ==================== REMARKS & NOTES ====================
+        if (d.TryGetValue("Remarks", out var remarks))
+            j.JobRemarks = CleanValue(remarks);
+
+        if (d.TryGetValue("Shipping Line", out var line))
+        {
+            var lineId = await GetOrCreateLineIdAsync(CleanValue(line), d);
+            if (lineId.HasValue)
+                j.JobLineId = lineId.Value;
+        }
+
+       if (d.TryGetValue("CHA Name", out var chaText))
+        {
+            var chaId = await GetOrCreateChaIdAsync(CleanValue(chaText), d);
+            if (chaId.HasValue)
+            j.JobChaId = chaId.Value;
+        }
+
+        return j;
+       
+    }
+
+    private async Task SaveExtractedJobs()
+    {
+        if (!extractedPdfData.Any())
+        {
+            ToastService.Warning("Nothing to import.");
+            return;
+        }
+
+        LoadingService.Show();
+        try
+        {
+            var job = await BuildJobFromExtractedDataAsync(extractedPdfData);
+            await JobService.CreateAsync(job);
+            ToastService.Success("Job imported successfully!");
+            await LoadJobsAsync();
+            ClosePdfDialog();
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Import failed: {ex.Message}");
+        }
+        finally { LoadingService.Hide(); }
+    }
+
+    private string GetMappingInfo(string pdfField) => pdfField switch
+    {
+        "Job No" => "→ JobNo",
+        "CHA Name" => "→ JobChaId",
+        "Importer Name" => "→ JobPartyId",
+        "Supplier Name" => "→ JobSupplierId",
+        "Container Numbers" => "→ Containers",
+        _ => "→ Mapped"
+    };
+
+    private string GetFieldCategory(string fieldName) => fieldName switch
+    {
+        "Job No" or "Job Date" => "Basic Info",
+        "MBL/MAWB" or "HBL/HAWB" => "B/L Info",
+        "Gross Weight" or "No of Pkgs" => "Weight/Qty",
+        "Port Origin" or "Port Shipment" => "Locations",
+        "Importer Name" or "CHA Name" or "Supplier Name" => "Parties",
+        "Container Numbers" or "Count 20 Ft" or "Count 40 Ft" => "Containers",
+        _ => "Other"
+    };
+
+    private string GetRowClass(string fieldName) => GetFieldCategory(fieldName) switch
+    {
+        "Parties" => "table-warning",
+        "Containers" => "table-info",
+        "Basic Info" => "table-success",
+        _ => ""
+    };
+
+    private int GetMappedFieldsCount() => extractedPdfData.Count(x => !GetMappingInfo(x.Key).Contains("Mapped"));
+    private int GetPartyCount() => extractedPdfData.Count(x => GetFieldCategory(x.Key) == "Parties");
+    private int GetContainerCount()
+    {
+        if (extractedPdfData.TryGetValue("Container Numbers", out var containers))
+            return containers.Split(new[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries).Length;
+        return 0;
+    }
+
+    private async Task CopyToClipboard(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return;
+        await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", text);
+        ToastService.Info("Copied!");
+    }
+
+    private string? CleanValue(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return null;
+
+        var v = value;
+
+        // Remove control chars and normalize
+        v = v.Replace("\r", "")
+             .Replace("\n", "")
+             .Replace("\u000C", "")
+             .Replace("\u000B", "")
+             .Replace("–", "-")
+             .Replace("—", "-")
+             .Trim();
+
+        // Collapse multiple spaces
+        v = Regex.Replace(v, @"\s+", " ");
+
+        // Remove very long dash sequences
+        v = Regex.Replace(v, @"-{3,}", "-");
+
+        // Remove trailing/leading dashes
+        v = v.Trim('-', ' ');
+
+        // If only dashes or underscores
+        if (Regex.IsMatch(v, @"^[-_]+$")) return null;
+
+        // ⚡ Handle cases like: "AS PER BL ---- INVOICE DETAILS"
+        if (Regex.IsMatch(v, @"-{2,}") && Regex.IsMatch(v, @"INVOICE|DETAIL|NUMBER|TOTAL", RegexOptions.IgnoreCase))
+        {
+            // keep only first part before long dashes
+            v = Regex.Replace(v, @"-{2,}.*", "").Trim();
+        }
+
+        // Remove leftover junk
+        v = Regex.Replace(v, @"-{2,}", "-");
+
+        // Trim again
+        v = v.Trim();
+
+        // If it becomes empty after cleanup, return null
+        if (string.IsNullOrEmpty(v)) return null;
+
+        // Prevent too long value
+        if (v.Length > 100) v = v.Substring(0, 100);
+
+        return v;
+    }
+
 }

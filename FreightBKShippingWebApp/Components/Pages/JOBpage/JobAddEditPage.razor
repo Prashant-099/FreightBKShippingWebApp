@@ -12,6 +12,7 @@
     @inject CountryService CountryService
     @inject CurrencyService CurrencyService
     @inject YearStatechangeService YearStatechangeService
+    @inject NavigationManager NavigationManager
 
 <DxPopup @bind-Visible="Visible"
 ShowCloseButton="true"
@@ -35,11 +36,11 @@ MaxWidth="1150px" Width="90%">
                     <DxTextBox @bind-Text="EditModel.JobSufix" />
                 </div>
             </DxFormLayoutItem>
-
+ 
             <DxFormLayoutItem Caption="Job Date" ColSpanMd="4">
                 <DxDateEdit @bind-Date="EditModel.JobDate" Format="dd-MM-yyyy" />
             </DxFormLayoutItem>
-
+      
             <DxFormLayoutTabPages>
                 <DxFormLayoutTabPage Caption="Job Info">
                     <DxFormLayoutGroup Decoration="FormLayoutGroupDecoration.None">
@@ -61,7 +62,7 @@ MaxWidth="1150px" Width="90%">
                             </DxFormLayoutItem>
  *@
 
-                            <DxFormLayoutItem Caption="Importer" ColSpanMd="12">
+                            <DxFormLayoutItem Caption="@PartyCaption" ColSpanMd="12">
                                 <DxComboBox Data="@party"
                                 TextFieldName="AccountName"
                                 ValueFieldName="AccountId"
@@ -74,7 +75,7 @@ MaxWidth="1150px" Width="90%">
                                 SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
                             </DxFormLayoutItem>
 
-                            <DxFormLayoutItem Caption="Importer Address" ColSpanMd="12">
+                            <DxFormLayoutItem Caption="@AddressCaption" ColSpanMd="12">
                                 <DxMemo @bind-Text="EditModel.JobPartyAddress" Rows="3"></DxMemo>
                             </DxFormLayoutItem>
 
@@ -477,6 +478,11 @@ MaxWidth="1150px" Width="90%">
     private bool Visible { get; set; }
     private Job EditModel = new();
     private bool IsEdit = false;
+    private string UploadUrl => NavigationManager.ToAbsoluteUri("/api/job/upload").AbsoluteUri;
+
+    private bool IsImport => string.Equals(JobType, "IMPORT", StringComparison.OrdinalIgnoreCase);
+    private string PartyCaption => IsImport ? "Importer" : "Exporter";
+    private string AddressCaption => $"{PartyCaption} Address";
 
     [Parameter] public EventCallback OnSaved { get; set; }
     [Parameter] public string JobType { get; set; } = "IMPORT";

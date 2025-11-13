@@ -1,0 +1,356 @@
+﻿@using FreightBKShippingWebApp.Services
+@using FreightBKShippingWebApp.Services.PdfReaderAndHelperService
+
+@* 
+File: Components/PdfImportModal.razor
+Reusable component for PDF import - works for both Import and Export pages
+
+INJECTION:
+- PdfDetailedExtractorService (For IMPORT PDFs)
+- ExportPdfExtractorService (For EXPORT PDFs)
+*@
+
+@if (ShowModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
+            <div class="modal-content">
+                <div class="modal-header @HeaderClass text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-file-pdf-fill me-2"></i>@ModalTitle
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="OnClose"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <label class="form-label fw-bold">
+                                <i class="bi bi-cloud-upload me-2"></i>Select PDF File
+                            </label>
+                            <InputFile OnChange="OnFileSelected" accept=".pdf" class="form-control form-control-lg" />
+                            <div class="form-text">
+                                <i class="bi bi-info-circle me-1"></i>Maximum file size: 10 MB
+                            </div>
+                        </div>
+                    </div>
+
+                    @if (IsProcessing)
+                    {
+                        <div class="text-center py-5">
+                            <div class="spinner-border @SpinnerClass mb-3" role="status" style="width: 3rem; height: 3rem;">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <h6 class="text-muted">Extracting data from PDF...</h6>
+                            <p class="small">@ProcessingMessage</p>
+                        </div>
+                    }
+
+                    @if (ExtractedData?.Any() == true)
+                    {
+                        <div class="card @SuccessCardClass">
+                            <div class="card-header @HeaderClass text-white">
+                                <h6 class="mb-0">
+                                    <i class="bi bi-check-circle me-2"></i>
+                                    Extracted Fields (@ExtractedData.Count)
+                                    <span class="badge bg-light text-dark ms-2">@JobType</span>
+                                </h6>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive" style="max-height: 500px;">
+                                    <table class="table table-hover table-sm mb-0">
+                                        <thead class="table-light sticky-top">
+                                            <tr>
+                                                <th style="width: 25%;"><i class="bi bi-tag me-1"></i>Field</th>
+                                                <th style="width: 50%;"><i class="bi bi-file-text me-1"></i>Value</th>
+                                                <th style="width: 15%;"><i class="bi bi-arrow-right me-1"></i>Status</th>
+                                                <th style="width: 10%;" class="text-center"><i class="bi bi-clipboard"></i></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var field in ExtractedData.OrderBy(x => x.Key))
+                                            {
+                                                <tr>
+                                                    <td>
+                                                        <strong class="text-primary">@field.Key</strong>
+                                                    </td>
+                                                    <td>
+                                                        <code style="font-size: 0.85rem;">@(field.Value.Length > 100 ? field.Value.Substring(0, 100) + "..." : field.Value)</code>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge bg-success">Mapped</span>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <button class="btn btn-outline-primary btn-sm"
+                                                                @onclick="() => CopyToClipboardAsync(field.Value)"
+                                                                title="Copy to clipboard">
+                                                            <i class="bi bi-clipboard"></i>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mt-3">
+                            <div class="col-md-3">
+                                <div class="card text-center border-primary">
+                                    <div class="card-body py-2">
+                                        <h5 class="mb-0 text-primary">@ExtractedData.Count</h5>
+                                        <small class="text-muted">Fields Extracted</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-center border-success">
+                                    <div class="card-body py-2">
+                                        <h5 class="mb-0 text-success">@GetPartyCount()</h5>
+                                        <small class="text-muted">Parties Detected</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-center border-warning">
+                                    <div class="card-body py-2">
+                                        <h5 class="mb-0 text-warning">@GetContainerCount()</h5>
+                                        <small class="text-muted">Containers</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-center border-info">
+                                    <div class="card-body py-2">
+                                        <h5 class="mb-0 text-info">@GetCargoDetails()</h5>
+                                        <small class="text-muted">Cargo Type</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 d-flex gap-2">
+                            <button class="btn @ButtonClass" @onclick="OnProcessData" disabled="@IsProcessing">
+                                <i class="bi bi-check-lg me-2"></i>@ProcessButtonText
+                            </button>
+                            <button class="btn btn-secondary" @onclick="OnClose" disabled="@IsProcessing">
+                                <i class="bi bi-x-lg me-2"></i>Cancel
+                            </button>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+@code {
+    // ==================== PARAMETERS ====================
+    [Parameter]
+    public bool ShowModal { get; set; }
+
+    [Parameter]
+    public EventCallback OnModalClose { get; set; }
+
+    [Parameter]
+    public EventCallback<Dictionary<string, string>> OnDataExtracted { get; set; }
+
+    [Parameter]
+    public string JobType { get; set; } = "IMPORT"; // "IMPORT" or "EXPORT"
+
+    [Parameter]
+    public string ModalTitle { get; set; } = "Import Jobs from PDF";
+
+    [Parameter]
+    public string ProcessButtonText { get; set; } = "Import & Create Job";
+
+    // ==================== STYLE PARAMETERS ====================
+    [Parameter]
+    public string HeaderClass { get; set; } = "bg-primary"; // "bg-primary" or "bg-success"
+
+    [Parameter]
+    public string ButtonClass { get; set; } = "btn-primary"; // "btn-primary" or "btn-success"
+
+    [Parameter]
+    public string SpinnerClass { get; set; } = "text-primary"; // "text-primary" or "text-success"
+
+    [Parameter]
+    public string SuccessCardClass { get; set; } = "border-success"; // "border-success" or "border-info"
+
+    // ==================== INJECTIONS ====================
+    // IMPORT PDF Extractor
+    [Inject]
+    public PdfDetailedExtractorService PdfExtractor { get; set; }
+
+    // EXPORT PDF Extractor (NEW)
+    [Inject]
+    public ExportPdfExtractorService ExportPdfExtractor { get; set; }
+
+    [Inject]
+    public ToasteService ToastService { get; set; }
+
+    [Inject]
+    public IJSRuntime JSRuntime { get; set; }
+
+    [Inject]
+    public ILogger<PdfImportModal> Logger { get; set; }
+
+    // ==================== STATE ====================
+    private bool IsProcessing = false;
+    private Dictionary<string, string> ExtractedData = new();
+    private string ProcessingMessage = "This may take a few moments";
+
+    // ==================== METHODS ====================
+    private async Task OnFileSelected(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            // ✅ File size validation
+            if (e.File.Size > 10 * 1024 * 1024)
+            {
+                ToastService.Error("File size exceeds 10 MB limit");
+                return;
+            }
+
+            IsProcessing = true;
+            ProcessingMessage = $"Processing {JobType} PDF...";
+            StateHasChanged();
+
+            // ✅ Read PDF bytes
+            using var stream = new MemoryStream();
+            await e.File.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024).CopyToAsync(stream);
+            byte[] fileBytes = stream.ToArray();
+
+            Logger.LogInformation($"📄 Processing {JobType} PDF ({fileBytes.Length} bytes)");
+
+            // ==================== ROUTE TO APPROPRIATE EXTRACTOR ====================
+            Dictionary<string, string> extracted = null;
+
+            if (JobType.Equals("EXPORT", StringComparison.OrdinalIgnoreCase))
+            {
+                // ✅ USE EXPORT EXTRACTOR
+                Logger.LogInformation("🚀 Using ExportPdfExtractorService");
+                ProcessingMessage = "Extracting export job data...";
+                StateHasChanged();
+                
+                extracted = await ExportPdfExtractor.ExtractExportFieldsAsync(fileBytes);
+            }
+            else
+            {
+                // ✅ USE IMPORT EXTRACTOR (DEFAULT)
+                Logger.LogInformation("🚀 Using PdfDetailedExtractorService");
+                ProcessingMessage = "Extracting import job data...";
+                StateHasChanged();
+                
+                extracted = await PdfExtractor.ExtractAllFieldsFromPdfAsync(fileBytes);
+            }
+
+            // ✅ Validate extraction
+            if (extracted == null || extracted.Count == 0)
+            {
+                ToastService.Warning("No data could be extracted from PDF");
+                Logger.LogWarning($"⚠️ No data extracted from {JobType} PDF");
+                return;
+            }
+
+            // ✅ Store and display
+            ExtractedData = extracted;
+            Logger.LogInformation($"✅ Extracted {extracted.Count} fields from {JobType} PDF");
+            ToastService.Success($"Extracted {extracted.Count} fields successfully!");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, $"❌ Failed to process {JobType} PDF");
+            ToastService.Error($"Failed to process PDF: {ex.Message}");
+        }
+        finally
+        {
+            IsProcessing = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnProcessData()
+    {
+        if (ExtractedData == null || ExtractedData.Count == 0)
+        {
+            ToastService.Warning("No data to process");
+            return;
+        }
+
+        Logger.LogInformation($"📤 Sending {ExtractedData.Count} fields to parent component ({JobType})");
+
+        // ✅ Notify parent component with extracted data
+        await OnDataExtracted.InvokeAsync(ExtractedData);
+
+        // ✅ Close modal
+        await OnClose();
+    }
+
+    private async Task OnClose()
+    {
+        ExtractedData = new();
+        await OnModalClose.InvokeAsync();
+    }
+
+    private async Task CopyToClipboardAsync(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return;
+
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", text);
+            ToastService.Info("Copied to clipboard!");
+        }
+        catch
+        {
+            ToastService.Error("Failed to copy");
+        }
+    }
+
+    // ==================== HELPER METHODS ====================
+    private int GetPartyCount()
+    {
+        int count = 0;
+
+        // IMPORT parties
+        if (ExtractedData.ContainsKey("Importer Name")) count++;
+        if (ExtractedData.ContainsKey("Supplier Name")) count++;
+
+        // EXPORT parties
+        if (ExtractedData.ContainsKey("Exporter Name")) count++;
+        if (ExtractedData.ContainsKey("Consignee Name")) count++;
+        
+        // Common
+        if (ExtractedData.ContainsKey("CHA Name")) count++;
+
+        return count;
+    }
+
+    private int GetContainerCount()
+    {
+        // Try Container Numbers (IMPORT)
+        if (ExtractedData.TryGetValue("Container Numbers", out var containers))
+            return containers.Split(new[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries).Length;
+
+        // Try Container Number (EXPORT - single)
+        if (ExtractedData.TryGetValue("Container Number", out var singleContainer))
+            return string.IsNullOrWhiteSpace(singleContainer) ? 0 : 1;
+
+        return 0;
+    }
+
+    private string GetCargoDetails()
+    {
+        // IMPORT cargo
+        if (ExtractedData.ContainsKey("Cargo Details"))
+            return "Present";
+
+        // EXPORT cargo
+        if (ExtractedData.ContainsKey("Item Description"))
+            return "Present";
+
+        return "—";
+    }
+}

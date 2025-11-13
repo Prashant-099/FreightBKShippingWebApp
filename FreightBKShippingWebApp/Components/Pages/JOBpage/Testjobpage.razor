@@ -1,0 +1,202 @@
+﻿@page "/jobimport"
+@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Services
+
+@inject JobService JobService
+@inject ToasteService ToastService
+@inject LoadingService LoadingService
+@inject ConfirmationDialogService ConfirmDialogService
+@inject YearStatechangeService YearStatechangeService
+@inject JobBuilderService JobBuilder
+
+<!-- Grid Component -->
+<DxGrid TItem="Job"
+        Data="@jobList"
+        @ref="MyGrid"
+        KeyFieldName="JobId"
+        ShowSearchBox="true"
+        PageSize="10"
+        PageSizeSelectorVisible="true"
+        ShowGroupPanel="true"
+        FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always"
+        FocusedRowEnabled="true"
+        SelectionMode="GridSelectionMode.Multiple"
+        SelectedDataItems="@SelectedJobs"
+        SelectedDataItemsChanged="OnSelectedJobsChanged">
+
+    <ToolbarTemplate>
+        <DxToolbar>
+            <TitleTemplate Context="ctxjob">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-briefcase-fill"></i>
+                    <span class="fs-5"> Import Job</span>
+                </div>
+            </TitleTemplate>
+            <Items>
+                <DxToolbarItem Text="Add" IconCssClass="bi bi-plus-circle" Click="OnCreateNew" />
+                <DxToolbarItem Text="Edit" IconCssClass="bi bi-pencil-square" Click="OnEdit" />
+                <DxToolbarItem Text="Delete" IconCssClass="bi bi-trash" Click="OnDelete" />
+                <DxToolbarItem Text="Import PDF" IconCssClass="bi bi-file-pdf-fill" Click="OnImportPDF" />
+                <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="LoadJobsAsync" />
+            </Items>
+        </DxToolbar>
+    </ToolbarTemplate>
+
+    <Columns>
+        <DxGridSelectionColumn Width="30" />
+        <DxGridDataColumn FieldName="JobNo" Caption="Job No" MinWidth="120" />
+        <DxGridDataColumn FieldName="JobDate" Caption="Job Date" DisplayFormat="d" MinWidth="130" />
+        <DxGridDataColumn FieldName="JobType" Caption="Job Type" MinWidth="130" />
+        <DxGridDataColumn FieldName="JobBlNo" Caption="B/L No" MinWidth="150" />
+        <DxGridDataColumn FieldName="JobBlDate" Caption="B/L Date" DisplayFormat="d" MinWidth="130" />
+        <DxGridDataColumn FieldName="JobChaId" Caption="Customs Agent" MinWidth="160" />
+        <DxGridDataColumn FieldName="Job20Ft" Caption="20ft Count" MinWidth="100" />
+        <DxGridDataColumn FieldName="Job40Ft" Caption="40ft Count" MinWidth="100" />
+    </Columns>
+</DxGrid>
+
+<JobAddEditPage @ref="popup" OnSaved="LoadJobsAsync" JobType="@JobType" />
+<ConfirmationDialog />
+
+<!-- ✅ REUSABLE PDF IMPORT MODAL -->
+<PdfImportModal ShowModal="@showPdfImportDialog"
+                OnModalClose="ClosePdfDialog"
+                OnDataExtracted="OnPdfDataExtracted"
+                JobType="@JobType"
+                ModalTitle="Import Jobs from PDF"
+                ProcessButtonText="Import & Create Job"
+                HeaderClass="bg-primary"
+                ButtonClass="btn-primary"
+                SpinnerClass="text-primary"
+                SuccessCardClass="border-success" />
+
+@code {
+    private List<Job> jobList = new();
+    private List<Job> SelectedJobs = new();
+    private IGrid MyGrid { get; set; }
+    private JobAddEditPage popup { get; set; }
+    private string JobType { get; set; } = "IMPORT";
+    private int? CurrentYearId { get; set; }
+
+    private bool showPdfImportDialog = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            CurrentYearId = YearStatechangeService.SelectedYearId;
+            await LoadJobsAsync();
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error("Failed to load jobs");
+        }
+    }
+
+    private async Task LoadJobsAsync()
+    {
+        try
+        {
+            var allJobs = await JobService.GetAllAsync();
+            jobList = allJobs.Where(j => j.JobType == JobType).ToList();
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error("Failed to load jobs");
+        }
+    }
+
+    // ==================== PDF MODAL HANDLERS ====================
+
+    private async Task OnImportPDF()
+    {
+        showPdfImportDialog = true;
+        await Task.CompletedTask;
+    }
+
+    private async Task ClosePdfDialog()
+    {
+        showPdfImportDialog = false;
+        await Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// ✅ Called when PDF data is extracted and user clicks "Import & Create Job"
+    /// </summary>
+    private async Task OnPdfDataExtracted(Dictionary<string, string> extractedData)
+    {
+        try
+        {
+            LoadingService.Show();
+
+            // Build job from extracted data
+            var job = await JobBuilder.BuildJobFromExtractedDataAsync(
+                extractedData,
+                JobType,
+                CurrentYearId);
+
+            if (job == null)
+            {
+                ToastService.Error("Failed to build job from extracted data");
+                return;
+            }
+
+            // Save job
+            var created = await JobService.CreateAsync(job);
+
+            if (created)
+            {
+                ToastService.Success("Job imported successfully!");
+                await LoadJobsAsync();
+            }
+            else
+            {
+                ToastService.Error("Failed to save job");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Processing failed: {ex.Message}");
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+
+    // ==================== GRID HANDLERS ====================
+
+    private void OnCreateNew(ToolbarItemClickEventArgs e) => popup.Show(new Job());
+
+    private void OnEdit(ToolbarItemClickEventArgs e)
+    {
+        var job = MyGrid.GetFocusedDataItem() as Job;
+        if (job != null) popup.Show(job);
+        else ToastService.Warning("Please select a job to edit.");
+    }
+
+    private async Task OnDelete(ToolbarItemClickEventArgs e)
+    {
+        if (!SelectedJobs.Any())
+        {
+            ToastService.Warning("Please select at least one job to delete.");
+            return;
+        }
+
+        var confirm = await ConfirmDialogService.ShowAsync($"Are you sure you want to delete {SelectedJobs.Count} job(s)?");
+        if (!confirm) return;
+
+        LoadingService.Show();
+        try
+        {
+            foreach (var job in SelectedJobs)
+                await JobService.DeleteAsync(job.JobId);
+
+            ToastService.Success($"{SelectedJobs.Count} job(s) deleted successfully.");
+            await LoadJobsAsync();
+        }
+        finally { LoadingService.Hide(); }
+    }
+
+    private void OnSelectedJobsChanged(IEnumerable<object> jobs) => SelectedJobs = jobs.Cast<Job>().ToList();
+}

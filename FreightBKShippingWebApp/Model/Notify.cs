@@ -16,7 +16,7 @@ namespace FreightBKShippingWebApp.Model
         public int NotifyCompanyId { get; set; }
 
         [Column("notify_state_id")]
-        public int NotifyStateId { get; set; }
+        public int  NotifyStateId { get; set; }    
 
         [Column("notify_addedby_user_id")]
         public string NotifyAddedByUserId { get; set; }
