@@ -2,6 +2,7 @@
 @using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Services
 @using FreightBKShippingWebApp.Components.Pages
+@using Microsoft.AspNetCore.Components.Authorization
 @inject BillService BillService
 @inject ToasteService ToastService
 @inject LoadingService LoadingService
@@ -9,6 +10,7 @@
 @inject NavigationManager Navigation
 @inject ReportService ReportService
 @inject ReportDataService ReportDataService
+@inject AuthenticationStateProvider AuthenticationStateProvider
 <DxGrid TItem="Bill"
         Data="@billList"
         @ref="MyGrid"
@@ -37,6 +39,11 @@
                 <DxToolbarItem Text="Delete" IconCssClass="bi bi-trash" Click="OnDelete" />
                 <DxToolbarItem Text="Print" IconCssClass="bi bi-printer" Click="@((_) => ShowReportPopup())"></DxToolbarItem>
                 <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="@(async (_) => await LoadBillsAsync())" />
+                @if(IsAdmin)
+                {
+                    <DxToolbarItem Text="@GetLockButtonText()"IconCssClass="@GetLockButtonIcon()"Click="OnToggleLock"/>
+                 }
+
             </Items>
         </DxToolbar>
     </ToolbarTemplate>
@@ -44,7 +51,27 @@
     <Columns>
         <DxGridDataColumn FieldName="BillId" Caption="ID" Visible="false" />
         <DxGridSelectionColumn Width="30" />
-        <DxGridDataColumn FieldName="BillLockedBy" Caption="Locked" Width="120" />
+        @* ✅ Show Locked By Username *@
+        <DxGridDataColumn FieldName="BillLockedByUsername" Caption="Locked By" Width="120">
+            <CellDisplayTemplate>
+                @{
+                    var bill = context.DataItem as Bill;
+
+                    if (!string.IsNullOrEmpty(bill?.BillLockedByUsername))
+                    {
+                        <span class="badge bg-warning text-dark">
+                            <i class="bi bi-lock-fill"></i>
+                            @bill.BillLockedByUsername
+                        </span>
+                    }
+                    else
+                    {
+                        <span class="text-muted">—</span>
+                    }
+                }
+            </CellDisplayTemplate>
+        </DxGridDataColumn>
+
         <DxGridDataColumn FieldName="BillAckNo" Caption="AKNO" Width="120" />
         <DxGridDataColumn FieldName="BillNo" Caption="Invoice No" Width="120" />
         <DxGridDataColumn FieldName="BillDate" Caption="Invoice Date" DisplayFormat="d" Width="120" />
@@ -112,33 +139,126 @@
     private List<Bill> SelectedBills = new();
     private List<ReportData> ReportDataList = new();
     private BillAddEditPage popup;
+    // ✅ Admin check
+    private bool IsAdmin = false;
+    private string CurrentUserId = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
+        await CheckUserRole();
         _ = LoadBillsAsync();
+
     }
+
+    // ✅ Check if user is admin
+    private async Task CheckUserRole()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            CurrentUserId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+            IsAdmin = user.IsInRole("Admin");
+        }
+    }
+
+    // ✅ Get lock button text based on selection
+    private string GetLockButtonText()
+    {
+        var selectedBill = MyGrid?.GetFocusedDataItem() as Bill;
+
+        if (selectedBill != null && !string.IsNullOrEmpty(selectedBill.BillLockedBy))
+        {
+            return "Unlock";
+        }
+
+        return "Lock";
+    }
+
+    // ✅ Get lock button icon
+    private string GetLockButtonIcon()
+    {
+        var selectedBill = MyGrid?.GetFocusedDataItem() as Bill;
+
+        if (selectedBill != null && !string.IsNullOrEmpty(selectedBill.BillLockedBy))
+        {
+            return "bi bi-unlock";
+        }
+
+        return "bi bi-lock";
+    }
+
+    // ✅ Toggle lock/unlock
+    private async Task OnToggleLock(ToolbarItemClickEventArgs e)
+    {
+        var bill = MyGrid.GetFocusedDataItem() as Bill;
+
+        if (bill == null)
+        {
+            ToastService.Warning("Please select a bill to lock/unlock.");
+            return;
+        }
+
+        try
+        {
+            LoadingService.Show("Processing...");
+            // Store the current state
+            bool isCurrentlyLocked = !string.IsNullOrEmpty(bill.BillLockedBy);
+
+            // Call the API first
+            var result = await BillService.ToggleLockAsync(bill.BillId);
+
+            if (result)
+            {
+                // Update local state after successful API call
+                bill.BillLockedBy = isCurrentlyLocked ? string.Empty : CurrentUserId;
+                bill.BillLockedByUsername = isCurrentlyLocked ? string.Empty : "You";
+
+                var action = isCurrentlyLocked ? "unlocked" : "locked";
+                ToastService.Success($"Bill {action} successfully.");
+               
+                await LoadBillsAsync();
+            }
+            else
+            {
+
+                ToastService.Error("Failed to toggle bill lock.");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Error: {ex.Message}");
+        }
+        finally
+        {
+            LoadingService.Hide();
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
 
     private async Task LoadBillsAsync()
     {
-        
+
         try
-    {
+        {
             LoadingService.Show();
-        // ✅ Load bills first (most important)
-        billList = await BillService.GetAllAsync();
+            // ✅ Load bills first (most important)
+            billList = await BillService.GetAllAsync();
             LoadingService.Hide();
-        await InvokeAsync(StateHasChanged); // ✅ Update UI immediately
-        
-        // ✅ Load report data in background (less critical)
-        ReportDataList = await ReportDataService.GetAllAsync();
-        await InvokeAsync(StateHasChanged);
-          
-    }
-    catch (Exception ex)
-    {
-        ToastService.Error($"Error loading bills: {ex.Message}");
-    }
-      
+            await InvokeAsync(StateHasChanged); // ✅ Update UI immediately
+
+            // ✅ Load report data in background (less critical)
+            ReportDataList = await ReportDataService.GetAllAsync();
+            await InvokeAsync(StateHasChanged);
+           
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Error loading bills: {ex.Message}");
+        }
+
     }
 
     private void OnSelectedBillsChanged(IEnumerable<object> bills)
@@ -158,17 +278,37 @@
     private void OnEdit(ToolbarItemClickEventArgs e)
     {
         var bill = MyGrid.GetFocusedDataItem() as Bill;
-        if (bill != null)
-            popup.Show(bill);
-        else
-            ToastService.Warning("Please select a bill to edit.");
-    }
 
+        if (bill == null)
+        {
+            ToastService.Warning("Please select a bill to edit.");
+            return;
+        }
+
+        // ✅ Check if bill is locked by another user
+        if (!string.IsNullOrEmpty(bill.BillLockedBy) )
+        {
+            ToastService.Error($"This bill is locked by {bill.BillLockedByUsername} and cannot be edited.");
+            return;
+        }
+
+        popup.Show(bill);
+    }
     private async Task OnDelete(ToolbarItemClickEventArgs e)
     {
         if (SelectedBills == null || SelectedBills.Count == 0)
         {
             ToastService.Warning("Please select at least one bill to delete.");
+            return;
+        }
+        // ✅ Check if any selected bill is locked
+        var lockedBills = SelectedBills
+            .Where(b => !string.IsNullOrEmpty(b.BillLockedBy))
+            .ToList();
+
+        if (lockedBills.Any())
+        {
+            ToastService.Error($"{lockedBills.Count} bill(s) are locked and cannot be deleted.");
             return;
         }
 

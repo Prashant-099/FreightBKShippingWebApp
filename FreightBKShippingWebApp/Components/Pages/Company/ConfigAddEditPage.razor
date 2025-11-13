@@ -1,0 +1,150 @@
+﻿@using FreightBKShippingWebApp.Models
+@using FreightBKShippingWebApp.Services
+@inject EinvConfigService EinvConfigService
+@inject ToasteService ToastService
+@inject LoadingService LoadingService
+
+<DxPopup @bind-Visible="isVisible"
+         HeaderText="@popupTitle"
+         Width="700px"
+         ShowCloseButton="true"
+         CloseOnEscape="true"
+         CloseOnOutsideClick="false">
+
+    <Content>
+        <EditForm Model="@EditModel" OnValidSubmit="SaveAsync" Context="cxtconfig">
+            <DxFormLayout>
+                <DxFormLayoutItem Caption="Username">
+                    <DxTextBox @bind-Text="EditModel.Username" />
+                </DxFormLayoutItem>
+
+                <DxFormLayoutItem Caption="Password">
+                    <DxTextBox @bind-Text="EditModel.Password" TextMode="TextBoxTextMode.Password" />
+                </DxFormLayoutItem>
+
+                <DxFormLayoutItem Caption="GSTIN">
+                    <DxTextBox @bind-Text="EditModel.Gstin" />
+                </DxFormLayoutItem>
+
+                <DxFormLayoutItem Caption="App Key">
+                    <DxTextBox @bind-Text="EditModel.AppKey" />
+                </DxFormLayoutItem>
+
+                <DxFormLayoutItem Caption="Auth Token">
+                    <DxTextBox @bind-Text="EditModel.AuthToken" />
+                </DxFormLayoutItem>
+
+                <DxFormLayoutItem Caption="SEK">
+                    <DxTextBox @bind-Text="EditModel.Sek" />
+                </DxFormLayoutItem>
+
+                <DxFormLayoutItem Caption="GSP Name">
+                    <DxTextBox @bind-Text="EditModel.GspName" />
+                </DxFormLayoutItem>
+
+                <DxFormLayoutItem Caption="ASP User ID">
+                    <DxTextBox @bind-Text="EditModel.AspUserId" />
+                </DxFormLayoutItem>
+
+                <DxFormLayoutItem Caption="ASP Password">
+                    <DxTextBox @bind-Text="EditModel.AspPassword" />
+                </DxFormLayoutItem>
+
+                <DxFormLayoutItem Caption="Auth URL">
+                    <DxTextBox @bind-Text="EditModel.AuthUrl" />
+                </DxFormLayoutItem>
+
+                <DxFormLayoutItem Caption="EWB by IRN URL">
+                    <DxTextBox @bind-Text="EditModel.EwbByIrn" />
+                </DxFormLayoutItem>
+
+                <DxFormLayoutItem Caption="EWB URL">
+                    <DxTextBox @bind-Text="EditModel.EwbUrl" />
+                </DxFormLayoutItem>
+
+                <DxFormLayoutItem Caption="Cancel EWB URL">
+                    <DxTextBox @bind-Text="EditModel.CancelEwbUrl" />
+                </DxFormLayoutItem>
+
+                <DxFormLayoutItem Caption="Base URL">
+                    <DxTextBox @bind-Text="EditModel.BaseUrl" />
+                </DxFormLayoutItem>
+
+                <DxFormLayoutItem Caption="Branch ID">
+                    <DxSpinEdit @bind-Value="EditModel.BranchId" />
+                </DxFormLayoutItem>
+
+               
+
+                <DxFormLayoutItem>
+                    <div class="text-end mt-3">
+                        <DxButton Text="Save" RenderStyle="ButtonRenderStyle.Primary" SubmitFormOnClick="true" />
+                        <DxButton Text="Cancel" RenderStyle="ButtonRenderStyle.Secondary" Click="Hide" />
+                    </div>
+                </DxFormLayoutItem>
+            </DxFormLayout>
+        </EditForm>
+    </Content>
+</DxPopup>
+
+@code {
+    private bool isVisible;
+    private string popupTitle = "Add / Edit E-Invoice Config";
+    private EinvConfig EditModel = new();
+
+    [Parameter] public EventCallback OnSaved { get; set; }
+
+    public void Show(EinvConfig? model = null)
+    {
+        popupTitle = model == null ? "Add E-Invoice Config" : "Edit E-Invoice Config";
+        EditModel = model != null ? new EinvConfig
+        {
+            Username = model.Username,
+            Password = model.Password,
+            Gstin = model.Gstin,
+            AppKey = model.AppKey,
+            AuthToken = model.AuthToken,
+            Sek = model.Sek,
+            EInvoiceTokenExp = model.EInvoiceTokenExp,
+            BranchId = model.BranchId,
+            
+            GspName = model.GspName,
+            AspUserId = model.AspUserId,
+            AspPassword = model.AspPassword,
+            AuthUrl = model.AuthUrl,
+            EwbByIrn = model.EwbByIrn,
+            EwbUrl = model.EwbUrl,
+            CancelEwbUrl = model.CancelEwbUrl,
+            BaseUrl = model.BaseUrl
+        } : new EinvConfig();
+        isVisible = true;
+    }
+
+    private void Hide() => isVisible = false;
+
+    private async Task SaveAsync()
+    {
+        LoadingService.Show();
+        try
+        {
+            if (await EinvConfigService.SaveAsync(EditModel))
+            {
+                ToastService.Success("Configuration saved successfully!");
+                await OnSaved.InvokeAsync();
+                Hide();
+            }
+            else
+            {
+                ToastService.Warning("Failed to save configuration.");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Error saving config: {ex.Message}");
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+}

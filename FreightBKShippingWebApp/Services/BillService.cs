@@ -1,6 +1,7 @@
 ﻿using FreightBKShippingWebApp.Model;
 using System;
 using System.Collections.Generic;
+using System.Net.Http;
 using System.Threading.Tasks;
 
 namespace FreightBKShippingWebApp.Services
@@ -125,7 +126,19 @@ namespace FreightBKShippingWebApp.Services
             }
         }
 
-
+        public async Task<bool> ToggleLockAsync(int billId)
+        {
+            try
+            {
+                var response = await _api.PostAsync<bool, object>($"api/Bills/{billId}/lock", null);
+                return response ;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error toggling bill lock: {ex.Message}");
+                return false;
+            }
+        }
 
     }
 }

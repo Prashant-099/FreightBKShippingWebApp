@@ -379,7 +379,7 @@ namespace FreightBKShippingWebApp.Model
         public string? BillCdnReason { get; set; }
 
         [Column("bill_locked_by")]
-        public int BillLockedBy { get; set; }
+        public string? BillLockedBy { get; set; } 
 
         [Column("bill_approved_by")]
         public int BillApprovedBy { get; set; }
@@ -432,5 +432,6 @@ namespace FreightBKShippingWebApp.Model
         public string? partyname { get; set; }
         public string? posname { get; set; }
         public string? Vouchname { get; set; }
+        public string? BillLockedByUsername { get; set; }
     }
 }

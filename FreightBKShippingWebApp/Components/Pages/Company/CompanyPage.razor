@@ -1,6 +1,7 @@
 ﻿@page "/company"
 
 @using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Models
 @using FreightBKShippingWebApp.Services
 @using DevExpress.Blazor
 @using FreightBKShippingWebApp.Components.Pages
@@ -9,6 +10,8 @@
 @inject LoadingService LoadingService
 @inject StateService StateService
 @inject CountryService CountryService
+@inject EinvConfigService EinvConfigService
+
 @inject IJSRuntime JS
 @inject ConfirmationDialogService ConfirmDialogService
 
@@ -55,7 +58,8 @@
                 <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="@((_) => LoadCompaniesAsync())" />
                 <DxToolbarItem Text="Column Chooser" IconCssClass="bi bi-list-columns"
                                Click="OnColumnChooserClick"></DxToolbarItem>
-            </Items>
+                    <DxToolbarItem Text="Config" IconCssClass="bi bi-plus-circle" Click="config" />
+                </Items>
         </DxToolbar>
     </ToolbarTemplate>
 
@@ -165,12 +169,18 @@
     </EditFormTemplate>
 </DxGrid>
 </div>
+<ConfigAddEditPage @ref="popup" OnSaved="LoadCompaniesAsync" />
 <ConfirmationDialog />
 @* </ConfigAuthorize> *@
 @code {
-
-
+    private ConfigAddEditPage popup;
+    EinvConfig ConfigModel = new();
   
+    private void config(ToolbarItemClickEventArgs e) 
+{
+        popup.Show(ConfigModel);
+}
+
     void OnColumnChooserClick()
     {
         CompanyGrid.ShowColumnChooser(".column-chooser-button");
@@ -197,6 +207,8 @@
             CountryList = await CountryService.GetAllAsync();
 
             companyList = await CompanyService.GetAllAsync();
+            var configs = await EinvConfigService.GetAllAsync();
+            ConfigModel = configs.FirstOrDefault() ?? new EinvConfig();
         }
         catch (Exception ex)
         {

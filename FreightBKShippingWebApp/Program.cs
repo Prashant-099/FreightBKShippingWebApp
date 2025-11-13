@@ -79,6 +79,7 @@ builder.Services.AddScoped<ReportDataService>();
 builder.Services.AddScoped<ReportService>();
 builder.Services.AddScoped<BillService>();
 builder.Services.AddScoped<GridLayoutService>();
+builder.Services.AddScoped<EinvConfigService>();
 //builder.Services.AddHttpClient<ApiClient>(client =>
 //{
 //    client.BaseAddress = new Uri("http://localhost:5003/");
@@ -87,6 +88,10 @@ builder.Services.AddHttpClient<ApiClient>(client =>
 {
     client.BaseAddress = new Uri("https://localhost:5003/");
 });
+//builder.Services.AddHttpClient<ApiClient>(client =>
+//{
+//    client.BaseAddress = new Uri("https://freightbook.in/");
+//});
 builder.Services.AddLocalization();
 builder.Services.AddControllers();
 var app = builder.Build();

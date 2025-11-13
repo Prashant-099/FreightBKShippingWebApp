@@ -1,4 +1,7 @@
-﻿@using FreightBKShippingWebApp.Model
+﻿@using FreightBKShippingWebApp.Components.Pages.Account
+@using FreightBKShippingWebApp.Components.Pages.ServicePage
+@using FreightBKShippingWebApp.Components.Pages.JOBpage
+@using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Models
 @using FreightBKShippingWebApp.Services
 @using DevExpress.Blazor
@@ -31,14 +34,60 @@
     .modal-xl {
         max-width: 900px;
     }
+    .fixed-height-grid{
+        max-height: 300px
+    }
+    .popup-content-container {
+        display: flex;
+        flex-direction: column;
+         height: 42vh;  /* controls popup height */
+    }
 
-    .sticky-top {
+    /* Scrollable form section */
+    .form-scroll-section {
+        flex: 1;
+        overflow-y: auto;
+        padding-right: 8px;
+      /*  margin-bottom: 70px; */  /* leave space for sticky footer */
+    }
+
+    /* Fixed footer bar inside popup */
+    .popup-footer-bar {
+        position: sticky;
+        bottom: 0;
+        background-color: #f8f9fa;
+        border-top: 1px solid #ddd;
+       /*  padding: 10px 20px; */
+        text-align: right;
+        z-index: 10;
+        box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.1);
+    }
+   /*  .sticky-top {
         position: sticky;
         top: 0;
         z-index: 10;
         background-color: #f8f9fa;
-    }
+    } */
+    .service-plus-button{
+        font-size: 0.9rem;
+        width: 28px;
+        height: 38px;
+        padding: 0;
+        border-radius: 50%;
+        line-height: 26px;
+        text-align: center;
+        font-weight: bold;
+        background-color: #7976ff;
+        color: white;
+        box-shadow: 0 0 3px rgba(0,0,0,0.2);
+        border: none;
+        cursor: pointer;
+        flex-shrink: 0;
 
+    }
+    .service-plus-button:hover {
+        background-color: #5f5ce6;
+    }
     .table-responsive {
         border: 1px solid #dee2e6;
         border-radius: 0.25rem;
@@ -56,23 +105,24 @@
             font-weight: 600;
             margin-right: 4px;
         }
-    .popup-footer {
+   /*  .popup-footer {
         position: sticky;
         bottom: 0;
-        background-color: #fff; /* or use your popup background color */
-        padding: 10px 20px;
-        text-align: right;
-        border-top: 1px solid #ddd;
-        z-index: 100;
+        background-color: #fff;
+        padding: 15px 20px;
+        border-top: 2px solid #dee2e6;
+        z-index: 1000;
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
     }
+
     .popup-footer2 {
         position: sticky;
         bottom: 0;
-        background-color: #fff; /* or use your popup background color */
+        background-color: #fff; // or use your popup background color 
         text-align: right;
         border-top: 1px solid #ddd;
         z-index: 100;
-    }
+    }*/
     .grid-container {
         background: #fff;
         border-radius: 6px;
@@ -93,10 +143,23 @@
         min-height: 48px;
     }
 
-    .total-amount-box {
-        background-color: #ccf6ff !important; /* light cyan like in your image */
+    .net-amount-box {
+        background-color: #e3fcef; 
+        border-radius: 8px;
+        padding: 6px 10px;
         font-weight: bold;
     }
+
+    /* Make the number field pop */
+    .net-amount-field {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #0a4b0a; /* dark green for clarity */
+        background-color: #d8f8e1 !important;
+        border: 2px solid #7dd87d;
+        border-radius: 6px;
+        text-align: right;
+    } 
     .jobdetails{
     margin-top: 6px;
     }
@@ -108,11 +171,14 @@
 
 <DxPopup @bind-Visible="Visible" ShowCloseButton="true" HeaderText="@Title" CloseOnOutsideClick="false" MaxWidth="1700px" Width="90%"
          horizontalAlignment="HorizontalAlignment.Center"
-         verticalAlignment="VerticalAlignment.Center" scrollable="true">
+         verticalAlignment="VerticalAlignment.Center"  >
 
-    <EditForm Model="@EditModel" OnValidSubmit="HandleValidSubmit" Context="cxbill">
+   
+        <EditForm Model="@EditModel" OnValidSubmit="HandleValidSubmit" Context="cxbill">
+
         <DataAnnotationsValidator />
         <ValidationSummary />
+       
         <DxFormLayout>
 
             <DxFormLayoutItem Caption="Bill Type" ColSpanMd="3">
@@ -146,6 +212,7 @@
                 </ChildContent>
             </DxFormLayoutItem>
             <DxFormLayoutItem Caption="Job Type" ColSpanMd="3">
+                <div class="hsn-field-wrapper">
                 <DxComboBox Data="@JobTypeList"
                             TextFieldName="Text"
                             ValueFieldName="Value"
@@ -155,6 +222,10 @@
                              Value="@EditModel.BillJobType"
                                 ValueChanged="@((string jobtype) => OnJobTypeChanged( jobtype))"
                                 ValueExpression="@( () => EditModel.BillJobType )"/>
+                                <DxButton Click="@ShowJobPopup"
+                              Text="+"
+                              CssClass="custom-plus-button" />
+                              </div>
             </DxFormLayoutItem>
             <DxFormLayoutItem Caption="Job No" ColSpanMd="3">
                 <DxComboBox Data="@FilteredJobList"
@@ -191,7 +262,9 @@
                             SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
             </DxFormLayoutItem>
             <DxFormLayoutItem Caption="Party Name" ColSpanMd="4">
+                 
                 <ChildContent Context="ctx">
+                    <div class="hsn-field-wrapper">
                     <DxComboBox TData="Account" TValue="int"
                                 Data="@AccountList"
                                 TextFieldName="AccountName"
@@ -202,6 +275,10 @@
                                 @bind-Value="EditModel.BillPartyId"
                                 SearchMode="ListSearchMode.AutoSearch"
                                 SearchFilterCondition="ListSearchFilterCondition.StartsWith" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                    <DxButton Click="@ShowAccountPopup"
+                              Text="+"
+                              CssClass="custom-plus-button" />
+                    </div>
                 </ChildContent>
             </DxFormLayoutItem>
              <DxFormLayoutItem Caption="Branch" ColSpanMd="3">
@@ -218,12 +295,12 @@
             </DxFormLayoutItem>
 
         </DxFormLayout>
-
+      
         <DxFormLayout>
            
                 <DxFormLayoutTabPages>
                     <DxFormLayoutTabPage Caption="Service Details">
-
+                        
                         @* 
                 <div class="grid-container">
                     <!-- Action Buttons Row -->
@@ -318,8 +395,8 @@
                     </div> *@
 
 
-                    
-                        <DxGrid Data="@BillDetails"
+
+                    <DxGrid Data="@BillDetails.OrderBy(x => x.BillDetailSno)"
                                 TItem="BillDetail"
                                 @ref="DetailGrid"
                             KeyFieldName="BillDetailSno"
@@ -332,17 +409,21 @@
                                 ShowFilterRow="false"
                                 ShowGroupPanel="false"
                             ColumnResizeMode="GridColumnResizeMode.NextColumn" TextWrapEnabled="false"
-                            ColumnResizing="Grid_ColumnResizing" PageSize="10">
+                            ColumnResizing="Grid_ColumnResizing" PageSize="10"
+                            CssClass="fixed-height-grid">
                         <ToolbarTemplate Context="gridToolbarContext">
                             <DxToolbar>
                                 
                                 <Items>
 
-                                    <DxToolbarItem Text="Add Row" IconCssClass="bi bi-plus" RenderStyle="ButtonRenderStyle.Success" Click="New_Click" />
+                                    <DxToolbarItem Text="" IconCssClass="bi bi-plus" RenderStyle="ButtonRenderStyle.Success" Click="New_Click" />
                                     <DxToolbarItem Type="Spacer" />
-                                    <DxToolbarItem Text="Clear All" IconCssClass="bi bi-trash" RenderStyle="ButtonRenderStyle.Danger" Click="Revert_Click" />
+                                    <DxToolbarItem Text="" IconCssClass="bi bi-trash" RenderStyle="ButtonRenderStyle.Danger" Click="Revert_Click" />
                                     <DxToolbarItem Type="Spacer" />
                                     <DxToolbarItem Text="" RenderStyle="ButtonRenderStyle.Primary" IconCssClass="bi bi-list-columns" Click="ColumnChooserButton_Click" />
+                                    <DxToolbarItem Type="Spacer" />
+                                    <DxToolbarItem Text="" IconCssClass="bi bi-plus" CssClass="service-plus-button" Click="@ShowServicePopup" />
+                                    <DxToolbarItem Type="Spacer" />
                                     <DxToolbarItem BeginGroup="true">
 <ChildContent Context="tb">
                                         <div class="d-flex align-items-center gap-2 ms-3">
@@ -383,6 +464,7 @@
                                 </Items>
                             </DxToolbar>
                         </ToolbarTemplate>
+
                         <Columns>
 
                                 <!-- Action Buttons Column -->
@@ -418,7 +500,7 @@
 
                                 </DxGridCommandColumn>
 
-                            <DxGridDataColumn FieldName="BillDetailSno" Caption="SNo" Width="@GetGridColumnWidth("BillDetailSno")" ReadOnly="true" Visible="@GetGridColumnVisibility("BillDetailSno")">
+                            <DxGridDataColumn FieldName="BillDetailSno" Caption="SNo" Width="@GetGridColumnWidth("BillDetailSno")" ReadOnly="true" Visible="@GetGridColumnVisibility("BillDetailSno")" SortOrder="GridColumnSortOrder.Descending">
                                 <EditSettings>
                                     <DxSpinEditSettings ShowSpinButtons="false" />
                                 </EditSettings>
@@ -465,7 +547,7 @@
                                                             ValueFieldName="CurrencyId" />
                                     </EditSettings>
                                 </DxGridDataColumn>
-                            <DxGridDataColumn FieldName="BillDetailExtraChrg" Caption="ExtraCharge" Width="@GetGridColumnWidth("BillDetailExtraChrg")" Visible="@GetGridColumnVisibility("BillDetailExtraChrg")">
+                            <DxGridDataColumn FieldName="BillDetailExtraChrg" Caption="Extra" Width="@GetGridColumnWidth("BillDetailExtraChrg")" Visible="@GetGridColumnVisibility("BillDetailExtraChrg")">
                                 <EditSettings>
                                     <DxSpinEditSettings ShowSpinButtons="false" />
                                 </EditSettings>
@@ -557,9 +639,10 @@
                     
 
 
-
+                        
                     </DxFormLayoutTabPage>
                     <DxFormLayoutTabPage Caption="Job Details">
+                        
         <DxFormLayout>
                    
 
@@ -698,8 +781,12 @@
                         </DxFormLayoutItem>
                     
         </DxFormLayout>
+       
                         </DxFormLayoutTabPage>
                     <DxFormLayoutTabPage Caption="Extra Details">
+                         <div class="popup-content-container">
+            <!-- Scrollable section -->
+            <div class="form-scroll-section">
                         <DxFormLayout>
                         <DxFormLayoutGroup Caption="Shipping Address" ColSpanMd="5">
                             <DxFormLayoutItem Caption="Party Name" ColSpanMd="12">
@@ -792,16 +879,17 @@
 
 
 
-
+                        </div>
+                        </div>
                     </DxFormLayoutTabPage>
                 </DxFormLayoutTabPages>
             
         </DxFormLayout>
-        
+            
              <DxFormLayout>
                  
             <div class="d-flex gap-1">
-                    <DxFormLayoutItem Caption="Remarks" ColSpanMd="9">
+                    <DxFormLayoutItem Caption="Remarks" ColSpanMd="8">
                     
                     <DxMemo @bind-Text="EditModel.BillRemarks" Width="100%" />
               </DxFormLayoutItem>
@@ -817,29 +905,31 @@
                                     Text="Is Round Off" />
                    
                     <DxSpinEdit @bind-Value="EditModel.BillRoundAmt"
-                                Format="N2"
-                                Width="80px"
+                                ReadOnly="true"
                                 CssClass="ms-1"
-                                NullText="0.00" />
+                                NullText="0.00" 
+                                DisplayFormat="N2"
+                                ShowSpinButtons="false"/>
                                 </div>
                     </DxFormLayoutItem>
 
-               <DxFormLayoutItem Caption="Total Amount" ColSpanMd="4">
+                <DxFormLayoutItem Caption="Total Amount" ColSpanMd="3" CssClass="net-amount-box">
                     
                     <DxSpinEdit @bind-Value="EditModel.BillNetAmount"
                                 ReadOnly="true"
-                                Format="N2"
-                                Width="100px"
-                                CssClass="total-amount-box" />
+                                CssClass="net-amount-field"
+                                ShowSpinButtons="false" />
                     </DxFormLayoutItem>
               
             </div>
 
             </DxFormLayout>
-       <DxFormLayout>
-        <div class="popup-footer">
-             <div class="d-flex gap-1">
- <DxFormLayoutItem Caption="Bank" ColSpanMd="4" >
+            
+
+                <div class="">
+            <div class="d-flex gap-2 align-items-center justify-content-between w-100 p-3" >
+                <div class="d-flex gap-2 align-items-center">
+                    <label class="mb-0 fw-semibold">Bank:</label>
                     <DxComboBox TData="Account" TValue="int"
                                 Data="@BankList"
                                 TextFieldName="AccountName"
@@ -849,10 +939,12 @@
                                 @bind-Value="EditModel.BillBankId"
                                 SearchMode="ListSearchMode.AutoSearch"
                                 SearchFilterCondition="ListSearchFilterCondition.StartsWith"
-                                ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
-</DxFormLayoutItem>
-                <DxFormLayoutItem Caption="Print Report:" ColSpanMd="4">
-               
+                                ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                Width="250px" />
+                </div>
+
+                <div class="d-flex gap-2 align-items-center">
+                    <label class="mb-0 fw-semibold">Print Report:</label>
                     <DxComboBox TData="ReportData" TValue="int"
                                 Data="@ReportDataList"
                                 TextFieldName="FormatName"
@@ -862,18 +954,31 @@
                                 @bind-Value="EditModel.BillReportId"
                                 SearchMode="ListSearchMode.AutoSearch"
                                 SearchFilterCondition="ListSearchFilterCondition.StartsWith"
-                                ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
-             </DxFormLayoutItem>
-                    <DxButton Text="Save" RenderStyle="ButtonRenderStyle.Primary" SubmitFormOnClick="true" />
-                    <DxButton Text="Cancel" RenderStyle="ButtonRenderStyle.Secondary" Click="Hide" />
+                                ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                Width="250px" />
+                </div>
 
+                <div class="d-flex gap-2">
+                    <DxButton Text="Save"
+                              RenderStyle="ButtonRenderStyle.Primary"
+                             SubmitFormOnClick="true"
+                              IconCssClass="bi bi-save" />
+                    <DxButton Text="Cancel"
+                              RenderStyle="ButtonRenderStyle.Secondary"
+                              Click="Hide"
+                              IconCssClass="bi bi-x-circle" />
                 </div>
             </div>
-        </DxFormLayout>
-           
-        
+        </div>
+
        
-    </EditForm>
+          </EditForm>
+    
+
+            
+     
+
+
     <ConfirmationDialog />
     @if (showGridLayoutDialog)
     {
@@ -992,10 +1097,12 @@
             </div>
         </div>
     }
-
+   
 
 </DxPopup>
-
+<AccountAddEditPage @ref="Accountpopup" OnSaved="RefreshList" />
+<ServiceAddEditPage @ref="Servicepopup" OnSaved="RefreshList" />
+<JobAddEditPage @ref="Jobpopup" OnSaved="RefreshList" />
 @code {
     // Grid Layout Management Variables
     private List<GridLayoutDto> availableGridLayouts = [];
@@ -1401,10 +1508,36 @@
 
 
 
+    private AccountAddEditPage Accountpopup;
+    private JobAddEditPage Jobpopup;
+    private ServiceAddEditPage Servicepopup;
+    private async Task RefreshList()
+    {
+        var jobTask = JobService.GetAllAsync();
+         var accountTask = AccountService.GetAllAsync();
+        var serviceTask = ServiceService.GetAllAsync();
 
+        await Task.WhenAll(jobTask, accountTask, serviceTask);
 
+         ServiceList = serviceTask.Result;
+        AccountList = accountTask.Result;
+        JobList = jobTask.Result;
+        FilteredJobList = JobList; 
+        StateHasChanged();
+    }
 
-
+    private void ShowAccountPopup(MouseEventArgs e)
+    {
+        Accountpopup.Show(new Account());
+    }
+     private void ShowJobPopup(MouseEventArgs e)
+    {
+        Jobpopup.Show(new Job());
+    }
+    private void ShowServicePopup()
+    {
+        Servicepopup.Show(new Service());
+    }
 
     [Parameter] public EventCallback OnSaved { get; set; }
     void ColumnChooserButton_Click()
@@ -1422,7 +1555,7 @@
     private Dictionary<BillDetail, DataChange> UnsavedChanges { get; } = new();
     private bool BatchItemsEnabled => UnsavedChanges.Count > 0 || (DetailGrid?.IsEditing() ?? false);
 
-    private int nextSNo = 1;
+    private int? nextSNo = 1;
 
     // Dropdown lists
     private List<Bill> bill =  [];
@@ -1450,7 +1583,7 @@
     private List<Job> FilteredJobList = new();
     protected override async Task OnInitializedAsync()
     {
-        // await LoadBillsDataAsync();
+         _ =LoadBillsDataAsync();
         InitializeGridColumns();
         await LoadAvailableGridLayouts();
         await LoadDefaultGridLayout();
@@ -1462,7 +1595,7 @@
         try
         {
             // ✅ Fire ALL API calls simultaneously (no awaits until WhenAll)
-            var billList =  BillService.GetAllAsync();
+            //var billList =  BillService.GetAllAsync();
             var serviceTask = ServiceService.GetAllAsync();
             var voucherTask = VoucherService.GetAllAsync();
             var stateTask = StateService.GetStatesAsync();
@@ -1483,14 +1616,14 @@
 
             // ✅ Wait for ALL tasks to complete together
             await Task.WhenAll(
-                serviceTask,billList, voucherTask, stateTask, locationTask, cargoTask,
+                serviceTask, voucherTask, stateTask, locationTask, cargoTask,
                 currTask, vesselTask, unitTask, hsnTask, gstTask,
                 companyTask, branchTask, reportTask, jobTask,
                 notifyTask, accountTask, rateMasterTask
             );
 
             // ✅ Now assign results (all are already completed)
-            bill = billList.Result;
+           // bill = billList.Result;
             ServiceList = serviceTask.Result;
             VoucherList = voucherTask.Result;
             stateList = stateTask.Result;
@@ -1695,24 +1828,58 @@
 
     public async void Show(Bill bill)
     {
-        var loadTask = EnsureDataLoadedAsync();
+        //var loadTask = EnsureDataLoadedAsync();
         if (bill?.BillId > 0)
         {
             EditModel = bill;
+             OnJobTypeChanged(EditModel.BillJobType);
 
-            BillDetails = bill.BillDetails?.Select(d => CloneBillDetail(d)).OrderBy(d => d.BillDetailId).ToList() ?? new List<BillDetail>();
+            BillDetails = bill.BillDetails?
+            .Select(d => CloneBillDetail(d))
+            .OrderBy(d => d.BillDetailId)
+            .ToList() ?? new List<BillDetail>();
             //OriginalDetails = bill.BillDetails?.Select(d => CloneBillDetail(d)).ToList() ?? new List<BillDetail>();
 
-            for (int i = 0; i < BillDetails.Count; i++)
+            // for (int i = 0; i < BillDetails.Count; i++)
+            // {
+            //     BillDetails[i].BillDetailSno = i + 1;
+
+
+
+
+            // }
+            // nextSNo = BillDetails.Count + 1;
+
+            // ✅ Set nextSNo based on max existing SNo
+            nextSNo = BillDetails.Any() ? BillDetails.Max(d => d.BillDetailSno) + 1 : 1;
+            // ✅ Add empty rows to make total 5 rows
+            int existingRowCount = BillDetails.Count;
+            int rowsToAdd = Math.Max(0, 5 - existingRowCount); // Ensure at least 5 rows total
+
+            for (int i = 0; i < rowsToAdd; i++)
             {
-                BillDetails[i].BillDetailSno = i + 1;
-
-
-
-
+                BillDetails.Add(new BillDetail
+                {
+                    BillDetailSno = nextSNo++,
+                    BillDetailId = 0,
+                    BillDetailExchRate = EditModel?.BillExchRate ?? 1,
+                    BillDetailCurrencyId = EditModel.BillDefaultCurrencyId,
+                    BillDetailQty = 1,
+                    BillDetailRate = 0,
+                    BillDetailAmount = 0,
+                    BillDetailTaxableAmt = 0,
+                    BillDetailGstPer = 0,
+                    BillDetailCgstPer = 0,
+                    BillDetailSgstPer = 0,
+                    BillDetailIgstPer = 0,
+                    BillDetailCgst = 0,
+                    BillDetailSgst = 0,
+                    BillDetailIgst = 0,
+                    BillDetailTotal = 0,
+                    BillDetailStatus = true
+                });
             }
-            nextSNo = BillDetails.Count + 1;
-            OnJobTypeChanged(EditModel.BillJobType);
+           
             Title = "Edit Bill";
         }
         else
@@ -1735,13 +1902,13 @@
         Visible = true;
         StateHasChanged();
         // ✅ Wait for data to finish loading
-        await loadTask;
+        //await loadTask;
     }
     // ✅ Cache dropdown data (load once, reuse)
     private bool _dataLoaded = false;
     private async Task EnsureDataLoadedAsync()
     {
-        if (_dataLoaded) return; // ✅ Already loaded
+        //if (_dataLoaded) return; // ✅ Already loaded
 
         LoadingService.Show("Loading form data...");
         try
@@ -1975,14 +2142,14 @@
         // Reindex SNo after deletion (only for non-deleted items)
         var activeDetails = BillDetails
             .Where(d => !UnsavedChanges.ContainsKey(d) || UnsavedChanges[d].Type != DataChangeType.Delete)
-            .OrderBy(d => d.BillDetailSno)
+           // .OrderBy(d => d.BillDetailSno)
             .ToList();
 
-        int sn = 1;
-        foreach (var d in activeDetails)
-        {
-            d.BillDetailSno = sn++;
-        }
+        // int sn = 1;
+        // foreach (var d in activeDetails)
+        // {
+        //     d.BillDetailSno = sn++;
+        // }
 
         // Update totals
         EditModel.BillNetAmount = (float)activeDetails.Sum(d => d.BillDetailTotal);
@@ -1996,12 +2163,16 @@
         BillDetails = BillDetails
        .Where(d => d.BillDetailId > 0 || d.BillDetailProductId > 0)
        .Select(d => CloneBillDetail(d))
+       .OrderBy(d => d.BillDetailSno)
        .ToList();
-        for (int i = 0; i < BillDetails.Count; i++)
-        {
-            BillDetails[i].BillDetailSno = i + 1;
-        }
-        nextSNo = BillDetails.Count + 1;
+        // for (int i = 0; i < BillDetails.Count; i++)
+        // {
+        //     BillDetails[i].BillDetailSno = i + 1;
+        // }
+        // nextSNo = BillDetails.Count + 1;
+
+        // ✅ Don't reindex - preserve database SNo values
+        nextSNo = BillDetails.Any() ? BillDetails.Max(d => d.BillDetailSno) + 1 : 1;
         await InvokeAsync(StateHasChanged);
     }
 
@@ -2319,33 +2490,34 @@
     {
         EditModel.BillIsRoundOff = isChecked;
         // Calculate base amount (sum of all line items)
-        var baseAmount = (float)BillDetails
+        var baseAmount = BillDetails
             .Where(d => !UnsavedChanges.ContainsKey(d) || UnsavedChanges[d].Type != DataChangeType.Delete)
-            .Sum(d => d.BillDetailTotal);
+            .Sum(d => (decimal)d.BillDetailTotal);
 
         if (EditModel.BillIsRoundOff)
         {
-            // Round to nearest whole number
-            var roundedAmount = (float)Math.Round(baseAmount, 0);
+           // Round to nearest whole number
+        var roundedAmount = Math.Round(baseAmount, 0, MidpointRounding.AwayFromZero);
 
-            // Calculate round-off difference
-            EditModel.BillRoundAmt = roundedAmount - baseAmount;
+        // Calculate round-off difference with 2 decimal precision
+        var roundOffDifference = Math.Round(roundedAmount - baseAmount, 2);
 
-            // Set final amount
-            EditModel.BillNetAmount = roundedAmount;
+        // Set values
+        EditModel.BillRoundAmt = (float)roundOffDifference;
+        EditModel.BillNetAmount = (float)roundedAmount;
         }
         else
         {
-            // No rounding - reset
-            EditModel.BillRoundAmt = 0;
-            EditModel.BillNetAmount = baseAmount;
+          // No rounding - reset
+        EditModel.BillRoundAmt = 0;
+        EditModel.BillNetAmount = (float)Math.Round(baseAmount, 2);
         }
         ConvertNumberToWords((decimal)EditModel.BillNetAmount);
         StateHasChanged();
     }
     private async Task HandleValidSubmit()
     {
-         
+         LoadingService.Show();
         try
         {
             // --- STEP 1: Apply Unsaved Changes ---
@@ -2421,7 +2593,7 @@
                     return;
                 }
             }
-
+            LoadingService.Hide();
             // --- STEP 6: UI Cleanup ---   
             //ToastService.Success("Changes applied successfully!");
             var confirm = await ConfirmDialogService.ShowAsync("Are you sure you want to print selected bill(s)?");
@@ -2444,10 +2616,7 @@
             ToastService.Error($"Error saving bill: {ex.Message}");
             Console.WriteLine($"❌ Full error: {ex}");
         }
-       
-        {
-            LoadingService.Hide();
-        }
+      
     }
 
 
