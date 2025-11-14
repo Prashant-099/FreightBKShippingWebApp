@@ -40,10 +40,6 @@ builder.Services.Configure<BrotliCompressionProviderOptions>(options =>
     options.Level = System.IO.Compression.CompressionLevel.Fastest;
 });
 
-
-//reportdesigner and report viewer
-
-
 builder.Services.AddOutputCache();
 builder.Services.AddScoped<ApiClient>();
 builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
@@ -85,7 +81,7 @@ builder.Services.AddScoped<GridLayoutService>();
 builder.Services.AddScoped<DataCleanupService>();
 //builder.Services.AddScoped<PdfExtractionService>();
 builder.Services.AddScoped<FreightBKShippingWebApp.Services.PdfReaderAndHelperService.ExportJobBuilderService>();
-builder.Services.AddScoped<FreightBKShippingWebApp.Services.PdfReaderAndHelperService.ExportPdfExtractorService>(); // ✅ Add this line
+builder.Services.AddScoped<FreightBKShippingWebApp.Services.PdfReaderAndHelperService.ExportPdfExtractorService>(); 
 
 builder.Services.AddScoped<FreightBKShippingWebApp.Services.PdfReaderAndHelperService.PdfDetailedExtractorService>();
 builder.Services.AddScoped<JobDataCreationService>();
