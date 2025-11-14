@@ -30,7 +30,7 @@ namespace FreightBKShippingWebApp.Model
         public string? JobYearId { get; set; }
 
         [Column("job_date")]
-        public DateTime JobDate { get; set; }
+        public DateTime JobDate { get; set; } = DateTime.Now;
 
         [Column("job_no")]
         public string? JobNo { get; set; }

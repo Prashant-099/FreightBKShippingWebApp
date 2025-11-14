@@ -193,7 +193,8 @@
                                 ValueChanged="@((int voucherId) => OnvoucherChanged(EditModel, voucherId))"
                                 ValueExpression="@( () => EditModel.BillVoucherId )"
                                 SearchMode="ListSearchMode.AutoSearch"
-                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                                SearchFilterCondition="ListSearchFilterCondition.StartsWith"
+                                ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
                 </ChildContent>
             </DxFormLayoutItem>
             <DxFormLayoutItem Caption="Bill No" ColSpanMd="3">
@@ -236,7 +237,7 @@
                             SearchMode="ListSearchMode.AutoSearch" SearchFilterCondition="ListSearchFilterCondition.StartsWith"
                              Value="@EditModel.BillJobNo"
                             ValueChanged="@((string jobno) => OnJobDetailsChanged(jobno))"
-                                ValueExpression="@( () => EditModel.BillJobNo )"/>
+                            ValueExpression="@( () => EditModel.BillJobNo )"/>
             </DxFormLayoutItem>
           
             <DxFormLayoutItem Caption="Supply Type" ColSpanMd="3">
@@ -410,6 +411,7 @@
                                 ShowGroupPanel="false"
                             ColumnResizeMode="GridColumnResizeMode.NextColumn" TextWrapEnabled="false"
                             ColumnResizing="Grid_ColumnResizing" PageSize="10"
+                          
                             CssClass="fixed-height-grid">
                         <ToolbarTemplate Context="gridToolbarContext">
                             <DxToolbar>
@@ -425,6 +427,7 @@
                                     <DxToolbarItem Text="" IconCssClass="bi bi-plus" CssClass="service-plus-button" Click="@ShowServicePopup" />
                                     <DxToolbarItem Type="Spacer" />
                                     <DxToolbarItem BeginGroup="true">
+                                       
 <ChildContent Context="tb">
                                         <div class="d-flex align-items-center gap-2 ms-3">
                                             <label class="mb-0">Layout:</label>
@@ -513,7 +516,8 @@
                                                             ValueFieldName="ServiceId"
                                                             ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
                                                         SearchMode="ListSearchMode.AutoSearch"
-                                                        SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+                                                        SearchFilterCondition="ListSearchFilterCondition.StartsWith"
+                                                         />
                                     </EditSettings>
                                 </DxGridDataColumn>
                             <DxGridDataColumn FieldName="BillDetailRemarks" Caption="Desc." Width="@GetGridColumnWidth("BillDetailRemarks")"  Visible="@GetGridColumnVisibility("BillDetailRemarks")" />
@@ -913,7 +917,7 @@
                                 </div>
                     </DxFormLayoutItem>
 
-                <DxFormLayoutItem Caption="Total Amount" ColSpanMd="3" CssClass="net-amount-box">
+                <DxFormLayoutItem Caption="Total Amount" ColSpanMd="4" CssClass="net-amount-box">
                     
                     <DxSpinEdit @bind-Value="EditModel.BillNetAmount"
                                 ReadOnly="true"
@@ -959,12 +963,16 @@
                 </div>
 
                 <div class="d-flex gap-2">
+                    <DxButton Text="Copy"
+                              RenderStyle="ButtonRenderStyle.Info"
+                             Click="CopyDetails"
+                              IconCssClass="bi bi-copy" />
                     <DxButton Text="Save"
                               RenderStyle="ButtonRenderStyle.Primary"
                              SubmitFormOnClick="true"
                               IconCssClass="bi bi-save" />
                     <DxButton Text="Cancel"
-                              RenderStyle="ButtonRenderStyle.Secondary"
+                              RenderStyle="ButtonRenderStyle.Danger"
                               Click="Hide"
                               IconCssClass="bi bi-x-circle" />
                 </div>
@@ -1514,12 +1522,12 @@
     private async Task RefreshList()
     {
         var jobTask = JobService.GetAllAsync();
-         var accountTask = AccountService.GetAllAsync();
+        var accountTask = AccountService.GetAllAsync();
         var serviceTask = ServiceService.GetAllAsync();
 
         await Task.WhenAll(jobTask, accountTask, serviceTask);
 
-         ServiceList = serviceTask.Result;
+        ServiceList = serviceTask.Result;
         AccountList = accountTask.Result;
         JobList = jobTask.Result;
         FilteredJobList = JobList; 
@@ -1530,7 +1538,7 @@
     {
         Accountpopup.Show(new Account());
     }
-     private void ShowJobPopup(MouseEventArgs e)
+    private void ShowJobPopup(MouseEventArgs e)
     {
         Jobpopup.Show(new Job());
     }
@@ -1583,7 +1591,7 @@
     private List<Job> FilteredJobList = new();
     protected override async Task OnInitializedAsync()
     {
-         _ =LoadBillsDataAsync();
+        _ =LoadBillsDataAsync();
         InitializeGridColumns();
         await LoadAvailableGridLayouts();
         await LoadDefaultGridLayout();
@@ -1623,7 +1631,7 @@
             );
 
             // ✅ Now assign results (all are already completed)
-           // bill = billList.Result;
+            // bill = billList.Result;
             ServiceList = serviceTask.Result;
             VoucherList = voucherTask.Result;
             stateList = stateTask.Result;
@@ -1832,7 +1840,7 @@
         if (bill?.BillId > 0)
         {
             EditModel = bill;
-             OnJobTypeChanged(EditModel.BillJobType);
+            OnJobTypeChanged(EditModel.BillJobType);
 
             BillDetails = bill.BillDetails?
             .Select(d => CloneBillDetail(d))
@@ -1879,7 +1887,7 @@
                     BillDetailStatus = true
                 });
             }
-           
+
             Title = "Edit Bill";
         }
         else
@@ -2142,7 +2150,7 @@
         // Reindex SNo after deletion (only for non-deleted items)
         var activeDetails = BillDetails
             .Where(d => !UnsavedChanges.ContainsKey(d) || UnsavedChanges[d].Type != DataChangeType.Delete)
-           // .OrderBy(d => d.BillDetailSno)
+            // .OrderBy(d => d.BillDetailSno)
             .ToList();
 
         // int sn = 1;
@@ -2258,7 +2266,7 @@
                     item.BillDetailCgstAcId = selectedGstslab.GstSlabCgstAccountId;
                     item.BillDetailSgstAcId = selectedGstslab.GstSlabSgstAccountId;
                 }
-                 else if (vouchergroup.VoucherGroup == "PURCHASE")
+                else if (vouchergroup.VoucherGroup == "PURCHASE")
                 {
                     item.BillDetailAccountId = selectedGstslab.GstSlabPurchaseAccountId;
                     item.BillDetailIgstAcId = selectedGstslab.GstSlabPigstAccountId;
@@ -2271,7 +2279,7 @@
                     item.BillDetailSlabId = billdetailsabid.GstSlabName;
                     // Map GST % from slab — if your HSN table has GST percentage
                     item.BillDetailGstPer = selectedHsn.HsnGstPer; // ✅ You said this ID corresponds to percentage
-                   // item.Taxcode = selectedGstslab.GstSlabName; // ✅ Not mapped to DB but used in grid
+                    // item.Taxcode = selectedGstslab.GstSlabName; // ✅ Not mapped to DB but used in grid
                 }
                 var selectedCompany = CompanyList?.FirstOrDefault(c => c.Status == true);
                 var selectedpos = StateList.FirstOrDefault(h => h.StateId == EditModel.BillPlaceOfSupply);
@@ -2496,25 +2504,122 @@
 
         if (EditModel.BillIsRoundOff)
         {
-           // Round to nearest whole number
-        var roundedAmount = Math.Round(baseAmount, 0, MidpointRounding.AwayFromZero);
+            // Round to nearest whole number
+            var roundedAmount = Math.Round(baseAmount, 0, MidpointRounding.AwayFromZero);
 
-        // Calculate round-off difference with 2 decimal precision
-        var roundOffDifference = Math.Round(roundedAmount - baseAmount, 2);
+            // Calculate round-off difference with 2 decimal precision
+            var roundOffDifference = Math.Round(roundedAmount - baseAmount, 2);
 
-        // Set values
-        EditModel.BillRoundAmt = (float)roundOffDifference;
-        EditModel.BillNetAmount = (float)roundedAmount;
+            // Set values
+            EditModel.BillRoundAmt = (float)roundOffDifference;
+            EditModel.BillNetAmount = (float)roundedAmount;
         }
         else
         {
-          // No rounding - reset
-        EditModel.BillRoundAmt = 0;
-        EditModel.BillNetAmount = (float)Math.Round(baseAmount, 2);
+            // No rounding - reset
+            EditModel.BillRoundAmt = 0;
+            EditModel.BillNetAmount = (float)Math.Round(baseAmount, 2);
         }
         ConvertNumberToWords((decimal)EditModel.BillNetAmount);
         StateHasChanged();
     }
+
+    //FOR COPY  NEW ENTRY
+    private async Task CopyDetails()
+    {
+        LoadingService.Show();
+        try
+        {
+            // --- STEP 1: Apply Unsaved Changes ---
+            foreach (var unsavedChange in UnsavedChanges)
+            {
+                var changedItem = unsavedChange.Key;
+                var changeType = unsavedChange.Value.Type;
+
+                switch (changeType)
+                {
+                    case DataChangeType.Addition:
+                        // You can handle additions later in final save
+                        break;
+
+                    case DataChangeType.Delete:
+                        // Simply skip these rows in total calculations
+                        break;
+
+                    case DataChangeType.Modification:
+                        // Update row calculations (GST, totals, etc.)
+                        UpdateRowAmounts(changedItem);
+                        break;
+                }
+            }
+
+
+
+            // --- STEP 2: Prepare Active Rows (non-deleted) ---
+            var activeDetails = BillDetails
+                .Where(d => !UnsavedChanges.ContainsKey(d) || UnsavedChanges[d].Type != DataChangeType.Delete)
+                .ToList();
+
+            // --- STEP 3: Recalculate Bill Totals ---
+            //EditModel.BillNetAmount = (float)activeDetails.Sum(d => d.BillDetailTotal);
+            EditModel.BillAmount = activeDetails.Sum(d => d.BillDetailAmount);
+            EditModel.BillTaxableAmt = activeDetails.Sum(d => d.BillDetailTaxableAmt);
+            EditModel.BillIgst = activeDetails.Sum(d => d.BillDetailIgst);
+            EditModel.BillCgst = activeDetails.Sum(d => d.BillDetailCgst);
+            EditModel.BillSgst = activeDetails.Sum(d => d.BillDetailSgst);
+            EditModel.BillTotal = EditModel.BillNetAmount;
+            EditModel.BillYearId = YearStatechangeService.SelectedYearId;
+            EditModel.BillNo = EditModel.BillNo;
+
+            // --- STEP 4: Filter only valid detail lines ---
+            var validDetails = activeDetails
+                .Where(d => d.BillDetailProductId > 0 || !string.IsNullOrEmpty(d.BillDetailHsnCode))
+                .ToList();
+
+            EditModel.BillDetails = validDetails;
+
+            // --- STEP 5: Save Bill (Create or Update) ---
+            bool result;
+            EditModel.BillId = 0;
+            EditModel.BillTime = DateTime.Now.ToString("hh:mm tt");
+                result = await BillService.CreateAsync(EditModel);
+                if (result)
+                    ToastService.Success("Bill created successfully!");
+                else
+                {
+                    ToastService.Error("Failed to create Bill!");
+                    return;
+                }
+           
+            
+            LoadingService.Hide();
+            // --- STEP 6: UI Cleanup ---   
+            //ToastService.Success("Changes applied successfully!");
+            var confirm = await ConfirmDialogService.ShowAsync("Are you sure you want to print selected bill(s)?");
+            if (confirm)
+            {
+
+               
+                await PreviewMergedReports();
+
+            }
+            UnsavedChanges.Clear();
+            Visible = false;
+            await OnSaved.InvokeAsync();
+          
+          
+           
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Error saving bill: {ex.Message}");
+            Console.WriteLine($"❌ Full error: {ex}");
+        }
+      
+    }
+
+
+
     private async Task HandleValidSubmit()
     {
          LoadingService.Show();

@@ -11,6 +11,7 @@
 @inject ReportService ReportService
 @inject ReportDataService ReportDataService
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IJSRuntime JSRuntime
 <DxGrid TItem="Bill"
         Data="@billList"
         @ref="MyGrid"
@@ -37,6 +38,7 @@
                 <DxToolbarItem Text="Add" IconCssClass="bi bi-plus-circle" Click="OnCreateNew" />
                 <DxToolbarItem Text="Edit" IconCssClass="bi bi-pencil-square" Click="OnEdit" />
                 <DxToolbarItem Text="Delete" IconCssClass="bi bi-trash" Click="OnDelete" />
+                <DxToolbarItem Text="Print PDF  " IconCssClass="bi bi-printer" Click="PrintReports" />
                 <DxToolbarItem Text="Print" IconCssClass="bi bi-printer" Click="@((_) => ShowReportPopup())"></DxToolbarItem>
                 <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="@(async (_) => await LoadBillsAsync())" />
                 @if(IsAdmin)
@@ -124,14 +126,26 @@
         </DxFormLayout>
 
         <div class="mt-3 d-flex justify-content-end gap-2">
-            <DxButton Text="Cancel" Click="@(() => IsReportPopupVisible = false)" />
             <DxButton Text="OK" RenderStyle="ButtonRenderStyle.Primary" Click="@ConfirmReportSelection" />
+            <DxButton Text="Cancel" RenderStyle="ButtonRenderStyle.Danger" Click="@(() => IsReportPopupVisible = false)" />
         </div>
     </div>
 </DxPopup>
 <BillAddEditPage @ref="popup" OnSaved="LoadBillsAsync" />
 
 <ConfirmationDialog />
+<script>
+    window.downloadFileFromStream = async (fileName, contentStreamReference) => {
+        const arrayBuffer = await contentStreamReference.arrayBuffer();
+        const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+</script>
 
 @code {
     DxGrid MyGrid;
@@ -389,6 +403,81 @@
         }
     }
 
+    //FOR PRINT PDF 
+    private async Task PrintReports()
+    {
+        var billList = SelectedBills.ToList();
+        if (!billList.Any())
+        {   
+            ToastService.Warning("Select at least one Bill.");
+            return;
+        }
+
+        LoadingService.Show("Building merged PDF...");
+        try
+        {
+            var layoutBytes = await ReportDataService.GetLayoutBytesAsync(ReportId);
+            if (layoutBytes == null || layoutBytes.Length == 0)
+            {
+                ToastService.Error("Failed to load report layout.");
+                return;
+            }
+
+            var dtoList = new List<PrintBillFullDto?>();
+            foreach (var bill in billList)
+            {
+                var dto = await BillService.GetPrintableBillAsync(bill.BillId);
+                dtoList.Add(dto);
+            }
+
+            var dtoDict = billList.Select((bill, i) => new { bill, dto = dtoList[i] })
+                                  .ToDictionary(x => x.bill, x => x.dto);
+
+            await ReportService.CreateMergedReportAsync(
+                billList,
+                bill => dtoDict.ContainsKey(bill) ? dtoDict[bill] : null,
+                layoutBytes);
+
+            // ✅ Export to PDF if report generated successfully
+            if (ReportService.MergedReport != null)
+            {
+                using var pdfStream = new MemoryStream();
+                ReportService.MergedReport.ExportToPdf(pdfStream);
+                pdfStream.Position = 0;
+
+                string fileName;
+                if (billList.Count == 1)
+                {
+                    var billNo = billList.First().BillNo?.Replace("/", "_") ?? "Bill";
+                    fileName = $"{billNo}.pdf";
+                }
+                else
+                {
+                    var firstBill = billList.First().BillNo?.Replace("/", "_") ?? "Bill";
+                    var lastBill = billList.Last().BillNo?.Replace("/", "_") ?? "Bill";
+                    fileName = $"Bills_{firstBill}_to_{lastBill}.pdf";
+                }
+
+                // Download via JS (Blazor)
+                using var streamRef = new Microsoft.JSInterop.DotNetStreamReference(pdfStream);
+                await JSRuntime.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
+
+                ToastService.Success("PDF downloaded successfully.");
+            }
+            else
+            {
+                ToastService.Error("Failed to build merged PDF.");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Failed to generate report: {ex.Message}");
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
 
 
     private bool IsReportPopupVisible = false;

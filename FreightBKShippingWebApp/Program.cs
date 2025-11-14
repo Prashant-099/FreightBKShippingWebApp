@@ -80,7 +80,7 @@ builder.Services.AddScoped<ReportDataService>();
 builder.Services.AddScoped<ReportService>();
 builder.Services.AddScoped<BillService>();
 builder.Services.AddScoped<GridLayoutService>();
-
+builder.Services.AddScoped<EinvConfigService>();
 //pdfreder services
 builder.Services.AddScoped<DataCleanupService>();
 //builder.Services.AddScoped<PdfExtractionService>();
@@ -91,22 +91,22 @@ builder.Services.AddScoped<FreightBKShippingWebApp.Services.PdfReaderAndHelperSe
 builder.Services.AddScoped<JobDataCreationService>();
 builder.Services.AddScoped<JobBuilderService>();
 
-builder.Services.AddHttpClient<ApiClient>(client =>
-{
-    client.BaseAddress = new Uri("http://localhost:5003/");
-});
-builder.Services.AddScoped<EinvConfigService>();
 //builder.Services.AddHttpClient<ApiClient>(client =>
 //{
-//    client.BaseAddress = new Uri("https://localhost:5003/");
+//    client.BaseAddress = new Uri("http://localhost:5003/");
 //});
+
 builder.Services.AddHttpClient<ApiClient>(client =>
 {
     client.BaseAddress = new Uri("https://localhost:5003/");
 });
 //builder.Services.AddHttpClient<ApiClient>(client =>
 //{
-//    client.BaseAddress = new Uri("https://freightbook.in/");
+//    client.BaseAddress = new Uri("https://localhost:5003/");
+//});
+//builder.Services.AddHttpClient<ApiClient>(client =>
+//{
+//    client.BaseAddress = new Uri("https://apihost.freightbook.in/");
 //});
 builder.Services.AddLocalization();
 builder.Services.AddControllers();
