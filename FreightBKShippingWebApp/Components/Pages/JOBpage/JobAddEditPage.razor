@@ -19,7 +19,9 @@ ShowCloseButton="true"
 HeaderText="@PopupTitle"
 Scrollable="true"
 CloseOnOutsideClick="false"
-MaxWidth="1150px" Width="90%">
+MaxWidth="1150px" Width="90%"
+         CssClass="popup-elevated" BodyCssClass="my-popup-body"
+      >
 
     <EditForm Model="@EditModel" OnValidSubmit="HandleValidSubmit" Context="ctxjobaddedit">
 
@@ -40,29 +42,14 @@ MaxWidth="1150px" Width="90%">
             <DxFormLayoutItem Caption="Job Date" ColSpanMd="4">
                 <DxDateEdit @bind-Date="EditModel.JobDate" Format="dd-MM-yyyy" />
             </DxFormLayoutItem>
-      
-            <DxFormLayoutTabPages>
-                <DxFormLayoutTabPage Caption="Job Info">
+
+
+            <DxFormLayoutTabPages >
+                <DxFormLayoutTabPage Caption="Job Info" >
                     <DxFormLayoutGroup Decoration="FormLayoutGroupDecoration.None">
                         <DxFormLayoutGroup ColSpanMd="6" Decoration="FormLayoutGroupDecoration.None">
-                            @* 
-                            <DxFormLayoutItem Caption="Importer" ColSpanMd="12">
-                                <DxComboBox Data="@parties"
-                                            TextFieldName="AccountName"
-                                            ValueFieldName="AccountId"
-                                            @bind-Value="@EditModel.JobPartyId"                      
-
-                                            NullText="Select Importer.." AllowUserInput="true"
-                                            SearchMode="ListSearchMode.AutoSearch"
-                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
-                            </DxFormLayoutItem>
-
-                            <DxFormLayoutItem Caption="Importer Address" ColSpanMd="12">
-                                <DxMemo @bind-Text="EditModel.JobPartyAddress" Rows="3"></DxMemo>
-                            </DxFormLayoutItem>
- *@
-
-                            <DxFormLayoutItem Caption="@PartyCaption" ColSpanMd="12">
+                   
+                            <DxFormLayoutItem Caption="@PartyCaption" ColSpanMd="12"  CaptionCssClass="caption-bold">
                                 <DxComboBox Data="@party"
                                 TextFieldName="AccountName"
                                 ValueFieldName="AccountId"
@@ -72,14 +59,17 @@ MaxWidth="1150px" Width="90%">
                                 NullText="Select Importer.."
                                 AllowUserInput="true"
                                 SearchMode="ListSearchMode.AutoSearch"
-                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" ShowDropDownButton="true"
+                                            CssClass="editor-smooth"
+                                            InputCssClass="input-smooth"
+                                           />
                             </DxFormLayoutItem>
 
-                            <DxFormLayoutItem Caption="@AddressCaption" ColSpanMd="12">
-                                <DxMemo @bind-Text="EditModel.JobPartyAddress" Rows="3"></DxMemo>
+                            <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="@AddressCaption" ColSpanMd="12" >
+                                <DxMemo @bind-Text="EditModel.JobPartyAddress" Rows="3"   CssClass="editor-smooth"></DxMemo>
                             </DxFormLayoutItem>
 
-                            <DxFormLayoutItem Caption="High Seas" ColSpanMd="12">
+                            <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="High Seas" ColSpanMd="12">
                                 <DxComboBox Data="@party"
                                 TextFieldName="AccountName"
                                 ValueFieldName="AccountId"
@@ -89,22 +79,22 @@ MaxWidth="1150px" Width="90%">
                                 NullText="Select High Seas.."
                                 AllowUserInput="true"
                                 SearchMode="ListSearchMode.AutoSearch"
-                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth" />
                             </DxFormLayoutItem>
 
-                            <DxFormLayoutItem Caption="High Seas Address" ColSpanMd="12">
-                                <DxMemo @bind-Text="EditModel.JobHighseas1Address" Rows="3"></DxMemo>
+                            <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="High Seas Address" ColSpanMd="12">
+                                <DxMemo @bind-Text="EditModel.JobHighseas1Address" Rows="3" CssClass="editor-smooth"></DxMemo>
                             </DxFormLayoutItem>
 
-                            <DxFormLayoutItem Caption="Agent" ColSpanMd="12">
-                                <DxTextBox @bind-Text="EditModel.JobAgent"></DxTextBox>
+                            <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Agetnt"  ColSpanMd="12">
+                                <DxTextBox @bind-Text="EditModel.JobAgent" CssClass="editor-smooth"></DxTextBox>
                             </DxFormLayoutItem>
 
-                            <DxFormLayoutItem Caption="Agent Address" ColSpanMd="12">
-                                <DxMemo @bind-Text="EditModel.JobAgentAddress" Rows="3"></DxMemo>
+                            <DxFormLayoutItem  CaptionCssClass="caption-bold" Caption="Agent Address" ColSpanMd="12">
+                                <DxMemo @bind-Text="EditModel.JobAgentAddress" Rows="3" CssClass="editor-smooth"></DxMemo>
                             </DxFormLayoutItem>
 
-                            <DxFormLayoutItem Caption="Cargo" ColSpanMd="12">
+                            <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Cargo" ColSpanMd="12">
                                 <DxComboBox Data="@cargos"
                                 TextFieldName="CargoName"
                                 ValueFieldName="CargoId"
@@ -114,168 +104,168 @@ MaxWidth="1150px" Width="90%">
                                 NullText="Select Cargo..."
                                 AllowUserInput="true"
                                 SearchMode="ListSearchMode.AutoSearch"
-                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth" />
                             </DxFormLayoutItem>
 
-                            <DxFormLayoutItem Caption="Cargo Desc" ColSpanMd="12">
-                                <DxMemo @bind-Text="EditModel.JobGoodsDesc" Rows="3"></DxMemo>
-                            </DxFormLayoutItem>
-
-
-                            <DxFormLayoutItem Caption="Prd. Brand" ColSpanMd="12">
-                                <DxTextBox @bind-Text="EditModel.JobBrand" />
-                            </DxFormLayoutItem>
-                            <DxFormLayoutItem Caption="HSN" ColSpanMd="12">
-                                <DxTextBox @bind-Text="EditModel.JobHsnCode" />
+                            <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Cargo Desc" ColSpanMd="12">
+                                <DxMemo @bind-Text="EditModel.JobGoodsDesc" Rows="3" CssClass="editor-smooth"></DxMemo>
                             </DxFormLayoutItem>
 
 
+                            <DxFormLayoutItem  CaptionCssClass="caption-bold" Caption="Prd. Brand" ColSpanMd="12">
+                                <DxTextBox @bind-Text="EditModel.JobBrand" CssClass="editor-smooth" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="HSN" ColSpanMd="12">
+                                <DxTextBox @bind-Text="EditModel.JobHsnCode" CssClass="editor-smooth" />
+                            </DxFormLayoutItem>
 
 
-                            <DxFormLayoutItem Caption="Vessel" ColSpanMd="12">
+
+
+                            <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Vessel" ColSpanMd="12">
                                 <DxComboBox Data="@vessels"
                                 TextFieldName="VesselName"
                                 ValueFieldName="VesselId"
                                 @bind-Value="EditModel.JobVesselId"
                                 NullText="Select Importer.." AllowUserInput="true"
                                 SearchMode="ListSearchMode.AutoSearch"
-                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth" />
                             </DxFormLayoutItem>
 
 
 
-                            <DxFormLayoutItem Caption="Line" ColSpanMd="12">
+                            <DxFormLayoutItem CaptionCssClass="caption-bold"  Caption="Line" ColSpanMd="12">
                                 <DxComboBox Data="@lines" TextFieldName="NotifyName"
                                 ValueFieldName="NotifyId" @bind-Value="EditModel.JobLineId"
                                 NullText="Select Line..." AllowUserInput="true"
                                 SearchMode="ListSearchMode.AutoSearch"
-                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth" />
                             </DxFormLayoutItem>
-                            <DxFormLayoutItem Caption="Default Currency " ColSpanMd="12">
+                            <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Default Currency " ColSpanMd="12">
                                 <DxComboBox Data="@Currencies" @bind-Value="EditModel.JobDefCurrId"
                                 TextFieldName="CurrencyName" ValueFieldName="CurrencyId" AllowUserInput="true"
                                 SearchMode="ListSearchMode.AutoSearch"
-                                SearchFilterCondition="ListSearchFilterCondition.StartsWith"></DxComboBox>
+                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth"></DxComboBox>
                             </DxFormLayoutItem>
 
 
                         </DxFormLayoutGroup>
 
 
-                        <DxFormLayoutGroup ColSpanMd="6" Decoration="FormLayoutGroupDecoration.None">
-                            <DxFormLayoutItem Caption="BL No" ColSpanMd="6">
-                                <DxTextBox @bind-Text="EditModel.JobBlNo" />
+                        <DxFormLayoutGroup  ColSpanMd="6" Decoration="FormLayoutGroupDecoration.None">
+                            <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="BL No" ColSpanMd="6">
+                                <DxTextBox @bind-Text="EditModel.JobBlNo" CssClass="editor-smooth" />
                             </DxFormLayoutItem>
 
-                            <DxFormLayoutItem Caption="BL Date" ColSpanMd="6">
-                                <DxDateEdit @bind-Date="EditModel.JobBlDate" DisplayFormat="dd/MM/yyyy" />
+                            <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="BL Date" ColSpanMd="6">
+                                <DxDateEdit @bind-Date="EditModel.JobBlDate" DisplayFormat="dd/MM/yyyy" CssClass="editor-smooth" />
                             </DxFormLayoutItem>
-                            <DxFormLayoutItem Caption="HBL No" ColSpanMd="6">
-                                <DxTextBox @bind-Text="EditModel.JobHblNo" />
-                            </DxFormLayoutItem>
-
-                            <DxFormLayoutItem Caption="HBL Date" ColSpanMd="6">
-                                <DxDateEdit @bind-Date="EditModel.JobHblDate" DisplayFormat="dd/MM/yyyy" />
-                            </DxFormLayoutItem>
-                            <DxFormLayoutItem Caption="BE No" ColSpanMd="6">
-                                <DxTextBox @bind-Text="EditModel.JobBeNo" />
+                            <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="HBL No" ColSpanMd="6">
+                                <DxTextBox @bind-Text="EditModel.JobHblNo" CssClass="editor-smooth" />
                             </DxFormLayoutItem>
 
-                            <DxFormLayoutItem Caption="BE Date" ColSpanMd="6">
-                                <DxDateEdit @bind-Date="EditModel.JobBeDate" DisplayFormat="dd/MM/yyyy" />
+                            <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="HBL Date" ColSpanMd="6">
+                                <DxDateEdit @bind-Date="EditModel.JobHblDate" DisplayFormat="dd/MM/yyyy" CssClass="editor-smooth" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="BE No" ColSpanMd="6">
+                                <DxTextBox @bind-Text="EditModel.JobBeNo" CssClass="editor-smooth" />
                             </DxFormLayoutItem>
 
-                            <DxFormLayoutItem Caption="Shipper Inv No" ColSpanMd="6">
-                                <DxTextBox @bind-Text="EditModel.JobShipperInvNo" />
+                            <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="BE Date" ColSpanMd="6">
+                                <DxDateEdit @bind-Date="EditModel.JobBeDate" DisplayFormat="dd/MM/yyyy" CssClass="editor-smooth" />
                             </DxFormLayoutItem>
 
-                            <DxFormLayoutItem Caption="Shipper Inv Date" ColSpanMd="6">
-                                <DxDateEdit @bind-Date="EditModel.JobShipperInvDate" DisplayFormat="dd/MM/yyyy" />
+                            <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Shipper Inv No" ColSpanMd="6">
+                                <DxTextBox @bind-Text="EditModel.JobShipperInvNo" CssClass="editor-smooth" />
+                            </DxFormLayoutItem>
+
+                            <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Shipper Inv Date" ColSpanMd="6">
+                                <DxDateEdit @bind-Date="EditModel.JobShipperInvDate" DisplayFormat="dd/MM/yyyy" CssClass="editor-smooth" />
                             </DxFormLayoutItem>
 
 
-                            <DxFormLayoutItem Caption="Gross Weight" ColSpanMd="6">
-                                <DxSpinEdit @bind-Value="EditModel.JobGrossWt" ShowSpinButtons=false />
+                            <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Gross Weight" ColSpanMd="6">
+                                <DxSpinEdit @bind-Value="EditModel.JobGrossWt" ShowSpinButtons=false CssClass="editor-smooth" />
                             </DxFormLayoutItem>
 
-                            <DxFormLayoutItem Caption="Unit" ColSpanMd="6">
+                            <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Unit" ColSpanMd="6">
                                 <DxComboBox Data="@weightUnits" @bind-Value="EditModel.JobGrossUnit" AllowUserInput="true"
                                 SearchMode="ListSearchMode.AutoSearch"
-                                SearchFilterCondition="ListSearchFilterCondition.StartsWith"></DxComboBox>
+                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth"></DxComboBox>
                             </DxFormLayoutItem>
 
 
-                            <DxFormLayoutItem Caption="Net Weight" ColSpanMd="6">
-                                <DxSpinEdit @bind-Value="EditModel.JobNetWt" ShowSpinButtons=false />
+                            <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Net Weight" ColSpanMd="6">
+                                <DxSpinEdit @bind-Value="EditModel.JobNetWt" ShowSpinButtons=false CssClass="editor-smooth" />
                             </DxFormLayoutItem>
-                            <DxFormLayoutItem Caption="Unit" ColSpanMd="6">
+                            <DxFormLayoutItem  CaptionCssClass="caption-bold" Caption="Unit" ColSpanMd="6">
                                 <DxComboBox Data="@weightUnits" @bind-Value="EditModel.JobNetUnit" AllowUserInput="true"
                                 SearchMode="ListSearchMode.AutoSearch"
-                                SearchFilterCondition="ListSearchFilterCondition.StartsWith"></DxComboBox>
+                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth"></DxComboBox>
                             </DxFormLayoutItem>
 
 
-                            <DxFormLayoutItem Caption="Quantity" ColSpanMd="6">
-                                <DxSpinEdit @bind-Value="EditModel.JobQty" ShowSpinButtons=false />
+                            <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Quantity" ColSpanMd="6">
+                                <DxSpinEdit @bind-Value="EditModel.JobQty" ShowSpinButtons=false CssClass="editor-smooth" />
 
                             </DxFormLayoutItem>
 
-                            <DxFormLayoutItem Caption="Unit" ColSpanMd="6">
+                            <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Unit" ColSpanMd="6">
                                 <DxComboBox Data="@weightUnits" @bind-Value="EditModel.JobQtyUnit" AllowUserInput="true"
                                 SearchMode="ListSearchMode.AutoSearch"
-                                SearchFilterCondition="ListSearchFilterCondition.StartsWith"></DxComboBox>
+                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth"></DxComboBox>
 
                             </DxFormLayoutItem>
 
-                            <DxFormLayoutItem Caption="CBM" ColSpanMd="12">
-                                <DxSpinEdit @bind-Value="EditModel.JobCbm" ShowSpinButtons=false />
+                            <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="CBM" ColSpanMd="12">
+                                <DxSpinEdit @bind-Value="EditModel.JobCbm" ShowSpinButtons=false CssClass="editor-smooth" />
                             </DxFormLayoutItem>
-                            <DxFormLayoutItem Caption="POL" ColSpanMd="12">
+                            <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="POL" ColSpanMd="12">
                                 <DxComboBox Data="@locationList"
                                 @bind-Value="EditModel.JobPolId" TextFieldName="LocationName"
                                 ValueFieldName="LocationId" AllowUserInput="true"
                                 SearchMode="ListSearchMode.AutoSearch"
-                                SearchFilterCondition="ListSearchFilterCondition.StartsWith"></DxComboBox>
+                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth"></DxComboBox>
                             </DxFormLayoutItem>
 
-                            <DxFormLayoutItem Caption="POD" ColSpanMd="12">
+                            <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="POD" ColSpanMd="12">
                                 <DxComboBox Data="@locationList" @bind-Value="EditModel.JobPodId"
                                 TextFieldName="LocationName" ValueFieldName="LocationId" AllowUserInput="true"
                                 SearchMode="ListSearchMode.AutoSearch"
-                                SearchFilterCondition="ListSearchFilterCondition.StartsWith"></DxComboBox>
+                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth"></DxComboBox>
                             </DxFormLayoutItem>
-                            <DxFormLayoutItem Caption="Place of Delivery" ColSpanMd="12">
-                                <DxTextBox @bind-Text="EditModel.JobPlaceOfDelivery" />
+                            <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Place of Delivery" ColSpanMd="12">
+                                <DxTextBox @bind-Text="EditModel.JobPlaceOfDelivery"  CssClass="editor-smooth"/>
                             </DxFormLayoutItem>
-                            <DxFormLayoutItem Caption="Place of Receipt" ColSpanMd="12">
-                                <DxTextBox @bind-Text="EditModel.JobPlaceOfReceipt" />
+                            <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Place of Receipt" ColSpanMd="12">
+                                <DxTextBox @bind-Text="EditModel.JobPlaceOfReceipt" CssClass="editor-smooth" />
                             </DxFormLayoutItem>
-                            <DxFormLayoutItem Caption="Country of Origin" ColSpanMd="12">
+                            <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Country of Origin" ColSpanMd="12">
                                 <DxComboBox Data="@countryList"
                                 @bind-Value="EditModel.JobCountryOrigin"
                                 TextFieldName="CountryName" ValueFieldName="CountryName" AllowUserInput="true"
                                 SearchMode="ListSearchMode.AutoSearch"
-                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth" />
                             </DxFormLayoutItem>
 
 
-                            <DxFormLayoutItem Caption="Certificate Origin" ColSpanMd="12">
-                                <DxTextBox @bind-Text="EditModel.JobCertiOrigin"></DxTextBox>
+                            <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Certificate Origin" ColSpanMd="12">
+                                <DxTextBox @bind-Text="EditModel.JobCertiOrigin" CssClass="editor-smooth" ></DxTextBox>
                             </DxFormLayoutItem>
 
-                            <DxFormLayoutItem Caption="Consignee" ColSpanMd="12">
+                            <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Consignee" ColSpanMd="12">
                                 <DxComboBox Data="@consignees" TextFieldName="NotifyName"
                                 ValueFieldName="NotifyId" @bind-Value="EditModel.JobConsigneeId"
                                 NullText="Select Consignor..." AllowUserInput="true"
                                 SearchMode="ListSearchMode.AutoSearch"
-                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth" />
                             </DxFormLayoutItem>
-                            <DxFormLayoutItem Caption="Supplier/Consignor" ColSpanMd="12">
+                            <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Supplier/Consignor" ColSpanMd="12">
                                 <DxComboBox Data="@consignor"
                                 @bind-Value="EditModel.JobSupplierId" TextFieldName="NotifyName"
                                 ValueFieldName="NotifyId" AllowUserInput="true"
                                 SearchMode="ListSearchMode.AutoSearch"
-                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth" />
                             </DxFormLayoutItem>
                         </DxFormLayoutGroup>
 
@@ -286,45 +276,45 @@ MaxWidth="1150px" Width="90%">
 
                         <DxFormLayoutGroup Decoration="FormLayoutGroupDecoration.None">
 
-                            <DxFormLayoutItem Caption="CHA" ColSpanMd="6">
+                            <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="CHA" ColSpanMd="6">
                                 <DxComboBox Data="@chaList"
                                 @bind-Value="EditModel.JobChaId" TextFieldName="NotifyName"
                                 ValueFieldName="NotifyId" AllowUserInput="true"
                                 SearchMode="ListSearchMode.AutoSearch"
-                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth" />
                             </DxFormLayoutItem>
-                            <DxFormLayoutItem Caption="Shipper" ColSpanMd="6">
+                            <DxFormLayoutItem  CaptionCssClass="caption-bold" Caption="Shipper" ColSpanMd="6">
                                 <DxComboBox Data="@shippers"
                                 TextFieldName="NotifyName" ValueFieldName="NotifyId"
                                 @bind-Value="EditModel.JobShipperId"
                                 NullText="Select Shipper..." AllowUserInput="true"
                                 SearchMode="ListSearchMode.AutoSearch"
-                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth" />
                             </DxFormLayoutItem>
 
 
 
 
 
-                            <DxFormLayoutItem Caption="Booking No." ColSpanMd="6">
-                                <DxTextBox @bind-Text="EditModel.JobBookingNo" />
+                            <DxFormLayoutItem  CaptionCssClass="caption-bold" Caption="Booking No." ColSpanMd="6">
+                                <DxTextBox @bind-Text="EditModel.JobBookingNo" CssClass="editor-smooth" />
                             </DxFormLayoutItem>
-                            <DxFormLayoutItem Caption="Exchange Rate" ColSpanMd="6">
-                                <DxSpinEdit @bind-Value="EditModel.JobExchRate" ShowSpinButtons=false />
+                            <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Exchange Rate" ColSpanMd="6">
+                                <DxSpinEdit @bind-Value="EditModel.JobExchRate" ShowSpinButtons=false CssClass="editor-smooth" />
                             </DxFormLayoutItem>
-                            <DxFormLayoutItem Caption="CFS" ColSpanMd="6">
-                                <DxTextBox @bind-Text="EditModel.JobCfs" />
+                            <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="CFS" ColSpanMd="6">
+                                <DxTextBox @bind-Text="EditModel.JobCfs" CssClass="editor-smooth" />
                             </DxFormLayoutItem>    
 
 
-                            <DxFormLayoutItem Caption="Status" ColSpanMd="6">
+                            <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Status" ColSpanMd="6">
                                 <DxComboBox Data="@stuslist"
                                 @bind-Value="EditModel.JobState" AllowUserInput="true"
                                 SearchMode="ListSearchMode.AutoSearch"
-                                SearchFilterCondition="ListSearchFilterCondition.StartsWith"></DxComboBox>
+                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth"></DxComboBox>
                             </DxFormLayoutItem>
-                            <DxFormLayoutItem Caption="Remarks" ColSpanMd="12">
-                                <DxMemo @bind-Text="EditModel.JobRemarks" Rows="3" />
+                            <DxFormLayoutItem CaptionCssClass="caption-bold"  Caption="Remarks" ColSpanMd="12">
+                                <DxMemo @bind-Text="EditModel.JobRemarks" Rows="3" CssClass="editor-smooth" />
                             </DxFormLayoutItem>
 
                         </DxFormLayoutGroup>
@@ -334,111 +324,111 @@ MaxWidth="1150px" Width="90%">
                 <DxFormLayoutTabPage Caption="Extra details">
                     <DxFormLayoutGroup Decoration="FormLayoutGroupDecoration.None">
                         <DxFormLayoutItem Caption="ETA">
-                            <DxDateEdit @bind-Date="EditModel.JobEta" DisplayFormat="dd/MM/yyyy" />
+                            <DxDateEdit @bind-Date="EditModel.JobEta" DisplayFormat="dd/MM/yyyy" CssClass="editor-smooth" />
                         </DxFormLayoutItem>
 
                         <DxFormLayoutItem Caption="ETD">
-                            <DxDateEdit @bind-Date="EditModel.JobEtd" DisplayFormat="dd/MM/yyyy" />
+                            <DxDateEdit @bind-Date="EditModel.JobEtd" DisplayFormat="dd/MM/yyyy" CssClass="editor-smooth" />
                         </DxFormLayoutItem>
 
                         <DxFormLayoutItem Caption="CFS">
-                            <DxMemo @bind-Text="EditModel.JobCfs" />
+                            <DxMemo @bind-Text="EditModel.JobCfs" CssClass="editor-smooth" />
                         </DxFormLayoutItem>
                         <DxFormLayoutItem Caption="ICD">
-                            <DxTextBox @bind-Text="EditModel.JobIcd"></DxTextBox>
+                            <DxTextBox @bind-Text="EditModel.JobIcd" CssClass="editor-smooth"></DxTextBox>
                         </DxFormLayoutItem>
 
 
                         <DxFormLayoutItem Caption="DO NO">
-                            <DxTextBox @bind-Text="EditModel.JobDoNo" />
+                            <DxTextBox @bind-Text="EditModel.JobDoNo" CssClass="editor-smooth" />
                         </DxFormLayoutItem>
 
                         <DxFormLayoutItem Caption="DO Date">
-                            <DxDateEdit @bind-Date="EditModel.JobDoDate" DisplayFormat="dd/MM/yyyy" />
+                            <DxDateEdit @bind-Date="EditModel.JobDoDate" DisplayFormat="dd/MM/yyyy"  CssClass="editor-smooth"/>
                         </DxFormLayoutItem>
 
                         <DxFormLayoutItem Caption="DO (%)">
-                            <DxSpinEdit @bind-value="EditModel.JobDoPer" ShowSpinButtons=false />
+                            <DxSpinEdit @bind-value="EditModel.JobDoPer" ShowSpinButtons=false CssClass="editor-smooth" />
                         </DxFormLayoutItem>
 
                         <DxFormLayoutItem Caption="ETD">
-                            <DxTextBox @bind-Text="EditModel.JobDoType"  />
+                            <DxTextBox @bind-Text="EditModel.JobDoType" CssClass="editor-smooth" />
                         </DxFormLayoutItem>
                         <DxFormLayoutItem Caption="DO Valid Date">
-                            <DxDateEdit @bind-Date="EditModel.JobDoValid" DisplayFormat="dd/MM/yyyy" />
+                            <DxDateEdit @bind-Date="EditModel.JobDoValid" DisplayFormat="dd/MM/yyyy"  CssClass="editor-smooth"/>
                         </DxFormLayoutItem>
                         <DxFormLayoutItem Caption="Terminal">
-                            <DxTextBox @bind-Text="EditModel.JobTerminal" />
+                            <DxTextBox @bind-Text="EditModel.JobTerminal"  CssClass="editor-smooth"/>
                         </DxFormLayoutItem> 
                         <DxFormLayoutItem Caption="IGM No">
-                            <DxTextBox @bind-Text="EditModel.JobIgmNo" />
+                            <DxTextBox @bind-Text="EditModel.JobIgmNo" CssClass="editor-smooth" />
                         </DxFormLayoutItem>
                         <DxFormLayoutItem Caption="IGM Date">
-                            <DxDateEdit @bind-Date="EditModel.JobIgmDate" DisplayFormat="dd/MM/yyyy" />
+                            <DxDateEdit @bind-Date="EditModel.JobIgmDate" DisplayFormat="dd/MM/yyyy" CssClass="editor-smooth" />
                         </DxFormLayoutItem>
 
 
                         <DxFormLayoutItem Caption="Marks & No" ColSpanMd="12">
-                            <DxMemo @bind-Text="EditModel.JobMarks" Rows="2" />
+                            <DxMemo @bind-Text="EditModel.JobMarks" Rows="2"  CssClass="editor-smooth"/>
                         </DxFormLayoutItem>
 
                         <DxFormLayoutItem Caption="Empty Yard">
-                            <DxMemo @bind-Text="EditModel.JobEmptyYard" />
+                            <DxMemo @bind-Text="EditModel.JobEmptyYard"  CssClass="editor-smooth"/>
                         </DxFormLayoutItem>
 
                         <DxFormLayoutItem Caption="Forwarder">
-                            <DxTextBox @bind-Text="EditModel.JobForwarder" />
+                            <DxTextBox @bind-Text="EditModel.JobForwarder"  CssClass="editor-smooth"/>
                         </DxFormLayoutItem>
 
                         <DxFormLayoutItem Caption="Surveyor">
-                            <DxTextBox @bind-Text="EditModel.Surveyor" />
+                            <DxTextBox @bind-Text="EditModel.Surveyor" CssClass="editor-smooth" />
                         </DxFormLayoutItem>
 
                         <DxFormLayoutItem Caption="Surveyor Address">
-                            <DxMemo @bind-Text="EditModel.SurveyorAddress" Rows="2" />
+                            <DxMemo @bind-Text="EditModel.SurveyorAddress" Rows="2" CssClass="editor-smooth" />
                         </DxFormLayoutItem>
 
 
                         <DxFormLayoutItem Caption="Free Days">
-                            <DxSpinEdit @bind-Value="EditModel.JobFreeDays" ShowSpinButtons=false/>
+                            <DxSpinEdit @bind-Value="EditModel.JobFreeDays" ShowSpinButtons=false CssClass="editor-smooth" />
                         </DxFormLayoutItem>
 
                         <DxFormLayoutItem Caption="Volume">
-                            <DxTextBox @bind-Text="EditModel.JobVolume" />
+                            <DxTextBox @bind-Text="EditModel.JobVolume" CssClass="editor-smooth" />
                         </DxFormLayoutItem>
 
 
                         <DxFormLayoutItem Caption="Out of Charge Date">
-                            <DxDateEdit @bind-Date="EditModel.JobOutOfChargeDate" DisplayFormat="dd/MM/yyyy" />
+                            <DxDateEdit @bind-Date="EditModel.JobOutOfChargeDate" DisplayFormat="dd/MM/yyyy" CssClass="editor-smooth" />
                         </DxFormLayoutItem>
 
                         <DxFormLayoutItem Caption="Remarks 2">
-                            <DxMemo @bind-Text="EditModel.JobGoodsDesc1" Rows="2" />
+                            <DxMemo @bind-Text="EditModel.JobGoodsDesc1" Rows="2"  CssClass="editor-smooth"/>
                         </DxFormLayoutItem>
 
                         <DxFormLayoutItem Caption="Custom#2">
-                            <DxTextBox @bind-Text="EditModel.JobCust2" />
+                            <DxTextBox @bind-Text="EditModel.JobCust2"  CssClass="editor-smooth"/>
                         </DxFormLayoutItem>
                         <DxFormLayoutItem Caption="Custom#3">
-                            <DxTextBox @bind-Text="EditModel.JobCust3" />
+                            <DxTextBox @bind-Text="EditModel.JobCust3" CssClass="editor-smooth" />
                         </DxFormLayoutItem>
                         <DxFormLayoutItem Caption="Custom#4">
-                            <DxTextBox @bind-Text="EditModel.JobCust4" />
+                            <DxTextBox @bind-Text="EditModel.JobCust4"  CssClass="editor-smooth"/>
                         </DxFormLayoutItem>
                         <DxFormLayoutItem Caption="Custom#5">
-                            <DxTextBox @bind-Text="EditModel.JobCust5" />
+                            <DxTextBox @bind-Text="EditModel.JobCust5"  CssClass="editor-smooth"/>
                         </DxFormLayoutItem>
                         <DxFormLayoutItem Caption="Custom#6">
-                            <DxTextBox @bind-Text="EditModel.JobCust6" />
+                            <DxTextBox @bind-Text="EditModel.JobCust6"  CssClass="editor-smooth"/>
                         </DxFormLayoutItem>
                         <DxFormLayoutItem Caption="Custom#7">
-                            <DxTextBox @bind-Text="EditModel.JobCust7" />
+                            <DxTextBox @bind-Text="EditModel.JobCust7" CssClass="editor-smooth" />
                         </DxFormLayoutItem>
                         <DxFormLayoutItem Caption="Custom#8">
-                            <DxTextBox @bind-Text="EditModel.JobCust8" />
+                            <DxTextBox @bind-Text="EditModel.JobCust8"  CssClass="editor-smooth"/>
                         </DxFormLayoutItem>
                         <DxFormLayoutItem Caption="Custom#9">
-                            <DxTextBox @bind-Text="EditModel.JobCust9" />
+                            <DxTextBox @bind-Text="EditModel.JobCust9" CssClass="editor-smooth" />
                         </DxFormLayoutItem>
                     </DxFormLayoutGroup>
 
@@ -448,20 +438,38 @@ MaxWidth="1150px" Width="90%">
                 <DxFormLayoutTabPage Caption="Container">
                     <DxFormLayoutGroup Decoration="FormLayoutGroupDecoration.None">
                         <DxFormLayoutItem Caption="20FT Container">
-                            <DxMemo @bind-Text="EditModel.JobContainer20Ft" Rows="3"/>
+                            <DxMemo @bind-Text="EditModel.JobContainer20Ft" Rows="3" CssClass="editor-smooth" />
                         </DxFormLayoutItem>
 
                         <DxFormLayoutItem Caption="40FT Container">
-                            <DxMemo @bind-Text="EditModel.JobContainer40Ft" Rows="3"/>
+                            <DxMemo @bind-Text="EditModel.JobContainer40Ft" Rows="3" CssClass="editor-smooth" />
                         </DxFormLayoutItem>
 
                         <DxFormLayoutItem Caption="Count(20 Ft)"> 
-                            <DxTextBox @bind-Text="EditModel.Job20Ft"></DxTextBox>
+                            <DxTextBox @bind-Text="EditModel.Job20Ft" CssClass="editor-smooth"></DxTextBox>
                         </DxFormLayoutItem>                     
                         <DxFormLayoutItem Caption="Count(40 Ft)"> 
-                            <DxTextBox @bind-Text="EditModel.Job40Ft"></DxTextBox>
+                            <DxTextBox @bind-Text="EditModel.Job40Ft" CssClass="editor-smooth"></DxTextBox>
                         </DxFormLayoutItem>
                     </DxFormLayoutGroup>
+                </DxFormLayoutTabPage>
+                <DxFormLayoutTabPage Caption="Import Details">
+                    @* <DxFormLayoutItem Caption="Upload Files" ColSpanMd="4"> *@
+                    @*     <div class="upload-wrapper"> *@
+                    @*         <DxUpload Name="jobFiles" *@
+                    @*                   AllowMultiFileUpload="true" *@
+                    @*                   SelectedFilesChanged="OnSelectedFilesChanged" *@
+                    @*                   MaxFileSize="15000000" *@
+                    @*                   ShowFileList="true" *@
+                    @*                   CssClass="upload-component" /> *@
+                    @*         <div class="info-text"> *@
+                    @*             Upload "Multiple Files",Max Size 15 MB. *@
+                    @*         </div> *@
+                    @*     </div> *@
+                    @* </DxFormLayoutItem> *@
+                    <DxFormLayoutItem ColSpanMd="12">
+                        <DxUpload Name="jobFiles" AllowMultiFileUpload="true" ></DxUpload>
+                    </DxFormLayoutItem>
                 </DxFormLayoutTabPage>
             </DxFormLayoutTabPages>
 
@@ -475,6 +483,14 @@ MaxWidth="1150px" Width="90%">
 </DxPopup>
 
 @code {
+
+    int SelectedFilesCount { get; set; }
+
+    void OnSelectedFilesChanged(IEnumerable<UploadFileInfo> files)
+    {
+        SelectedFilesCount = files.Count();
+        StateHasChanged();
+    }
     private bool Visible { get; set; }
     private Job EditModel = new();
     private bool IsEdit = false;
