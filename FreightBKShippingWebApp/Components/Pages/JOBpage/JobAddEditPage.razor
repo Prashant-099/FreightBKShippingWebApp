@@ -13,6 +13,8 @@
     @inject CurrencyService CurrencyService
     @inject YearStatechangeService YearStatechangeService
     @inject NavigationManager NavigationManager
+    @inject PdfDetailedExtractorService PdfExtractor
+    @inject JobDataCreationService JobDataCreationService
 
 <DxPopup @bind-Visible="Visible"
 ShowCloseButton="true"
@@ -20,8 +22,8 @@ HeaderText="@PopupTitle"
 Scrollable="true"
 CloseOnOutsideClick="false"
 MaxWidth="1150px" Width="90%"
-         CssClass="popup-elevated" BodyCssClass="my-popup-body"
-      >
+CssClass="popup-elevated" BodyCssClass="my-popup-body"
+>
 
     <EditForm Model="@EditModel" OnValidSubmit="HandleValidSubmit" Context="ctxjobaddedit">
 
@@ -31,16 +33,25 @@ MaxWidth="1150px" Width="90%"
         <DxFormLayout>
 
             <!-- Basic Info -->
-            <DxFormLayoutItem Caption="Job No" ColSpanMd="4">
+            <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Job No" ColSpanMd="4">
                 <div class="d-flex gap-1">
                     <DxTextBox @bind-Text="EditModel.JobPrefix" ></DxTextBox>
                     <DxTextBox @bind-Text="EditModel.JobNo" />
                     <DxTextBox @bind-Text="EditModel.JobSufix" />
                 </div>
             </DxFormLayoutItem>
- 
-            <DxFormLayoutItem Caption="Job Date" ColSpanMd="4">
+
+            <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Job Date" ColSpanMd="4">
                 <DxDateEdit @bind-Date="EditModel.JobDate" Format="dd-MM-yyyy" />
+            </DxFormLayoutItem>
+
+            <DxFormLayoutItem CaptionCssClass="caption-bold"
+                              Caption="@($"Import {(JobType == "IMPORT" ? ".be file" : ".sb file")}")"
+                              ColSpanMd="8">
+                <InputFile OnChange="HandleUpload" 
+                accept=".sb,.dat,.be" 
+                class="form-control" />
+
             </DxFormLayoutItem>
 
 
@@ -48,7 +59,7 @@ MaxWidth="1150px" Width="90%"
                 <DxFormLayoutTabPage Caption="Job Info" >
                     <DxFormLayoutGroup Decoration="FormLayoutGroupDecoration.None">
                         <DxFormLayoutGroup ColSpanMd="6" Decoration="FormLayoutGroupDecoration.None">
-                   
+
                             <DxFormLayoutItem Caption="@PartyCaption" ColSpanMd="12"  CaptionCssClass="caption-bold">
                                 <DxComboBox Data="@party"
                                 TextFieldName="AccountName"
@@ -59,10 +70,10 @@ MaxWidth="1150px" Width="90%"
                                 NullText="Select Importer.."
                                 AllowUserInput="true"
                                 SearchMode="ListSearchMode.AutoSearch"
-                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" ShowDropDownButton="true"
-                                            CssClass="editor-smooth"
-                                            InputCssClass="input-smooth"
-                                           />
+                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" ShowDropDownButton="true"
+                                CssClass="editor-smooth"
+                                InputCssClass="input-smooth"
+                                />
                             </DxFormLayoutItem>
 
                             <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="@AddressCaption" ColSpanMd="12" >
@@ -79,7 +90,7 @@ MaxWidth="1150px" Width="90%"
                                 NullText="Select High Seas.."
                                 AllowUserInput="true"
                                 SearchMode="ListSearchMode.AutoSearch"
-                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth" />
+                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth" />
                             </DxFormLayoutItem>
 
                             <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="High Seas Address" ColSpanMd="12">
@@ -104,7 +115,7 @@ MaxWidth="1150px" Width="90%"
                                 NullText="Select Cargo..."
                                 AllowUserInput="true"
                                 SearchMode="ListSearchMode.AutoSearch"
-                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth" />
+                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth" />
                             </DxFormLayoutItem>
 
                             <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Cargo Desc" ColSpanMd="12">
@@ -119,9 +130,6 @@ MaxWidth="1150px" Width="90%"
                                 <DxTextBox @bind-Text="EditModel.JobHsnCode" CssClass="editor-smooth" />
                             </DxFormLayoutItem>
 
-
-
-
                             <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Vessel" ColSpanMd="12">
                                 <DxComboBox Data="@vessels"
                                 TextFieldName="VesselName"
@@ -129,23 +137,21 @@ MaxWidth="1150px" Width="90%"
                                 @bind-Value="EditModel.JobVesselId"
                                 NullText="Select Importer.." AllowUserInput="true"
                                 SearchMode="ListSearchMode.AutoSearch"
-                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth" />
+                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth" />
                             </DxFormLayoutItem>
-
-
 
                             <DxFormLayoutItem CaptionCssClass="caption-bold"  Caption="Line" ColSpanMd="12">
                                 <DxComboBox Data="@lines" TextFieldName="NotifyName"
                                 ValueFieldName="NotifyId" @bind-Value="EditModel.JobLineId"
                                 NullText="Select Line..." AllowUserInput="true"
                                 SearchMode="ListSearchMode.AutoSearch"
-                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth" />
+                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth" />
                             </DxFormLayoutItem>
                             <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Default Currency " ColSpanMd="12">
                                 <DxComboBox Data="@Currencies" @bind-Value="EditModel.JobDefCurrId"
                                 TextFieldName="CurrencyName" ValueFieldName="CurrencyId" AllowUserInput="true"
                                 SearchMode="ListSearchMode.AutoSearch"
-                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth"></DxComboBox>
+                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth"></DxComboBox>
                             </DxFormLayoutItem>
 
 
@@ -191,7 +197,7 @@ MaxWidth="1150px" Width="90%"
                             <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Unit" ColSpanMd="6">
                                 <DxComboBox Data="@weightUnits" @bind-Value="EditModel.JobGrossUnit" AllowUserInput="true"
                                 SearchMode="ListSearchMode.AutoSearch"
-                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth"></DxComboBox>
+                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth"></DxComboBox>
                             </DxFormLayoutItem>
 
 
@@ -201,7 +207,7 @@ MaxWidth="1150px" Width="90%"
                             <DxFormLayoutItem  CaptionCssClass="caption-bold" Caption="Unit" ColSpanMd="6">
                                 <DxComboBox Data="@weightUnits" @bind-Value="EditModel.JobNetUnit" AllowUserInput="true"
                                 SearchMode="ListSearchMode.AutoSearch"
-                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth"></DxComboBox>
+                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth"></DxComboBox>
                             </DxFormLayoutItem>
 
 
@@ -213,7 +219,7 @@ MaxWidth="1150px" Width="90%"
                             <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Unit" ColSpanMd="6">
                                 <DxComboBox Data="@weightUnits" @bind-Value="EditModel.JobQtyUnit" AllowUserInput="true"
                                 SearchMode="ListSearchMode.AutoSearch"
-                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth"></DxComboBox>
+                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth"></DxComboBox>
 
                             </DxFormLayoutItem>
 
@@ -225,14 +231,14 @@ MaxWidth="1150px" Width="90%"
                                 @bind-Value="EditModel.JobPolId" TextFieldName="LocationName"
                                 ValueFieldName="LocationId" AllowUserInput="true"
                                 SearchMode="ListSearchMode.AutoSearch"
-                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth"></DxComboBox>
+                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth"></DxComboBox>
                             </DxFormLayoutItem>
 
                             <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="POD" ColSpanMd="12">
                                 <DxComboBox Data="@locationList" @bind-Value="EditModel.JobPodId"
                                 TextFieldName="LocationName" ValueFieldName="LocationId" AllowUserInput="true"
                                 SearchMode="ListSearchMode.AutoSearch"
-                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth"></DxComboBox>
+                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth"></DxComboBox>
                             </DxFormLayoutItem>
                             <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Place of Delivery" ColSpanMd="12">
                                 <DxTextBox @bind-Text="EditModel.JobPlaceOfDelivery"  CssClass="editor-smooth"/>
@@ -245,7 +251,7 @@ MaxWidth="1150px" Width="90%"
                                 @bind-Value="EditModel.JobCountryOrigin"
                                 TextFieldName="CountryName" ValueFieldName="CountryName" AllowUserInput="true"
                                 SearchMode="ListSearchMode.AutoSearch"
-                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth" />
+                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth" />
                             </DxFormLayoutItem>
 
 
@@ -258,14 +264,14 @@ MaxWidth="1150px" Width="90%"
                                 ValueFieldName="NotifyId" @bind-Value="EditModel.JobConsigneeId"
                                 NullText="Select Consignor..." AllowUserInput="true"
                                 SearchMode="ListSearchMode.AutoSearch"
-                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth" />
+                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth" />
                             </DxFormLayoutItem>
                             <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Supplier/Consignor" ColSpanMd="12">
                                 <DxComboBox Data="@consignor"
                                 @bind-Value="EditModel.JobSupplierId" TextFieldName="NotifyName"
                                 ValueFieldName="NotifyId" AllowUserInput="true"
                                 SearchMode="ListSearchMode.AutoSearch"
-                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth" />
+                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth" />
                             </DxFormLayoutItem>
                         </DxFormLayoutGroup>
 
@@ -281,7 +287,7 @@ MaxWidth="1150px" Width="90%"
                                 @bind-Value="EditModel.JobChaId" TextFieldName="NotifyName"
                                 ValueFieldName="NotifyId" AllowUserInput="true"
                                 SearchMode="ListSearchMode.AutoSearch"
-                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth" />
+                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth" />
                             </DxFormLayoutItem>
                             <DxFormLayoutItem  CaptionCssClass="caption-bold" Caption="Shipper" ColSpanMd="6">
                                 <DxComboBox Data="@shippers"
@@ -289,7 +295,7 @@ MaxWidth="1150px" Width="90%"
                                 @bind-Value="EditModel.JobShipperId"
                                 NullText="Select Shipper..." AllowUserInput="true"
                                 SearchMode="ListSearchMode.AutoSearch"
-                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth" />
+                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth" />
                             </DxFormLayoutItem>
 
 
@@ -311,7 +317,7 @@ MaxWidth="1150px" Width="90%"
                                 <DxComboBox Data="@stuslist"
                                 @bind-Value="EditModel.JobState" AllowUserInput="true"
                                 SearchMode="ListSearchMode.AutoSearch"
-                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth"></DxComboBox>
+                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth"></DxComboBox>
                             </DxFormLayoutItem>
                             <DxFormLayoutItem CaptionCssClass="caption-bold"  Caption="Remarks" ColSpanMd="12">
                                 <DxMemo @bind-Text="EditModel.JobRemarks" Rows="3" CssClass="editor-smooth" />
@@ -483,7 +489,813 @@ MaxWidth="1150px" Width="90%"
 </DxPopup>
 
 @code {
+    /// <summary>
+    ///
+    public class FlatFileRow
+    {
+        public string Section { get; set; }
+        public List<string> Fields { get; set; }
+    }
 
+    private string GetField(List<string> fields, params int[] indexes)
+    {
+        var values = new List<string>();
+
+        foreach (var index in indexes)
+        {
+            if (fields != null && fields.Count > index && !string.IsNullOrWhiteSpace(fields[index]))
+                values.Add(fields[index].Trim());
+        }
+
+        return string.Join(" ", values);
+    }
+
+    private DateTime? ParseDate(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+
+        if (DateTime.TryParse(value, out var dt))
+            return dt;
+
+        if (DateTime.TryParseExact(value, "yyyyMMdd", null,
+            System.Globalization.DateTimeStyles.None, out dt))
+            return dt;
+
+        return null;
+    }
+
+    private double SafeParseDouble(string value)
+    {
+        if (double.TryParse(value, out var d)) return d;
+        return 0;
+    }
+
+    private decimal? SafeParseDecimal(string value)
+    {
+        if (decimal.TryParse(value, out var d)) return d;
+        return null;
+    }
+    private int SafeParseInt(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return 0;
+
+        if (int.TryParse(value.Trim(), out int result))
+            return result;
+
+        return 0;
+    }
+
+    private List<FlatFileRow> rows = new();
+    private List<string> uploadedFileLines = new();
+    private Dictionary<string, string> extractedData = new();  // Global dictionary
+    private string UploadMessage = "";
+    private string DebugInfo = "";
+
+    //be
+    private readonly HashSet<string> AllowedTablesBE = new()
+{
+    "BE", "INVOICE", "ITEMS", "CONTAINER", "EXCHANGE", "IGMS",
+    "DEPB", "BOND", "CERT", "SBEDUTY", "CTX", "BE_ITEM_SW_INFO_TYPE",
+    "STATEMENT", "SUPPORTINGDOCS"
+};
+
+    private void ReadDataBE(List<string> fileContent)
+    {
+        string currentTable = "";
+
+        foreach (var line in fileContent)
+        {
+            if (string.IsNullOrWhiteSpace(line))
+                continue;
+
+            if (line.StartsWith("<TABLE>"))
+            {
+                currentTable = line.Replace("<TABLE>", "").Trim();
+
+                if (!AllowedTablesBE.Contains(currentTable))
+                    currentTable = "";
+
+                continue;
+            }
+
+            if (line.StartsWith("<END-") ||
+                line.StartsWith("HREC") ||  // BE files start with HREC instead of TREC
+                line.StartsWith("<START-SIGNATURE>") ||
+                line.StartsWith("<START-CERTIFICATE>"))
+            {
+                currentTable = "";
+                continue;
+            }
+
+            if (string.IsNullOrEmpty(currentTable))
+                continue;
+
+            var fields = line.Split('\x1D').ToList();
+
+            rows.Add(new FlatFileRow
+                {
+                    Section = currentTable,
+                    Fields = fields
+                });
+        }
+
+        Console.WriteLine($"📊 ReadDataBE: Parsed {rows.Count} rows from BE file");
+    }
+
+    private void BuildDataDictionaryBE()
+    {
+        extractedData.Clear();
+
+        var beRow = rows.FirstOrDefault(x => x.Section == "BE");
+        if (beRow == null) return;
+
+        var f = beRow.Fields;
+
+        // ---------------------------
+        // IMPORTER DETAILS
+        // ---------------------------
+        extractedData["ImporterName"] = GetField(f, 9);
+        extractedData["ImporterAddress1"] = GetField(f, 10);
+        extractedData["ImporterAddress2"] = GetField(f, 11);
+        extractedData["ImporterAddress3"] = GetField(f, 12);
+        extractedData["ImporterAddress4"] = GetField(f, 13);
+        extractedData["IEC"] = GetField(f, 7);
+
+        // ---------------------------
+        // BE CORE VALUES
+        // ---------------------------
+        extractedData["BENo"] = GetField(f, 4);
+        extractedData["BEDate"] = GetField(f, 5);
+        extractedData["BEType"] = GetField(f, 6);
+
+        // ---------------------------
+        // PORT DETAILS
+        // ---------------------------
+        extractedData["PortCode"] = GetField(f, 1);
+        extractedData["PortOfOrigin"] = GetField(f, 20);
+        extractedData["PortOfShipment"] = GetField(f, 24);
+        extractedData["CountryOfOrigin"] = GetField(f, 22);
+        extractedData["CountryOfConsignment"] = GetField(f, 23);
+
+        // ---------------------------
+        // WEIGHTS
+        // ---------------------------
+        extractedData["GrossWeight"] = GetField(f, 36);
+        extractedData["UnitOfMeasurement"] = GetField(f, 37);
+
+        // ---------------------------
+        // INVOICE DETAILS (from INVOICE table)
+        // ---------------------------
+        var invoiceRow = rows.FirstOrDefault(x => x.Section == "INVOICE");
+        if (invoiceRow != null)
+        {
+            var inv = invoiceRow.Fields;
+            extractedData["SupplierName"] = GetField(inv, 22);
+            extractedData["SupplierAddress1"] = GetField(inv, 23);
+            extractedData["SupplierAddress2"] = GetField(inv, 24);
+            extractedData["SupplierAddress3"] = GetField(inv, 25);
+            extractedData["SupplierCountry"] = GetField(inv, 26);
+            extractedData["InvoiceNumber"] = GetField(inv, 73);  // Actual invoice number
+            extractedData["InvoiceDate"] = GetField(inv, 7);
+        }
+
+        Console.WriteLine($"📋 BuildDataDictionaryBE: Extracted {extractedData.Count} fields");
+    }
+
+
+    //sb
+    private readonly HashSet<string> AllowedTables = new()
+{
+    "SB","INVOICE","ITEM","CONTAINER","Supportingdocs","ITEMACCESS",
+    "DBK","LICENCE","PACKINGLIST","SW_INFO_TYPE","SW_CONST","SW_PROD",
+    "AR4","STR","SW_CTRL","CARGOBACK","PCKGBACK","CONTAINERBACK"
+};
+
+
+    private void ReadDataSB(List<string> fileContent)
+    {
+        string currentTable = "";
+
+        foreach (var line in fileContent)
+        {
+            if (string.IsNullOrWhiteSpace(line))
+                continue;
+
+            if (line.StartsWith("<TABLE>"))
+            {
+                currentTable = line.Replace("<TABLE>", "").Trim();
+
+                if (!AllowedTables.Contains(currentTable))
+                    currentTable = "";
+
+                continue;
+            }
+
+            if (line.StartsWith("<END-") ||
+                line.StartsWith("TREC") ||
+                line.StartsWith("<START-SIGNATURE>") ||
+                line.StartsWith("<START-CERTIFICATE>"))
+            {
+                currentTable = "";
+                continue;
+            }
+
+            if (string.IsNullOrEmpty(currentTable))
+                continue;
+
+            var fields = line.Split('\x1D').ToList();
+
+            rows.Add(new FlatFileRow
+                {
+                    Section = currentTable,
+                    Fields = fields
+                });
+        }
+    }
+    private void BuildDataDictionary()
+    {
+        extractedData.Clear();
+
+        var sbRow = rows.FirstOrDefault(x => x.Section == "SB");
+        if (sbRow == null) return;
+
+        var f = sbRow.Fields;
+
+        // ---------------------------
+        // EXPORTER DETAILS
+        // ---------------------------
+        extractedData["ExporterName"] = GetField(f, 9);
+        extractedData["ExporterAddress1"] = GetField(f, 10);
+        extractedData["ExporterAddress2"] = GetField(f, 11);
+        extractedData["ExporterAddress3"] = GetField(f, 12);
+        extractedData["ExporterAddress4"] = GetField(f, 13);
+        extractedData["ExporterAddress5"] = GetField(f, 14);
+        extractedData["GSTIN"] = GetField(f, 16);
+        extractedData["Phone"] = GetField(f, 17);
+        extractedData["Email"] = GetField(f, 18);
+        extractedData["PAN"] = GetField(f, 19);
+        // ---------------------------
+        // CONSIGNEE DETAILS
+        // ---------------------------
+        extractedData["ConsigneeName"] = GetField(f, 20);
+        extractedData["ConsigneeAddress1"] = GetField(f, 21);
+        extractedData["ConsigneeAddress2"] = GetField(f, 22);
+        extractedData["ConsigneeAddress3"] = GetField(f, 23);
+        extractedData["ConsigneeAddress4"] = GetField(f, 24);
+        // ---------------------------
+        // CHA + IEC + AGENT
+        // ---------------------------
+        extractedData["CHA"] = GetField(f, 6);
+        extractedData["IEC"] = GetField(f, 7);
+        extractedData["BranchSNo"] = GetField(f, 8);
+        // ---------------------------
+        // SHIPPING BILL CORE VALUES
+        // ---------------------------
+        extractedData["SBNo"] = GetField(f, 4);
+        extractedData["SBDate"] = GetField(f, 5);
+           // ---------------------------
+        // PORT + VESSEL DETAILS
+        // ---------------------------
+        // From TABLESB (SB Main - Indices 0-49)
+        extractedData["PortCode"] = GetField(f, 1);              // Custom House Code
+        extractedData["POL"] = GetField(f, 29);                  // Port of Loading
+        extractedData["POD"] = GetField(f, 33);                  // Port of Discharge
+        extractedData["DestinationCountry"] = GetField(f, 31);   // Country of final destination
+        extractedData["GrossWeight"] = GetField(f, 36);          // Gross weight
+        extractedData["NetWeight"] = GetField(f, 37);            // Net weight
+        extractedData["MarksNumbers"] = GetField(f, 40);         // Marks Numbers
+        extractedData["GSTIN"] = GetField(f, 49);                // GSTN ID
+    }
+
+
+    private async Task MapSBMain(List<string> fields)
+    {
+        try
+        {
+           
+            EditModel.JobNo = GetField(fields, 2);
+            EditModel.JobSbNo = GetField(fields, 4);          // Field 5: SB Number (1902025)
+            EditModel.JobSbDate = ParseDate(GetField(fields, 5)); // Field 6: SB Date (20251106)
+
+            string exporterName = GetField(fields, 9);
+
+            if (!string.IsNullOrWhiteSpace(exporterName))
+            {
+                EditModel.JobPartyId = await JobDataCreationService.GetOrCreateAccountIdAsync(
+                    exporterName,
+                    extractedData,
+                    "Exporter"
+                );
+            }
+            EditModel.JobPartyAddress = GetField(fields, 10, 11, 12, 13);
+
+            // Consignee
+            EditModel.JobConsigneeId = await JobDataCreationService.GetOrCreateConsigneeIdAsync(
+                                         extractedData["ConsigneeName"],
+                                         extractedData    
+                                     );
+            EditModel.JobConsigneeAddress =
+             $"{extractedData["ConsigneeAddress1"]} {extractedData["ConsigneeAddress2"]} " +
+             $"{extractedData["ConsigneeAddress3"]} {extractedData["ConsigneeAddress4"]}";
+
+            // Port of Loading
+            var polName = GetField(fields, 29);
+            var polCountry = GetField(fields, 31);  
+            EditModel.JobPolId = await JobDataCreationService.GetOrCreateLocationWithCountryAsync(polName, polCountry, "PORT");
+
+            // Port of Discharge
+            var podName = GetField(fields, 33);
+            var podCountry = GetField(fields, 32);  
+            EditModel.JobPodId = await JobDataCreationService.GetOrCreateLocationWithCountryAsync(podName, podCountry, "PORT");
+            // Weights
+            EditModel.JobGrossWt = SafeParseDouble(GetField(fields, 36));  // Index 36: Gross Weight (27000)
+            EditModel.JobGrossUnit = GetField(fields, 38);                 // Index 38: Unit of Measurement (KGS/MTS)
+            EditModel.JobNetWt = SafeParseDouble(GetField(fields, 37));    // Index 37: Net Weight (27000)
+            EditModel.JobNetUnit = GetField(fields, 38);                   // Index 38: Unit of Measurement (same as gross unit)
+     string qtyString = GetField(fields, 39);              // "1080"
+Console.WriteLine($"Field[39] Packages: '{qtyString}'");
+
+EditModel.JobQty = SafeParseInt(qtyString);           // 1080
+EditModel.JobQtyUnit = "PKG";                                 
+            var itemRow = rows.FirstOrDefault(x => x.Section == "ITEM");
+            if (itemRow != null)
+            {
+                var itemFields = itemRow.Fields;
+
+                // ✅ GOODS DESCRIPTION
+                EditModel.JobGoodsDesc = GetField(itemFields, 8);         // Index 8: Description
+                                                                          // "QUARTZ POWDER S325 (BATCH NO.0515-QD)"
+
+                // HSN Code
+                EditModel.JobHsnCode = GetField(itemFields, 9);           // Index 9: HSN/HS Code
+
+                // Item Quantity & Unit Price
+                // EditModel.JobItemQty = SafeParseDouble(GetField(itemFields, 11));    Index 11: Quantity
+                // EditModel.JobItemUnit = GetField(itemFields, 10);         Index 10: Unit (MTS/KGS)
+                // EditModel.JobUnitPrice = SafeParseDouble(GetField(itemFields, 12));  Index 12: Unit Price
+            }
+
+            var invoiceRow = rows.FirstOrDefault(x => x.Section == "INVOICE");
+            if (invoiceRow != null)
+            {
+                var invoiceFields = invoiceRow.Fields;
+
+                // ✅ SHIPPER INVOICE NUMBER
+                EditModel.JobShipperInvNo = GetField(invoiceFields, 4);    // Index 4: Invoice Number
+                                                                          // "WMA/009/OVW/06"
+
+                // Invoice Date & Value
+                EditModel.JobShipperInvDate = ParseDate(GetField(invoiceFields, 5));    // Index 5: Invoice Date
+            }
+            // ==========================================
+            // CONTAINER PARSING - DEBUGGING VERSION
+            // ==========================================
+            var containerRows = rows.Where(x => x.Section == "CONTAINER").ToList();
+
+            int count20 = 0, count40 = 0;
+            var numbers20 = new List<string>();
+            var numbers40 = new List<string>();
+
+            foreach (var row in containerRows)
+            {
+                var f = row.Fields;
+
+                if (f.Count >= 6)
+                {
+                    // f[4] mein Type + Number dono hain
+                    string typeAndNumber = GetField(f, 4);     // "CBHU5685814"
+
+                    // Pehle 2 characters = Type, baaki = Number
+                    string type = typeAndNumber.Substring(0, 2);           // "CB"
+                    string number = typeAndNumber.Substring(2).Trim();     // "HU5685814"
+
+                    // f[5] = Size
+                    string size = GetField(f, 5);              // "20"
+
+                    Console.WriteLine($"Type: {type}, Number: {number}, Size: {size}");
+
+                    // Store Container Type
+                    if (string.IsNullOrEmpty(EditModel.JobContainerType))
+                        EditModel.JobContainerType = type;
+
+                    // Count by size
+                    if (size.Contains("20") || size == "20")
+                    {
+                        count20++;
+                        numbers20.Add(number);
+                    }
+                    else if (size.Contains("40") || size == "40")
+                    {
+                        count40++;
+                        numbers40.Add(number);
+                    }
+                }
+            }
+
+            // STORE RESULTS
+            EditModel.Job20Ft = count20.ToString();
+            EditModel.Job40Ft = count40.ToString();
+            EditModel.JobContainer20Ft = string.Join(", ", numbers20);
+            EditModel.JobContainer40Ft = string.Join(", ", numbers40);
+			EditModel.JobContainerType = GetField(fields, 53); 
+
+
+            // EditModel.JobMarks = GetField();
+            // EditModel.Job20Ft = GetField();
+            // EditModel.Job40Ft = GetField();
+            // EditModel.JobHsnCode = GetField();
+ 
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("SB_MAIN ERROR → " + ex.Message);
+        }
+    }
+
+    private async Task MapBEMain(List<string> fields)
+    {
+        try
+        {
+
+            // ==========================================
+            // BE MAIN TABLE FIELDS
+            // ==========================================
+            EditModel.JobNo = GetField(fields, 2);
+            EditModel.JobSbNo = GetField(fields, 4);  // BE Number
+            EditModel.JobSbDate = ParseDate(GetField(fields, 5));
+
+            // Importer Details
+            string importerName = GetField(fields, 9);
+            if (!string.IsNullOrWhiteSpace(importerName))
+            {
+                EditModel.JobPartyId = await JobDataCreationService.GetOrCreateAccountIdAsync(
+                    importerName,
+                    extractedData,
+                    "Importer"
+                );
+            }
+            EditModel.JobPartyAddress = GetField(fields, 10, 11, 12, 13);
+
+            // Ports and Countries
+            var polName = GetField(fields, 20);
+            var polCountry = GetField(fields, 22);
+            if (!string.IsNullOrWhiteSpace(polName))
+            {
+                EditModel.JobPolId = await JobDataCreationService.GetOrCreateLocationWithCountryAsync(
+                    polName, polCountry, "PORT");
+            }
+
+            var podName = GetField(fields, 24);
+            var podCountry = GetField(fields, 23);
+            if (!string.IsNullOrWhiteSpace(podName))
+            {
+                EditModel.JobPodId = await JobDataCreationService.GetOrCreateLocationWithCountryAsync(
+                    podName, podCountry, "PORT");
+            }
+
+            // ==========================================
+            // ❌ WRONG - Ye fields BE main table mein nahi hain
+            // EditModel.JobGrossWt = SafeParseDouble(GetField(fields, 36));
+            // EditModel.JobQty = SafeParseInt(GetField(fields, 34));
+            // ==========================================
+
+            // ==========================================
+            // INVOICE TABLE PARSING
+            // ==========================================
+            var invoiceRow = rows.FirstOrDefault(x => x.Section == "INVOICE");
+            if (invoiceRow != null)
+            {
+                var invFields = invoiceRow.Fields;
+
+                EditModel.JobShipperInvNo = GetField(invFields, 73);
+                EditModel.JobShipperInvDate = ParseDate(GetField(invFields, 7));
+
+                string supplierName = GetField(invFields, 22);
+                if (!string.IsNullOrWhiteSpace(supplierName))
+                {
+                    EditModel.JobConsigneeId = await JobDataCreationService.GetOrCreateConsigneeIdAsync(
+                        supplierName,
+                        extractedData
+                    );
+                }
+                EditModel.JobConsigneeAddress = $"{GetField(invFields, 23)} {GetField(invFields, 24)} " +
+                                               $"{GetField(invFields, 25)} {GetField(invFields, 26)}";
+            }
+
+            // ==========================================
+            // ITEMS TABLE PARSING
+            // ==========================================
+            var itemRow = rows.FirstOrDefault(x => x.Section == "ITEMS");
+            if (itemRow != null)
+            {
+                var itemFields = itemRow.Fields;
+
+                EditModel.JobGoodsDesc = GetField(itemFields, 11);
+                EditModel.JobHsnCode = GetField(itemFields, 21);
+
+                // ✅ Item Quantity se total packages milega
+                EditModel.JobQty = SafeParseDouble(GetField(itemFields, 8));
+                EditModel.JobQtyUnit = GetField(itemFields, 9);
+
+                EditModel.JobBrand = GetField(itemFields, 17);
+                EditModel.JobCountryOrigin = GetField(itemFields, 20);
+            }
+
+            // ==========================================
+            // EXCHANGE TABLE PARSING
+            // ==========================================
+            var exchangeRow = rows.FirstOrDefault(x => x.Section == "EXCHANGE");
+            if (exchangeRow != null)
+            {
+                var exFields = exchangeRow.Fields;
+                EditModel.JobExchRate = SafeParseDouble(GetField(exFields, 9));
+            }
+
+            // ==========================================
+            // ✅ IGMS TABLE - YAHA SE SAHI DATA MILEGA
+            // ==========================================
+            var igmsRow = rows.FirstOrDefault(x => x.Section == "IGMS");
+            if (igmsRow != null)
+            {
+                var igmsFields = igmsRow.Fields;
+                Console.WriteLine($"🔍 IGMS Fields Count: {igmsFields.Count}");
+
+                // Print all fields for debugging
+                for (int i = 0; i < igmsFields.Count; i++)
+                {
+                    Console.WriteLine($"IGMS[{i}] = '{igmsFields[i]}'");
+                }
+
+                // ✅ BL Number - Field 12 (Position 13)
+                EditModel.JobBlNo = GetField(igmsFields, 12);
+
+                // ✅ BL Date - Field 13 (Position 14)
+                string blDateStr = GetField(igmsFields, 13);
+                EditModel.JobBlDate = ParseDate(blDateStr);
+
+                // ✅ No of Packages - Field 16 (Position 17)
+                string packagesStr = GetField(igmsFields, 16);
+                EditModel.JobQty = SafeParseInt(packagesStr);
+                EditModel.JobQtyUnit = GetField(igmsFields, 17);  // Package Type
+                Console.WriteLine($"📦 Packages: {packagesStr} {EditModel.JobQtyUnit}");
+
+                // ✅ Gross Weight - Field 18 (Position 19)
+                string grossWtStr = GetField(igmsFields, 18);
+                EditModel.JobGrossWt = SafeParseDouble(grossWtStr);
+                EditModel.JobGrossUnit = GetField(igmsFields, 19);  // Unit
+                Console.WriteLine($"⚖️ Gross Weight: {grossWtStr} {EditModel.JobGrossUnit}");
+
+                // ✅ Marks and Numbers - Fields 20, 21, 22 (Positions 21, 22, 23)
+                EditModel.JobMarks = GetField(igmsFields, 20, 21, 22);
+                Console.WriteLine($"📝 Marks: {EditModel.JobMarks}");
+            }
+            else
+            {
+                Console.WriteLine("⚠️ IGMS section not found!");
+            }
+
+            // ==========================================
+            // ✅ CONTAINER TABLE - CORRECT PARSING
+            // ==========================================
+            var containerRows = rows.Where(x => x.Section == "CONTAINER").ToList();
+            Console.WriteLine($"📦 Found {containerRows.Count} containers");
+
+            int count20 = 0, count40 = 0;
+            var numbers20 = new List<string>();
+            var numbers40 = new List<string>();
+
+            foreach (var row in containerRows)
+            {
+                var f = row.Fields;
+
+                Console.WriteLine($"Container Fields Count: {f.Count}");
+                for (int i = 0; i < f.Count && i < 12; i++)  // Print first 12 fields
+                {
+                    Console.WriteLine($"CONTAINER[{i}] = '{f[i]}'");
+                }
+
+                if (f.Count >= 10)
+                {
+                    // ✅ METHOD 1: Use Field[4] - has type indicator
+                    // Format: "FTTNU9840812074" or "TTNU9840812"
+                    // F = 20ft FCL, other = check by length/pattern
+                    string field4 = GetField(f, 4);
+
+                    // ✅ METHOD 2: Pure container number from Field[9]
+                    string containerNumber = GetField(f, 9);  // "TTNU9840812"
+
+                    Console.WriteLine($"📦 Field[4]: {field4}");
+                    Console.WriteLine($"📦 Field[9]: {containerNumber}");
+
+                    // Skip if empty
+                    if (string.IsNullOrWhiteSpace(containerNumber))
+                        continue;
+
+                    // ✅ Determine size from Field[4] pattern
+                    bool is20ft = false;
+                    bool is40ft = false;
+
+                    if (field4.StartsWith("F"))
+                    {
+                        // "F" prefix usually indicates 20ft FCL
+                        is20ft = true;
+                    }
+                    else if (field4.Length > 11)
+                    {
+                        // Longer format might be 40ft
+                        // Check if it has specific 40ft indicators
+                        string sizeCode = field4.Length >= 13 ? field4.Substring(11, 2) : "";
+
+                        if (sizeCode == "45" || sizeCode == "42" || sizeCode == "40")
+                            is40ft = true;
+                        else
+                            is20ft = true;  // Default to 20ft
+                    }
+                    else
+                    {
+                        // Standard 11-char container = typically 20ft
+                        is20ft = true;
+                    }
+
+                    // ✅ Alternative: Check container number prefix patterns
+                    // Common 20ft: TTNU, TCLU, TEMU, etc. (standard containers)
+                    // Common 40ft: Usually same prefixes but with HC suffix
+                    string prefix = containerNumber.Length >= 4 ? containerNumber.Substring(0, 4) : "";
+
+                    // Store container type from prefix
+                    if (string.IsNullOrEmpty(EditModel.JobContainerType))
+                        EditModel.JobContainerType = prefix;
+
+                    Console.WriteLine($"📏 Detected: 20ft={is20ft}, 40ft={is40ft}");
+
+                    // Count and store
+                    if (is20ft)
+                    {
+                        count20++;
+                        numbers20.Add(containerNumber);
+                    }
+                    else if (is40ft)
+                    {
+                        count40++;
+                        numbers40.Add(containerNumber);
+                    }
+                }
+            }
+
+            EditModel.Job20Ft = count20.ToString();
+            EditModel.Job40Ft = count40.ToString();
+            EditModel.JobContainer20Ft = string.Join(", ", numbers20);
+            EditModel.JobContainer40Ft = string.Join(", ", numbers40);
+
+
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ BE_MAIN ERROR → {ex.Message}");
+            Console.WriteLine($"Stack Trace: {ex.StackTrace}");
+            throw;
+        }
+    }
+
+
+
+    // private async Task HandleUpload(InputFileChangeEventArgs e)
+    // {
+    //     try
+    //     {
+    //         var file = e.File;
+
+    //         using var reader = new StreamReader(file.OpenReadStream());
+    //         string content = await reader.ReadToEndAsync();
+
+    //         uploadedFileLines = content.Split(
+    //             new[] { "\r\n", "\r", "\n" },
+    //             StringSplitOptions.None
+    //         ).ToList();
+
+    //         rows.Clear();
+    //         extractedData.Clear();
+
+    //         ReadDataSB(uploadedFileLines);
+
+    //         var sbRow = rows.FirstOrDefault(x => x.Section == "SB");
+
+    //         if (sbRow == null)
+    //         {
+    //             UploadMessage = "⚠ SB section not found!";
+    //             return;
+    //         }
+
+    //         Build dictionary from SB row
+    //         BuildDataDictionary();
+
+    //         Map SB fields
+    //         await MapSBMain(sbRow.Fields);
+
+    //         UploadMessage = $"✔ File uploaded! Parsed {rows.Count} rows.";
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         UploadMessage = "❌ ERROR: " + ex.Message;
+    //     }
+    // }
+    // Class level variable
+
+    private string shipmentType = "";
+    private string fileExtension = "";
+    private async Task HandleUpload(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            var file = e.File;
+
+            // ✅ STEP 1: Get file extension
+            fileExtension = Path.GetExtension(file.Name).ToLower();
+
+            using var reader = new StreamReader(file.OpenReadStream());
+            string content = await reader.ReadToEndAsync();
+
+            uploadedFileLines = content.Split(
+                new[] { "\r\n", "\r", "\n" },
+                StringSplitOptions.None
+            ).ToList();
+
+            rows.Clear();
+            extractedData.Clear();
+
+            // ✅ STEP 2: Check file type and call appropriate function
+            if (fileExtension == ".be" || fileExtension == ".dat")
+            {
+                // BE (Import) File Processing
+
+                ReadDataBE(uploadedFileLines);  // Read BE sections
+
+                var beRow = rows.FirstOrDefault(x => x.Section == "BE");
+                if (beRow == null)
+                {
+                    UploadMessage = "⚠ BE section not found in import file!";
+                    return;
+                }
+
+                BuildDataDictionaryBE();  // Build BE dictionary
+                await MapBEMain(beRow.Fields);  // Map BE data
+
+                shipmentType = "Import";
+                UploadMessage = $"✔ Import file uploaded! BE No: {EditModel.JobSbNo} | Rows: {rows.Count}";
+            }
+            else if (fileExtension == ".sb")
+            {
+                // SB (Export) File Processing
+                Console.WriteLine("🟢 Processing SB (Export) file...");
+
+                ReadDataSB(uploadedFileLines);  // Read SB sections
+
+                var sbRow = rows.FirstOrDefault(x => x.Section == "SB");
+                if (sbRow == null)
+                {
+                    UploadMessage = "⚠ SB section not found in export file!";
+                    return;
+                }
+
+                BuildDataDictionary();  // Build SB dictionary
+                await MapSBMain(sbRow.Fields);  // Map SB data
+
+                shipmentType = "Export";
+                UploadMessage = $"✔ Export file uploaded! SB No: {EditModel.JobSbNo} | Rows: {rows.Count}";
+            }
+            else
+            {
+                UploadMessage = $"❌ Unsupported file type: {fileExtension}. Please upload .be, .dat or .sb file.";
+                return;
+            }
+
+            Console.WriteLine($"✅ Processing complete: Type={shipmentType}, Rows={rows.Count}");
+        }
+        catch (Exception ex)
+        {
+            UploadMessage = $"❌ ERROR: {ex.Message}";
+            Console.WriteLine($"Error Stack: {ex.StackTrace}");
+        }
+        await Refresh();
+    }
+
+    // Detection method
+    private string DetectShipmentType()
+    {
+        // Method 2 (Most reliable for your case)
+        bool hasIGM = rows.Any(x => x.Section == "IGM");
+        bool hasEGM = rows.Any(x => x.Section == "EGM");
+
+        if (hasIGM) return "Import";
+        if (hasEGM) return "Export";
+
+        return "Unknown";
+    }
+
+    ///
+    /// </summary>
     int SelectedFilesCount { get; set; }
 
     void OnSelectedFilesChanged(IEnumerable<UploadFileInfo> files)
@@ -531,37 +1343,41 @@ MaxWidth="1150px" Width="90%"
 
     protected override async Task OnInitializedAsync()
     {
-                var parties = await AccountService.GetAllAsync();
-             party = parties.Where(a => a.AccountTypeId == 18).ToList();
+        await Refresh();
+    }
 
-               cargos = await CargoService.GetAllAsync();
-             vessels = await VesselService.GetAllAsync();
-            countryList = await CountryService.GetAllAsync();
-            Currencies = await CurrencyService.GetAllAsync();
-            if (Currencies.Any())
-            {
-                EditModel.JobDefCurrId = Currencies.FirstOrDefault().CurrencyId;
-            }
-            var locationlist = await LocationService.GetAllAsync();
-            locationList = locationlist.Where(l => l.LocationType == "PORT").ToList();
+    private async Task Refresh()
+    {
+        var parties = await AccountService.GetAllAsync();
+        party = parties.Where(a => a.AccountTypeId == 18).ToList();
 
+        cargos = await CargoService.GetAllAsync();
+        vessels = await VesselService.GetAllAsync();
+        countryList = await CountryService.GetAllAsync();
+        Currencies = await CurrencyService.GetAllAsync();
 
-            var allNotify = await NotifyService.GetAllAsync();
-
-            // Separate lists by type
-            shippers = allNotify.Where(n => n.NotifyType == "SHIPPER").ToList();
-            lines = allNotify.Where(n => n.NotifyType == "LINE").ToList();
-            consignees = allNotify.Where(n => n.NotifyType == "CONSIGNEE").ToList();
-            consignor = allNotify.Where(n => n.NotifyType == "CONSIGNOR").ToList();
-            agent = allNotify.Where(n => n.NotifyType == "AGENT").ToList();
-            chaList = allNotify.Where(n => n.NotifyType == "CHA").ToList();
-
-
-            StateHasChanged();
+        if (Currencies.Any())
+        {
+            EditModel.JobDefCurrId = Currencies.FirstOrDefault().CurrencyId;
         }
 
-        private async Task HandleValidSubmit()
+        var locationlist = await LocationService.GetAllAsync();
+        locationList = locationlist.Where(l => l.LocationType == "PORT").ToList();
 
+        var allNotify = await NotifyService.GetAllAsync();
+
+        shippers = allNotify.Where(n => n.NotifyType == "SHIPPER").ToList();
+        lines = allNotify.Where(n => n.NotifyType == "LINE").ToList();
+        consignees = allNotify.Where(n => n.NotifyType == "CONSIGNEE").ToList();
+        consignor = allNotify.Where(n => n.NotifyType == "CONSIGNOR").ToList();
+        agent = allNotify.Where(n => n.NotifyType == "AGENT").ToList();
+        chaList = allNotify.Where(n => n.NotifyType == "CHA").ToList();
+
+        StateHasChanged();
+    }
+
+
+        private async Task HandleValidSubmit()
          {
         EditModel.JobType = JobType;
         EditModel.JobYearId = YearStatechangeService.SelectedYearId.ToString();
@@ -627,6 +1443,8 @@ MaxWidth="1150px" Width="90%"
             // Clear the address if no high seas is selected
             EditModel.JobHighseas1Address = string.Empty;
         }
+
+
     }
 
     private void OnCargoChanged(int? value)
