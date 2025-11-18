@@ -1,0 +1,665 @@
+﻿@page "/extractdatafromfile"
+@using System.Text
+@using System.Text.Json
+@using FreightBKShippingWebApp.Model
+@using System.Text.RegularExpressions
+@using iText.Kernel.Pdf
+@using iText.Kernel.Pdf.Canvas.Parser
+@using iText.Kernel.Pdf.Canvas.Parser.Listener
+
+<h3>Extract Data from File</h3>
+
+<div class="file-upload-section">
+    <InputFile OnChange="HandleFileSelected" accept=".sb,.txt,.pdf,.json,.log" />
+    @if (!string.IsNullOrEmpty(StatusMessage))
+    {
+        <div class="alert alert-info mt-2">@StatusMessage</div>
+    }
+</div>
+
+@if (!string.IsNullOrEmpty(ExtractedText))
+{
+    <div class="textbox-section">
+        <label for="extractedTextBox">Extracted Text (@CharCount characters):</label>
+        <textarea id="extractedTextBox" 
+                  class="form-control text-box" 
+                  @bind="ExtractedText" 
+                  @bind:event="oninput"
+                  rows="20">
+        </textarea>
+        <button class="btn btn-secondary mt-2" @onclick="ClearText">Clear</button>
+    </div>
+}
+
+<style>
+    .file-upload-section {
+        margin-bottom: 20px;
+    }
+
+    .alert {
+        padding: 10px;
+        border-radius: 4px;
+        background-color: #d1ecf1;
+        border: 1px solid #bee5eb;
+        color: #0c5460;
+    }
+
+    .textbox-section {
+        margin-top: 20px;
+    }
+
+    .textbox-section label {
+        font-weight: bold;
+        margin-bottom: 8px;
+        display: block;
+    }
+
+    .text-box {
+        width: 100%;
+        font-family: 'Consolas', 'Monaco', monospace;
+        font-size: 13px;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        background: #f7f7f7;
+        resize: vertical;
+    }
+
+    .text-box:focus {
+        outline: none;
+        border-color: #007bff;
+        background: #ffffff;
+    }
+
+    .btn {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+
+    .btn-secondary {
+        background-color: #6c757d;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background-color: #5a6268;
+    }
+
+    .mt-2 {
+        margin-top: 10px;
+    }
+</style>
+
+@code {
+    private string ExtractedText = "";
+    private string StatusMessage = "";
+    private int CharCount => ExtractedText?.Length ?? 0;
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            var file = e.File;
+            StatusMessage = $"Loading file: {file.Name} ({file.Size} bytes)...";
+            StateHasChanged();
+
+            using var stream = file.OpenReadStream(maxAllowedSize: 50 * 1024 * 1024); // 50 MB
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+
+            byte[] fileBytes = ms.ToArray();
+            StatusMessage = $"File loaded. Extracting data from {file.Name}...";
+            StateHasChanged();
+
+            ExtractedText = await ExtractDataFromFileAsync(fileBytes, file.Name);
+            
+            if (string.IsNullOrEmpty(ExtractedText))
+            {
+                ExtractedText = "⚠️ File appears to be empty or could not be read.";
+                StatusMessage = "Extraction completed but no data found.";
+            }
+            else
+            {
+                StatusMessage = $"✓ Successfully extracted {CharCount} characters from {file.Name}";
+            }
+        }
+        catch (Exception ex)
+        {
+            ExtractedText = $"❌ ERROR:\n\n{ex.Message}\n\nStack Trace:\n{ex.StackTrace}";
+            StatusMessage = "Error occurred during file processing.";
+        }
+        
+        StateHasChanged();
+    }
+
+    private void ClearText()
+    {
+        ExtractedText = "";
+        StatusMessage = "";
+    }
+
+    private Task<string> ExtractDataFromFileAsync(byte[] data, string fileName)
+    {
+        try
+        {
+            string ext = Path.GetExtension(fileName).ToLower();
+
+            switch (ext)
+            {
+                case ".pdf":
+                    return ExtractFromPdf(data);
+
+                case ".txt":
+                case ".log":
+                    return Task.FromResult(Encoding.UTF8.GetString(data));
+
+                case ".json":
+                    return Task.FromResult(Encoding.UTF8.GetString(data));
+
+                case ".sb":
+                    return ExtractFromSB(data);
+
+                default:
+                    // Try to read as text anyway
+                    string content = Encoding.UTF8.GetString(data);
+                    if (string.IsNullOrWhiteSpace(content))
+                    {
+                        content = Encoding.ASCII.GetString(data);
+                    }
+                    return Task.FromResult($"Unsupported file extension: {ext}\n\nRaw content:\n{content}");
+            }
+        }
+        catch (Exception ex)
+        {
+            return Task.FromResult($"Error in ExtractDataFromFileAsync: {ex.Message}");
+        }
+    }
+
+    private Task<string> ExtractFromPdf(byte[] data)
+    {
+        try
+        {
+            using var ms = new MemoryStream(data);
+            using var pdf = new PdfReader(ms);
+            using var doc = new PdfDocument(pdf);
+            var sb = new StringBuilder();
+
+            for (int i = 1; i <= doc.GetNumberOfPages(); i++)
+            {
+                var page = doc.GetPage(i);
+                var strategy = new SimpleTextExtractionStrategy();
+                string pageText = PdfTextExtractor.GetTextFromPage(page, strategy);
+                sb.AppendLine($"=== Page {i} ===");
+                sb.AppendLine(pageText);
+                sb.AppendLine();
+            }
+
+            return Task.FromResult(sb.ToString());
+        }
+        catch (Exception ex)
+        {
+            return Task.FromResult($"PDF Extraction Error: {ex.Message}");
+        }
+    }
+
+    private Task<string> ExtractFromSB(byte[] data)
+    {
+        try
+        {
+            var result = new StringBuilder();
+
+            // Try UTF8 first
+            string raw = Encoding.UTF8.GetString(data);
+            
+            // Check if it looks like binary or corrupted
+            if (raw.Take(100).Count(c => char.IsControl(c) && c != '\r' && c != '\n' && c != '\t') > 50)
+            {
+                // Try ASCII
+                raw = Encoding.ASCII.GetString(data);
+            }
+
+            // Parse structured data
+            if (raw.Contains("<TABLE>") || raw.Contains("<"))
+            {
+                result.AppendLine("╔════════════════════════════════════════════════════════════════╗");
+                result.AppendLine("║            SHIPPING BILL DATA - PARSED SECTIONS                ║");
+                result.AppendLine("╚════════════════════════════════════════════════════════════════╝");
+                result.AppendLine();
+                
+                var dict = ParseSBFile(raw);
+                
+                foreach (var kvp in dict)
+                {
+                    result.AppendLine($"\n{kvp.Key}");
+                    result.AppendLine(new string('─', 70));
+                    result.AppendLine(kvp.Value);
+                    result.AppendLine();
+                }
+            }
+            else
+            {
+                result.AppendLine("RAW CONTENT:");
+                result.AppendLine(new string('=', 70));
+                result.AppendLine(raw);
+            }
+
+            return Task.FromResult(result.ToString());
+        }
+        catch (Exception ex)
+        {
+            return Task.FromResult($"❌ SB File Error: {ex.Message}\n\nStack: {ex.StackTrace}");
+        }
+    }
+
+    private Dictionary<string, string> ParseSBFile(string content)
+    {
+        var dict = new Dictionary<string, string>();
+        int sectionNumber = 0;
+
+        try
+        {
+            // Split by <TABLE> tags and process each section
+            var tableSections = Regex.Split(content, @"<TABLE>");
+            
+            foreach (var section in tableSections)
+            {
+                if (string.IsNullOrWhiteSpace(section)) continue;
+
+                // Get the first line as the table name
+                var lines = section.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+                if (lines.Length == 0) continue;
+
+                string tableName = lines[0].Trim();
+                
+                // Stop at special markers
+                if (tableName.StartsWith("END-SB") || 
+                    tableName.StartsWith("START-SIGNATURE") || 
+                    tableName.StartsWith("START-CERTIFICATE"))
+                {
+                    break;
+                }
+
+                // Get the data (everything after the table name)
+                var dataLines = lines.Skip(1).ToList();
+                
+                if (dataLines.Count > 0)
+                {
+                    sectionNumber++;
+                    string parsedData = ParseTableData(tableName, dataLines);
+                    dict[$"[{sectionNumber}] TABLE: {tableName}"] = parsedData;
+                }
+            }
+
+            // Extract SIGNATURE section
+            var signatureMatch = Regex.Match(content, @"<START-SIGNATURE>(.*?)</START-SIGNATURE>", RegexOptions.Singleline);
+            if (signatureMatch.Success)
+            {
+                sectionNumber++;
+                dict[$"[{sectionNumber}] SIGNATURE"] = signatureMatch.Groups[1].Value.Trim();
+            }
+
+            // Extract CERTIFICATE section
+            var certificateMatch = Regex.Match(content, @"<START-CERTIFICATE>(.*?)(?:</START-CERTIFICATE>|<SIGNER-VERSION>|$)", RegexOptions.Singleline);
+            if (certificateMatch.Success)
+            {
+                sectionNumber++;
+                dict[$"[{sectionNumber}] CERTIFICATE"] = certificateMatch.Groups[1].Value.Trim();
+            }
+
+            // Extract SIGNER-VERSION
+            var versionMatch = Regex.Match(content, @"<SIGNER-VERSION>(.*?)</SIGNER-VERSION>", RegexOptions.Singleline);
+            if (versionMatch.Success)
+            {
+                sectionNumber++;
+                dict[$"[{sectionNumber}] SIGNER-VERSION"] = versionMatch.Groups[1].Value.Trim();
+            }
+
+            // If no structured data found
+            if (dict.Count == 0)
+            {
+                dict["RAW_CONTENT"] = content;
+            }
+        }
+        catch (Exception ex)
+        {
+            dict["Parse Error"] = ex.Message;
+        }
+
+        return dict;
+    }
+
+    private string ParseTableData(string tableName, List<string> dataLines)
+    {
+        var result = new StringBuilder();
+        
+        foreach (var line in dataLines)
+        {
+            if (string.IsNullOrWhiteSpace(line)) continue;
+            
+            // Parse based on table type
+            switch (tableName.ToUpper())
+            {
+                case "SB":
+                    result.AppendLine(ParseSBTable(line));
+                    break;
+                    
+                case "INVOICE":
+                    result.AppendLine(ParseInvoiceTable(line));
+                    break;
+                    
+                case "EXCHANGE":
+                    result.AppendLine(ParseExchangeTable(line));
+                    break;
+                    
+                case "ITEM":
+                    result.AppendLine(ParseItemTable(line));
+                    break;
+                    
+                case "LICENCE":
+                    result.AppendLine(ParseLicenceTable(line));
+                    break;
+                    
+                case "PACKINGLIST":
+                    result.AppendLine(ParsePackingListTable(line));
+                    break;
+                    
+                case "CONTAINER":
+                    result.AppendLine(ParseContainerTable(line));
+                    break;
+                    
+                case "SW_INFO_TYPE":
+                    result.AppendLine(ParseSwInfoTable(line));
+                    break;
+                    
+                case "SUPPORTINGDOCS":
+                    result.AppendLine(ParseSupportingDocsTable(line));
+                    break;
+                    
+                default:
+                    result.AppendLine($"  {line}");
+                    break;
+            }
+        }
+        
+        return result.ToString();
+    }
+
+    private string ParseSBTable(string line)
+    {
+        var sb = new StringBuilder();
+        // Format: FINPORT + various fields
+        if (line.StartsWith("FIN"))
+        {
+            sb.AppendLine($"  Port Code: {SafeSubstring(line, 3, 5)}");
+            sb.AppendLine($"  SB Number: {SafeSubstring(line, 8, 7)}");
+            sb.AppendLine($"  SB Date: {SafeSubstring(line, 15, 8)}");
+            sb.AppendLine($"  Shipping Bill Type: {SafeSubstring(line, 23, 2)}");
+            sb.AppendLine($"  Line: {line}");
+        }
+        else
+        {
+            sb.AppendLine($"  {line}");
+        }
+        return sb.ToString();
+    }
+
+    private string ParseInvoiceTable(string line)
+    {
+        var sb = new StringBuilder();
+        if (line.StartsWith("FIN"))
+        {
+            sb.AppendLine($"  Port + SB: {SafeSubstring(line, 0, 23)}");
+            sb.AppendLine($"  Invoice Number: {SafeSubstring(line, 23, 20)}");
+            sb.AppendLine($"  Invoice Date: {SafeSubstring(line, 43, 8)}");
+            sb.AppendLine($"  Currency: {SafeSubstring(line, 51, 3)}");
+            sb.AppendLine($"  Full Line: {line}");
+        }
+        else
+        {
+            sb.AppendLine($"  {line}");
+        }
+        return sb.ToString();
+    }
+
+    private string ParseExchangeTable(string line)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine($"  Exchange Rate Flag: {SafeSubstring(line, line.Length - 1, 1)}");
+        sb.AppendLine($"  Full Line: {line}");
+        return sb.ToString();
+    }
+
+    private string ParseItemTable(string line)
+    {
+        var sb = new StringBuilder();
+        if (line.StartsWith("FIN"))
+        {
+            sb.AppendLine($"  Item Serial: {SafeSubstring(line, 23, 3)}");
+            sb.AppendLine($"  HS Code: {SafeSubstring(line, 26, 8)}");
+            sb.AppendLine($"  Item Description: {ExtractItemDescription(line)}");
+            sb.AppendLine($"  Quantity: {ExtractQuantity(line)}");
+            sb.AppendLine($"  Full Line: {line}");
+        }
+        else
+        {
+            sb.AppendLine($"  {line}");
+        }
+        return sb.ToString();
+    }
+
+    private string ParseLicenceTable(string line)
+    {
+        var sb = new StringBuilder();
+        if (line.Length > 30)
+        {
+            sb.AppendLine($"  Licence Number: {ExtractLicenceNumber(line)}");
+            sb.AppendLine($"  Full Line: {line}");
+        }
+        else
+        {
+            sb.AppendLine($"  {line}");
+        }
+        return sb.ToString();
+    }
+
+    private string ParsePackingListTable(string line)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine($"  Packages: {line}");
+        return sb.ToString();
+    }
+
+    private string ParseContainerTable(string line)
+    {
+        var sb = new StringBuilder();
+        if (line.StartsWith("FIN"))
+        {
+            sb.AppendLine($"  Container Number: {ExtractContainerNumber(line)}");
+            sb.AppendLine($"  Seal Number: {ExtractSealNumber(line)}");
+            sb.AppendLine($"  Full Line: {line}");
+        }
+        else
+        {
+            sb.AppendLine($"  {line}");
+        }
+        return sb.ToString();
+    }
+
+    private string ParseSwInfoTable(string line)
+    {
+        var sb = new StringBuilder();
+        if (line.StartsWith("FIN"))
+        {
+            int itemSerial = ExtractItemSerialFromSwInfo(line);
+            string infoType = ExtractSwInfoType(line);
+            string infoValue = ExtractSwInfoValue(line);
+            
+            sb.AppendLine($"  Item Serial: {itemSerial}");
+            sb.AppendLine($"  Info Type: {infoType}");
+            sb.AppendLine($"  Info Value: {infoValue}");
+            sb.AppendLine($"  Full Line: {line}");
+        }
+        else
+        {
+            sb.AppendLine($"  {line}");
+        }
+        return sb.ToString();
+    }
+
+    private string ParseSupportingDocsTable(string line)
+    {
+        var sb = new StringBuilder();
+        if (line.StartsWith("FIN"))
+        {
+            sb.AppendLine($"  Document Type: Supporting Document");
+            sb.AppendLine($"  Document Details: {line.Substring(23)}");
+            sb.AppendLine($"  Full Line: {line}");
+        }
+        else
+        {
+            sb.AppendLine($"  {line}");
+        }
+        return sb.ToString();
+    }
+
+    // Helper methods
+    private string SafeSubstring(string str, int start, int length)
+    {
+        if (string.IsNullOrEmpty(str) || start >= str.Length) return "";
+        if (start + length > str.Length) length = str.Length - start;
+        return str.Substring(start, length).Trim();
+    }
+
+    private string ExtractItemDescription(string line)
+    {
+        var match = Regex.Match(line, @"[A-Z][A-Z\s]+(?=MTS|KGS|PCS|UNITS)", RegexOptions.IgnoreCase);
+        return match.Success ? match.Value.Trim() : "";
+    }
+
+    private string ExtractQuantity(string line)
+    {
+        var match = Regex.Match(line, @"(\d+\.?\d*)(MTS|KGS|PCS|UNITS)", RegexOptions.IgnoreCase);
+        return match.Success ? match.Value : "";
+    }
+
+    private string ExtractLicenceNumber(string line)
+    {
+        var match = Regex.Match(line, @"\d{10,}");
+        return match.Success ? match.Value : "";
+    }
+
+    private string ExtractContainerNumber(string line)
+    {
+        var match = Regex.Match(line, @"[A-Z]{4}\d{7}");
+        return match.Success ? match.Value : "";
+    }
+
+    private string ExtractSealNumber(string line)
+    {
+        var match = Regex.Match(line, @"(RFID|SEAL)\w+", RegexOptions.IgnoreCase);
+        return match.Success ? match.Value : "";
+    }
+
+    private int ExtractItemSerialFromSwInfo(string line)
+    {
+        var match = Regex.Match(line.Substring(23, Math.Min(6, line.Length - 23)), @"\d+");
+        return match.Success ? int.Parse(match.Value) : 0;
+    }
+
+    private string ExtractSwInfoType(string line)
+    {
+        var match = Regex.Match(line, @"(CHR|ORC|DTY)[A-Z]{3,}", RegexOptions.IgnoreCase);
+        return match.Success ? match.Value : "";
+    }
+
+    private string ExtractSwInfoValue(string line)
+    {
+        int lastAlphaPos = -1;
+        for (int i = 30; i < line.Length; i++)
+        {
+            if (char.IsLetter(line[i])) lastAlphaPos = i;
+        }
+        return lastAlphaPos > 0 && lastAlphaPos < line.Length - 1 ? line.Substring(lastAlphaPos + 1).Trim() : "";
+    }
+
+    private Dictionary<string, string> ExtractLooseXml(string xml)
+    {
+        var dict = new Dictionary<string, string>();
+        int counter = 0;
+
+        var tableMatches = Regex.Matches(
+            xml,
+            @"<TABLE>([A-Z0-9_-]+)\s*(.*?)(?=<TABLE>|<END-SB>|<START-SIGNATURE>|$)",
+            RegexOptions.Singleline | RegexOptions.IgnoreCase
+        );
+
+        foreach (Match tm in tableMatches)
+        {
+            string tableName = tm.Groups[1].Value.Trim();
+            string tableContent = tm.Groups[2].Value.Trim();
+            
+            counter++;
+            dict.Add($"{counter}_{tableName}", tableContent);
+        }
+
+        var tagMatches = Regex.Matches(
+            xml,
+            @"<([A-Z0-9_-]+)>(.*?)</\1>",
+            RegexOptions.Singleline | RegexOptions.IgnoreCase
+        );
+
+        foreach (Match m in tagMatches)
+        {
+            string tag = m.Groups[1].Value.Trim();
+            string value = m.Groups[2].Value.Trim();
+
+            if (!dict.ContainsKey(tag) && tag != "TABLE")
+            {
+                counter++;
+                dict.Add($"{counter}_{tag}", value);
+            }
+        }
+
+        if (dict.Count == 0)
+        {
+            var lines = xml.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+            for (int i = 0; i < lines.Length && i < 50; i++)
+            {
+                dict.Add($"Line_{i + 1}", lines[i]);
+            }
+        }
+
+        return dict;
+    }
+
+    private Dictionary<string, string> ExtractXmlToDictionary(string xml)
+    {
+        var result = new Dictionary<string, string>();
+
+        try
+        {
+            var doc = new System.Xml.XmlDocument();
+            doc.LoadXml(xml);
+
+            foreach (System.Xml.XmlNode node in doc.DocumentElement.ChildNodes)
+            {
+                if (node.NodeType == System.Xml.XmlNodeType.Element)
+                {
+                    string name = node.Name;
+                    string value = node.InnerText.Trim();
+
+                    if (!result.ContainsKey(name))
+                        result.Add(name, value);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            result.Add("xml_error", ex.Message);
+        }
+
+        return result;
+    }
+}

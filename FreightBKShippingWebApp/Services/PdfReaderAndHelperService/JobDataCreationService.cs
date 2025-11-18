@@ -69,7 +69,7 @@ public class JobDataCreationService
         }
     }
 
-    public async Task<int?> GetOrCreateLocationWithCountryAsync(string portName, string countryName = null)
+    public async Task<int?> GetOrCreateLocationWithCountryAsync(string portName, string countryName = null, string locType = "PORT")
     {
         if (string.IsNullOrWhiteSpace(portName)) return null;
 
@@ -108,7 +108,9 @@ public class JobDataCreationService
             {
                 LocationName = portName.Trim(),
                 LocationCode = portName.Trim(),
-                LocationCountryId = countryId.Value
+                LocationCountryId = countryId.Value,
+                LocationType=locType
+              
             };
 
             bool created = await _locationService.CreateAsync(newLoc);
