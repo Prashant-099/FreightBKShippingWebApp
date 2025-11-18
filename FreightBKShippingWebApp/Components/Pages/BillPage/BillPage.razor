@@ -39,6 +39,23 @@
                 <DxToolbarItem Text="Edit" IconCssClass="bi bi-pencil-square" Click="OnEdit" />
                 <DxToolbarItem Text="Delete" IconCssClass="bi bi-trash" Click="OnDelete" />
                 <DxToolbarItem Text="Print PDF  " IconCssClass="bi bi-printer" Click="PrintReports" />
+                <DxToolbarItem Text="Print"
+                               IconCssClass="bi bi-printer"
+                               RenderStyleMode="ToolbarItemRenderStyleMode.Contained"
+                               BeginGroup="true">
+                    <Items>
+                        <DxToolbarItem Text="PDF" IconCssClass="bi bi-file-pdf" Click="@(async () => await ExportReport("PDF"))" />
+                        <DxToolbarItem Text="XLS" IconCssClass="bi bi-file-excel" Click="@(async () => await ExportReport("XLS"))" />
+                        <DxToolbarItem Text="XLSX" IconCssClass="bi bi-file-excel" Click="@(async () => await ExportReport("XLSX"))" />
+                        <DxToolbarItem Text="RTF" IconCssClass="bi bi-file-word" Click="@(async () => await ExportReport("RTF"))" />
+                        <DxToolbarItem Text="MHT" IconCssClass="bi bi-file-earmark" Click="@(async () => await ExportReport("MHT"))" />
+                        <DxToolbarItem Text="HTML" IconCssClass="bi bi-filetype-html" Click="@(async () => await ExportReport("HTML"))" />
+                        <DxToolbarItem Text="Text" IconCssClass="bi bi-file-text" Click="@(async () => await ExportReport("TEXT"))" />
+                        <DxToolbarItem Text="CSV" IconCssClass="bi bi-filetype-csv" Click="@(async () => await ExportReport("CSV"))" />
+                        <DxToolbarItem Text="Image" IconCssClass="bi bi-file-image" Click="@(async () => await ExportReport("IMAGE"))" />
+                        <DxToolbarItem Text="DOCX" IconCssClass="bi bi-file-word" Click="@(async () => await ExportReport("DOCX"))" />
+                    </Items>
+                </DxToolbarItem>
                 <DxToolbarItem Text="Print" IconCssClass="bi bi-printer" Click="@((_) => ShowReportPopup())"></DxToolbarItem>
                 <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="@(async (_) => await LoadBillsAsync())" />
                 @if(IsAdmin)
@@ -126,8 +143,8 @@
         </DxFormLayout>
 
         <div class="mt-3 d-flex justify-content-end gap-2">
-            <DxButton Text="OK" RenderStyle="ButtonRenderStyle.Primary" Click="@ConfirmReportSelection" />
-            <DxButton Text="Cancel" RenderStyle="ButtonRenderStyle.Danger" Click="@(() => IsReportPopupVisible = false)" />
+            <DxButton Text="OK" RenderStyle="ButtonRenderStyle.Primary" IconCssClass="bi bi-box-arrow-right" Click="@ConfirmReportSelection" />
+            <DxButton Text="Cancel" RenderStyle="ButtonRenderStyle.Danger" IconCssClass="bi bi-x-circle" Click="@(() => IsReportPopupVisible = false)" />
         </div>
     </div>
 </DxPopup>
@@ -137,7 +154,7 @@
 <script>
     window.downloadFileFromStream = async (fileName, contentStreamReference) => {
         const arrayBuffer = await contentStreamReference.arrayBuffer();
-        const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
+        const blob = new Blob([arrayBuffer]);
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -231,7 +248,7 @@
 
                 var action = isCurrentlyLocked ? "unlocked" : "locked";
                 ToastService.Success($"Bill {action} successfully.");
-               
+
                 await LoadBillsAsync();
             }
             else
@@ -266,7 +283,7 @@
             // ✅ Load report data in background (less critical)
             ReportDataList = await ReportDataService.GetAllAsync();
             await InvokeAsync(StateHasChanged);
-           
+
         }
         catch (Exception ex)
         {
@@ -356,7 +373,7 @@
 
 
 
-    private int ReportId = 1;  // Har page mein isko change kar dena: 1, 2, 3
+   // private int ReportId = 1;  // Har page mein isko change kar dena: 1, 2, 3
 
     private async Task PreviewMergedReports()
     {
@@ -367,37 +384,89 @@
             return;
         }
 
-        LoadingService.Show("Building merged report...");   
+        LoadingService.Show("Building merged report...");
         try
         {
-            var layoutBytes = await ReportDataService.GetLayoutBytesAsync(ReportId);
-            if (layoutBytes == null || layoutBytes.Length == 0)
+            // Group bills by their ReportId
+            var billsByReportId = billList.GroupBy(b => b.BillReportId).ToList();
+
+            // Create a list to hold all individual reports
+            var allReports = new List<DevExpress.XtraReports.UI.XtraReport>();
+
+            // Process each group of bills with same report layout
+            foreach (var group in billsByReportId)
             {
-                ToastService.Error("Failed to load report layout.");
+                var reportId = group.Key;
+                var groupBills = group.ToList();
+
+                // Load layout for this group
+                var layoutBytes = await ReportDataService.GetLayoutBytesAsync(reportId);
+                if (layoutBytes == null || layoutBytes.Length == 0)
+                {
+                    ToastService.Error($"Failed to load report layout for Report ID: {reportId}");
+                    continue;
+                }
+
+                // Load bill data for bills in this group
+                var dtoList = new List<PrintBillFullDto?>();
+                foreach (var bill in groupBills)
+                {
+                    var dto = await BillService.GetPrintableBillAsync(bill.BillId);
+                    dtoList.Add(dto);
+                }
+
+                var dtoDict = groupBills.Select((bill, i) => new { bill, dto = dtoList[i] })
+                                        .ToDictionary(x => x.bill, x => x.dto);
+
+                // Create report for this group
+                await ReportService.CreateMergedReportAsync(
+                    groupBills,
+                    bill => dtoDict.ContainsKey(bill) ? dtoDict[bill] : null,
+                    layoutBytes);
+
+                if (ReportService.MergedReport != null)
+                {
+                    allReports.Add(ReportService.MergedReport);
+                }
+            }
+
+            if (!allReports.Any())
+            {
+                ToastService.Error("Failed to generate any reports.");
                 return;
             }
 
-            var dtoList = new List<PrintBillFullDto?>();
-            foreach (var bill in billList)
+            // If we have multiple report layouts, merge them into one
+            if (allReports.Count > 1)
             {
-                var dto = await BillService.GetPrintableBillAsync(bill.BillId);
-                dtoList.Add(dto);
+                var finalReport = new DevExpress.XtraReports.UI.XtraReport();
+
+                foreach (var report in allReports)
+                {
+                    // Create the report document if not already created
+                    if (report.Pages.Count == 0)
+                    {
+                        report.CreateDocument();
+                    }
+
+                    // Add pages from each report to the final report
+                    foreach (DevExpress.XtraPrinting.Page page in report.Pages)
+                    {
+                        finalReport.Pages.Add(page);
+                    }
+                }
+
+                ReportService.MergedReport = finalReport;
             }
-
-            var dtoDict = billList.Select((bill, i) => new { bill, dto = dtoList[i] })
-                                  .ToDictionary(x => x.bill, x => x.dto);
-
-            await ReportService.CreateMergedReportAsync(
-                billList,
-                bill => dtoDict.ContainsKey(bill) ? dtoDict[bill] : null,
-                layoutBytes);
+            // else: single report layout, already in ReportService.MergedReport
 
             Navigation.NavigateTo("/reportviewer");
-        }catch (Exception ex)
+        }
+        catch (Exception ex)
         {
             ToastService.Error($"Failed to generate report: {ex.Message}");
         }
-       finally
+        finally
         {
             LoadingService.Hide();
         }
@@ -408,7 +477,7 @@
     {
         var billList = SelectedBills.ToList();
         if (!billList.Any())
-        {   
+        {
             ToastService.Warning("Select at least one Bill.");
             return;
         }
@@ -416,58 +485,106 @@
         LoadingService.Show("Building merged PDF...");
         try
         {
-            var layoutBytes = await ReportDataService.GetLayoutBytesAsync(ReportId);
-            if (layoutBytes == null || layoutBytes.Length == 0)
+            // Group bills by their ReportId
+            var billsByReportId = billList.GroupBy(b => b.BillReportId).ToList();
+
+            // Create a list to hold all individual reports
+            var allReports = new List<DevExpress.XtraReports.UI.XtraReport>();
+
+            // Process each group of bills with same report layout
+            foreach (var group in billsByReportId)
             {
-                ToastService.Error("Failed to load report layout.");
+                var reportId = group.Key;
+                var groupBills = group.ToList();
+
+                // Load layout for this group
+                var layoutBytes = await ReportDataService.GetLayoutBytesAsync(reportId);
+                if (layoutBytes == null || layoutBytes.Length == 0)
+                {
+                    ToastService.Error($"Failed to load report layout for Report ID: {reportId}");
+                    continue;
+                }
+
+                // Load bill data for bills in this group
+                var dtoList = new List<PrintBillFullDto?>();
+                foreach (var bill in groupBills)
+                {
+                    var dto = await BillService.GetPrintableBillAsync(bill.BillId);
+                    dtoList.Add(dto);
+                }
+
+                var dtoDict = groupBills.Select((bill, i) => new { bill, dto = dtoList[i] })
+                                        .ToDictionary(x => x.bill, x => x.dto);
+
+                // Create report for this group
+                await ReportService.CreateMergedReportAsync(
+                    groupBills,
+                    bill => dtoDict.ContainsKey(bill) ? dtoDict[bill] : null,
+                    layoutBytes);
+
+                if (ReportService.MergedReport != null)
+                {
+                    allReports.Add(ReportService.MergedReport);
+                }
+            }
+
+            if (!allReports.Any())
+            {
+                ToastService.Error("Failed to generate any reports.");
                 return;
             }
 
-            var dtoList = new List<PrintBillFullDto?>();
-            foreach (var bill in billList)
+            // Merge all PDFs into one stream
+            using var pdfStream = new MemoryStream();
+
+            if (allReports.Count == 1)
             {
-                var dto = await BillService.GetPrintableBillAsync(bill.BillId);
-                dtoList.Add(dto);
-            }
-
-            var dtoDict = billList.Select((bill, i) => new { bill, dto = dtoList[i] })
-                                  .ToDictionary(x => x.bill, x => x.dto);
-
-            await ReportService.CreateMergedReportAsync(
-                billList,
-                bill => dtoDict.ContainsKey(bill) ? dtoDict[bill] : null,
-                layoutBytes);
-
-            // ✅ Export to PDF if report generated successfully
-            if (ReportService.MergedReport != null)
-            {
-                using var pdfStream = new MemoryStream();
-                ReportService.MergedReport.ExportToPdf(pdfStream);
-                pdfStream.Position = 0;
-
-                string fileName;
-                if (billList.Count == 1)
-                {
-                    var billNo = billList.First().BillNo?.Replace("/", "_") ?? "Bill";
-                    fileName = $"{billNo}.pdf";
-                }
-                else
-                {
-                    var firstBill = billList.First().BillNo?.Replace("/", "_") ?? "Bill";
-                    var lastBill = billList.Last().BillNo?.Replace("/", "_") ?? "Bill";
-                    fileName = $"Bills_{firstBill}_to_{lastBill}.pdf";
-                }
-
-                // Download via JS (Blazor)
-                using var streamRef = new Microsoft.JSInterop.DotNetStreamReference(pdfStream);
-                await JSRuntime.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
-
-                ToastService.Success("PDF downloaded successfully.");
+                // Single report layout - export directly
+                allReports[0].ExportToPdf(pdfStream);
             }
             else
             {
-                ToastService.Error("Failed to build merged PDF.");
+                // Multiple report layouts - merge PDFs
+                var pdfStreams = new List<MemoryStream>();
+
+                // Combine pages from each report into a single XtraReport and export once
+                var combinedReport = new DevExpress.XtraReports.UI.XtraReport();
+
+                foreach (var report in allReports)
+                {
+                    if (report.Pages.Count == 0)
+                        report.CreateDocument();
+
+                    foreach (DevExpress.XtraPrinting.Page page in report.Pages)
+                    {
+                        combinedReport.Pages.Add(page);
+                    }
+                }
+
+                combinedReport.ExportToPdf(pdfStream);
+            
             }
+
+            pdfStream.Position = 0;
+
+            string fileName;
+            if (billList.Count == 1)
+            {
+                var billNo = billList.First().BillNo?.Replace("/", "_") ?? "Bill";
+                fileName = $"{billNo}.pdf";
+            }
+            else
+            {
+                var firstBill = billList.First().BillNo?.Replace("/", "_") ?? "Bill";
+                var lastBill = billList.Last().BillNo?.Replace("/", "_") ?? "Bill";
+                fileName = $"Bills_{firstBill}_to_{lastBill}.pdf";
+            }
+
+            // Download via JS (Blazor)
+            using var streamRef = new Microsoft.JSInterop.DotNetStreamReference(pdfStream);
+            await JSRuntime.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
+
+            ToastService.Success("PDF downloaded successfully.");
         }
         catch (Exception ex)
         {
@@ -482,17 +599,17 @@
 
     private bool IsReportPopupVisible = false;
     private int? SelectedReportId;
- 
 
-  
 
-   
+
+
+
     private async Task ShowReportPopup()
     {
-      
+
         try
         {
-           
+
             if (ReportDataList?.Any() != true)
             {
                 ToastService.Warning("No reports available.");
@@ -506,7 +623,7 @@
         {
             ToastService.Error($"Failed to load report list: {ex.Message}");
         }
-        
+
     }
 
     private async Task ConfirmReportSelection()
@@ -517,9 +634,234 @@
             return;
         }
 
-        ReportId = SelectedReportId.Value;
+      //  ReportId = SelectedReportId.Value;
         IsReportPopupVisible = false;
         await PreviewMergedReports();
     }
+    // Change based on your bill report ID
+    private Bill CurrentBill; // Current bill being edited
 
+    private async Task ExportReport(string format)
+    {
+        var billList = SelectedBills.ToList();
+        if (!billList.Any())
+        {
+            ToastService.Warning("Select at least one Bill to export.");
+            return;
+        }
+
+        LoadingService.Show($"Exporting to {format}...");
+
+        try
+        {
+            // Group bills by their ReportId
+            var billsByReportId = billList.GroupBy(b => b.BillReportId).ToList();
+
+            // Create a list to hold all individual reports
+            var allReports = new List<DevExpress.XtraReports.UI.XtraReport>();
+
+            // Process each group of bills with same report layout
+            foreach (var group in billsByReportId)
+            {
+                var reportId = group.Key;
+                var groupBills = group.ToList();
+
+                // Load layout for this group
+                var layoutBytes = await ReportDataService.GetLayoutBytesAsync(reportId);
+                if (layoutBytes == null || layoutBytes.Length == 0)
+                {
+                    ToastService.Error($"Failed to load report layout for Report ID: {reportId}");
+                    continue;
+                }
+
+                // Load bill data for bills in this group
+                var dtoList = new List<PrintBillFullDto?>();
+                foreach (var bill in groupBills)
+                {
+                    var dto = await BillService.GetPrintableBillAsync(bill.BillId);
+                    dtoList.Add(dto);
+                }
+
+                var dtoDict = groupBills.Select((bill, i) => new { bill, dto = dtoList[i] })
+                                        .ToDictionary(x => x.bill, x => x.dto);
+
+                // Create report for this group
+                await ReportService.CreateMergedReportAsync(
+                    groupBills,
+                    bill => dtoDict.ContainsKey(bill) ? dtoDict[bill] : null,
+                    layoutBytes);
+
+                if (ReportService.MergedReport != null)
+                {
+                    allReports.Add(ReportService.MergedReport);
+                }
+            }
+
+            if (!allReports.Any())
+            {
+                ToastService.Error("Failed to generate any reports.");
+                return;
+            }
+
+            // Create final merged report
+            DevExpress.XtraReports.UI.XtraReport finalReport;
+
+            if (allReports.Count == 1)
+            {
+                finalReport = allReports[0];
+            }
+            else
+            {
+                // Merge multiple reports into one
+                finalReport = new DevExpress.XtraReports.UI.XtraReport();
+
+                foreach (var report in allReports)
+                {
+                    // Create the report document if not already created
+                    if (report.Pages.Count == 0)
+                    {
+                        report.CreateDocument();
+                    }
+
+                    // Add pages from each report to the final report
+                    foreach (DevExpress.XtraPrinting.Page page in report.Pages)
+                    {
+                        finalReport.Pages.Add(page);
+                    }
+                }
+            }
+
+            // Generate filename
+            string fileName;
+            if (billList.Count == 1)
+            {
+                var billNo = billList.First().BillNo?.Replace("/", "_") ?? "Bill";
+                fileName = $"{billNo}";
+            }
+            else
+            {
+                var firstBill = billList.First().BillNo?.Replace("/", "_") ?? "Bill";
+                var lastBill = billList.Last().BillNo?.Replace("/", "_") ?? "Bill";
+                fileName = $"Bills_{firstBill}_to_{lastBill}";
+            }
+
+            // Export based on selected format
+            using var exportStream = new MemoryStream();
+
+            switch (format.ToUpper())
+            {
+                case "PDF":
+                    finalReport.ExportToPdf(exportStream);
+                    fileName += ".pdf";
+                    break;
+
+                case "XLS":
+                    var xlsOptions = new DevExpress.XtraPrinting.XlsExportOptions
+                    {
+                        ExportMode = DevExpress.XtraPrinting.XlsExportMode.SingleFile,
+                        SheetName = "Bills"
+                    };
+                    finalReport.ExportToXls(exportStream, xlsOptions);
+                    fileName += ".xls";
+                    break;
+
+                case "XLSX":
+                    var xlsxOptions = new DevExpress.XtraPrinting.XlsxExportOptions
+                    {
+                        ExportMode = DevExpress.XtraPrinting.XlsxExportMode.SingleFile,
+                        SheetName = "Bills"
+                    };
+                    finalReport.ExportToXlsx(exportStream, xlsxOptions);
+                    fileName += ".xlsx";
+                    break;
+
+                case "RTF":
+                    var rtfOptions = new DevExpress.XtraPrinting.RtfExportOptions
+                    {
+                        ExportMode = DevExpress.XtraPrinting.RtfExportMode.SingleFile
+                    };
+                    finalReport.ExportToRtf(exportStream, rtfOptions);
+                    fileName += ".rtf";
+                    break;
+
+                case "MHT":
+                    var mhtOptions = new DevExpress.XtraPrinting.MhtExportOptions
+                    {
+                        ExportMode = DevExpress.XtraPrinting.HtmlExportMode.SingleFile
+                    };
+                    finalReport.ExportToMht(exportStream, mhtOptions);
+                    fileName += ".mht";
+                    break;
+
+                case "HTML":
+                    var htmlOptions = new DevExpress.XtraPrinting.HtmlExportOptions
+                    {
+                        ExportMode = DevExpress.XtraPrinting.HtmlExportMode.SingleFile
+                    };
+                    finalReport.ExportToHtml(exportStream, htmlOptions);
+                    fileName += ".html";
+                    break;
+
+                case "TEXT":
+                    var textOptions = new DevExpress.XtraPrinting.TextExportOptions
+                    {
+                        TextExportMode = DevExpress.XtraPrinting.TextExportMode.Text
+                    };
+                    finalReport.ExportToText(exportStream, textOptions);
+                    fileName += ".txt";
+                    break;
+
+                case "CSV":
+                    var csvOptions = new DevExpress.XtraPrinting.CsvExportOptions
+                    {
+                        Separator = ","
+                    };
+                    finalReport.ExportToCsv(exportStream, csvOptions);
+                    fileName += ".csv";
+                    break;
+
+                case "IMAGE":
+                    var imageOptions = new DevExpress.XtraPrinting.ImageExportOptions
+                    {
+                        ExportMode = DevExpress.XtraPrinting.ImageExportMode.SingleFile,
+                        Format = System.Drawing.Imaging.ImageFormat.Png,
+                        PageRange = finalReport.Pages.Count > 0
+                            ? $"1-{finalReport.Pages.Count}"
+                            : "1"
+                    };
+                    finalReport.ExportToImage(exportStream, imageOptions);
+                    fileName += ".png";
+                    break;
+
+                case "DOCX":
+                    var docxOptions = new DevExpress.XtraPrinting.DocxExportOptions
+                    {
+                        ExportMode = DevExpress.XtraPrinting.DocxExportMode.SingleFile
+                    };
+                    finalReport.ExportToDocx(exportStream, docxOptions);
+                    fileName += ".docx";
+                    break;
+
+                default:
+                    ToastService.Error($"Unsupported format: {format}");
+                    return;
+            }
+
+            exportStream.Position = 0;
+
+            // Download file
+            using var streamRef = new Microsoft.JSInterop.DotNetStreamReference(exportStream);
+            await JSRuntime.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
+
+            ToastService.Success($"{format} exported successfully.");
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Failed to export: {ex.Message}");
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
 }
