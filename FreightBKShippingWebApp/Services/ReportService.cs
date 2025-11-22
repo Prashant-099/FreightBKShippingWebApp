@@ -15,7 +15,7 @@ namespace FreightBKShippingWebApp.Services
     {
 
 
-        public XtraReport? MergedReport { get; private set; }
+        public XtraReport? MergedReport { get;  set; }
 
         public ReportService(LoadingService loadingService)
         {

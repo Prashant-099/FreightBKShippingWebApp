@@ -96,14 +96,14 @@ builder.Services.AddScoped<AuthTokenService>();
 //    client.BaseAddress = new Uri("http://localhost:5003/");
 //});
 
-builder.Services.AddHttpClient<ApiClient>(client =>
-{
-    client.BaseAddress = new Uri("https://localhost:5003/");
-});
 //builder.Services.AddHttpClient<ApiClient>(client =>
 //{
 //    client.BaseAddress = new Uri("https://localhost:5003/");
 //});
+builder.Services.AddHttpClient<ApiClient>(client =>
+{
+    client.BaseAddress = new Uri("https://localhost:5003/");
+});
 //builder.Services.AddHttpClient<ApiClient>(client =>
 //{
 //    client.BaseAddress = new Uri("https://apihost.freightbook.in/");
