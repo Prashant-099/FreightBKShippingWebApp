@@ -1,0 +1,44 @@
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace FreightBKShippingWebApp.Model
+{
+    [Table("wpmailconfig")]
+    public class WpMailConfig
+    {
+        [Key]
+        [Column("wpmailconfig_id")]
+        public int Id { get; set; }
+
+        [Required(ErrorMessage = "Message Type is required.")]
+
+        [Column("wpmailconfig_msgtype")]
+        public string? MsgType { get; set; }
+
+        [Required(ErrorMessage = "Template is required.")]
+
+        [Column("wpmailconfig_templatetext")]
+        public string? TemplateText { get; set; }
+
+        [Column("wpmailconfig_mailsub")]
+        public string? MailSub { get; set; }
+
+        [Column("wpmailconfig_companyid")]
+        public int? CompanyId { get; set; }
+
+        [Column("wpmailconfig_created")]
+        public DateTime Created { get; set; } = DateTime.UtcNow;
+
+        [Column("wpmailconfig_updated")]
+        public DateTime Updated { get; set; } = DateTime.UtcNow;
+
+        [Column("wpmailconfig_create_uid")]
+        public string? CreateUid { get; set; }
+
+        [Column("wpmailconfig_edited_uid")]
+        public string? EditedUid { get; set; }
+
+        [Column("wpmailconfig_isdefault")]
+        public bool? IsDefault { get; set; }
+    }
+}
