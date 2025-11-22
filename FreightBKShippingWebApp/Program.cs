@@ -87,6 +87,10 @@ builder.Services.AddScoped<FreightBKShippingWebApp.Services.PdfReaderAndHelperSe
 builder.Services.AddScoped<JobDataCreationService>();
 builder.Services.AddScoped<JobBuilderService>();
 
+
+//
+builder.Services.AddScoped<AuthTokenService>();
+
 //builder.Services.AddHttpClient<ApiClient>(client =>
 //{
 //    client.BaseAddress = new Uri("http://localhost:5003/");

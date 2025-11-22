@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
+using FreightBKShippingWebApp.Components.Pages.Company;
 
 namespace FreightBKShippingWebApp.Model
 {
@@ -75,11 +76,30 @@ namespace FreightBKShippingWebApp.Model
         [Column("account_website")]
         public string? AccountWebsite { get; set; }
 
+        private string? _accountGstNo;
+
         [Column("account_pan")]
         public string? AccountPan { get; set; }
 
+        public string? Panno
+        {
+            get => AccountPan;
+            set => AccountPan = value?.ToUpper();
+        }
+
         [Column("account_gstno")]
-        public string? AccountGstNo { get; set; }
+        public string? AccountGstNo
+        {
+            get => _accountGstNo;  // ✅ Use backing field instead of calling itself
+            set
+            {
+                _accountGstNo = value?.ToUpper() ?? string.Empty;  // ✅ Set backing field
+                AccountPan = (!string.IsNullOrEmpty(_accountGstNo) && _accountGstNo.Length >= 12)
+                    ? _accountGstNo.Substring(2, 10)
+                    : string.Empty;
+            }
+        }
+
 
         [Column("account_tanno")]
         public string? AccountTanNo { get; set; }

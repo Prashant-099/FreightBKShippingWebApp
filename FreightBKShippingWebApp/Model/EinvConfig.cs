@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Newtonsoft.Json;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FreightBKShippingWebApp.Models
@@ -8,12 +9,14 @@ namespace FreightBKShippingWebApp.Models
     {
         [Key]
         [Column("username")]
+        [JsonProperty("user_name")]
         [StringLength(60)]
         public string Username { get; set; }
 
-        [Column("password")]
+        [Column("asp_password")]
+        [JsonProperty("eInvPwd")]
         [StringLength(60)]
-        public string? Password { get; set; }
+        public string? eInvPwd { get; set; }
 
         [Column("gstin")]
         [StringLength(45)]
@@ -24,6 +27,7 @@ namespace FreightBKShippingWebApp.Models
         public string? AppKey { get; set; }
 
         [Column("authtoken")]
+        [JsonProperty("AuthToken")]
         [StringLength(200)]
         public string? AuthToken { get; set; }
 
@@ -46,12 +50,14 @@ namespace FreightBKShippingWebApp.Models
         public string? GspName { get; set; }
 
         [Column("asp_userid")]
+        [JsonProperty("aspid")]
         [StringLength(50)]
         public string? AspUserId { get; set; }
 
-        [Column("asp_password")]
+        [Column("password")]
+        [JsonProperty("Password")]
         [StringLength(50)]
-        public string? AspPassword { get; set; }
+        public string? Password { get; set; }
 
         [Column("auth_url")]
         [StringLength(100)]

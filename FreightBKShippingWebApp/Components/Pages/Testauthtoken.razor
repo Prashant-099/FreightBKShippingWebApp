@@ -1,0 +1,478 @@
+﻿@* @page "/authtoken" *@
+@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Models
+@using FreightBKShippingWebApp.Services
+@using System.Text.Json
+
+@inject AuthTokenService AuthTokenService
+@inject ToasteService ToastService
+@inject LoadingService LoadingService
+@inject IJSRuntime JSRuntime
+@inject EinvConfigService ConfigService
+
+<div class="container-fluid py-4">
+    <div class="card shadow-lg border-0">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0">
+                <i class="bi bi-shield-lock-fill"></i> Generate e-Invoice Auth Token
+            </h4>
+        </div>
+
+        <div class="card-body p-4">
+            <div class="row g-3">
+                <!-- API SETTINGS -->
+                <div class="col-12">
+                    <h5 class="text-primary border-bottom pb-2">
+                        <i class="bi bi-gear-fill"></i> API Settings
+                    </h5>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">Auth URL <span class="text-danger">*</span></label>
+                    <input class="form-control" @bind="apiConfig.AuthUrl"
+                           placeholder="https://gstsandbox.charteredinfo.com/eivital/dec/v1.04/auth" />
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">GSP Name</label>
+                    <input class="form-control" @bind="apiConfig.GspName"
+                           placeholder="TaxPro_Sandbox" />
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label fw-bold">ASP ID</label>
+                    <input class="form-control" @bind="apiConfig.AspUserId"
+                           placeholder="1656691121" />
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label fw-bold">ASP Password</label>
+                    <input class="form-control" @bind="apiConfig.Password"
+                           type="password" placeholder="Enter ASP Password" />
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label fw-bold">User Name</label>
+                    <input class="form-control" @bind="apiConfig.Username"
+                           placeholder="TaxProEnvPON" />
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label fw-bold">eInv Password</label>
+                    <input class="form-control" @bind="apiConfig.eInvPwd"
+                           type="password" placeholder="Enter eInv Password" />
+                </div>
+
+                <!-- LOGIN DETAILS -->
+                <div class="col-12 mt-4">
+                    <h5 class="text-primary border-bottom pb-2">
+                        <i class="bi bi-person-badge-fill"></i> Login Details
+                    </h5>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">GSTIN <span class="text-danger">*</span></label>
+                    <input class="form-control" @bind="apiConfig.Gstin"
+                           placeholder="34AACCC1596Q002" />
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">App Key</label>
+                    <input class="form-control" @bind="apiConfig.AppKey"
+                           placeholder="Enter your App Key (optional)" />
+                </div>
+            </div>
+
+            <!-- ACTION BUTTONS -->
+            <div class="mt-4 d-flex gap-3">
+                <button class="btn btn-primary btn-lg px-5"
+                        @onclick="GenerateTokenAsync"
+                        disabled="@isProcessing">
+                    @if (isProcessing)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2"></span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-key-fill me-2"></i>
+                    }
+                    Generate Auth Token
+                </button>
+
+                @if (!string.IsNullOrEmpty(tokenResponse?.Data?.AuthToken))
+                {
+                    <button class="btn btn-outline-success btn-lg" @onclick="CopyTokenAsync">
+                        <i class="bi bi-clipboard-check me-2"></i> Copy Token
+                    </button>
+                }
+            </div>
+
+            <!-- TOKEN DISPLAY -->
+            @if (tokenResponse != null)
+            {
+                @if (tokenResponse.Status == 1 && tokenResponse.Data != null)
+                {
+                    <div class="alert alert-success mt-4 shadow-sm border-0">
+                        <h5 class="alert-heading">
+                            <i class="bi bi-check-circle-fill"></i> Token Generated Successfully!
+                        </h5>
+                        <hr />
+
+                        <div class="row g-3">
+                            @if (!string.IsNullOrEmpty(tokenResponse.Data.ClientId))
+                            {
+                                <div class="col-md-6">
+                                    <label class="fw-bold text-muted small">Client ID</label>
+                                    <div class="p-2 bg-light rounded border">
+                                        <code>@tokenResponse.Data.ClientId</code>
+                                    </div>
+                                </div>
+                            }
+
+                            @if (!string.IsNullOrEmpty(tokenResponse.Data.UserName))
+                            {
+                                <div class="col-md-6">
+                                    <label class="fw-bold text-muted small">User Name</label>
+                                    <div class="p-2 bg-light rounded border">
+                                        <code>@tokenResponse.Data.UserName</code>
+                                    </div>
+                                </div>
+                            }
+
+                            <div class="col-12">
+                                <label class="fw-bold text-muted small">Auth Token</label>
+                                <div class="p-3 bg-light rounded border position-relative">
+                                    <code class="text-break" style="font-size: 0.85rem;">@tokenResponse.Data.AuthToken</code>
+                                    <button class="btn btn-sm btn-outline-primary position-absolute top-0 end-0 m-2"
+                                            @onclick="() => CopyToClipboardAsync(tokenResponse.Data.AuthToken)">
+                                        <i class="bi bi-clipboard"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            @if (!string.IsNullOrEmpty(tokenResponse.Data.Sek))
+                            {
+                                <div class="col-md-6">
+                                    <label class="fw-bold text-muted small">SEK (Session Key)</label>
+                                    <div class="p-2 bg-light rounded border">
+                                        <code class="text-break" style="font-size: 0.8rem;">@tokenResponse.Data.Sek</code>
+                                    </div>
+                                </div>
+                            }
+
+                            @if (!string.IsNullOrEmpty(tokenResponse.Data.TokenExpiry))
+                            {
+                                <div class="col-md-6">
+                                    <label class="fw-bold text-muted small">Token Expiry</label>
+                                    <div class="p-2 bg-light rounded border">
+                                        <code>@tokenResponse.Data.TokenExpiry</code>
+                                        <span class="badge @GetExpiryBadgeClass() ms-2">
+                                            @GetExpiryTimeString()
+                                        </span>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-danger mt-4 shadow-sm border-0">
+                        <h5 class="alert-heading">
+                            <i class="bi bi-exclamation-triangle-fill"></i> Error Generating Token
+                        </h5>
+                        <p class="mb-0">
+                            <strong>Status:</strong> @tokenResponse.Status <br />
+                            @if (tokenResponse.ErrorDetails != null)
+                            {
+                                <strong>Error:</strong> @tokenResponse.ErrorDetails.ToString()
+                            }
+                        </p>
+                    </div>
+                }
+            }
+
+            <!-- DEBUG INFO -->
+            @if (!string.IsNullOrEmpty(debugInfo))
+            {
+                <div class="mt-4">
+                    <button class="btn btn-sm btn-outline-secondary"
+                            @onclick="() => showDebug = !showDebug">
+                        <i class="bi bi-bug"></i> @(showDebug ? "Hide" : "Show") Debug Info
+                    </button>
+
+                    @if (showDebug)
+                    {
+                        <div class="mt-2 p-3 bg-dark text-light rounded">
+                            <pre style="color: #0f0; font-size: 0.85rem; margin: 0; white-space: pre-wrap;">@debugInfo</pre>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    .form-label {
+        font-size: 0.9rem;
+        margin-bottom: 0.3rem;
+    }
+
+    .card {
+        border-radius: 10px;
+    }
+
+    .card-header {
+        border-radius: 10px 10px 0 0 !important;
+    }
+
+    code {
+        word-break: break-all;
+    }
+
+    .btn-lg {
+        font-size: 1rem;
+        padding: 0.75rem 1.5rem;
+    }
+
+    .spinner-border-sm {
+        width: 1rem;
+        height: 1rem;
+        border-width: 0.15em;
+    }
+</style>
+
+@code {
+    private EinvConfig apiConfig = new();
+    private AuthTokenResponse? tokenResponse;
+    private string debugInfo = string.Empty;
+    private bool showDebug = false;
+    private bool isProcessing = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadConfigurationAsync();
+    }
+
+    private async Task LoadConfigurationAsync()
+    {
+        try
+        {
+            apiConfig = await ConfigService.GetByUsernameAsync("TaxProEnvPON") ?? new EinvConfig();
+
+            if (apiConfig.Username == "0")
+            {
+                ToastService.Warning("No saved configuration found. Using default values.");
+            }
+            else
+            {
+                ToastService.Success("Configuration loaded successfully.");
+            }
+        }
+        catch (Exception ex)
+        {
+            apiConfig = new EinvConfig();
+            ToastService.Error($"Failed to load configuration: {ex.Message}");
+            LogDebugInfo($"Load Config Error: {ex}");
+        }
+    }
+
+    private async Task GenerateTokenAsync()
+    {
+        if (!ValidateInputs()) return;
+
+        isProcessing = true;
+        debugInfo = string.Empty;
+
+        try
+        {
+            // Save configuration
+            await SaveConfigurationAsync();
+
+            // Generate token
+            LoadingService.Show("Fetching Auth Token...");
+
+            tokenResponse = await FetchAuthTokenAsync();
+
+            if (tokenResponse?.Status == 1 && tokenResponse.Data != null)
+            {
+                await SaveTokenToDatabaseAsync(tokenResponse.Data);
+                ToastService.Success("🎉 Auth Token Generated Successfully!");
+            }
+            else
+            {
+                ToastService.Error("Failed to generate token. Check debug info for details.");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Error: {ex.Message}");
+            LogDebugInfo($"Exception: {ex}");
+        }
+        finally
+        {
+            LoadingService.Hide();
+            isProcessing = false;
+        }
+    }
+
+    private bool ValidateInputs()
+    {
+        if (string.IsNullOrWhiteSpace(apiConfig.AuthUrl))
+        {
+            ToastService.Warning("Please enter Auth URL");
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(apiConfig.Gstin))
+        {
+            ToastService.Warning("Please enter GSTIN");
+            return false;
+        }
+
+        return true;
+    }
+
+    private async Task SaveConfigurationAsync()
+    {
+        LoadingService.Show("Saving configuration...");
+
+        var saved = await ConfigService.SaveAsync(apiConfig);
+
+        if (!saved)
+        {
+            throw new Exception("Failed to save configuration");
+        }
+
+        ToastService.Success("Configuration saved!");
+    }
+
+    private async Task<AuthTokenResponse?> FetchAuthTokenAsync()
+    {
+        using var httpClient = new HttpClient();
+
+        // Add required headers (lowercase as per API requirement)
+        httpClient.DefaultRequestHeaders.Add("aspid", apiConfig.AspUserId);
+        httpClient.DefaultRequestHeaders.Add("password", apiConfig.Password);
+        httpClient.DefaultRequestHeaders.Add("Gstin", apiConfig.Gstin);
+        httpClient.DefaultRequestHeaders.Add("user_name", apiConfig.Username);
+        httpClient.DefaultRequestHeaders.Add("eInvPwd", apiConfig.eInvPwd);
+
+        LogDebugInfo($"=== REQUEST ===\nURL: {apiConfig.AuthUrl}\nHeaders:\n" +
+                     $"  aspid: {apiConfig.AspUserId}\n" +
+                     $"  Gstin: {apiConfig.Gstin}\n" +
+                     $"  user_name: {apiConfig.Username}");
+
+        var response = await httpClient.GetAsync(apiConfig.AuthUrl);
+        var responseBody = await response.Content.ReadAsStringAsync();
+
+        LogDebugInfo($"\n=== RESPONSE ===\nStatus: {response.StatusCode}\nBody: {responseBody}");
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new Exception($"API Error {response.StatusCode}: {responseBody}");
+        }
+
+        return JsonSerializer.Deserialize<AuthTokenResponse>(responseBody,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+    }
+
+    private async Task SaveTokenToDatabaseAsync(AuthTokenData tokenData)
+    {
+        apiConfig.AuthToken = tokenData.AuthToken;
+        apiConfig.Sek = tokenData.Sek;
+        apiConfig.AppKey = tokenData.ClientId;
+        apiConfig.EInvoiceTokenExp = tokenData.TokenExpiry;
+
+        var result = await ConfigService.SaveAsync(apiConfig);
+
+        if (result)
+        {
+            ToastService.Success("Token saved to database!");
+        }
+        else
+        {
+            ToastService.Error("Failed to save token to database!");
+        }
+    }
+
+    private async Task CopyTokenAsync()
+    {
+        if (tokenResponse?.Data?.AuthToken != null)
+        {
+            await CopyToClipboardAsync(tokenResponse.Data.AuthToken);
+        }
+    }
+
+    private async Task CopyToClipboardAsync(string text)
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", text);
+            ToastService.Success("Copied to clipboard!");
+        }
+        catch
+        {
+            ToastService.Warning("Could not copy. Please copy manually.");
+        }
+    }
+
+    private void LogDebugInfo(string message)
+    {
+        debugInfo += $"{message}\n";
+    }
+
+    private string GetExpiryTimeString()
+    {
+        if (tokenResponse?.Data?.TokenExpiry == null) return string.Empty;
+
+        if (DateTime.TryParse(tokenResponse.Data.TokenExpiry, out var expiry))
+        {
+            var remaining = expiry - DateTime.Now;
+
+            if (remaining.TotalMinutes > 0)
+            {
+                return $"Expires in {remaining.TotalMinutes:F0} min";
+            }
+
+            return "EXPIRED";
+        }
+
+        return "Invalid Date";
+    }
+
+    private string GetExpiryBadgeClass()
+    {
+        if (tokenResponse?.Data?.TokenExpiry == null) return "bg-secondary";
+
+        if (DateTime.TryParse(tokenResponse.Data.TokenExpiry, out var expiry))
+        {
+            var remaining = expiry - DateTime.Now;
+
+            if (remaining.TotalMinutes > 30) return "bg-success";
+            if (remaining.TotalMinutes > 10) return "bg-warning text-dark";
+            if (remaining.TotalMinutes > 0) return "bg-danger";
+        }
+
+        return "bg-secondary";
+    }
+
+    // Data Models
+    public class AuthTokenResponse
+    {
+        public int Status { get; set; }
+        public AuthTokenData? Data { get; set; }
+        public object? ErrorDetails { get; set; }
+        public object? InfoDtls { get; set; }
+    }
+
+    public class AuthTokenData
+    {
+        public string ClientId { get; set; } = string.Empty;
+        public string UserName { get; set; } = string.Empty;
+        public string AuthToken { get; set; } = string.Empty;
+        public string Sek { get; set; } = string.Empty;
+        public string TokenExpiry { get; set; } = string.Empty;
+    }
+}

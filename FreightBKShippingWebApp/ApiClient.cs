@@ -201,9 +201,13 @@ namespace FreightBKShippingWebApp
                // Console.WriteLine("Status Code: " + res.StatusCode);
 
                 var content = await res.Content.ReadAsStringAsync();
-              //  Console.WriteLine("Raw JSON Response:");
-              //  Console.WriteLine(content);
-
+                //  Console.WriteLine("Raw JSON Response:");
+                //  Console.WriteLine(content);
+                if (res.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    Console.WriteLine($"ℹ️ 404 Not Found for {path} → returning null/default");
+                    return default;
+                }
                 res.EnsureSuccessStatusCode(); // Throws HttpRequestException for non-success codes
 
                 if (string.IsNullOrWhiteSpace(content))
