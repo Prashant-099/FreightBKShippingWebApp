@@ -317,7 +317,8 @@ public class JobDataCreationService
                 AccountName = name.Trim(),
                 AccountGroupId = defaultGroupId.Value,
                 AccountPrintName = name.Trim(),
-                AccountTypeId = 18
+                AccountTypeId = 18,
+                //AccountAddress1=
             };
 
             if (data != null)
@@ -326,7 +327,7 @@ public class JobDataCreationService
                 var addressParts = new List<string>();
 
                 // Try single address field (old format)
-                var singleAddressKey = string.IsNullOrEmpty(prefix) ? "Address" : $"{prefix} Address";
+                var singleAddressKey = string.IsNullOrEmpty(prefix) ? "ImporterAddress1" : $"{prefix} ImporterAddress2";
                 if (data.TryGetValue(singleAddressKey, out var singleAddr) && !string.IsNullOrWhiteSpace(singleAddr))
                 {
                     addressParts.Add(singleAddr.Trim());

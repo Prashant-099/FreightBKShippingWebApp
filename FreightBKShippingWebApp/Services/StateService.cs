@@ -1,4 +1,5 @@
 ﻿using FreightBKShippingWebApp.Model;
+using System.Net.Http;
 
 namespace FreightBKShippingWebApp.Services
 {
@@ -22,6 +23,64 @@ namespace FreightBKShippingWebApp.Services
         {
             return await _apiClient.SafeGetFromJsonAsync<State>($"/api/states/{id}");
         }
+
+        /// <summary>
+        /// Get state by Name
+        /// </summary>
+        /// <param name="stateName"></param>
+        /// <returns></returns>
+        /// <summary>
+        /// Gets state ID by name, or creates new state if not found
+        /// </summary>
+        public async Task<int> GetOrCreateStateIdAsync(string stateName, string? stateCode = null)
+        {
+            if (string.IsNullOrWhiteSpace(stateName))
+                throw new ArgumentException("State name cannot be empty", nameof(stateName));
+
+            try
+            {
+                var request = new State
+                {
+                    StateName = stateName.Trim(),
+                    StateCode = stateCode?.Trim()
+                };
+
+                var result = await _apiClient.PostAsync<State, State>(
+                    "api/States/",
+                    request
+                );
+
+                if (result?.StateId == null)
+                    throw new Exception("Invalid response from API");
+
+                return result.StateId;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Failed to get or create state: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// Gets state by name only (returns null if not found)
+        /// </summary>
+        public async Task<State?> GetStateByCodeAsync(string stateCode)
+        {
+            if (string.IsNullOrWhiteSpace(stateCode))
+                return null;
+
+            try
+            {
+                return await _apiClient.GetFromJsonAsync<State>(
+                    $"api/States/GetByCode/{Uri.EscapeDataString(stateCode)}"
+                );
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
 
         // Create new state
         public async Task<State?> CreateStateAsync(State state)

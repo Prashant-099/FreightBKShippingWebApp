@@ -45,11 +45,38 @@ namespace FreightBKShippingWebApp.Services
         {
             try
             {
-                // Decide whether to insert or update based on existence
-                if (model.Username == null || model.Username == "")
+                EinvConfig? existing = null;
+
+                // Try GET to check if record exists
+                try
+                {
+                    existing = await _api.GetFromJsonAsync<EinvConfig>($"api/EinvConfig/{model.Username}");
+                }
+                catch (HttpRequestException httpEx)
+                {
+                    // When API returns 404 → this means "does not exist"
+                    if (httpEx.StatusCode == System.Net.HttpStatusCode.NotFound)
+                    {
+                        existing = null;
+                    }
+                    else
+                    {
+                        // Re-throw other HTTP errors (500, 401, etc.)
+                        throw;
+                    }
+                }
+
+                // Determine insert vs update
+                if (existing == null)
+                {
+                    // Create new record
                     return await _api.PostAsync<bool, EinvConfig>("api/EinvConfig", model);
+                }
                 else
+                {
+                    // Update existing record
                     return await _api.PutAsync<bool, EinvConfig>($"api/EinvConfig/{model.Username}", model);
+                }
             }
             catch (Exception ex)
             {
@@ -57,5 +84,8 @@ namespace FreightBKShippingWebApp.Services
                 return false;
             }
         }
+
+
+
     }
 }

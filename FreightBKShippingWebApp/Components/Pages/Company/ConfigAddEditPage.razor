@@ -1,15 +1,17 @@
 ﻿@using FreightBKShippingWebApp.Models
 @using FreightBKShippingWebApp.Services
+@using System.Text.Json
 @inject EinvConfigService EinvConfigService
 @inject ToasteService ToastService
 @inject LoadingService LoadingService
+@inject EinvConfigService ConfigService
 
 <DxPopup @bind-Visible="isVisible"
          HeaderText="@popupTitle"
          Width="700px"
          ShowCloseButton="true"
          CloseOnEscape="true"
-         CloseOnOutsideClick="false">
+         CloseOnOutsideClick="false" BodyCssClass="my-popup-body" AllowResize="true" AllowDragByHeaderOnly="true">
 
     <Content>
         <EditForm Model="@EditModel" OnValidSubmit="SaveAsync" Context="cxtconfig">
@@ -19,23 +21,11 @@
                 </DxFormLayoutItem>
 
                 <DxFormLayoutItem Caption="Password">
-                    <DxTextBox @bind-Text="EditModel.Password" TextMode="TextBoxTextMode.Password" />
+                    <DxTextBox @bind-Text="EditModel.eInvPwd" />
                 </DxFormLayoutItem>
 
                 <DxFormLayoutItem Caption="GSTIN">
                     <DxTextBox @bind-Text="EditModel.Gstin" />
-                </DxFormLayoutItem>
-
-                <DxFormLayoutItem Caption="App Key">
-                    <DxTextBox @bind-Text="EditModel.AppKey" />
-                </DxFormLayoutItem>
-
-                <DxFormLayoutItem Caption="Auth Token">
-                    <DxTextBox @bind-Text="EditModel.AuthToken" />
-                </DxFormLayoutItem>
-
-                <DxFormLayoutItem Caption="SEK">
-                    <DxTextBox @bind-Text="EditModel.Sek" />
                 </DxFormLayoutItem>
 
                 <DxFormLayoutItem Caption="GSP Name">
@@ -47,26 +37,63 @@
                 </DxFormLayoutItem>
 
                 <DxFormLayoutItem Caption="ASP Password">
-                    <DxTextBox @bind-Text="EditModel.AspPassword" />
+                    <DxTextBox @bind-Text="EditModel.Password" />
                 </DxFormLayoutItem>
 
-                <DxFormLayoutItem Caption="Auth URL">
+                <DxFormLayoutItem Caption="Auth URL" ColSpanMd="9">
                     <DxTextBox @bind-Text="EditModel.AuthUrl" />
                 </DxFormLayoutItem>
 
-                <DxFormLayoutItem Caption="EWB by IRN URL">
+                <!-- TOKEN GENERATION SECTION -->
+                <DxFormLayoutItem ColSpanMd="3">
+                 @*    <div class="alert alert-info mb-3">
+                        <i class="bi bi-info-circle-fill"></i>
+                        <strong>Generate Auth Token:</strong> Click below to automatically fetch and populate token fields
+                    </div> *@
+                    <DxButton Text="🔑 Generate Token"
+                              RenderStyle="ButtonRenderStyle.Success"
+                              Click="GenerateAuthTokenAsync"
+                              CssClass="w-100 mb-1" />
+                </DxFormLayoutItem>
+
+                <DxFormLayoutItem Caption="App Key" ColSpanMd="12">
+                    <DxTextBox @bind-Text="EditModel.AppKey" ReadOnly="true" />
+                </DxFormLayoutItem>
+
+                <DxFormLayoutItem Caption="Auth Token" ColSpanMd="12">
+                    <DxTextBox @bind-Text="EditModel.AuthToken" ReadOnly="true" />
+                </DxFormLayoutItem>
+
+                <DxFormLayoutItem Caption="SEK" ColSpanMd="12">
+                    <DxTextBox @bind-Text="EditModel.Sek" ReadOnly="true" />
+                </DxFormLayoutItem>
+
+                <DxFormLayoutItem Caption="Token Expiry" ColSpanMd="12">
+                    <DxTextBox @bind-Text="EditModel.EInvoiceTokenExp" ReadOnly="true">
+                        <Buttons>
+                            @if (!string.IsNullOrEmpty(EditModel.EInvoiceTokenExp))
+                            {
+                                <DxTextBoxButton IconCssClass="bi bi-clock-fill"
+                                                 Tooltip="@GetExpiryStatus()"
+                                                 Click="@(() => {})" />
+                            }
+                        </Buttons>
+                    </DxTextBox>
+                </DxFormLayoutItem>
+
+                <DxFormLayoutItem Caption="EWB by IRN URL" ColSpanMd="12">
                     <DxTextBox @bind-Text="EditModel.EwbByIrn" />
                 </DxFormLayoutItem>
 
-                <DxFormLayoutItem Caption="EWB URL">
+                <DxFormLayoutItem Caption="EWB URL" ColSpanMd="12">
                     <DxTextBox @bind-Text="EditModel.EwbUrl" />
                 </DxFormLayoutItem>
 
-                <DxFormLayoutItem Caption="Cancel EWB URL">
+                <DxFormLayoutItem Caption="Cancel EWB URL" ColSpanMd="12">
                     <DxTextBox @bind-Text="EditModel.CancelEwbUrl" />
                 </DxFormLayoutItem>
 
-                <DxFormLayoutItem Caption="Base URL">
+                <DxFormLayoutItem Caption="Base URL" ColSpanMd="12">
                     <DxTextBox @bind-Text="EditModel.BaseUrl" />
                 </DxFormLayoutItem>
 
@@ -74,18 +101,42 @@
                     <DxSpinEdit @bind-Value="EditModel.BranchId" />
                 </DxFormLayoutItem>
 
-               
-
-                <DxFormLayoutItem>
+                <DxFormLayoutItem ColSpanMd="12">
                     <div class="text-end mt-3">
-                        <DxButton Text="Save" RenderStyle="ButtonRenderStyle.Primary" SubmitFormOnClick="true" />
-                        <DxButton Text="Cancel" RenderStyle="ButtonRenderStyle.Secondary" Click="Hide" />
+                        <DxButton Text="Save" 
+                                  RenderStyle="ButtonRenderStyle.Primary" 
+                                  SubmitFormOnClick="true" />
+                        <DxButton Text="Cancel" 
+                                  RenderStyle="ButtonRenderStyle.Secondary" 
+                                  Click="Hide" />
                     </div>
                 </DxFormLayoutItem>
             </DxFormLayout>
         </EditForm>
     </Content>
 </DxPopup>
+
+<style>
+    .alert {
+        padding: 0.75rem 1rem;
+        border-radius: 0.375rem;
+        border: 1px solid transparent;
+    }
+
+    .alert-info {
+        background-color: #cfe2ff;
+        border-color: #b6d4fe;
+        color: #084298;
+    }
+
+    .w-100 {
+        width: 100%;
+    }
+
+    .mb-3 {
+        margin-bottom: 1rem;
+    }
+</style>
 
 @code {
     private bool isVisible;
@@ -98,29 +149,139 @@
     {
         popupTitle = model == null ? "Add E-Invoice Config" : "Edit E-Invoice Config";
         EditModel = model != null ? new EinvConfig
-        {
-            Username = model.Username,
-            Password = model.Password,
-            Gstin = model.Gstin,
-            AppKey = model.AppKey,
-            AuthToken = model.AuthToken,
-            Sek = model.Sek,
-            EInvoiceTokenExp = model.EInvoiceTokenExp,
-            BranchId = model.BranchId,
-            
-            GspName = model.GspName,
-            AspUserId = model.AspUserId,
-            AspPassword = model.AspPassword,
-            AuthUrl = model.AuthUrl,
-            EwbByIrn = model.EwbByIrn,
-            EwbUrl = model.EwbUrl,
-            CancelEwbUrl = model.CancelEwbUrl,
-            BaseUrl = model.BaseUrl
-        } : new EinvConfig();
+            {
+                Username = model.Username,
+                eInvPwd = model.eInvPwd,
+                Gstin = model.Gstin,
+                AppKey = model.AppKey,
+                AuthToken = model.AuthToken,
+                Sek = model.Sek,
+                EInvoiceTokenExp = model.EInvoiceTokenExp,
+                BranchId = model.BranchId,
+                GspName = model.GspName,
+                AspUserId = model.AspUserId,
+                Password = model.Password,
+                AuthUrl = model.AuthUrl,
+                EwbByIrn = model.EwbByIrn,
+                EwbUrl = model.EwbUrl,
+                CancelEwbUrl = model.CancelEwbUrl,
+                BaseUrl = model.BaseUrl
+            } : new EinvConfig();
         isVisible = true;
     }
 
     private void Hide() => isVisible = false;
+
+    private async Task GenerateAuthTokenAsync()
+    {
+        // Validate required fields
+        if (!ValidateTokenGeneration())
+        {
+            return;
+        }
+
+        LoadingService.Show("Generating Auth Token...");
+
+        try
+        {
+            using var httpClient = new HttpClient();
+
+            // Add required headers (lowercase as per API requirement)
+            httpClient.DefaultRequestHeaders.Add("aspid", EditModel.AspUserId);
+            httpClient.DefaultRequestHeaders.Add("password", EditModel.Password);
+            httpClient.DefaultRequestHeaders.Add("Gstin", EditModel.Gstin);
+            httpClient.DefaultRequestHeaders.Add("user_name", EditModel.Username);
+            httpClient.DefaultRequestHeaders.Add("eInvPwd", EditModel.eInvPwd);
+
+            // Make GET request
+            var response = await httpClient.GetAsync(EditModel.AuthUrl);
+            var responseBody = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception($"API Error {response.StatusCode}: {responseBody}");
+            }
+
+            // Deserialize response
+            var tokenResponse = JsonSerializer.Deserialize<AuthTokenResponse>(responseBody,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (tokenResponse?.Status == 1 && tokenResponse.Data != null)
+            {
+                // Populate fields automatically
+                EditModel.AppKey = tokenResponse.Data.ClientId;
+                EditModel.AuthToken = tokenResponse.Data.AuthToken;
+                EditModel.Sek = tokenResponse.Data.Sek;
+                EditModel.EInvoiceTokenExp = tokenResponse.Data.TokenExpiry;
+                var result = await ConfigService.SaveAsync(EditModel);
+
+                if (result)
+                {
+                    ToastService.Success("Token saved to database!");
+                }
+                else
+                {
+                    ToastService.Error("Failed to save token to database!");
+                }
+              
+                StateHasChanged(); // Force UI update
+            }
+            else
+            {
+                var errorMsg = tokenResponse?.ErrorDetails?.ToString() ?? "Unknown error";
+                throw new Exception($"Token generation failed: {errorMsg}");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Failed to generate token: {ex.Message}");
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+
+    private bool ValidateTokenGeneration()
+    {
+        if (string.IsNullOrWhiteSpace(EditModel.AuthUrl))
+        {
+            ToastService.Warning("Please enter Auth URL");
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(EditModel.Gstin))
+        {
+            ToastService.Warning("Please enter GSTIN");
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(EditModel.Username))
+        {
+            ToastService.Warning("Please enter Username");
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(EditModel.eInvPwd))
+        {
+            ToastService.Warning("Please enter eInv Password");
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(EditModel.AspUserId))
+        {
+            ToastService.Warning("Please enter ASP User ID");
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(EditModel.Password))
+        {
+            ToastService.Warning("Please enter ASP Password");
+            return false;
+        }
+
+        return true;
+    }
 
     private async Task SaveAsync()
     {
@@ -146,5 +307,40 @@
         {
             LoadingService.Hide();
         }
+    }
+
+    private string GetExpiryStatus()
+    {
+        if (string.IsNullOrEmpty(EditModel.EInvoiceTokenExp))
+            return "No expiry set";
+
+        if (DateTime.TryParse(EditModel.EInvoiceTokenExp, out var expiry))
+        {
+            var remaining = expiry - DateTime.Now;
+
+            if (remaining.TotalMinutes > 0)
+                return $"Expires in {remaining.TotalMinutes:F0} minutes";
+            else
+                return "EXPIRED - Generate new token";
+        }
+
+        return "Invalid date format";
+    }
+
+    // Data Models for JSON deserialization
+    public class AuthTokenResponse
+    {
+        public int Status { get; set; }
+        public AuthTokenData? Data { get; set; }
+        public object? ErrorDetails { get; set; }
+    }
+
+    public class AuthTokenData
+    {
+        public string ClientId { get; set; } = string.Empty;
+        public string UserName { get; set; } = string.Empty;
+        public string AuthToken { get; set; } = string.Empty;
+        public string Sek { get; set; } = string.Empty;
+        public string TokenExpiry { get; set; } = string.Empty;
     }
 }

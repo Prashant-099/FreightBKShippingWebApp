@@ -1,5 +1,8 @@
 ﻿@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Models
 @using FreightBKShippingWebApp.Services
+
+@using System.Text.Json
 @inject AccountService AccountService
 @inject ToasteService ToastService
 @inject LoadingService LoadingService
@@ -7,6 +10,7 @@
 @inject CountryService CountryService
 @inject AccountGroupService AccountGroupService
 @inject AccountTypeService AccountTypeService
+@inject EinvConfigService EinvConfigService
 
 <DxPopup @bind-Visible="Visible" ShowCloseButton="true" HeaderText="@Title" CloseOnOutsideClick="false" MaxWidth="1050px"  Width="90%"  
 horizontalAlignment="HorizontalAlignment.Center"
@@ -161,8 +165,15 @@ verticalAlignment="VerticalAlignment.Center"
                                             SearchMode="ListSearchMode.AutoSearch"
                                             SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
                             </DxFormLayoutItem>
-                            <DxFormLayoutItem Caption="GST No" ColSpanMd="12">
+                            <DxFormLayoutItem Caption="GST No" ColSpanMd="9">
                                 <DxTextBox @bind-Text="EditModel.AccountGstNo" />
+                            </DxFormLayoutItem>  
+                            <DxFormLayoutItem ColSpanMd="3">
+                                    <DxButton Text="🔍 Fetch"
+                                              RenderStyle="ButtonRenderStyle.Info"
+                                              Click="FetchGstinDetailsAsync"
+                                              CssClass="w-100" />
+
                             </DxFormLayoutItem>
                             <DxFormLayoutItem Caption="PAN" ColSpanMd="12">
                                 <DxTextBox @bind-Text="EditModel.AccountPan" />
@@ -345,7 +356,9 @@ verticalAlignment="VerticalAlignment.Center"
         stateList = await StateService.GetStatesAsync();
         countryList = await CountryService.GetAllAsync();
         groupList = await AccountGroupService.GetAllAsync();   // API से load
-        typeList = await AccountTypeService.GetAllAsync();
+        typeList = await AccountTypeService.GetAllAsync(); 
+        states = await StateService.GetStatesAsync();
+        await LoadEinvConfigAsync();
     }
 
     private async Task HandleValidSubmit()
@@ -400,5 +413,249 @@ verticalAlignment="VerticalAlignment.Center"
         }
     }
 
+    //
+    private EinvConfig? einvConfig;
+    private List<State> states = new();
+    private async Task LoadEinvConfigAsync()
+    {
+        try
+        {
+            // Load your saved EinvConfig (adjust username as needed)
+            einvConfig = await EinvConfigService.GetByUsernameAsync("TaxProEnvPON");
 
+            if (einvConfig == null)
+            {
+                ToastService.Warning("E-Invoice configuration not found. Please configure first.");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Failed to load config: {ex.Message}");
+        }
+    }
+
+
+    private async Task FetchGstinDetailsAsync()
+    {
+        // Validation
+        if (string.IsNullOrWhiteSpace(EditModel.AccountGstNo))
+        {
+            ToastService.Warning("Please enter GST Number");
+            return;
+        }
+
+        if (einvConfig == null)
+        {
+            ToastService.Warning("E-Invoice configuration not loaded");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(einvConfig.AuthToken))
+        {
+            ToastService.Warning("Auth Token not found. Please generate token first.");
+            return;
+        }
+
+        LoadingService.Show("Fetching GSTIN details...");
+
+        try
+        {
+            using var httpClient = new HttpClient();
+
+            // Build URL with GSTIN in path
+            string apiUrl = $"{einvConfig.BaseUrl}Master/gstin/{EditModel.AccountGstNo}";
+
+            // Add required headers from EinvConfig
+            httpClient.DefaultRequestHeaders.Add("aspid", einvConfig.AspUserId);
+            httpClient.DefaultRequestHeaders.Add("password", einvConfig.Password);
+            httpClient.DefaultRequestHeaders.Add("Gstin", einvConfig.Gstin);
+            httpClient.DefaultRequestHeaders.Add("user_name", einvConfig.Username);
+            httpClient.DefaultRequestHeaders.Add("AuthToken", einvConfig.AuthToken);
+
+            // Make GET request
+            var response = await httpClient.GetAsync(apiUrl);
+            var responseBody = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new Exception($"API Error {response.StatusCode}: {responseBody}");
+            }
+
+            // 🔥 Parse the weird API response structure
+            using var doc = JsonDocument.Parse(responseBody);
+            var root = doc.RootElement;
+
+            // Get Status as string and convert to int
+            string statusStr = root.GetProperty("Status").GetString() ?? "0";
+            int status = int.Parse(statusStr);
+
+            if (status != 1)
+            {
+                var errorDetails = root.TryGetProperty("ErrorDetails", out var err)
+                    ? err.ToString()
+                    : "Unknown error";
+                ToastService.Error($"Failed to fetch GSTIN: {errorDetails}");
+                return;
+            }
+
+            // Get Data as string and parse it again
+            string dataJson = root.GetProperty("Data").GetString() ?? "{}";
+
+            // Deserialize the nested JSON string
+            var gstinData = JsonSerializer.Deserialize<GstinData>(dataJson,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (gstinData != null)
+            {
+                // Populate form fields with fetched data
+                PopulateFormWithGstinData(gstinData);
+
+                ToastService.Success($"✅ GSTIN details fetched for {gstinData.LegalName}");
+            }
+            else
+            {
+                ToastService.Error("Failed to parse GSTIN data");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Error: {ex.Message}");
+            Console.WriteLine($"GSTIN Fetch Error: {ex}");
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+
+    // Updated GstinData model to match actual API response
+    public class GstinData
+    {
+        public string Gstin { get; set; } = string.Empty;
+        public string LegalName { get; set; } = string.Empty;
+        public string TradeName { get; set; } = string.Empty;
+        public int StateCode { get; set; }
+        public string Status { get; set; } = string.Empty;
+
+        // Address fields are individual properties
+        public string AddrBnm { get; set; } = string.Empty;  // Building Name
+        public string AddrBno { get; set; } = string.Empty;  // Building Number
+        public string AddrFlno { get; set; } = string.Empty; // Floor Number
+        public string AddrSt { get; set; } = string.Empty;   // Street
+        public string AddrLoc { get; set; } = string.Empty;  // Location
+        public int AddrPncd { get; set; }                     // Pincode
+        public string TxpType { get; set; } = string.Empty;   // Taxpayer Type
+        public string BlkStatus { get; set; } = string.Empty; // Block Status
+        public string DtReg { get; set; } = string.Empty;     // Registration Date
+        public string? DtDReg { get; set; }                   // De-registration Date
+    }
+
+    // Updated PopulateFormWithGstinData to match new structure
+    private async Task PopulateFormWithGstinData(GstinData data)
+    {
+        if (data == null)
+        {
+            ToastService.Warning("Invalid GSTIN data received.");
+            return;
+        }
+
+        // Basic fields
+        EditModel.AccountName = data.LegalName ?? EditModel.AccountName;
+        EditModel.AccountPrintName = data.TradeName ?? EditModel.AccountPrintName;
+
+        // Address Line 1
+        var addressParts1 = new List<string>();
+        if (!string.IsNullOrEmpty(data.AddrBnm)) addressParts1.Add(data.AddrBnm);
+        if (!string.IsNullOrEmpty(data.AddrBno)) addressParts1.Add(data.AddrBno);
+        if (!string.IsNullOrEmpty(data.AddrFlno)) addressParts1.Add($"Floor {data.AddrFlno}");
+        EditModel.AccountAddress1 = string.Join(", ", addressParts1);
+
+        // Address Line 2
+        var addressParts2 = new List<string>();
+        if (!string.IsNullOrEmpty(data.AddrSt)) addressParts2.Add(data.AddrSt);
+        if (!string.IsNullOrEmpty(data.AddrLoc)) addressParts2.Add(data.AddrLoc);
+        EditModel.AccountAddress2 = string.Join(", ", addressParts2);
+
+        EditModel.AccountAddress3 = "";
+        EditModel.AccountPincode = data.AddrPncd > 0 ? data.AddrPncd.ToString() : "";
+
+        // =============================
+        // 🔥 STATE LOGIC
+        // 1️⃣ First: Try to get state by StateCode
+        // 2️⃣ If found → use it
+        // 3️⃣ If not found → fallback to GetOrCreateStateIdAsync
+        // =============================
+        if (data.StateCode > 0)
+        {
+            try
+            {
+                string code = data.StateCode.ToString();
+
+                // STEP 1 — Get existing state by Code
+                var existingState = await StateService.GetStateByCodeAsync(code);
+
+                if (existingState != null)
+                {
+                    // Found in DB — assign directly
+                    EditModel.AccountStateId = existingState.StateId;
+                    ToastService.Info($"State set: {existingState.StateName} ({code})");
+                }
+                else
+                {
+                    // STEP 2 — Not found → create using your existing create API
+                    int createdStateId = await StateService.GetOrCreateStateIdAsync(
+                        stateName: "",      // name not required
+                        stateCode: code     // important
+                    );
+
+                    if (createdStateId > 0)
+                    {
+                        EditModel.AccountStateId = createdStateId;
+                        ToastService.Info($"New state created for code {code}");
+                    }
+                    else
+                    {
+                        ToastService.Warning($"Unable to find or create state for code {code}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ToastService.Warning($"Failed to load state: {ex.Message}");
+            }
+        }
+
+        StateHasChanged();
+    }
+
+    public class GstinApiResponse
+    {
+        public int Status { get; set; }
+        public GstinData? Data { get; set; }
+        public object? ErrorDetails { get; set; }
+    }
+
+    // public class GstinData
+    // {
+    //     public string Gstin { get; set; } = string.Empty;
+    //     public string LegalName { get; set; } = string.Empty;
+    //     public string TradeName { get; set; } = string.Empty;
+    //     public string StateCode { get; set; } = string.Empty;
+    //     public string Status { get; set; } = string.Empty;
+    //     public GstinAddress? Address { get; set; }
+    // }
+
+    public class GstinAddress
+    {
+        public string Building { get; set; } = string.Empty;
+        public string Street { get; set; } = string.Empty;
+        public string Location { get; set; } = string.Empty;
+        public string City { get; set; } = string.Empty;
+        public string District { get; set; } = string.Empty;
+        public string State { get; set; } = string.Empty;
+        public string Pincode { get; set; } = string.Empty;
+    }
+
+
+    //
 }

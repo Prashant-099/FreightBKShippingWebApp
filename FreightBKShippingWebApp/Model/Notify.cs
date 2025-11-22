@@ -42,8 +42,8 @@ namespace FreightBKShippingWebApp.Model
         [Column("notify_city")]
         public string? NotifyCity { get; set; } = string.Empty;
 
-        [Column("notify_tel")]
-        public string? NotifyTel { get; set; } = string.Empty;
+        //[Column("notify_tel")]
+        //public string? NotifyTel { get; set; } = string.Empty;
 
         [Column("notify_email")]
         public string? NotifyEmail { get; set; } = string.Empty;
