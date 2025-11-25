@@ -177,7 +177,7 @@
 
 <DxPopup @bind-Visible="Visible" ShowCloseButton="true" HeaderText="@Title" CloseOnOutsideClick="false" MaxWidth="1700px" Width="90%"
          horizontalAlignment="HorizontalAlignment.Center"
-         verticalAlignment="VerticalAlignment.Center">
+         verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body" >
 
 
     <EditForm Model="@EditModel" OnValidSubmit="HandleValidSubmit" Context="cxbill">
@@ -200,7 +200,7 @@
                                 ValueExpression="@( () => EditModel.BillVoucherId )"
                                 SearchMode="ListSearchMode.AutoSearch"
                                 SearchFilterCondition="ListSearchFilterCondition.StartsWith"
-                                ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                                ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" CssClass="editor-smooth" />
                 </ChildContent>
             </DxFormLayoutItem>
             <DxFormLayoutItem Caption="Bill No" ColSpanMd="3">
@@ -219,7 +219,11 @@
                 </ChildContent>
             </DxFormLayoutItem>
             <DxFormLayoutItem Caption="Job Type" ColSpanMd="3">
-                <div class="hsn-field-wrapper">
+                @* <div class="hsn-field-wrapper"> *@
+                <div style="position: relative; display: inline-block; width: 100%;">
+                    <DxButton Click="@ShowJobPopup"
+                              Text="+"
+                              CssClass="custom-plus-button" />
                     <DxComboBox Data="@JobTypeList"
                                 TextFieldName="Text"
                                 ValueFieldName="Value"
@@ -229,9 +233,7 @@
                                 Value="@EditModel.BillJobType"
                                 ValueChanged="@((string jobtype) => OnJobTypeChanged(jobtype))"
                                 ValueExpression="@(() => EditModel.BillJobType)" />
-                    <DxButton Click="@ShowJobPopup"
-                              Text="+"
-                              CssClass="custom-plus-button" />
+                  
                 </div>
             </DxFormLayoutItem>
             <DxFormLayoutItem Caption="Job No" ColSpanMd="3">
@@ -268,10 +270,14 @@
                             SearchMode="ListSearchMode.AutoSearch"
                             SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
             </DxFormLayoutItem>
-            <DxFormLayoutItem Caption="Party Name" ColSpanMd="4">
+            <DxFormLayoutItem Caption="Party Name" ColSpanMd="6">
 
-                <ChildContent Context="ctx">
-                    <div class="hsn-field-wrapper">
+                @* <ChildContent Context="ctx" > *@
+                    @* <div class="hsn-field-wrapper"> *@
+                <div style="position: relative; display: inline-block; width: 100%;">
+                           <DxButton Click="@ShowAccountPopup"
+                              Text="+"
+                              CssClass="custom-plus-button" />
                         <DxComboBox TData="Account" TValue="int"
                                     Data="@AccountList"
                                     TextFieldName="AccountName"
@@ -282,11 +288,9 @@
                                     @bind-Value="EditModel.BillPartyId"
                                     SearchMode="ListSearchMode.AutoSearch"
                                     SearchFilterCondition="ListSearchFilterCondition.StartsWith" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
-                        <DxButton Click="@ShowAccountPopup"
-                                  Text="+"
-                                  CssClass="custom-plus-button" />
+                     
                     </div>
-                </ChildContent>
+                @* </ChildContent> *@
             </DxFormLayoutItem>
             <DxFormLayoutItem Caption="Branch" ColSpanMd="3">
                 <DxComboBox Data="@branchList"
@@ -295,7 +299,7 @@
                             @bind-Value="EditModel.BillBranchId" />
             </DxFormLayoutItem>
 
-            <DxFormLayoutItem Caption="Is RCM Applicable" ColSpanMd="4">
+            <DxFormLayoutItem Caption="Is RCM Applicable" ColSpanMd="3">
                 <DxCheckBox Checked="@EditModel.BillIsRcm"
                             CheckedChanged="@((bool isChecked) => ApplyRcmLogic(isChecked))" CheckedExpression="() => EditModel.BillIsRcm" />
             </DxFormLayoutItem>

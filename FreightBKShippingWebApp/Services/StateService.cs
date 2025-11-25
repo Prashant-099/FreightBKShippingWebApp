@@ -33,7 +33,7 @@ namespace FreightBKShippingWebApp.Services
         /// Gets state ID by name, or creates new state if not found
         /// </summary>
         public async Task<int> GetOrCreateStateIdAsync(string stateName, string? stateCode = null)
-        {
+            {
             if (string.IsNullOrWhiteSpace(stateName))
                 throw new ArgumentException("State name cannot be empty", nameof(stateName));
 

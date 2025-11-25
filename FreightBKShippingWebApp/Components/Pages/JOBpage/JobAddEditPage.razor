@@ -1,6 +1,12 @@
-﻿    @using FreightBKShippingWebApp.Model
-    @using FreightBKShippingWebApp.Models
-    @using FreightBKShippingWebApp.Services
+﻿@using FreightBKShippingWebApp.Components.Pages.Account
+@using FreightBKShippingWebApp.Components.Pages.CargoPage
+@using FreightBKShippingWebApp.Components.Pages.CountryPage
+@using FreightBKShippingWebApp.Components.Pages.NotifyPage
+@using FreightBKShippingWebApp.Components.Pages.StationPort
+@using FreightBKShippingWebApp.Components.Pages.VesselPage
+@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Models
+@using FreightBKShippingWebApp.Services
 
     @inject JobService JobService
     @inject AccountService AccountService
@@ -15,6 +21,7 @@
     @inject NavigationManager NavigationManager
     @inject PdfDetailedExtractorService PdfExtractor
     @inject JobDataCreationService JobDataCreationService
+    @inject LoadingService LoadingService
 
 <DxPopup @bind-Visible="Visible"
 ShowCloseButton="true"
@@ -46,12 +53,16 @@ CssClass="popup-elevated" BodyCssClass="my-popup-body"
             </DxFormLayoutItem>
 
             <DxFormLayoutItem CaptionCssClass="caption-bold"
-                              Caption="@($"Import {(JobType == "IMPORT" ? ".be file" : ".sb file")}")"
-                              ColSpanMd="8">
-                <InputFile OnChange="HandleUpload" 
-                accept=".sb,.dat,.be" 
-                class="form-control" />
-
+            Caption="@($"Import {(JobType == "IMPORT" ? ".be file" : ".sb file")}")"
+            ColSpanMd="4">
+                <Template>
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-cloud-upload"></i>
+                        <InputFile OnChange="HandleUpload"
+                        accept=".sb,.dat,.be"
+                        class="form-control" />
+                    </div>
+                </Template>
             </DxFormLayoutItem>
 
 
@@ -61,19 +72,25 @@ CssClass="popup-elevated" BodyCssClass="my-popup-body"
                         <DxFormLayoutGroup ColSpanMd="6" Decoration="FormLayoutGroupDecoration.None">
 
                             <DxFormLayoutItem Caption="@PartyCaption" ColSpanMd="12"  CaptionCssClass="caption-bold">
-                                <DxComboBox Data="@party"
-                                TextFieldName="AccountName"
-                                ValueFieldName="AccountId"
-                                Value="@EditModel.JobPartyId"
-                                ValueChanged="@((int? value) => OnImporterChanged(value))"
-                                ValueExpression="@(() => EditModel.JobPartyId)"
-                                NullText="Select Importer.."
-                                AllowUserInput="true"
-                                SearchMode="ListSearchMode.AutoSearch"
-                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" ShowDropDownButton="true"
-                                CssClass="editor-smooth"
-                                InputCssClass="input-smooth"
-                                />
+                                <div style="position: relative; display: inline-block; width: 100%;">
+                                    <DxButton Click="@(() => ShowAccountPopup())"
+                                    Text="+"
+                                    CssClass="custom-plus-button" />
+                                    <DxComboBox Data="@party"
+                                    TextFieldName="AccountName"
+                                    ValueFieldName="AccountId"
+                                    Value="@EditModel.JobPartyId"
+                                    ValueChanged="@((int? value) => OnImporterChanged(value))"
+                                    ValueExpression="@(() => EditModel.JobPartyId)"
+                                    NullText="Select Importer.."
+                                    AllowUserInput="true"
+                                    SearchMode="ListSearchMode.AutoSearch"
+                                    SearchFilterCondition="ListSearchFilterCondition.StartsWith" ShowDropDownButton="true"
+                                    CssClass="editor-smooth"
+                                    InputCssClass="input-smooth"
+                                    />
+
+                                </div>
                             </DxFormLayoutItem>
 
                             <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="@AddressCaption" ColSpanMd="12" >
@@ -81,16 +98,21 @@ CssClass="popup-elevated" BodyCssClass="my-popup-body"
                             </DxFormLayoutItem>
 
                             <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="High Seas" ColSpanMd="12">
-                                <DxComboBox Data="@party"
-                                TextFieldName="AccountName"
-                                ValueFieldName="AccountId"
-                                Value="@EditModel.JobHighSeas1"
-                                ValueChanged="@((int? value) => OnHighSeasChanged(value))"
-                                ValueExpression="@(() => EditModel.JobHighSeas1)"
-                                NullText="Select High Seas.."
-                                AllowUserInput="true"
-                                SearchMode="ListSearchMode.AutoSearch"
-                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth" />
+                                <div style="position: relative; display: inline-block; width: 100%;">
+                                    <DxButton Click="@(() => ShowAccountPopup())"
+                                    Text="+"
+                                    CssClass="custom-plus-button" />
+                                    <DxComboBox Data="@party"
+                                    TextFieldName="AccountName"
+                                    ValueFieldName="AccountId"
+                                    Value="@EditModel.JobHighSeas1"
+                                    ValueChanged="@((int? value) => OnHighSeasChanged(value))"
+                                    ValueExpression="@(() => EditModel.JobHighSeas1)"
+                                    NullText="Select High Seas.."
+                                    AllowUserInput="true"
+                                    SearchMode="ListSearchMode.AutoSearch"
+                                    SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth" />
+                                </div>
                             </DxFormLayoutItem>
 
                             <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="High Seas Address" ColSpanMd="12">
@@ -106,16 +128,21 @@ CssClass="popup-elevated" BodyCssClass="my-popup-body"
                             </DxFormLayoutItem>
 
                             <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Cargo" ColSpanMd="12">
-                                <DxComboBox Data="@cargos"
-                                TextFieldName="CargoName"
-                                ValueFieldName="CargoId"
-                                Value="@EditModel.JobCargoId"
-                                ValueChanged="@((int? value) => OnCargoChanged(value))"
-                                ValueExpression="@(() => EditModel.JobCargoId)"
-                                NullText="Select Cargo..."
-                                AllowUserInput="true"
-                                SearchMode="ListSearchMode.AutoSearch"
-                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth" />
+                                <div style="position: relative; display: inline-block; width: 100%;">
+                                    <DxButton Click="@(() => newpopupcargo())"
+                                    Text="+"
+                                    CssClass="custom-plus-button" />
+                                    <DxComboBox Data="@cargos"
+                                    TextFieldName="CargoName"
+                                    ValueFieldName="CargoId"
+                                    Value="@EditModel.JobCargoId"
+                                    ValueChanged="@((int? value) => OnCargoChanged(value))"
+                                    ValueExpression="@(() => EditModel.JobCargoId)"
+                                    NullText="Select Cargo..."
+                                    AllowUserInput="true"
+                                    SearchMode="ListSearchMode.AutoSearch"
+                                    SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth" />
+                                </div>
                             </DxFormLayoutItem>
 
                             <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Cargo Desc" ColSpanMd="12">
@@ -131,21 +158,33 @@ CssClass="popup-elevated" BodyCssClass="my-popup-body"
                             </DxFormLayoutItem>
 
                             <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Vessel" ColSpanMd="12">
-                                <DxComboBox Data="@vessels"
-                                TextFieldName="VesselName"
-                                ValueFieldName="VesselId"
-                                @bind-Value="EditModel.JobVesselId"
-                                NullText="Select Importer.." AllowUserInput="true"
-                                SearchMode="ListSearchMode.AutoSearch"
-                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth" />
+                                <div style="position: relative; display: inline-block; width: 100%;">
+                                    <DxButton Click="newpopupVessel"
+                                    Text="+"
+                                    CssClass="custom-plus-button" />
+                                    <DxComboBox Data="@vessels"
+                                    TextFieldName="VesselName"
+                                    ValueFieldName="VesselId"
+                                    @bind-Value="EditModel.JobVesselId"
+                                    NullText="Select Importer.." AllowUserInput="true"
+                                    SearchMode="ListSearchMode.AutoSearch"
+                                    SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth" />
+                                </div>
                             </DxFormLayoutItem>
 
                             <DxFormLayoutItem CaptionCssClass="caption-bold"  Caption="Line" ColSpanMd="12">
-                                <DxComboBox Data="@lines" TextFieldName="NotifyName"
-                                ValueFieldName="NotifyId" @bind-Value="EditModel.JobLineId"
-                                NullText="Select Line..." AllowUserInput="true"
-                                SearchMode="ListSearchMode.AutoSearch"
-                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth" />
+                                <div style="position: relative; display: inline-block; width: 100%;">
+                                    <DxButton Click="@(()=>newpopuplines("LINE"))"
+                                    Text="+"
+                                    CssClass="custom-plus-button" />
+
+                                    <DxComboBox Data="@lines" TextFieldName="NotifyName"
+                                    ValueFieldName="NotifyId" @bind-Value="EditModel.JobLineId"
+                                    NullText="Select Line..." AllowUserInput="true"
+                                    SearchMode="ListSearchMode.AutoSearch"
+                                    SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth" />
+                                </div>
+
                             </DxFormLayoutItem>
                             <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Default Currency " ColSpanMd="12">
                                 <DxComboBox Data="@Currencies" @bind-Value="EditModel.JobDefCurrId"
@@ -220,18 +259,22 @@ CssClass="popup-elevated" BodyCssClass="my-popup-body"
                                 <DxComboBox Data="@weightUnits" @bind-Value="EditModel.JobQtyUnit" AllowUserInput="true"
                                 SearchMode="ListSearchMode.AutoSearch"
                                 SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth"></DxComboBox>
-
                             </DxFormLayoutItem>
 
                             <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="CBM" ColSpanMd="12">
                                 <DxSpinEdit @bind-Value="EditModel.JobCbm" ShowSpinButtons=false CssClass="editor-smooth" />
                             </DxFormLayoutItem>
                             <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="POL" ColSpanMd="12">
-                                <DxComboBox Data="@locationList"
-                                @bind-Value="EditModel.JobPolId" TextFieldName="LocationName"
-                                ValueFieldName="LocationId" AllowUserInput="true"
-                                SearchMode="ListSearchMode.AutoSearch"
-                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth"></DxComboBox>
+                                <div style="position: relative; display: inline-block; width: 100%;">
+                                    <DxButton Click="@(()=>newpopuplocation())"
+                                    Text="+"
+                                    CssClass="custom-plus-button" />
+                                    <DxComboBox Data="@locationList"
+                                    @bind-Value="EditModel.JobPolId" TextFieldName="LocationName"
+                                    ValueFieldName="LocationId" AllowUserInput="true"
+                                    SearchMode="ListSearchMode.AutoSearch"
+                                    SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth"></DxComboBox>
+                                </div>
                             </DxFormLayoutItem>
 
                             <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="POD" ColSpanMd="12">
@@ -247,11 +290,16 @@ CssClass="popup-elevated" BodyCssClass="my-popup-body"
                                 <DxTextBox @bind-Text="EditModel.JobPlaceOfReceipt" CssClass="editor-smooth" />
                             </DxFormLayoutItem>
                             <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Country of Origin" ColSpanMd="12">
-                                <DxComboBox Data="@countryList"
-                                @bind-Value="EditModel.JobCountryOrigin"
-                                TextFieldName="CountryName" ValueFieldName="CountryName" AllowUserInput="true"
-                                SearchMode="ListSearchMode.AutoSearch"
-                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth" />
+                                <div style="position: relative; display: inline-block; width: 100%;">
+                                    <DxButton Click="newpopupcountry"
+                                    Text="+"
+                                    CssClass="custom-plus-button" />
+                                    <DxComboBox Data="@countryList"
+                                    @bind-Value="EditModel.JobCountryOrigin"
+                                    TextFieldName="CountryName" ValueFieldName="CountryName" AllowUserInput="true"
+                                    SearchMode="ListSearchMode.AutoSearch"
+                                    SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth" />
+                                </div>
                             </DxFormLayoutItem>
 
 
@@ -260,18 +308,28 @@ CssClass="popup-elevated" BodyCssClass="my-popup-body"
                             </DxFormLayoutItem>
 
                             <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Consignee" ColSpanMd="12">
-                                <DxComboBox Data="@consignees" TextFieldName="NotifyName"
-                                ValueFieldName="NotifyId" @bind-Value="EditModel.JobConsigneeId"
-                                NullText="Select Consignor..." AllowUserInput="true"
-                                SearchMode="ListSearchMode.AutoSearch"
-                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth" />
+                                <div style="position: relative; display: inline-block; width: 100%;">
+                                    <DxButton Click="@(()=>newpopuplines("CONSIGNEE"))"
+                                    Text="+"
+                                    CssClass="custom-plus-button" />
+                                    <DxComboBox Data="@consignees" TextFieldName="NotifyName"
+                                    ValueFieldName="NotifyId" @bind-Value="EditModel.JobConsigneeId"
+                                    NullText="Select Consignor..." AllowUserInput="true"
+                                    SearchMode="ListSearchMode.AutoSearch"
+                                    SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth" />
+                                </div>
                             </DxFormLayoutItem>
                             <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Supplier/Consignor" ColSpanMd="12">
-                                <DxComboBox Data="@consignor"
-                                @bind-Value="EditModel.JobSupplierId" TextFieldName="NotifyName"
-                                ValueFieldName="NotifyId" AllowUserInput="true"
-                                SearchMode="ListSearchMode.AutoSearch"
-                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth" />
+                                <div style="position: relative; display: inline-block; width: 100%;">
+                                    <DxButton Click="@(()=>newpopuplines("CONSIGNOR"))"
+                                    Text="+"
+                                    CssClass="custom-plus-button" />
+                                    <DxComboBox Data="@consignor"
+                                    @bind-Value="EditModel.JobSupplierId" TextFieldName="NotifyName"
+                                    ValueFieldName="NotifyId" AllowUserInput="true"
+                                    SearchMode="ListSearchMode.AutoSearch"
+                                    SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth" />
+                                </div>
                             </DxFormLayoutItem>
                         </DxFormLayoutGroup>
 
@@ -283,19 +341,29 @@ CssClass="popup-elevated" BodyCssClass="my-popup-body"
                         <DxFormLayoutGroup Decoration="FormLayoutGroupDecoration.None">
 
                             <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="CHA" ColSpanMd="6">
-                                <DxComboBox Data="@chaList"
-                                @bind-Value="EditModel.JobChaId" TextFieldName="NotifyName"
-                                ValueFieldName="NotifyId" AllowUserInput="true"
-                                SearchMode="ListSearchMode.AutoSearch"
-                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth" />
+                                <div style="position: relative; display: inline-block; width: 100%;">
+                                    <DxButton Click="@(()=>newpopuplines("CHA"))"
+                                    Text="+"
+                                    CssClass="custom-plus-button" />
+                                    <DxComboBox Data="@chaList"
+                                    @bind-Value="EditModel.JobChaId" TextFieldName="NotifyName"
+                                    ValueFieldName="NotifyId" AllowUserInput="true"
+                                    SearchMode="ListSearchMode.AutoSearch"
+                                    SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth" />
+                                </div>
                             </DxFormLayoutItem>
                             <DxFormLayoutItem  CaptionCssClass="caption-bold" Caption="Shipper" ColSpanMd="6">
-                                <DxComboBox Data="@shippers"
-                                TextFieldName="NotifyName" ValueFieldName="NotifyId"
-                                @bind-Value="EditModel.JobShipperId"
-                                NullText="Select Shipper..." AllowUserInput="true"
-                                SearchMode="ListSearchMode.AutoSearch"
-                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth" />
+                                <div style="position: relative; display: inline-block; width: 100%;">
+                                    <DxButton Click="@(()=>newpopuplines("SHIPPER"))"
+                                    Text="+"
+                                    CssClass="custom-plus-button" />
+                                    <DxComboBox Data="@shippers"
+                                    TextFieldName="NotifyName" ValueFieldName="NotifyId"
+                                    @bind-Value="EditModel.JobShipperId"
+                                    NullText="Select Shipper..." AllowUserInput="true"
+                                    SearchMode="ListSearchMode.AutoSearch"
+                                    SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth" />
+                                </div>
                             </DxFormLayoutItem>
 
 
@@ -459,7 +527,7 @@ CssClass="popup-elevated" BodyCssClass="my-popup-body"
                         </DxFormLayoutItem>
                     </DxFormLayoutGroup>
                 </DxFormLayoutTabPage>
-                <DxFormLayoutTabPage Caption="Import Details">
+                <DxFormLayoutTabPage Caption="Upload Docs">
                     @* <DxFormLayoutItem Caption="Upload Files" ColSpanMd="4"> *@
                     @*     <div class="upload-wrapper"> *@
                     @*         <DxUpload Name="jobFiles" *@
@@ -488,7 +556,164 @@ CssClass="popup-elevated" BodyCssClass="my-popup-body"
     </EditForm>
 </DxPopup>
 
+
+<AccountAddEditPage @ref="popup" OnSaved="LoadAccountsAsync" />
+<VesselAddEditPage @ref="popupVessel" OnSaved="LoadVesselsAsync" />
+<CargoAddEditPage @ref="popupCargo" OnSaved="LoadCargosAsync" />
+<NotifyAddEditPage @ref="popuplines" OnSaved="LoadNotifiesAsync" />
+<LocationAddEditPage @ref="popuplocation" OnSaved="LoadLocationsAsync" />
+<CountryAddEditPage @ref="popupcountry" OnSaved="LoadCountriesAsync" />
+
 @code {
+    // + butoon for lines
+    private CountryAddEditPage popupcountry;
+    private void newpopupcountry()
+    {
+        popupcountry.Show(new Country());
+    }
+    private async Task LoadCountriesAsync()
+    {
+        LoadingService.Show();
+        try
+        {
+            countryList = await CountryService.GetAllAsync();
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+    //
+    // + butoon for lines
+    private LocationAddEditPage popuplocation;
+    private void newpopuplocation()
+    {
+        popuplocation.Show(new Location()
+            {
+                LocationStatus = true,
+                LocationType = "PORT",  
+                LocationCreated = DateTime.Now
+            });
+    }
+    private async Task LoadLocationsAsync()
+    {
+        LoadingService.Show();
+        try
+        {
+            locationList = await LocationService.GetAllAsync();
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+    //
+
+    // + butoon for lines
+    private NotifyAddEditPage popuplines;
+    private string notifytype = "";
+    private async Task LoadNotifiesAsync()
+    {
+        LoadingService.Show("Loading notifies...");
+        try
+        {
+            lines = await NotifyService.GetAllAsync();
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+
+    private void newpopuplines(string ntype)
+    {
+        popuplines.Show(new Notify()
+            {
+                NotifyType = ntype,
+                NotifyStatus = true,
+                NotifyCreated = DateTime.Now,
+                NotifyUpdated = DateTime.Now
+            });
+    }
+
+    // + butoon for Cargo
+    private CargoAddEditPage popupCargo;
+    private void newpopupcargo()
+    {
+        popupCargo.Show(new Cargo
+            {
+                CargoStatus = true,
+                CargoGstPer = 0,
+                CargoCess = 0,
+                CargoCreated = DateTime.Now
+            });
+    }
+    private async Task LoadCargosAsync()
+    {
+        LoadingService.Show();
+        try
+        {
+            cargos = await CargoService.GetAllAsync();
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+    //
+    //+ butoon for Vessel
+    private VesselAddEditPage popupVessel;
+    private void newpopupVessel()
+    {
+        popupVessel.Show(new Vessel()
+            {
+                VesselStatus = true,
+                VesselDtSailing = DateTime.Now,
+                VesselDtBerting = DateTime.Now.AddDays(3),
+                VesselEta = DateTime.Now.AddDays(5)
+            });
+    }
+    private async Task LoadVesselsAsync()
+    {
+        LoadingService.Show();
+        try
+        {
+            vessels = await VesselService.GetAllAsync();
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+    //
+
+    //+ button of acount model
+    private AccountAddEditPage popup = null!;
+    private List<Account> accountList = [];
+    private Job newJob = new();
+    private List<string> jobtype = new() { "IMPORT", "EXPORT" };
+    private async Task LoadAccountsAsync()
+    {
+        LoadingService.Show("Loading accounts...");
+        try
+        {
+            accountList = await AccountService.GetAllAsync();
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+    private string currentPopupType = "";
+    private async Task ShowAccountPopup()
+    {
+        popup.Show();
+        // currentPopupType = type;
+        // newJob = new Job { JobType = type };
+        newJob = new Job();
+    }
+    //
+
     /// <summary>
     ///
     public class FlatFileRow
@@ -648,7 +873,7 @@ CssClass="popup-elevated" BodyCssClass="my-popup-body"
         // ---------------------------
         // INVOICE DETAILS (from INVOICE table)
         // ---------------------------
-      
+
 
     }
 
@@ -743,7 +968,7 @@ CssClass="popup-elevated" BodyCssClass="my-popup-body"
         // ---------------------------
         extractedData["SBNo"] = GetField(f, 4);
         extractedData["SBDate"] = GetField(f, 5);
-           // ---------------------------
+        // ---------------------------
         // PORT + VESSEL DETAILS
         // ---------------------------
         // From TABLESB (SB Main - Indices 0-49)
@@ -755,7 +980,7 @@ CssClass="popup-elevated" BodyCssClass="my-popup-body"
         extractedData["NetWeight"] = GetField(f, 37);            // Net weight
         extractedData["MarksNumbers"] = GetField(f, 40);         // Marks Numbers
         extractedData["GSTIN"] = GetField(f, 49);      
-        
+
         extractedData["PartyAddress1"] = GetField(f, 10);
         extractedData["PartyAddress2"] = GetField(f, 11);
         extractedData["PartyAddress3"] = GetField(f, 12);
@@ -768,12 +993,12 @@ CssClass="popup-elevated" BodyCssClass="my-popup-body"
     {
         try
         {
-           
+
             EditModel.JobNo = GetField(fields, 2);
             EditModel.JobSbNo = GetField(fields, 4);          // Field 5: SB Number (1902025)
             EditModel.JobSbDate = ParseDate(GetField(fields, 5)); // Field 6: SB Date (20251106)
 
-  // ========================= EXPORTER / PARTY =========================
+            // ========================= EXPORTER / PARTY =========================
 
             string exporterName = GetField(fields, 9);
 
@@ -844,10 +1069,10 @@ CssClass="popup-elevated" BodyCssClass="my-popup-body"
             EditModel.JobGrossUnit = GetField(fields, 38);                 // Index 38: Unit of Measurement (KGS/MTS)
             EditModel.JobNetWt = SafeParseDouble(GetField(fields, 37));    // Index 37: Net Weight (27000)
             EditModel.JobNetUnit = GetField(fields, 38);                   // Index 38: Unit of Measurement (same as gross unit)
-     string qtyString = GetField(fields, 39);              // "1080"
+            string qtyString = GetField(fields, 39);              // "1080"
 
-EditModel.JobQty = SafeParseInt(qtyString);           // 1080
-EditModel.JobQtyUnit = "PKG";                                 
+            EditModel.JobQty = SafeParseInt(qtyString);           // 1080
+            EditModel.JobQtyUnit = "PKG";                                 
             var itemRow = rows.FirstOrDefault(x => x.Section == "ITEM");
             if (itemRow != null)
             {
@@ -873,7 +1098,7 @@ EditModel.JobQtyUnit = "PKG";
 
                 // ✅ SHIPPER INVOICE NUMBER
                 EditModel.JobShipperInvNo = GetField(invoiceFields, 4);    // Index 4: Invoice Number
-                                                                          // "WMA/009/OVW/06"
+                                                                           // "WMA/009/OVW/06"
 
                 // Invoice Date & Value
                 EditModel.JobShipperInvDate = ParseDate(GetField(invoiceFields, 5));    // Index 5: Invoice Date
@@ -928,14 +1153,14 @@ EditModel.JobQtyUnit = "PKG";
             EditModel.Job40Ft = count40.ToString();
             EditModel.JobContainer20Ft = string.Join(", ", numbers20);
             EditModel.JobContainer40Ft = string.Join(", ", numbers40);
-			EditModel.JobContainerType = GetField(fields, 53); 
+            EditModel.JobContainerType = GetField(fields, 53); 
 
 
             // EditModel.JobMarks = GetField();
             // EditModel.Job20Ft = GetField();
             // EditModel.Job40Ft = GetField();
             // EditModel.JobHsnCode = GetField();
- 
+
         }
         catch (Exception ex)
         {
@@ -955,7 +1180,7 @@ EditModel.JobQtyUnit = "PKG";
             EditModel.JobSbNo = GetField(fields, 4);  // BE Number
             EditModel.JobSbDate = ParseDate(GetField(fields, 5));
 
-          
+
             // Importer Details
             string importerName = GetField(fields, 9);
 
@@ -1080,7 +1305,7 @@ EditModel.JobQtyUnit = "PKG";
                 Console.WriteLine($"🔍 IGMS Fields Count: {igmsFields.Count}");
 
                 // Print all fields for debugging
-         
+
 
                 // ✅ BL Number - Field 12 (Position 13)
                 EditModel.JobBlNo = GetField(igmsFields, 12);
@@ -1263,6 +1488,7 @@ EditModel.JobQtyUnit = "PKG";
     {
         try
         {
+            LoadingService.Show();
             var file = e.File;
 
             // ✅ STEP 1: Get file extension
@@ -1333,6 +1559,11 @@ EditModel.JobQtyUnit = "PKG";
             UploadMessage = $"❌ ERROR: {ex.Message}";
             Console.WriteLine($"Error Stack: {ex.StackTrace}");
         }
+        finally
+        {
+            LoadingService.Hide();
+        }
+        
 
     }
 
