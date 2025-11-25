@@ -69,8 +69,7 @@ namespace FreightBKShippingWebApp.Services
                 Console.WriteLine("Merge error: " + ex.Message);
             }
            
-            {
-            }
+            
         }
 
     }

@@ -30,7 +30,7 @@
         public string? bill_hblno { get; set; }
         public string? bill_sbno { get; set; }
         public DateTime? bill_bldate { get; set; }
-        public DateTime bill_hbldate { get; set; }
+        public DateTime? bill_hbldate { get; set; }
         public DateTime? bill_sbdate { get; set; }
         public string? bill_jobno { get; set; }
         public string? bill_jobtype { get; set; }

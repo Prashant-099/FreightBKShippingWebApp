@@ -148,5 +148,8 @@ namespace FreightBKShippingWebApp.Model
 
         [Column("company_ismulti_branch")]
         public bool IsMultiBranch { get; set; }
+        //added by dhruv
+        [Column("company_haswpmsg")]
+        public bool? HasWhatsapp { get; set; }
     }
 }
