@@ -1,0 +1,105 @@
+﻿@using System.Text.Json
+@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Services
+@inject ToasteService ToasteService
+<DxPopup @bind-Visible="Visible"
+         Width="90%"
+         MaxWidth="1600px"
+         ShowCloseButton="true"
+         CloseOnOutsideClick="false"
+         HeaderText="E-Invoice Preview"
+         BodyCssClass="popup-body"
+         horizontalAlignment="HorizontalAlignment.Center"
+         verticalAlignment="VerticalAlignment.Center">
+
+    <BodyTemplate>
+
+        <!-- Selected Bills Summary -->
+        <div class="mb-3">
+            <h6><b>Selected Bills:</b></h6>
+
+            @if (SelectedBills != null && SelectedBills.Any())
+            {
+                <ul>
+                    @foreach (var b in SelectedBills)
+                    {
+                        <li>@b.BillNo — ₹@b.BillAmount</li>
+                    }
+                </ul>
+            }
+            else
+            {
+                <p>No bills available.</p>
+            }
+        </div>
+
+        <!-- JSON Preview Box -->
+        <div>
+            <h6><b>Generated JSON Preview:</b></h6>
+            <textarea class="form-control"
+                      rows="18"
+                      readonly
+                      style="font-family: Consolas; font-size: 13px; white-space: pre; overflow:auto;">
+                @jsonPreview
+            </textarea>
+        </div>
+
+        <!-- Buttons -->
+        <div class="mt-3 d-flex gap-2">
+            <button class="btn btn-success" @onclick="Generate">Generate E-Invoice</button>
+            <button class="btn btn-secondary" @onclick="Hide">Close</button>
+        </div>
+
+    </BodyTemplate>
+
+</DxPopup>
+
+@code {
+    [Parameter] public EventCallback<List<Bill>> OnGenerateEInvoice { get; set; }
+
+    public bool Visible { get; set; }
+    public List<Bill> SelectedBills { get; set; } = new();
+
+    private string jsonPreview = "";
+
+    // ------------------ SHOW -------------------
+    public void Show(List<Bill> bills)
+    {
+        SelectedBills = bills;
+
+        jsonPreview = JsonSerializer.Serialize(bills, new JsonSerializerOptions
+            {
+                WriteIndented = true
+            });
+
+        Visible = true;
+        StateHasChanged();
+    }
+
+    // ------------------ HIDE -------------------
+    public void Hide()
+    {
+        Visible = false;
+        SelectedBills.Clear();
+        jsonPreview = "";
+    }
+
+    // ------------------ GENERATE -------------------
+    private async Task Generate()
+    {
+        // 🔍 Example validation (aap chahe to modify kar sakte ho)
+        foreach (var bill in SelectedBills)
+        {
+            if (string.IsNullOrWhiteSpace(bill.BillGstNo))
+            {
+                ToasteService.Error($"Bill {bill.BillNo} missing GST No");
+                return;
+            }
+        }
+
+        if (OnGenerateEInvoice.HasDelegate)
+            await OnGenerateEInvoice.InvokeAsync(SelectedBills);
+
+        ToasteService.Success("E-Invoice JSON generated successfully!");
+    }
+}

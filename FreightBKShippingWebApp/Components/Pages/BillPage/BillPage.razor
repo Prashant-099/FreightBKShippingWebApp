@@ -38,6 +38,11 @@
                 <DxToolbarItem Text="Add" IconCssClass="bi bi-plus-circle" Click="OnCreateNew" />
                 <DxToolbarItem Text="Edit" IconCssClass="bi bi-pencil-square" Click="OnEdit" />
                 <DxToolbarItem Text="Delete" IconCssClass="bi bi-trash" Click="OnDelete" />
+                  <DxToolbarItem 
+        Text="E-Invoice" 
+        IconCssClass="bi bi-file-earmark-text" 
+        Click="OnEInvoiceClick" />
+
                 <DxToolbarItem Text="Print PDF  " IconCssClass="bi bi-printer" Click="PrintReports" />
             
                 <DxToolbarItem Text="Print" IconCssClass="bi bi-printer" Click="@((_) => ShowReportPopup())"></DxToolbarItem>
@@ -149,6 +154,7 @@
     </div>
 </DxPopup>
 <BillAddEditPage @ref="popup" OnSaved="LoadBillsAsync" />
+<EInvoicePopUP @ref="EInvoicePopupRef" />
 
 <ConfirmationDialog />
 <script>
@@ -165,6 +171,25 @@
 </script>
 
 @code {
+
+    //
+
+    private EInvoicePopUP EInvoicePopupRef { get; set; }
+
+    private async Task OnEInvoiceClick(ToolbarItemClickEventArgs e)
+    {
+        if (SelectedBills == null || SelectedBills.Count == 0)
+        {
+            ToastService.Warning("Please select at least one bill.");
+            return;
+        }
+
+        // ✔ Pass selected bills to popup
+        EInvoicePopupRef.Show(SelectedBills.ToList());
+    }
+
+
+    //==============================================================
     DxGrid MyGrid;
     private List<Bill> billList = [];
     private List<Bill> SelectedBills = new();

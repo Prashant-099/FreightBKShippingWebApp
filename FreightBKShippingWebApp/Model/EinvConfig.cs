@@ -42,7 +42,7 @@ namespace FreightBKShippingWebApp.Models
         [Column("branch_id")]
         public int? BranchId { get; set; }
 
-        [Column("company_id")]
+        [Column("company_id")] 
         public int? CompanyId { get; set; }
 
         [Column("gsp_name")]
