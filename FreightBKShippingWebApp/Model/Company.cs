@@ -38,7 +38,7 @@ namespace FreightBKShippingWebApp.Model
         public string? Address3 { get; set; }
 
         [Column("company_stateid")]
-        public string? StateId { get; set; }
+        public int StateId { get; set; }
 
         [Column("company_statecode")]
         public string? StateCode { get; set; }

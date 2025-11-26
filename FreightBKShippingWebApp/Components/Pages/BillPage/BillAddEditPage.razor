@@ -5,6 +5,7 @@
 @using FreightBKShippingWebApp.Models
 @using FreightBKShippingWebApp.Services
 @using DevExpress.Blazor
+
 @inject BillService BillService
 @inject ToasteService ToastService
 @inject LoadingService LoadingService
@@ -203,6 +204,7 @@
                                 ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" CssClass="editor-smooth" />
                 </ChildContent>
             </DxFormLayoutItem>
+
             <DxFormLayoutItem Caption="Bill No" ColSpanMd="3">
                 <ChildContent Context="ctx">
                     <DxTextBox @bind-Text="EditModel.BillNo" />
@@ -2444,9 +2446,11 @@
                     item.BillDetailAmount = item.BillDetailQty * item.BillDetailRate;
                     item.BillDetailTaxableAmt = item.BillDetailAmount * item.BillDetailExchRate;
                     // Convert string StateId → int for safe comparison
-                    var companyState = StateList?.FirstOrDefault(s =>
-           !string.IsNullOrEmpty(selectedCompany.StateId) &&
-           s.StateName.Equals(selectedCompany.StateId, StringComparison.OrdinalIgnoreCase));
+                    var companyState = StateList?
+               .FirstOrDefault(s =>
+                   s.StateName != null &&
+                   s.StateName.Equals(selectedCompany.StateId.ToString(), StringComparison.OrdinalIgnoreCase));
+
 
                     if (companyState != null)  // ✅ Added null check
                     {
