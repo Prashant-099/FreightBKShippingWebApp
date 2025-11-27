@@ -549,6 +549,20 @@ namespace FreightBKShippingWebApp
                 return null;
             }
         }
+        public async Task<string?> GetRawStringAsync(string path)
+        {
+            await SetAuthorizeHeader(); // token apply hoga
+
+            try
+            {
+                return await httpClient.GetStringAsync(path);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ GetRawStringAsync Error: {ex.Message}");
+                return null;
+            }
+        }
 
     }
 }

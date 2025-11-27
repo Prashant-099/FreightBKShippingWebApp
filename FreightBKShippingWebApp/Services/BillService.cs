@@ -139,6 +139,19 @@ namespace FreightBKShippingWebApp.Services
                 return false;
             }
         }
+        public async Task<string?> GetEInvoiceRawAsync(int billId)
+        {
+            try
+            {
+                return await _api.GetRawStringAsync($"api/Bills/einvoice/{billId}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Error fetching raw E-Invoice JSON for bill {billId}: {ex.Message}");
+                return null;
+            }
+        }
+
 
     }
 }
