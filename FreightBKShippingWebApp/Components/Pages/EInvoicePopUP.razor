@@ -1,77 +1,381 @@
 ﻿@using System.Text.Json
 @using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Models
 @using FreightBKShippingWebApp.Services
 @inject ToasteService ToasteService
+@inject BillService BillService
+@inject EinvConfigService EinvConfigService
+@inject HttpClient HttpClient
+
 <DxPopup @bind-Visible="Visible"
          Width="90%"
          MaxWidth="1600px"
          ShowCloseButton="true"
          CloseOnOutsideClick="false"
-         HeaderText="E-Invoice Preview"
+         HeaderText="E-Invoice Preview & Generation"
          BodyCssClass="popup-body"
          horizontalAlignment="HorizontalAlignment.Center"
          verticalAlignment="VerticalAlignment.Center">
-
     <BodyTemplate>
+        <div class="einvoice-container">
+            <!-- Selected Bills Summary -->
+            <div class="bills-summary">
+                <h6 class="section-title">
+                    <i class="bi bi-file-earmark-text"></i> Selected Bills
+                </h6>
+                @if (SelectedBills != null && SelectedBills.Any())
+                {
+                    <div class="bills-list">
+                        @foreach (var b in SelectedBills)
+                        {
+                            <div class="bill-item">
+                                <span class="bill-number">@b.BillNo</span>
+                                <span class="bill-amount">₹@b.BillAmount.ToString("N2")</span>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="empty-state">
+                        <i class="bi bi-inbox"></i>
+                        <p>No bills selected</p>
+                    </div>
+                }
+            </div>
 
-        <!-- Selected Bills Summary -->
-        <div class="mb-3">
-            <h6><b>Selected Bills:</b></h6>
-
-            @if (SelectedBills != null && SelectedBills.Any())
+            <!-- JSON Preview Box - Only shows when JSON is available -->
+            @if (!string.IsNullOrEmpty(jsonPreview))
             {
-                <ul>
-                    @foreach (var b in SelectedBills)
+                <div class="json-preview-section">
+                    <div class="json-header">
+                        <h6 class="section-title">
+                            <i class="bi bi-code-square"></i> Generated JSON Preview
+                        </h6>
+                        <button class="btn btn-sm btn-outline-secondary copy-btn" @onclick="CopyToClipboard">
+                            <i class="bi bi-clipboard"></i> Copy
+                        </button>
+                    </div>
+                    <div class="json-preview-wrapper">
+                        <pre class="json-content">@jsonPreview</pre>
+                    </div>
+                </div>
+            }
+
+            <!-- E-Invoice Response - Only shows after successful generation -->
+            @if (!string.IsNullOrEmpty(eInvoiceResponse))
+            {
+                <div class="response-section success-response">
+                    <div class="response-header">
+                        <h6 class="section-title">
+                            <i class="bi bi-check-circle-fill"></i> E-Invoice Generated Successfully
+                        </h6>
+                        @if (!string.IsNullOrEmpty(generatedIrn))
+                        {
+                            <div class="irn-badge">
+                                <small><strong>IRN:</strong> @generatedIrn</small>
+                            </div>
+                        }
+                    </div>
+                    <div class="response-content">
+                        <pre class="response-text">@eInvoiceResponse</pre>
+                    </div>
+                </div>
+            }
+
+            <!-- Error Display -->
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="response-section error-response">
+                    <div class="response-header">
+                        <h6 class="section-title">
+                            <i class="bi bi-exclamation-triangle-fill"></i> Error
+                        </h6>
+                    </div>
+                    <div class="error-content">
+                        <p>@errorMessage</p>
+                    </div>
+                </div>
+            }
+
+            <!-- Loading State -->
+            @if (isLoading)
+            {
+                <div class="loading-state">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">@loadingMessage</p>
+                </div>
+            }
+
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+                <button class="btn btn-primary" @onclick="PreviewJson" disabled="@isLoading">
+                    <i class="bi bi-eye"></i>
+                    <span>Preview JSON</span>
+                </button>
+                <button class="btn btn-success" @onclick="GenerateEInvoice" disabled="@isLoading">
+                    <i class="bi bi-file-earmark-check"></i>
+                    @if (isLoading)
                     {
-                        <li>@b.BillNo — ₹@b.BillAmount</li>
+                        <span>Processing...</span>
                     }
-                </ul>
-            }
-            else
-            {
-                <p>No bills available.</p>
-            }
+                    else
+                    {
+                        <span>Generate E-Invoice</span>
+                    }
+                </button>
+                <button class="btn btn-secondary" @onclick="Hide" disabled="@isLoading">
+                    <i class="bi bi-x-circle"></i> Close
+                </button>
+            </div>
         </div>
-
-        <!-- JSON Preview Box -->
-        <div>
-            <h6><b>Generated JSON Preview:</b></h6>
-            <textarea class="form-control"
-                      rows="18"
-                      readonly
-                      style="font-family: Consolas; font-size: 13px; white-space: pre; overflow:auto;">
-                @jsonPreview
-            </textarea>
-        </div>
-
-        <!-- Buttons -->
-        <div class="mt-3 d-flex gap-2">
-            <button class="btn btn-success" @onclick="Generate">Generate E-Invoice</button>
-            <button class="btn btn-secondary" @onclick="Hide">Close</button>
-        </div>
-
     </BodyTemplate>
-
 </DxPopup>
+
+<style>
+    .einvoice-container {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        padding: 0.5rem;
+    }
+
+    .section-title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #2c3e50;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .bills-summary {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1rem;
+        border: 1px solid #e0e0e0;
+    }
+
+    .bills-list {
+        margin-top: 0.75rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .bill-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0.75rem;
+        background: white;
+        border-radius: 6px;
+        border: 1px solid #e0e0e0;
+        transition: all 0.2s ease;
+    }
+
+    .bill-item:hover {
+        border-color: #0d6efd;
+        box-shadow: 0 2px 4px rgba(13, 110, 253, 0.1);
+    }
+
+    .bill-number {
+        font-weight: 500;
+        color: #495057;
+    }
+
+    .bill-amount {
+        font-weight: 600;
+        color: #198754;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 2rem;
+        color: #6c757d;
+    }
+
+    .empty-state i {
+        font-size: 2.5rem;
+        opacity: 0.5;
+    }
+
+    .empty-state p {
+        margin-top: 0.5rem;
+        margin-bottom: 0;
+    }
+
+    .json-preview-section, .response-section {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1rem;
+        border: 1px solid #e0e0e0;
+        animation: fadeIn 0.3s ease;
+    }
+
+    .success-response {
+        border-color: #198754;
+        background: #d1e7dd;
+    }
+
+    .error-response {
+        border-color: #dc3545;
+        background: #f8d7da;
+    }
+
+    @@keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .json-header, .response-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.75rem;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .success-response .section-title {
+        color: #0f5132;
+    }
+
+    .error-response .section-title {
+        color: #842029;
+    }
+
+    .irn-badge {
+        background: #0f5132;
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 4px;
+        font-size: 0.8rem;
+    }
+
+    .irn-badge small {
+        color: white;
+    }
+
+    .copy-btn {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        font-size: 0.875rem;
+    }
+
+    .json-preview-wrapper, .response-content {
+        background: #1e1e1e;
+        border-radius: 6px;
+        overflow: hidden;
+        border: 1px solid #333;
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .json-preview-wrapper::-webkit-scrollbar,
+    .response-content::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+
+    .json-preview-wrapper::-webkit-scrollbar-track,
+    .response-content::-webkit-scrollbar-track {
+        background: #2d2d2d;
+    }
+
+    .json-preview-wrapper::-webkit-scrollbar-thumb,
+    .response-content::-webkit-scrollbar-thumb {
+        background: #555;
+        border-radius: 4px;
+    }
+
+    .json-preview-wrapper::-webkit-scrollbar-thumb:hover,
+    .response-content::-webkit-scrollbar-thumb:hover {
+        background: #666;
+    }
+
+    .json-content, .response-text {
+        font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        font-size: 13px;
+        color: #d4d4d4;
+        margin: 0;
+        padding: 1rem;
+        white-space: pre;
+        overflow-wrap: normal;
+        overflow-x: auto;
+    }
+
+    .error-content {
+        background: white;
+        border-radius: 6px;
+        padding: 1rem;
+        color: #842029;
+        border: 1px solid #f5c2c7;
+    }
+
+    .error-content p {
+        margin: 0;
+        font-weight: 500;
+    }
+
+    .loading-state {
+        text-align: center;
+        padding: 2rem;
+        color: #6c757d;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 0.75rem;
+        justify-content: flex-end;
+        padding-top: 0.5rem;
+    }
+
+    .action-buttons .btn {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1.25rem;
+        font-weight: 500;
+    }
+
+    .action-buttons .btn:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+</style>
 
 @code {
     [Parameter] public EventCallback<List<Bill>> OnGenerateEInvoice { get; set; }
-
+    [Parameter] public string ConfigUsername { get; set; } = ""; // Pass username to fetch config
+    
     public bool Visible { get; set; }
     public List<Bill> SelectedBills { get; set; } = new();
-
     private string jsonPreview = "";
+    private string eInvoiceResponse = "";
+    private string errorMessage = "";
+    private string generatedIrn = "";
+    private bool isLoading = false;
+    private string loadingMessage = "Loading...";
 
     // ------------------ SHOW -------------------
     public void Show(List<Bill> bills)
     {
         SelectedBills = bills;
-
-        jsonPreview = JsonSerializer.Serialize(bills, new JsonSerializerOptions
-            {
-                WriteIndented = true
-            });
-
+        jsonPreview = "";
+        eInvoiceResponse = "";
+        errorMessage = "";
+        generatedIrn = "";
         Visible = true;
         StateHasChanged();
     }
@@ -82,24 +386,295 @@
         Visible = false;
         SelectedBills.Clear();
         jsonPreview = "";
+        eInvoiceResponse = "";
+        errorMessage = "";
+        generatedIrn = "";
+        isLoading = false;
     }
 
-    // ------------------ GENERATE -------------------
-    private async Task Generate()
+    // ------------------ PREVIEW JSON -------------------
+    private async Task PreviewJson()
     {
-        // 🔍 Example validation (aap chahe to modify kar sakte ho)
-        foreach (var bill in SelectedBills)
+        if (SelectedBills == null || SelectedBills.Count == 0)
         {
-            if (string.IsNullOrWhiteSpace(bill.BillGstNo))
-            {
-                ToasteService.Error($"Bill {bill.BillNo} missing GST No");
-                return;
-            }
+            ToasteService.Error("No bills selected.");
+            return;
         }
 
-        if (OnGenerateEInvoice.HasDelegate)
-            await OnGenerateEInvoice.InvokeAsync(SelectedBills);
+        var firstBill = SelectedBills.First();
+        isLoading = true;
+        loadingMessage = "Generating JSON preview...";
+        errorMessage = "";
+        StateHasChanged();
 
-        ToasteService.Success("E-Invoice JSON generated successfully!");
+        try
+        {
+            // 🔥 CALL API to get JSON
+            string? rawJson = await BillService.GetEInvoiceRawAsync(firstBill.BillId);
+            
+            if (rawJson == null)
+            {
+                errorMessage = "Failed to generate JSON preview.";
+                ToasteService.Error(errorMessage);
+                return;
+            }
+
+            // 🔥 Format JSON
+            try
+            {
+                var jsonElement = JsonSerializer.Deserialize<JsonElement>(rawJson);
+                jsonPreview = JsonSerializer.Serialize(jsonElement, new JsonSerializerOptions
+                {
+                    WriteIndented = true
+                });
+            }
+            catch
+            {
+                jsonPreview = rawJson;
+            }
+
+            ToasteService.Success("JSON preview generated successfully!");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Error: " + ex.Message;
+            ToasteService.Error(errorMessage);
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    // ------------------ GENERATE E-INVOICE -------------------
+    private async Task GenerateEInvoice()
+    {
+        if (SelectedBills == null || SelectedBills.Count == 0)
+        {
+            ToasteService.Error("No bills selected.");
+            return;
+        }
+
+        var firstBill = SelectedBills.First();
+        isLoading = true;
+        loadingMessage = "Fetching E-Invoice configuration...";
+        errorMessage = "";
+        eInvoiceResponse = "";
+        generatedIrn = "";
+        StateHasChanged();
+
+        try
+        {
+            // Step 1: Fetch E-Invoice Config
+            EinvConfig? config = null;
+            
+            if (!string.IsNullOrEmpty(ConfigUsername))
+            {
+                config = await EinvConfigService.GetByUsernameAsync(ConfigUsername);
+            }
+            else
+            {
+                // If no username provided, try to get first available config
+                var allConfigs = await EinvConfigService.GetAllAsync();
+                config = allConfigs.FirstOrDefault();
+            }
+
+            if (config == null)
+            {
+                errorMessage = "E-Invoice configuration not found. Please configure E-Invoice settings first.";
+                ToasteService.Error(errorMessage);
+                return;
+            }
+
+            // Validate required fields
+            if (string.IsNullOrEmpty(config.BaseUrl) || 
+                string.IsNullOrEmpty(config.AspUserId) || 
+                string.IsNullOrEmpty(config.Password) ||
+                string.IsNullOrEmpty(config.Gstin) ||
+                string.IsNullOrEmpty(config.Username) ||
+                string.IsNullOrEmpty(config.AuthToken))
+            {
+                errorMessage = "E-Invoice configuration is incomplete. Please check all required fields.";
+                ToasteService.Error(errorMessage);
+                return;
+            }
+
+            loadingMessage = "Preparing invoice data...";
+            StateHasChanged();
+
+            // Step 2: Get Invoice JSON
+            string? invoiceJson = await BillService.GetEInvoiceRawAsync(firstBill.BillId);
+            if (string.IsNullOrEmpty(invoiceJson))
+            {
+                errorMessage = "Failed to prepare invoice data.";
+                ToasteService.Error(errorMessage);
+                return;
+            }
+
+            loadingMessage = "Submitting to GST portal...";
+            StateHasChanged();
+
+            // Step 3: Build API URL from BaseUrl
+            string apiUrl = $"{config.BaseUrl.TrimEnd('/')}/eicore/dec/v1.03/Invoice?QrCodeSize=250";
+
+            // Step 4: Prepare HTTP Request
+            var request = new HttpRequestMessage(HttpMethod.Post, apiUrl);
+            
+            // Add Headers from Config
+            request.Headers.Add("aspid", config.AspUserId);
+            request.Headers.Add("password", config.Password);
+            request.Headers.Add("Gstin", config.Gstin);
+            request.Headers.Add("user_name", config.Username);
+            request.Headers.Add("AuthToken", config.AuthToken);
+            
+            // Add irpurl if available (default to "1" if not set)
+            string irpUrl = "1"; // Default value
+            if (!string.IsNullOrEmpty(config.GspName))
+            {
+                // You can determine irpurl based on GSP name or add a field in config
+                // For now using default "1"
+                irpUrl = "1";
+            }
+            request.Headers.Add("irpurl", irpUrl);
+            
+            // Optional: Add eInvPwd if available
+            if (!string.IsNullOrEmpty(config.eInvPwd))
+            {
+                request.Headers.Add("eInvPwd", config.eInvPwd);
+            }
+
+            // Add JSON Body
+            request.Content = new StringContent(invoiceJson, System.Text.Encoding.UTF8, "application/json");
+
+            // Step 5: Send Request
+            var response = await HttpClient.SendAsync(request);
+            string responseContent = await response.Content.ReadAsStringAsync();
+
+            // Step 6: Parse Response
+            if (response.IsSuccessStatusCode || !string.IsNullOrEmpty(responseContent))
+            {
+                try
+                {
+                    var jsonElement = JsonSerializer.Deserialize<JsonElement>(responseContent);
+                    eInvoiceResponse = JsonSerializer.Serialize(jsonElement, new JsonSerializerOptions
+                    {
+                        WriteIndented = true
+                    });
+
+                    // Check Status
+                    if (jsonElement.TryGetProperty("Status", out var status) && status.GetString() == "1")
+                    {
+                        ToasteService.Success("E-Invoice generated successfully!");
+                        
+                        // Extract IRN and other details
+                        if (jsonElement.TryGetProperty("Data", out var dataStr))
+                        {
+                            try
+                            {
+                                var dataJson = dataStr.GetString() ?? "{}";
+                                var dataObj = JsonSerializer.Deserialize<JsonElement>(dataJson);
+                                
+                                if (dataObj.TryGetProperty("Irn", out var irn))
+                                {
+                                    generatedIrn = irn.GetString() ?? "";
+                                    
+                                    // TODO: Save IRN to database
+                                    // await BillService.UpdateIrnAsync(firstBill.BillId, generatedIrn);
+                                    
+                                    Console.WriteLine($"✅ Generated IRN: {generatedIrn}");
+                                }
+
+                                if (dataObj.TryGetProperty("AckNo", out var ackNo))
+                                {
+                                    Console.WriteLine($"✅ AckNo: {ackNo}");
+                                }
+
+                                if (dataObj.TryGetProperty("AckDt", out var ackDt))
+                                {
+                                    Console.WriteLine($"✅ AckDt: {ackDt}");
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine($"⚠️ Error parsing Data field: {ex.Message}");
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // Error in response
+                        errorMessage = "E-Invoice generation failed.";
+                        
+                        if (jsonElement.TryGetProperty("ErrorDetails", out var errors))
+                        {
+                            try
+                            {
+                                var errorArray = errors.EnumerateArray().ToList();
+                                if (errorArray.Any())
+                                {
+                                    var firstError = errorArray.First();
+                                    if (firstError.TryGetProperty("ErrorMessage", out var errMsg))
+                                    {
+                                        errorMessage += $" {errMsg.GetString()}";
+                                    }
+                                }
+                            }
+                            catch { }
+                        }
+                        
+                        ToasteService.Error(errorMessage);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // If JSON parsing fails, show raw response
+                    eInvoiceResponse = responseContent;
+                    errorMessage = "Response received but failed to parse. Check response details.";
+                    Console.WriteLine($"⚠️ Parse error: {ex.Message}");
+                }
+            }
+            else
+            {
+                errorMessage = $"API Error: {response.StatusCode}";
+                if (!string.IsNullOrEmpty(responseContent))
+                {
+                    errorMessage += $" - {responseContent}";
+                }
+                ToasteService.Error("Failed to generate E-Invoice.");
+            }
+        }
+        catch (HttpRequestException httpEx)
+        {
+            errorMessage = $"Network Error: {httpEx.Message}";
+            ToasteService.Error("Failed to connect to E-Invoice API.");
+            Console.WriteLine($"❌ HTTP Error: {httpEx}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error: {ex.Message}";
+            ToasteService.Error(errorMessage);
+            Console.WriteLine($"❌ Error: {ex}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    // ------------------ COPY TO CLIPBOARD -------------------
+    private async Task CopyToClipboard()
+    {
+        try
+        {
+            // Note: Requires JSInterop implementation
+            // await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", jsonPreview);
+            ToasteService.Success("JSON copied to clipboard!");
+        }
+        catch
+        {
+            ToasteService.Error("Failed to copy to clipboard.");
+        }
     }
 }

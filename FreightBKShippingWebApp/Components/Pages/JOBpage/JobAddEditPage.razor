@@ -1,6 +1,7 @@
 ﻿@using FreightBKShippingWebApp.Components.Pages.Account
 @using FreightBKShippingWebApp.Components.Pages.CargoPage
 @using FreightBKShippingWebApp.Components.Pages.CountryPage
+@using FreightBKShippingWebApp.Components.Pages.CurrencyPage
 @using FreightBKShippingWebApp.Components.Pages.NotifyPage
 @using FreightBKShippingWebApp.Components.Pages.StationPort
 @using FreightBKShippingWebApp.Components.Pages.VesselPage
@@ -187,10 +188,15 @@ CssClass="popup-elevated" BodyCssClass="my-popup-body"
 
                             </DxFormLayoutItem>
                             <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Default Currency " ColSpanMd="12">
+                                 <div style="position: relative; display: inline-block; width: 100%;">
+                                    <DxButton Click="newpopupcurrency"
+                                    Text="+"
+                                    CssClass="custom-plus-button" />
                                 <DxComboBox Data="@Currencies" @bind-Value="EditModel.JobDefCurrId"
                                 TextFieldName="CurrencyName" ValueFieldName="CurrencyId" AllowUserInput="true"
                                 SearchMode="ListSearchMode.AutoSearch"
                                 SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="editor-smooth"></DxComboBox>
+                                </div>
                             </DxFormLayoutItem>
 
 
@@ -555,17 +561,40 @@ CssClass="popup-elevated" BodyCssClass="my-popup-body"
         </div>
     </EditForm>
     <AccountAddEditPage @ref="popup" OnSaved="LoadAccountsAsync" />
-<VesselAddEditPage @ref="popupVessel" OnSaved="LoadVesselsAsync" />
-<CargoAddEditPage @ref="popupCargo" OnSaved="LoadCargosAsync" />
-<NotifyAddEditPage @ref="popuplines" OnSaved="LoadNotifiesAsync" />
-<LocationAddEditPage @ref="popuplocation" OnSaved="LoadLocationsAsync" />
-<CountryAddEditPage @ref="popupcountry" OnSaved="LoadCountriesAsync" />
-
+    <VesselAddEditPage @ref="popupVessel" OnSaved="LoadVesselsAsync" />
+    <CargoAddEditPage @ref="popupCargo" OnSaved="LoadCargosAsync" />
+    <NotifyAddEditPage @ref="popuplines" OnSaved="LoadNotifiesAsync" />
+    <LocationAddEditPage @ref="popuplocation" OnSaved="LoadLocationsAsync" />
+    <CountryAddEditPage @ref="popupcountry" OnSaved="LoadCountriesAsync" />
+    <CurrencyAddEditPage @ref="popupcurrency" OnSaved="LoadCurrenciesAsync" />
 </DxPopup>
 
 
 
 @code {
+    // + butoon for currency
+    private CurrencyAddEditPage popupcurrency;
+
+    private void newpopupcurrency()
+    {
+        popupcurrency.Show(new Currency()
+			{
+				CurrencyStatus = true
+			});
+    }
+    private async Task LoadCurrenciesAsync()
+    {
+        LoadingService.Show();
+        try
+        {
+            await Refresh();
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+    
     // + butoon for chaList
     private CountryAddEditPage popupcountry;
     private async void newpopupcountry()
@@ -574,7 +603,7 @@ CssClass="popup-elevated" BodyCssClass="my-popup-body"
       
     }
     private async Task LoadCountriesAsync()
-    {
+    {   
         LoadingService.Show();
         try
         {
