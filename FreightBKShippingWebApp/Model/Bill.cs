@@ -56,9 +56,9 @@ namespace FreightBKShippingWebApp.Model
 
         [Column("bill_duedate")]
         public DateTime? BillDueDate { get; set; }
-
-        [Column("bill_type")]
+        
        
+        [Column("bill_type")]
         public string? BillType { get; set; }
 
         [Column("bill_amount")]
@@ -109,11 +109,13 @@ namespace FreightBKShippingWebApp.Model
         [Column("bill_total")]
         public double BillTotal { get; set; }
 
+        [Required]
         [Column("bill_placeofsupply")]
         public int BillPlaceOfSupply { get; set; }
 
+        [Required]
         [Column("bill_supply_type")]
-        
+
         public string? BillSupplyType { get; set; }
 
         [Column("bill_ship_party")]

@@ -554,22 +554,24 @@ CssClass="popup-elevated" BodyCssClass="my-popup-body"
             <DxButton Text="Cancel" Click="Cancel" CssClass="ms-2" />
         </div>
     </EditForm>
-</DxPopup>
-
-
-<AccountAddEditPage @ref="popup" OnSaved="LoadAccountsAsync" />
+    <AccountAddEditPage @ref="popup" OnSaved="LoadAccountsAsync" />
 <VesselAddEditPage @ref="popupVessel" OnSaved="LoadVesselsAsync" />
 <CargoAddEditPage @ref="popupCargo" OnSaved="LoadCargosAsync" />
 <NotifyAddEditPage @ref="popuplines" OnSaved="LoadNotifiesAsync" />
 <LocationAddEditPage @ref="popuplocation" OnSaved="LoadLocationsAsync" />
 <CountryAddEditPage @ref="popupcountry" OnSaved="LoadCountriesAsync" />
 
+</DxPopup>
+
+
+
 @code {
-    // + butoon for lines
+    // + butoon for chaList
     private CountryAddEditPage popupcountry;
-    private void newpopupcountry()
+    private async void newpopupcountry()
     {
         popupcountry.Show(new Country());
+      
     }
     private async Task LoadCountriesAsync()
     {
@@ -617,7 +619,8 @@ CssClass="popup-elevated" BodyCssClass="my-popup-body"
         LoadingService.Show("Loading notifies...");
         try
         {
-            lines = await NotifyService.GetAllAsync();
+            await Refresh();
+
         }
         finally
         {
@@ -689,7 +692,7 @@ CssClass="popup-elevated" BodyCssClass="my-popup-body"
 
     //+ button of acount model
     private AccountAddEditPage popup = null!;
-    private List<Account> accountList = [];
+  
     private Job newJob = new();
     private List<string> jobtype = new() { "IMPORT", "EXPORT" };
     private async Task LoadAccountsAsync()
@@ -697,7 +700,7 @@ CssClass="popup-elevated" BodyCssClass="my-popup-body"
         LoadingService.Show("Loading accounts...");
         try
         {
-            accountList = await AccountService.GetAllAsync();
+            party = await AccountService.GetAllAsync();
         }
         finally
         {
