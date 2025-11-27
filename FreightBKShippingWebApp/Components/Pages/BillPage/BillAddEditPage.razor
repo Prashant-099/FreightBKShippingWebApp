@@ -2227,7 +2227,7 @@
        // .Sum(d => d.BillDetailTotal);
 
        // ✅ Use centralized calculation
-    RecalculateNetAmount();
+        RecalculateNetAmount(EditModel.BillIsRoundOff);
     }
 
     async Task DeleteDataItem(object dataItem)
@@ -2448,34 +2448,34 @@
                     // Convert string StateId → int for safe comparison
                     var companyState = StateList?
                .FirstOrDefault(s =>
-                   s.StateName != null &&
-                   s.StateName.Equals(selectedCompany.StateId.ToString(), StringComparison.OrdinalIgnoreCase));
+                   s.StateId != null &&
+                   s.StateId == selectedCompany.StateId);
 
 
                     if (companyState != null)  // ✅ Added null check
                     {
                         int companyStateId = companyState.StateId;
 
-                        // if (companyStateId == EditModel.BillPlaceOfSupply)
-                        // {
-                        //     // Intra-state → CGST + SGST
-                        //     item.BillDetailIgst = 0;
-                        //     item.BillDetailIgstPer = 0;
-                        //     item.BillDetailCgstPer = item.BillDetailGstPer / 2;
-                        //     item.BillDetailSgstPer = item.BillDetailGstPer / 2;
-                        //     item.BillDetailCgst = item.BillDetailTaxableAmt * (item.BillDetailCgstPer / 100);
-                        //     item.BillDetailSgst = item.BillDetailTaxableAmt * (item.BillDetailSgstPer / 100);
-                        // }
-                        // else
-                        // {
-                        //     // Inter-state → IGST only
-                        //     item.BillDetailCgstPer = 0;
-                        //     item.BillDetailSgstPer = 0;
-                        //     item.BillDetailCgst = 0;
-                        //     item.BillDetailSgst = 0;
-                        //     item.BillDetailIgstPer = item.BillDetailGstPer;
-                        //     item.BillDetailIgst = item.BillDetailTaxableAmt * (item.BillDetailIgstPer / 100);
-                        // }
+                        if (companyStateId == EditModel.BillPlaceOfSupply)
+                        {
+                            // Intra-state → CGST + SGST
+                            item.BillDetailIgst = 0;
+                            item.BillDetailIgstPer = 0;
+                            item.BillDetailCgstPer = item.BillDetailGstPer / 2;
+                            item.BillDetailSgstPer = item.BillDetailGstPer / 2;
+                            item.BillDetailCgst = item.BillDetailTaxableAmt * (item.BillDetailCgstPer / 100);
+                            item.BillDetailSgst = item.BillDetailTaxableAmt * (item.BillDetailSgstPer / 100);
+                        }
+                        else
+                        {
+                            // Inter-state → IGST only
+                            item.BillDetailCgstPer = 0;
+                            item.BillDetailSgstPer = 0;
+                            item.BillDetailCgst = 0;
+                            item.BillDetailSgst = 0;
+                            item.BillDetailIgstPer = item.BillDetailGstPer;
+                            item.BillDetailIgst = item.BillDetailTaxableAmt * (item.BillDetailIgstPer / 100);
+                        }
 
                         if (EditModel.BillIsRcm)
                         {
@@ -2575,12 +2575,13 @@
         .Sum(d => d.BillDetailTaxableAmt);
 
            // ApplyRoundOff(EditModel.BillIsRoundOff);
-            RecalculateNetAmount();
+            RecalculateNetAmount(EditModel.BillIsRoundOff);
         }
     }
     // ✅ NEW: Centralized calculation method
-    private void RecalculateNetAmount()
+    private void RecalculateNetAmount(bool isChecked)
     {
+        EditModel.BillIsRoundOff = isChecked;
         if (EditModel == null) return;
 
         // Calculate base amount (sum of all active line items)
@@ -2679,14 +2680,14 @@
 
         // EditModel.BillNetAmount = baseTotal;
         // ApplyRoundOff(EditModel.BillIsRoundOff);
-        RecalculateNetAmount(); // ✅ Single source of truth
+        RecalculateNetAmount(EditModel.BillIsRoundOff); // ✅ Single source of truth
         StateHasChanged();
     }
     private void ApplyRoundOff(bool isChecked)
     {
 
         EditModel.BillIsRoundOff = isChecked;
-        RecalculateNetAmount();
+        RecalculateNetAmount(EditModel.BillIsRoundOff);
         StateHasChanged();
         // EditModel.BillIsRoundOff = isChecked;
         // // Calculate base amount (sum of all line items)
