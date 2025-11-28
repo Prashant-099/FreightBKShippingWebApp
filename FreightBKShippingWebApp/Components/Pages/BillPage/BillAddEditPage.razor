@@ -2598,10 +2598,9 @@ verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body" >
                     item.BillDetailTaxableAmt = item.BillDetailAmount * item.BillDetailExchRate;
                     // Convert string StateId → int for safe comparison
                     var companyState = StateList?
-               .FirstOrDefault(s =>
-                   s.StateId != null &&
-                   s.StateId == selectedCompany.StateId);
-
+      .FirstOrDefault(s =>
+          s.StateId != null &&
+          s.StateId.ToString() == selectedCompany.StateId.ToString());
 
                     if (companyState != null)  // ✅ Added null check
                     {
