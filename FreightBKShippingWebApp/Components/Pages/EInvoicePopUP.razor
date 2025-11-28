@@ -2,28 +2,35 @@
 @using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Models
 @using FreightBKShippingWebApp.Services
-@inject ToasteService ToasteService
+@using System.Text
+@using Microsoft.JSInterop
+@inject ToasteService ToastService
 @inject BillService BillService
 @inject EinvConfigService EinvConfigService
 @inject HttpClient HttpClient
+@inject IJSRuntime JSRuntime
 
 <DxPopup @bind-Visible="Visible"
-         Width="90%"
+         Width="95%"
          MaxWidth="1600px"
          ShowCloseButton="true"
          CloseOnOutsideClick="false"
-         HeaderText="E-Invoice Preview & Generation"
+         HeaderText="E-Invoice Preview & Submission"
          BodyCssClass="popup-body"
-         horizontalAlignment="HorizontalAlignment.Center"
-         verticalAlignment="VerticalAlignment.Center">
+         HorizontalAlignment="HorizontalAlignment.Center"
+         VerticalAlignment="VerticalAlignment.Center">
+
     <BodyTemplate>
+
         <div class="einvoice-container">
-            <!-- Selected Bills Summary -->
+
+            <!-- SELECTED BILLS SECTION -->
             <div class="bills-summary">
                 <h6 class="section-title">
                     <i class="bi bi-file-earmark-text"></i> Selected Bills
                 </h6>
-                @if (SelectedBills != null && SelectedBills.Any())
+
+                @if (SelectedBills?.Any() == true)
                 {
                     <div class="bills-list">
                         @foreach (var b in SelectedBills)
@@ -44,94 +51,90 @@
                 }
             </div>
 
-            <!-- JSON Preview Box - Only shows when JSON is available -->
-            @if (!string.IsNullOrEmpty(jsonPreview))
+            <!-- JSON PREVIEW SECTION -->
+            @if (!string.IsNullOrWhiteSpace(jsonPreview))
             {
                 <div class="json-preview-section">
                     <div class="json-header">
                         <h6 class="section-title">
-                            <i class="bi bi-code-square"></i> Generated JSON Preview
+                            <i class="bi bi-code-square"></i> JSON Preview
                         </h6>
-                        <button class="btn btn-sm btn-outline-secondary copy-btn" @onclick="CopyToClipboard">
+
+                        <button class="btn btn-sm btn-outline-secondary copy-btn"
+                                @onclick="CopyToClipboard">
                             <i class="bi bi-clipboard"></i> Copy
                         </button>
                     </div>
+
                     <div class="json-preview-wrapper">
                         <pre class="json-content">@jsonPreview</pre>
                     </div>
                 </div>
             }
 
-            <!-- E-Invoice Response - Only shows after successful generation -->
-            @if (!string.IsNullOrEmpty(eInvoiceResponse))
+            <!-- API RESPONSE JSON -->
+            @if (!string.IsNullOrWhiteSpace(eInvoiceJson))
             {
-                <div class="response-section success-response">
-                    <div class="response-header">
+                <div class="response-section">
+                    <div class="json-header">
                         <h6 class="section-title">
-                            <i class="bi bi-check-circle-fill"></i> E-Invoice Generated Successfully
+                            <i class="bi bi-file-text"></i> Response JSON
                         </h6>
-                        @if (!string.IsNullOrEmpty(generatedIrn))
-                        {
-                            <div class="irn-badge">
-                                <small><strong>IRN:</strong> @generatedIrn</small>
-                            </div>
-                        }
                     </div>
-                    <div class="response-content">
-                        <pre class="response-text">@eInvoiceResponse</pre>
+
+                    <div class="json-preview-wrapper">
+                        <pre class="json-content">@eInvoiceJson</pre>
                     </div>
                 </div>
             }
 
-            <!-- Error Display -->
-            @if (!string.IsNullOrEmpty(errorMessage))
+            <!-- ERROR BOX -->
+            @if (!string.IsNullOrWhiteSpace(errorMessage))
             {
-                <div class="response-section error-response">
-                    <div class="response-header">
-                        <h6 class="section-title">
-                            <i class="bi bi-exclamation-triangle-fill"></i> Error
-                        </h6>
-                    </div>
-                    <div class="error-content">
-                        <p>@errorMessage</p>
-                    </div>
+                <div class="error-box">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    @errorMessage
                 </div>
             }
 
-            <!-- Loading State -->
+            <!-- SUCCESS IRN BADGE -->
+            @if (!string.IsNullOrWhiteSpace(generatedIrn))
+            {
+                <div class="success-box">
+                    <i class="bi bi-check-circle-fill"></i>
+                    <strong>IRN:</strong> @generatedIrn
+                </div>
+            }
+
+            <!-- LOADING -->
             @if (isLoading)
             {
                 <div class="loading-state">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
+                    <div class="spinner-border text-primary"></div>
                     <p class="mt-2">@loadingMessage</p>
                 </div>
             }
 
-            <!-- Action Buttons -->
+            <!-- ACTION BUTTONS -->
             <div class="action-buttons">
                 <button class="btn btn-primary" @onclick="PreviewJson" disabled="@isLoading">
-                    <i class="bi bi-eye"></i>
-                    <span>Preview JSON</span>
+                    <i class="bi bi-eye"></i> Preview JSON
                 </button>
+
                 <button class="btn btn-success" @onclick="GenerateEInvoice" disabled="@isLoading">
                     <i class="bi bi-file-earmark-check"></i>
-                    @if (isLoading)
-                    {
-                        <span>Processing...</span>
-                    }
-                    else
-                    {
-                        <span>Generate E-Invoice</span>
-                    }
+                    @(isLoading ? "Processing..." : "Generate E-Invoice")
                 </button>
+
                 <button class="btn btn-secondary" @onclick="Hide" disabled="@isLoading">
                     <i class="bi bi-x-circle"></i> Close
                 </button>
             </div>
+
         </div>
+
     </BodyTemplate>
+
 </DxPopup>
 
 <style>
@@ -143,53 +146,100 @@
     }
 
     .section-title {
-        font-size: 1rem;
         font-weight: 600;
         color: #2c3e50;
-        margin: 0;
         display: flex;
         align-items: center;
-        gap: 0.5rem;
+        gap: .5rem;
     }
 
     .bills-summary {
         background: #f8f9fa;
-        border-radius: 8px;
         padding: 1rem;
-        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        border: 1px solid #ddd;
     }
 
     .bills-list {
-        margin-top: 0.75rem;
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
+        margin-top: .75rem;
+        display: grid;
+        gap: .5rem;
     }
 
     .bill-item {
         display: flex;
         justify-content: space-between;
-        align-items: center;
-        padding: 0.5rem 0.75rem;
-        background: white;
+        padding: .6rem .8rem;
+        background: #fff;
+        border: 1px solid #ccc;
         border-radius: 6px;
-        border: 1px solid #e0e0e0;
-        transition: all 0.2s ease;
     }
 
-    .bill-item:hover {
-        border-color: #0d6efd;
-        box-shadow: 0 2px 4px rgba(13, 110, 253, 0.1);
+    .json-preview-section,
+    .response-section {
+        background: #f8f9fa;
+        padding: 1rem;
+        border-radius: 8px;
+        border: 1px solid #ddd;
     }
 
-    .bill-number {
-        font-weight: 500;
-        color: #495057;
+    .json-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: .75rem;
     }
 
-    .bill-amount {
+    .json-preview-wrapper {
+        max-height: 250px;
+        overflow-y: auto;
+        background: #1e1e1e;
+        border-radius: 6px;
+        border: 1px solid #444;
+    }
+
+    .json-content {
+        padding: 1rem;
+        color: #dcdcdc;
+        font-size: 13px;
+        white-space: pre;
+        margin: 0;
+    }
+
+    .error-box {
+        background: #f8d7da;
+        border-left: 5px solid #dc3545;
+        padding: 1rem;
+        border-radius: 6px;
+        color: #842029;
+        display: flex;
+        align-items: center;
+        gap: .75rem;
         font-weight: 600;
-        color: #198754;
+    }
+
+    .success-box {
+        background: #d1e7dd;
+        border-left: 5px solid #198754;
+        padding: 1rem;
+        border-radius: 6px;
+        color: #0f5132;
+        display: flex;
+        align-items: center;
+        gap: .75rem;
+        font-weight: 600;
+    }
+
+    .loading-state {
+        text-align: center;
+        padding: 2rem;
+    }
+
+    .action-buttons {
+        display: flex;
+        justify-content: flex-end;
+        gap: .75rem;
+        flex-wrap: wrap;
     }
 
     .empty-state {
@@ -199,170 +249,34 @@
     }
 
     .empty-state i {
-        font-size: 2.5rem;
-        opacity: 0.5;
+        font-size: 3rem;
+        margin-bottom: 1rem;
     }
 
-    .empty-state p {
-        margin-top: 0.5rem;
-        margin-bottom: 0;
-    }
-
-    .json-preview-section, .response-section {
-        background: #f8f9fa;
-        border-radius: 8px;
-        padding: 1rem;
-        border: 1px solid #e0e0e0;
-        animation: fadeIn 0.3s ease;
-    }
-
-    .success-response {
-        border-color: #198754;
-        background: #d1e7dd;
-    }
-
-    .error-response {
-        border-color: #dc3545;
-        background: #f8d7da;
-    }
-
-    @@keyframes fadeIn {
-        from {
-            opacity: 0;
-            transform: translateY(-10px);
+    @@media (max-width: 768px) {
+        .json-preview-wrapper {
+            max-height: 200px !important;
         }
-        to {
-            opacity: 1;
-            transform: translateY(0);
+
+        .action-buttons {
+            justify-content: stretch;
         }
-    }
 
-    .json-header, .response-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 0.75rem;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-    }
-
-    .success-response .section-title {
-        color: #0f5132;
-    }
-
-    .error-response .section-title {
-        color: #842029;
-    }
-
-    .irn-badge {
-        background: #0f5132;
-        color: white;
-        padding: 0.25rem 0.75rem;
-        border-radius: 4px;
-        font-size: 0.8rem;
-    }
-
-    .irn-badge small {
-        color: white;
-    }
-
-    .copy-btn {
-        display: flex;
-        align-items: center;
-        gap: 0.25rem;
-        font-size: 0.875rem;
-    }
-
-    .json-preview-wrapper, .response-content {
-        background: #1e1e1e;
-        border-radius: 6px;
-        overflow: hidden;
-        border: 1px solid #333;
-        max-height: 400px;
-        overflow-y: auto;
-    }
-
-    .json-preview-wrapper::-webkit-scrollbar,
-    .response-content::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
-    }
-
-    .json-preview-wrapper::-webkit-scrollbar-track,
-    .response-content::-webkit-scrollbar-track {
-        background: #2d2d2d;
-    }
-
-    .json-preview-wrapper::-webkit-scrollbar-thumb,
-    .response-content::-webkit-scrollbar-thumb {
-        background: #555;
-        border-radius: 4px;
-    }
-
-    .json-preview-wrapper::-webkit-scrollbar-thumb:hover,
-    .response-content::-webkit-scrollbar-thumb:hover {
-        background: #666;
-    }
-
-    .json-content, .response-text {
-        font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-        font-size: 13px;
-        color: #d4d4d4;
-        margin: 0;
-        padding: 1rem;
-        white-space: pre;
-        overflow-wrap: normal;
-        overflow-x: auto;
-    }
-
-    .error-content {
-        background: white;
-        border-radius: 6px;
-        padding: 1rem;
-        color: #842029;
-        border: 1px solid #f5c2c7;
-    }
-
-    .error-content p {
-        margin: 0;
-        font-weight: 500;
-    }
-
-    .loading-state {
-        text-align: center;
-        padding: 2rem;
-        color: #6c757d;
-    }
-
-    .action-buttons {
-        display: flex;
-        gap: 0.75rem;
-        justify-content: flex-end;
-        padding-top: 0.5rem;
-    }
-
-    .action-buttons .btn {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 0.5rem 1.25rem;
-        font-weight: 500;
-    }
-
-    .action-buttons .btn:disabled {
-        cursor: not-allowed;
-        opacity: 0.6;
+        .action-buttons button {
+            flex: 1;
+        }
     }
 </style>
 
 @code {
     [Parameter] public EventCallback<List<Bill>> OnGenerateEInvoice { get; set; }
-    [Parameter] public string ConfigUsername { get; set; } = ""; // Pass username to fetch config
+    [Parameter] public string ConfigUsername { get; set; } = "";
     
     public bool Visible { get; set; }
     public List<Bill> SelectedBills { get; set; } = new();
+    
     private string jsonPreview = "";
-    private string eInvoiceResponse = "";
+    private string eInvoiceJson = "";
     private string errorMessage = "";
     private string generatedIrn = "";
     private bool isLoading = false;
@@ -373,7 +287,7 @@
     {
         SelectedBills = bills;
         jsonPreview = "";
-        eInvoiceResponse = "";
+        eInvoiceJson = "";
         errorMessage = "";
         generatedIrn = "";
         Visible = true;
@@ -386,7 +300,7 @@
         Visible = false;
         SelectedBills.Clear();
         jsonPreview = "";
-        eInvoiceResponse = "";
+        eInvoiceJson = "";
         errorMessage = "";
         generatedIrn = "";
         isLoading = false;
@@ -397,48 +311,45 @@
     {
         if (SelectedBills == null || SelectedBills.Count == 0)
         {
-            ToasteService.Error("No bills selected.");
+            ToastService.Error("No bills selected.");
             return;
         }
 
-        var firstBill = SelectedBills.First();
+        var bill = SelectedBills.First();
         isLoading = true;
         loadingMessage = "Generating JSON preview...";
         errorMessage = "";
+        eInvoiceJson = "";
+        generatedIrn = "";
         StateHasChanged();
 
         try
         {
-            // 🔥 CALL API to get JSON
-            string? rawJson = await BillService.GetEInvoiceRawAsync(firstBill.BillId);
-            
-            if (rawJson == null)
+            var rawJson = await BillService.GetEInvoiceRawAsync(bill.BillId);
+
+            if (string.IsNullOrWhiteSpace(rawJson))
             {
-                errorMessage = "Failed to generate JSON preview.";
-                ToasteService.Error(errorMessage);
+                errorMessage = "Unable to generate JSON.";
+                ToastService.Error(errorMessage);
                 return;
             }
 
-            // 🔥 Format JSON
             try
             {
-                var jsonElement = JsonSerializer.Deserialize<JsonElement>(rawJson);
-                jsonPreview = JsonSerializer.Serialize(jsonElement, new JsonSerializerOptions
-                {
-                    WriteIndented = true
-                });
+                var parsed = JsonSerializer.Deserialize<JsonElement>(rawJson);
+                jsonPreview = JsonSerializer.Serialize(parsed, new JsonSerializerOptions { WriteIndented = true });
             }
             catch
             {
                 jsonPreview = rawJson;
             }
 
-            ToasteService.Success("JSON preview generated successfully!");
+            ToastService.Success("JSON generated!");
         }
         catch (Exception ex)
         {
             errorMessage = "Error: " + ex.Message;
-            ToasteService.Error(errorMessage);
+            ToastService.Error(errorMessage);
         }
         finally
         {
@@ -450,211 +361,161 @@
     // ------------------ GENERATE E-INVOICE -------------------
     private async Task GenerateEInvoice()
     {
-        if (SelectedBills == null || SelectedBills.Count == 0)
+        if (SelectedBills == null || !SelectedBills.Any())
         {
-            ToasteService.Error("No bills selected.");
+            ToastService.Error("No bills selected.");
             return;
         }
 
-        var firstBill = SelectedBills.First();
+        var bill = SelectedBills.First();
+
         isLoading = true;
-        loadingMessage = "Fetching E-Invoice configuration...";
+        loadingMessage = "Processing E-Invoice...";
         errorMessage = "";
-        eInvoiceResponse = "";
         generatedIrn = "";
+        eInvoiceJson = "";
         StateHasChanged();
 
         try
         {
-            // Step 1: Fetch E-Invoice Config
+            // STEP 1: Load Config
             EinvConfig? config = null;
-            
             if (!string.IsNullOrEmpty(ConfigUsername))
-            {
                 config = await EinvConfigService.GetByUsernameAsync(ConfigUsername);
-            }
             else
-            {
-                // If no username provided, try to get first available config
-                var allConfigs = await EinvConfigService.GetAllAsync();
-                config = allConfigs.FirstOrDefault();
-            }
+                config = (await EinvConfigService.GetAllAsync()).FirstOrDefault();
 
             if (config == null)
             {
-                errorMessage = "E-Invoice configuration not found. Please configure E-Invoice settings first.";
-                ToasteService.Error(errorMessage);
+                errorMessage = "E-Invoice configuration not found.";
+                ToastService.Error(errorMessage);
                 return;
             }
 
-            // Validate required fields
-            if (string.IsNullOrEmpty(config.BaseUrl) || 
-                string.IsNullOrEmpty(config.AspUserId) || 
-                string.IsNullOrEmpty(config.Password) ||
-                string.IsNullOrEmpty(config.Gstin) ||
-                string.IsNullOrEmpty(config.Username) ||
-                string.IsNullOrEmpty(config.AuthToken))
+            // STEP 2: Get Invoice JSON
+            var json = await BillService.GetEInvoiceRawAsync(bill.BillId);
+            if (string.IsNullOrWhiteSpace(json))
             {
-                errorMessage = "E-Invoice configuration is incomplete. Please check all required fields.";
-                ToasteService.Error(errorMessage);
+                errorMessage = "Failed to prepare invoice JSON.";
+                ToastService.Error(errorMessage);
                 return;
             }
 
-            loadingMessage = "Preparing invoice data...";
-            StateHasChanged();
+            // STEP 3: Prepare API Request
+            string url = $"{config.BaseUrl.TrimEnd('/')}/eicore/dec/v1.03/Invoice?QrCodeSize=250";
 
-            // Step 2: Get Invoice JSON
-            string? invoiceJson = await BillService.GetEInvoiceRawAsync(firstBill.BillId);
-            if (string.IsNullOrEmpty(invoiceJson))
+            var req = new HttpRequestMessage(HttpMethod.Post, url);
+            req.Headers.Add("aspid", config.AspUserId);
+            req.Headers.Add("password", config.Password);
+            req.Headers.Add("Gstin", config.Gstin);
+            req.Headers.Add("user_name", config.Username);
+            req.Headers.Add("AuthToken", config.AuthToken);
+            req.Content = new StringContent(json, Encoding.UTF8, "application/json");
+
+            // STEP 4: Send Request
+            var res = await HttpClient.SendAsync(req);
+            var content = await res.Content.ReadAsStringAsync();
+
+            // STEP 5: Parse Response
+            var parsed = JsonSerializer.Deserialize<JsonElement>(content);
+            eInvoiceJson = JsonSerializer.Serialize(parsed, new JsonSerializerOptions { WriteIndented = true });
+
+            var status = parsed.GetProperty("Status").GetString();
+
+            if (status == "1")
             {
-                errorMessage = "Failed to prepare invoice data.";
-                ToasteService.Error(errorMessage);
-                return;
-            }
+                // STEP 6: Extract IRN and other data
+                string? irn = null;
+                string? ackNo = null;
+                DateTime? ackDate = null;
+                string? signedInvoice = null;
+                string? signedQrCode = null;
 
-            loadingMessage = "Submitting to GST portal...";
-            StateHasChanged();
-
-            // Step 3: Build API URL from BaseUrl
-            string apiUrl = $"{config.BaseUrl.TrimEnd('/')}/eicore/dec/v1.03/Invoice?QrCodeSize=250";
-
-            // Step 4: Prepare HTTP Request
-            var request = new HttpRequestMessage(HttpMethod.Post, apiUrl);
-            
-            // Add Headers from Config
-            request.Headers.Add("aspid", config.AspUserId);
-            request.Headers.Add("password", config.Password);
-            request.Headers.Add("Gstin", config.Gstin);
-            request.Headers.Add("user_name", config.Username);
-            request.Headers.Add("AuthToken", config.AuthToken);
-            
-            // Add irpurl if available (default to "1" if not set)
-            string irpUrl = "1"; // Default value
-            if (!string.IsNullOrEmpty(config.GspName))
-            {
-                // You can determine irpurl based on GSP name or add a field in config
-                // For now using default "1"
-                irpUrl = "1";
-            }
-            request.Headers.Add("irpurl", irpUrl);
-            
-            // Optional: Add eInvPwd if available
-            if (!string.IsNullOrEmpty(config.eInvPwd))
-            {
-                request.Headers.Add("eInvPwd", config.eInvPwd);
-            }
-
-            // Add JSON Body
-            request.Content = new StringContent(invoiceJson, System.Text.Encoding.UTF8, "application/json");
-
-            // Step 5: Send Request
-            var response = await HttpClient.SendAsync(request);
-            string responseContent = await response.Content.ReadAsStringAsync();
-
-            // Step 6: Parse Response
-            if (response.IsSuccessStatusCode || !string.IsNullOrEmpty(responseContent))
-            {
-                try
+                if (parsed.TryGetProperty("Data", out var dataNode))
                 {
-                    var jsonElement = JsonSerializer.Deserialize<JsonElement>(responseContent);
-                    eInvoiceResponse = JsonSerializer.Serialize(jsonElement, new JsonSerializerOptions
-                    {
-                        WriteIndented = true
-                    });
+                    if (dataNode.TryGetProperty("Irn", out var irnNode))
+                        irn = irnNode.GetString();
 
-                    // Check Status
-                    if (jsonElement.TryGetProperty("Status", out var status) && status.GetString() == "1")
+                    if (dataNode.TryGetProperty("AckNo", out var ackNoNode))
+                        ackNo = ackNoNode.GetString();
+
+                    if (dataNode.TryGetProperty("AckDt", out var ackDtNode))
                     {
-                        ToasteService.Success("E-Invoice generated successfully!");
-                        
-                        // Extract IRN and other details
-                        if (jsonElement.TryGetProperty("Data", out var dataStr))
+                        var ackDtStr = ackDtNode.GetString();
+                        if (DateTime.TryParse(ackDtStr, out var parsedDate))
+                            ackDate = parsedDate;
+                    }
+
+                    if (dataNode.TryGetProperty("SignedInvoice", out var signedInvNode))
+                        signedInvoice = signedInvNode.GetString();
+
+                    if (dataNode.TryGetProperty("SignedQRCode", out var qrNode))
+                        signedQrCode = qrNode.GetString();
+                }
+
+                if (!string.IsNullOrWhiteSpace(irn))
+                {
+                    generatedIrn = irn;
+
+                    // STEP 7: Save IRN to Database
+                    try
+                    {
+                        bool saved = await BillService.SaveEInvoiceDataAsync(
+                            bill.BillId,
+                            irn,
+                            ackNo,
+                            ackDate,
+                            signedInvoice,
+                            signedQrCode
+                        );
+
+                        if (saved)
                         {
-                            try
+                            ToastService.Success($"E-Invoice generated successfully! IRN: {irn}");
+                            
+                            // Trigger callback if provided
+                            if (OnGenerateEInvoice.HasDelegate)
                             {
-                                var dataJson = dataStr.GetString() ?? "{}";
-                                var dataObj = JsonSerializer.Deserialize<JsonElement>(dataJson);
-                                
-                                if (dataObj.TryGetProperty("Irn", out var irn))
-                                {
-                                    generatedIrn = irn.GetString() ?? "";
-                                    
-                                    // TODO: Save IRN to database
-                                    // await BillService.UpdateIrnAsync(firstBill.BillId, generatedIrn);
-                                    
-                                    Console.WriteLine($"✅ Generated IRN: {generatedIrn}");
-                                }
-
-                                if (dataObj.TryGetProperty("AckNo", out var ackNo))
-                                {
-                                    Console.WriteLine($"✅ AckNo: {ackNo}");
-                                }
-
-                                if (dataObj.TryGetProperty("AckDt", out var ackDt))
-                                {
-                                    Console.WriteLine($"✅ AckDt: {ackDt}");
-                                }
+                                await OnGenerateEInvoice.InvokeAsync(SelectedBills);
                             }
-                            catch (Exception ex)
-                            {
-                                Console.WriteLine($"⚠️ Error parsing Data field: {ex.Message}");
-                            }
+                        }
+                        else
+                        {
+                            ToastService.Warning("E-Invoice generated but failed to save to database.");
                         }
                     }
-                    else
+                    catch (Exception dbEx)
                     {
-                        // Error in response
-                        errorMessage = "E-Invoice generation failed.";
-                        
-                        if (jsonElement.TryGetProperty("ErrorDetails", out var errors))
-                        {
-                            try
-                            {
-                                var errorArray = errors.EnumerateArray().ToList();
-                                if (errorArray.Any())
-                                {
-                                    var firstError = errorArray.First();
-                                    if (firstError.TryGetProperty("ErrorMessage", out var errMsg))
-                                    {
-                                        errorMessage += $" {errMsg.GetString()}";
-                                    }
-                                }
-                            }
-                            catch { }
-                        }
-                        
-                        ToasteService.Error(errorMessage);
+                        errorMessage = $"E-Invoice generated but database save failed: {dbEx.Message}";
+                        ToastService.Warning(errorMessage);
                     }
                 }
-                catch (Exception ex)
+                else
                 {
-                    // If JSON parsing fails, show raw response
-                    eInvoiceResponse = responseContent;
-                    errorMessage = "Response received but failed to parse. Check response details.";
-                    Console.WriteLine($"⚠️ Parse error: {ex.Message}");
+                    errorMessage = "IRN not found in response.";
+                    ToastService.Error(errorMessage);
                 }
             }
             else
             {
-                errorMessage = $"API Error: {response.StatusCode}";
-                if (!string.IsNullOrEmpty(responseContent))
+                // Read Error Message
+                if (parsed.TryGetProperty("ErrorDetails", out var errArr) &&
+                    errArr.GetArrayLength() > 0)
                 {
-                    errorMessage += $" - {responseContent}";
+                    errorMessage = errArr[0].GetProperty("ErrorMessage").GetString();
                 }
-                ToasteService.Error("Failed to generate E-Invoice.");
+                else
+                {
+                    errorMessage = "Unknown error occurred.";
+                }
+
+                ToastService.Error(errorMessage);
             }
-        }
-        catch (HttpRequestException httpEx)
-        {
-            errorMessage = $"Network Error: {httpEx.Message}";
-            ToasteService.Error("Failed to connect to E-Invoice API.");
-            Console.WriteLine($"❌ HTTP Error: {httpEx}");
         }
         catch (Exception ex)
         {
             errorMessage = $"Error: {ex.Message}";
-            ToasteService.Error(errorMessage);
-            Console.WriteLine($"❌ Error: {ex}");
+            ToastService.Error(errorMessage);
         }
         finally
         {
@@ -668,13 +529,12 @@
     {
         try
         {
-            // Note: Requires JSInterop implementation
-            // await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", jsonPreview);
-            ToasteService.Success("JSON copied to clipboard!");
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", jsonPreview);
+            ToastService.Success("JSON copied to clipboard!");
         }
         catch
         {
-            ToasteService.Error("Failed to copy to clipboard.");
+            ToastService.Error("Failed to copy to clipboard.");
         }
     }
 }
