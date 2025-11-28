@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace FreightBKShippingWebApp.Services
@@ -153,18 +154,17 @@ namespace FreightBKShippingWebApp.Services
         }
 
         public async Task<bool> SaveEInvoiceDataAsync(
-    int billId,
-    string irn,
-    string? ackNo = null,
-    DateTime? ackDate = null,
-    string? signedInvoice = null,
-    string? signedQrCode = null)
+       int billId,
+       string irn,
+       string? ackNo = null,
+       DateTime? ackDate = null,
+       string? signedInvoice = null,
+       string? signedQrCode = null)
         {
             try
             {
                 // First, get the existing bill
                 var bill = await _api.GetFromJsonAsync<Bill>($"api/Bills/{billId}");
-
                 if (bill == null)
                 {
                     Console.WriteLine($"❌ Bill not found: {billId}");
@@ -175,31 +175,33 @@ namespace FreightBKShippingWebApp.Services
                 bill.BillIrnNo = irn;
                 bill.BillAckNo = ackNo;
                 bill.BillAckDate = ackDate?.ToString("dd/MM/yyyy HH:mm:ss");
-                var signedInv = signedInvoice;
-                if (!string.IsNullOrEmpty(signedQrCode))
-                    bill.BillQRCode = Convert.FromBase64String(signedQrCode);
-                var EInvoiceGeneratedDate = DateTime.Now;
-                var IsEInvoiceGenerated = true;
+                // Safely handle Base64 QR code
+                if (!string.IsNullOrWhiteSpace(signedQrCode))
+                {
+                    // Convert JWT or any string to bytes
+                    bill.BillQRCode = Encoding.UTF8.GetBytes(signedQrCode);
+                }
+                // Mark as E-Invoice generated
+                bill.BillAckDate = DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss");
+
+                //bill.IsEInvoiceGenerated = true;
 
                 // Save the updated bill
                 var result = await _api.PutAsync<bool, Bill>($"api/Bills/{billId}", bill);
 
                 if (result)
-                {
                     Console.WriteLine($"✅ E-Invoice data saved for Bill {billId}");
-                }
                 else
-                {
                     Console.WriteLine($"❌ Failed to save E-Invoice data for Bill {billId}");
-                }
 
                 return result;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Error saving E-Invoice data for bill {billId}: {ex.Message}");
+                Console.WriteLine($"❌ Error saving E-Invoice data for Bill {billId}: {ex.Message}");
                 return false;
             }
         }
+
     }
 }

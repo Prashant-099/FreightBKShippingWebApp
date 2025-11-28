@@ -5,6 +5,7 @@
 @inject ToasteService ToastService
 @inject LoadingService LoadingService
 @inject EinvConfigService ConfigService
+@inject GstinAuthTokenService GstinAuthTokenService
 
 <DxPopup @bind-Visible="isVisible"
          HeaderText="@popupTitle"
@@ -171,117 +172,139 @@
     }
 
     private void Hide() => isVisible = false;
-
     private async Task GenerateAuthTokenAsync()
     {
-        // Validate required fields
-        if (!ValidateTokenGeneration())
+        var configs = await EinvConfigService.GetAllAsync();
+        var config = configs.FirstOrDefault();
+
+        if (config == null)
         {
+            ToastService.Error("E-Invoice config not found");
             return;
         }
 
-        LoadingService.Show("Generating Auth Token...");
+        var response = await GstinAuthTokenService.GenerateAuthTokenAsync(config);
 
-        try
+        if (response != null)
         {
-            using var httpClient = new HttpClient();
+            ToastService.Success("Token generated successfully!");
+            var updatedList = await EinvConfigService.GetAllAsync();
+            EditModel = updatedList.FirstOrDefault();
+        }
 
-            // Add required headers (lowercase as per API requirement)
-            httpClient.DefaultRequestHeaders.Add("aspid", EditModel.AspUserId);
-            httpClient.DefaultRequestHeaders.Add("password", EditModel.Password);
-            httpClient.DefaultRequestHeaders.Add("Gstin", EditModel.Gstin);
-            httpClient.DefaultRequestHeaders.Add("user_name", EditModel.Username);
-            httpClient.DefaultRequestHeaders.Add("eInvPwd", EditModel.eInvPwd);
 
-            // Make GET request
-            var response = await httpClient.GetAsync(EditModel.AuthUrl);
-            var responseBody = await response.Content.ReadAsStringAsync();
+    }
 
-            if (!response.IsSuccessStatusCode)
-            {
-                throw new Exception($"API Error {response.StatusCode}: {responseBody}");
-            }
+    // private async Task GenerateAuthTokenAsync()
+    // {
+    //     // Validate required fields
+    //     if (!ValidateTokenGeneration())
+    //     {
+    //         return;
+    //     }
 
-            // Deserialize response
-            var tokenResponse = JsonSerializer.Deserialize<AuthTokenResponse>(responseBody,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+    //     LoadingService.Show("Generating Auth Token...");
 
-            if (tokenResponse?.Status == 1 && tokenResponse.Data != null)
-            {
-                // Populate fields automatically
-                EditModel.AppKey = tokenResponse.Data.ClientId;
-                EditModel.AuthToken = tokenResponse.Data.AuthToken;
-                EditModel.Sek = tokenResponse.Data.Sek;
-                EditModel.EInvoiceTokenExp = tokenResponse.Data.TokenExpiry;
-                var result = await ConfigService.SaveAsync(EditModel);
+    //     try
+    //     {
+    //         using var httpClient = new HttpClient();
 
-                if (result)
-                {
-                    ToastService.Success("Token saved to database!");
-                }
-                else
-                {
-                    ToastService.Error("Failed to save token to database!");
-                }
+    //         // Add required headers (lowercase as per API requirement)
+    //         httpClient.DefaultRequestHeaders.Add("aspid", EditModel.AspUserId);
+    //         httpClient.DefaultRequestHeaders.Add("password", EditModel.Password);
+    //         httpClient.DefaultRequestHeaders.Add("Gstin", EditModel.Gstin);
+    //         httpClient.DefaultRequestHeaders.Add("user_name", EditModel.Username);
+    //         httpClient.DefaultRequestHeaders.Add("eInvPwd", EditModel.eInvPwd);
+
+    //         // Make GET request
+    //         var response = await httpClient.GetAsync(EditModel.AuthUrl);
+    //         var responseBody = await response.Content.ReadAsStringAsync();
+
+    //         if (!response.IsSuccessStatusCode)
+    //         {
+    //             throw new Exception($"API Error {response.StatusCode}: {responseBody}");
+    //         }
+
+    //         // Deserialize response
+    //         var tokenResponse = JsonSerializer.Deserialize<AuthTokenResponse>(responseBody,
+    //             new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+    //         if (tokenResponse?.Status == 1 && tokenResponse.Data != null)
+    //         {
+    //             // Populate fields automatically
+    //             EditModel.AppKey = tokenResponse.Data.ClientId;
+    //             EditModel.AuthToken = tokenResponse.Data.AuthToken;
+    //             EditModel.Sek = tokenResponse.Data.Sek;
+    //             EditModel.EInvoiceTokenExp = tokenResponse.Data.TokenExpiry;
+    //             var result = await ConfigService.SaveAsync(EditModel);
+
+    //             if (result)
+    //             {
+    //                 ToastService.Success("Token saved to database!");
+    //             }
+    //             else
+    //             {
+    //                 ToastService.Error("Failed to save token to database!");
+    //             }
               
-                StateHasChanged(); // Force UI update
-            }
-            else
-            {
-                var errorMsg = tokenResponse?.ErrorDetails?.ToString() ?? "Unknown error";
-                throw new Exception($"Token generation failed: {errorMsg}");
-            }
-        }
-        catch (Exception ex)
-        {
-            ToastService.Error($"Failed to generate token: {ex.Message}");
-        }
-        finally
-        {
-            LoadingService.Hide();
-        }
-    }
+    //             StateHasChanged(); // Force UI update
+    //         }
+    //         else
+    //         {
+    //             var errorMsg = tokenResponse?.ErrorDetails?.ToString() ?? "Unknown error";
+    //             throw new Exception($"Token generation failed: {errorMsg}");
+    //         }
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         ToastService.Error($"Failed to generate token: {ex.Message}");
+    //     }
+    //     finally
+    //     {
+    //         LoadingService.Hide();
+    //     }
+    // }
 
-    private bool ValidateTokenGeneration()
-    {
-        if (string.IsNullOrWhiteSpace(EditModel.AuthUrl))
-        {
-            ToastService.Warning("Please enter Auth URL");
-            return false;
-        }
+    // private bool ValidateTokenGeneration()
+    // {
+    //     if (string.IsNullOrWhiteSpace(EditModel.AuthUrl))
+    //     {
+    //         ToastService.Warning("Please enter Auth URL");
+    //         return false;
+    //     }
 
-        if (string.IsNullOrWhiteSpace(EditModel.Gstin))
-        {
-            ToastService.Warning("Please enter GSTIN");
-            return false;
-        }
+    //     if (string.IsNullOrWhiteSpace(EditModel.Gstin))
+    //     {
+    //         ToastService.Warning("Please enter GSTIN");
+    //         return false;
+    //     }
 
-        if (string.IsNullOrWhiteSpace(EditModel.Username))
-        {
-            ToastService.Warning("Please enter Username");
-            return false;
-        }
+    //     if (string.IsNullOrWhiteSpace(EditModel.Username))
+    //     {
+    //         ToastService.Warning("Please enter Username");
+    //         return false;
+    //     }
 
-        if (string.IsNullOrWhiteSpace(EditModel.eInvPwd))
-        {
-            ToastService.Warning("Please enter eInv Password");
-            return false;
-        }
+    //     if (string.IsNullOrWhiteSpace(EditModel.eInvPwd))
+    //     {
+    //         ToastService.Warning("Please enter eInv Password");
+    //         return false;
+    //     }
 
-        if (string.IsNullOrWhiteSpace(EditModel.AspUserId))
-        {
-            ToastService.Warning("Please enter ASP User ID");
-            return false;
-        }
+    //     if (string.IsNullOrWhiteSpace(EditModel.AspUserId))
+    //     {
+    //         ToastService.Warning("Please enter ASP User ID");
+    //         return false;
+    //     }
 
-        if (string.IsNullOrWhiteSpace(EditModel.Password))
-        {
-            ToastService.Warning("Please enter ASP Password");
-            return false;
-        }
+    //     if (string.IsNullOrWhiteSpace(EditModel.Password))
+    //     {
+    //         ToastService.Warning("Please enter ASP Password");
+    //         return false;
+    //     }
 
-        return true;
-    }
+    //     return true;
+    // }
 
     private async Task SaveAsync()
     {

@@ -31,6 +31,7 @@
 @inject ConfirmationDialogService ConfirmDialogService
 @inject NavigationManager Navigation
 @inject GridLayoutService GridLayoutService
+
 <style>
     .modal-xl {
     max-width: 900px;
@@ -722,10 +723,6 @@ verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body" >
                             <DxSpinEdit @bind-Value="EditModel.BillNetAmount" ReadOnly="true" Format="N2" Width="150px" />
                         </div>
                         </div> *@
-
-
-
-
                 </DxFormLayoutTabPage>
                 <DxFormLayoutTabPage Caption="Job Details">
 
@@ -1067,11 +1064,6 @@ verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body" >
 
     </EditForm>
 
-
-
-
-
-
     <ConfirmationDialog />
     @if (showGridLayoutDialog)
     {
@@ -1304,7 +1296,8 @@ verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body" >
         }).ToList();
     }
 
-    // Enhanced GetGridColumnWidth method - returns string for DevExpress
+    // ======================Enhanced GetGridColumnWidth method - returns string for DevExpress==========================
+   
     private string GetGridColumnWidth(string fieldName)
     {
         if (currentGridLayout == null || !currentGridLayout.Any())
@@ -1582,6 +1575,7 @@ verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body" >
         isEditGridLayoutMode = false;
     }
 
+    //===========================================
 
 
     // // Handle cell value changes, especially when service/product is selected
@@ -1628,59 +1622,15 @@ verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body" >
 
 
 
-
-
+    // ============================================
+    // 🚀 OPTIMIZED VERSION - PROGRESSIVE LOADING
+    // ============================================
 
     private AccountAddEditPage Accountpopup;
     private JobAddEditPage Jobpopup;
     private ServiceAddEditPage Servicepopup;
-    private async Task RefreshList()
-    {
-        var jobTask = JobService.GetAllAsync();
-        var accountTask = AccountService.GetAllAsync();
-        var serviceTask = ServiceService.GetAllAsync();
 
-        await Task.WhenAll(jobTask, accountTask, serviceTask);
-
-        ServiceList = serviceTask.Result;
-        AccountList = accountTask.Result;
-        JobList = jobTask.Result;
-        FilteredJobList = JobList;
-        StateHasChanged();
-    }
-
-    private void ShowAccountPopup(MouseEventArgs e)
-    {
-        Accountpopup.Show(new Account());
-    }
-    private void ShowJobPopup(MouseEventArgs e)
-    {
-        Jobpopup.Show(new Job());
-    }
-    private void ShowServicePopup()
-    {
-        Servicepopup.Show(new Service());
-    }
-
-    [Parameter] public EventCallback OnSaved { get; set; }
-    void ColumnChooserButton_Click()
-    {
-        DetailGrid.ShowColumnChooser();
-    }
-
-    private bool Visible { get; set; }
-    private string Title { get; set; } = "Add/Edit Bill";
-    private Bill EditModel { get; set; } = new();
-    private IGrid DetailGrid { get; set; }
-
-    private List<BillDetail> BillDetails { get; set; } = new();
-    // private List<BillDetail> OriginalDetails { get; set; } = new();
-    private Dictionary<BillDetail, DataChange> UnsavedChanges { get; } = new();
-    private bool BatchItemsEnabled => UnsavedChanges.Count > 0 || (DetailGrid?.IsEditing() ?? false);
-
-    private int? nextSNo = 1;
-
-    // Dropdown lists
+    // Dropdown lists (same as before)
     private List<Bill> bill = [];
     private List<Voucher> VoucherList = new();
     private List<Account> AccountList = new();
@@ -1704,88 +1654,454 @@ verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body" >
     private List<Account> BankList = new();
     private List<Job> JobList = new();
     private List<Job> FilteredJobList = new();
+
+    // ✅ Track loading states for UI feedback
+    private bool isCriticalDataLoaded = false;
+    private bool isBackgroundDataLoaded = false;
+    private Dictionary<string, bool> lazyLoadedData = new();
+
+    // ============================================
+    // 🎯 STAGE 1: Load ONLY Critical Data First
+    // ============================================
     protected override async Task OnInitializedAsync()
     {
-        await LoadBillsDataAsync();
         InitializeGridColumns();
         await LoadAvailableGridLayouts();
         await LoadDefaultGridLayout();
+
+        // ✅ Load only what's needed to show the form
+        await LoadCriticalDataAsync();
+
+        // ✅ Load other data in background (non-blocking)
+        _ = LoadBackgroundDataAsync();
     }
 
-    private async Task LoadBillsDataAsync()
+    /// <summary>
+    /// STAGE 1: Load ONLY data needed to display the form immediately
+    /// This runs FIRST and FAST (2-4 API calls max)
+    /// </summary>
+    private async Task LoadCriticalDataAsync()
     {
-
         try
         {
-            // ✅ Fire ALL API calls simultaneously (no awaits until WhenAll)
-            //var billList =  BillService.GetAllAsync();
+            // ✅ Only load what's ABSOLUTELY needed for initial render
+            var jobTask = JobService.GetAllAsync();
+            var accountTask = AccountService.GetAllAsync();
+            var stateTask = StateService.GetStatesAsync();
+
+            await Task.WhenAll(jobTask, accountTask, stateTask);
+
+            // Set critical data
+            JobList = jobTask.Result;
+            FilteredJobList = JobList;
+
+            var allAccounts = accountTask.Result;
+            AccountList = allAccounts.Where(a => a.AccountTypeId == 14 || a.AccountTypeId == 18).ToList();
+            BankList = allAccounts.Where(a => a.AccountTypeId == 10).ToList();
+
+            stateList = stateTask.Result;
+            StateList = stateTask.Result;
+
+            isCriticalDataLoaded = true;
+            StateHasChanged(); // ✅ Form can now render!
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error("Error loading critical data: " + ex.Message);
+            Console.WriteLine($"❌ LoadCriticalDataAsync error: {ex}");
+        }
+    }
+
+    // ============================================
+    // 🎯 STAGE 2: Load Background Data (Non-Blocking)
+    // ============================================
+    /// <summary>
+    /// STAGE 2: Load remaining dropdown data in BACKGROUND
+    /// User can already interact with form while this loads
+    /// </summary>
+    private async Task LoadBackgroundDataAsync()
+    {
+        try
+        {
+            // ✅ Load common dropdowns that might be used soon
             var serviceTask = ServiceService.GetAllAsync();
             var voucherTask = VoucherService.GetAllAsync();
-            var stateTask = StateService.GetStatesAsync();
-            var locationTask = LocationService.GetAllAsync();
-            var cargoTask = CargoService.GetAllAsync();
             var currTask = CurrencyService.GetAllAsync();
-            var vesselTask = VesselService.GetAllAsync();
             var unitTask = UnitService.GetAllAsync();
             var hsnTask = HsnSacService.GetAllAsync();
             var gstTask = GstSlabService.GetAllAsync();
-            var companyTask = CompanyService.GetAllAsync();
-            var branchTask = BranchService.GetAllAsync();
-            var reportTask = ReportDataService.GetAllAsync();
-            var jobTask = JobService.GetAllAsync();
             var notifyTask = NotifyService.GetAllAsync();
-            var accountTask = AccountService.GetAllAsync();
-            var rateMasterTask = RateMasterService.GetAllAsync();
 
-            // ✅ Wait for ALL tasks to complete together
             await Task.WhenAll(
-                serviceTask, voucherTask, stateTask, locationTask, cargoTask,
-                currTask, vesselTask, unitTask, hsnTask, gstTask,
-                companyTask, branchTask, reportTask, jobTask,
-                notifyTask, accountTask, rateMasterTask
+                serviceTask, voucherTask, currTask, unitTask,
+                hsnTask, gstTask, notifyTask
             );
 
-            // ✅ Now assign results (all are already completed)
-            // bill = billList.Result;
+            // Assign results
             ServiceList = serviceTask.Result;
             VoucherList = voucherTask.Result;
-            stateList = stateTask.Result;
-            StateList = stateTask.Result; // ✅ Reuse same result
-            locationList = locationTask.Result;
-            CargoList = cargoTask.Result;
             CurrList = currTask.Result;
-            VesselList = vesselTask.Result;
             UnitList = unitTask.Result;
             HsnList = hsnTask.Result;
             GstslabList = gstTask.Result;
-            CompanyList = companyTask.Result;
-            branchList = branchTask.Result;
-            ReportDataList = reportTask.Result;
-            JobList = jobTask.Result;
-            FilteredJobList = JobList; // ✅ Direct assignment
 
-            // ✅ Filter Notify lists (in-memory, fast)
             var allNotify = notifyTask.Result;
             ConsigneeList = allNotify.Where(n => n.NotifyType == "CONSIGNEE").ToList();
             ShipperList = allNotify.Where(n => n.NotifyType == "SHIPPER").ToList();
             LineList = allNotify.Where(n => n.NotifyType == "LINE").ToList();
 
-            // ✅ Filter Account lists (in-memory, fast)
-            var allAccounts = accountTask.Result;
-            AccountList = allAccounts.Where(a => a.AccountTypeId == 14 || a.AccountTypeId == 18).ToList();
-            BankList = allAccounts.Where(a => a.AccountTypeId == 10).ToList();  
-
-            RateMasterList = rateMasterTask.Result;
-            StateHasChanged();
+            isBackgroundDataLoaded = true;
+            StateHasChanged(); // ✅ Dropdowns now populated
         }
         catch (Exception ex)
         {
-            ToastService.Error("Error loading data: " + ex.Message);
-            Console.WriteLine($"❌ LoadBillsDataAsync error: {ex}");
+            ToastService.Error("Error loading background data: " + ex.Message);
+            Console.WriteLine($"❌ LoadBackgroundDataAsync error: {ex}");
+        }
+    }
+
+    // ============================================
+    // 🎯 STAGE 3: Lazy Load (On-Demand Only)
+    // ============================================
+    /// <summary>
+    /// STAGE 3: Load data ONLY when user needs it
+    /// Example: Load Cargo list only when user clicks Cargo dropdown
+    /// </summary>
+    private async Task<List<Cargo>> GetCargoListAsync()
+    {
+        if (!lazyLoadedData.ContainsKey("Cargo"))
+        {
+            try
+            {
+                CargoList = await CargoService.GetAllAsync();
+                lazyLoadedData["Cargo"] = true;
+            }
+            catch (Exception ex)
+            {
+                ToastService.Error("Error loading cargo data: " + ex.Message);
+                CargoList = new List<Cargo>();
+            }
+        }
+        return CargoList;
+    }
+
+    private async Task<List<Vessel>> GetVesselListAsync()
+    {
+        if (!lazyLoadedData.ContainsKey("Vessel"))
+        {
+            try
+            {
+                VesselList = await VesselService.GetAllAsync();
+                lazyLoadedData["Vessel"] = true;
+            }
+            catch (Exception ex)
+            {
+                ToastService.Error("Error loading vessel data: " + ex.Message);
+                VesselList = new List<Vessel>();
+            }
+        }
+        return VesselList;
+    }
+
+    private async Task<List<Location>> GetLocationListAsync()
+    {
+        if (!lazyLoadedData.ContainsKey("Location"))
+        {
+            try
+            {
+                locationList = await LocationService.GetAllAsync();
+                lazyLoadedData["Location"] = true;
+            }
+            catch (Exception ex)
+            {
+                ToastService.Error("Error loading location data: " + ex.Message);
+                locationList = new List<Location>();
+            }
+        }
+        return locationList;
+    }
+
+    private async Task<List<Company>> GetCompanyListAsync()
+    {
+        if (!lazyLoadedData.ContainsKey("Company"))
+        {
+            try
+            {
+                CompanyList = await CompanyService.GetAllAsync();
+                lazyLoadedData["Company"] = true;
+            }
+            catch (Exception ex)
+            {
+                ToastService.Error("Error loading company data: " + ex.Message);
+                CompanyList = new List<Company>();
+            }
+        }
+        return CompanyList;
+    }
+
+    private async Task<List<Branch>> GetBranchListAsync()
+    {
+        if (!lazyLoadedData.ContainsKey("Branch"))
+        {
+            try
+            {
+                branchList = await BranchService.GetAllAsync();
+                lazyLoadedData["Branch"] = true;
+            }
+            catch (Exception ex)
+            {
+                ToastService.Error("Error loading branch data: " + ex.Message);
+                branchList = new List<Branch>();
+            }
+        }
+        return branchList;
+    }
+
+    private async Task<List<RateMaster>> GetRateMasterListAsync()
+    {
+        if (!lazyLoadedData.ContainsKey("RateMaster"))
+        {
+            try
+            {
+                RateMasterList = await RateMasterService.GetAllAsync();
+                lazyLoadedData["RateMaster"] = true;
+            }
+            catch (Exception ex)
+            {
+                ToastService.Error("Error loading rate master data: " + ex.Message);
+                RateMasterList = new List<RateMaster>();
+            }
+        }
+        return RateMasterList;
+    }
+
+    private async Task<List<ReportData>> GetReportDataListAsync()
+    {
+        if (!lazyLoadedData.ContainsKey("ReportData"))
+        {
+            try
+            {
+                ReportDataList = await ReportDataService.GetAllAsync();
+                lazyLoadedData["ReportData"] = true;
+            }
+            catch (Exception ex)
+            {
+                ToastService.Error("Error loading report data: " + ex.Message);
+                ReportDataList = new List<ReportData>();
+            }
+        }
+        return ReportDataList;
+    }
+
+    // ============================================
+    // 🔄 Optimized RefreshList (Only refresh what changed)
+    // ============================================
+    private async Task RefreshList()
+    {
+        var jobTask = JobService.GetAllAsync();
+        var accountTask = AccountService.GetAllAsync();
+        var serviceTask = ServiceService.GetAllAsync();
+
+        await Task.WhenAll(jobTask, accountTask, serviceTask);
+
+        ServiceList = serviceTask.Result;
+
+        var allAccounts = accountTask.Result;
+        AccountList = allAccounts.Where(a => a.AccountTypeId == 14 || a.AccountTypeId == 18).ToList();
+        BankList = allAccounts.Where(a => a.AccountTypeId == 10).ToList();
+
+        JobList = jobTask.Result;
+        FilteredJobList = JobList;
+
+        StateHasChanged();
+    }
+
+    // ============================================
+    // 📝 Show Method (Remains mostly the same)
+    // ============================================
+    public async void Show(Bill bill)
+    {
+        // ✅ Show loading only if critical data not loaded
+        if (!isCriticalDataLoaded)
+        {
+            LoadingService.Show("Loading form...");
+            await LoadCriticalDataAsync();
+            LoadingService.Hide();
         }
 
+        if (bill?.BillId > 0)
+        {
+            EditModel = bill;
+            OnJobTypeChanged(EditModel.BillJobType);
 
+            BillDetails = bill.BillDetails?
+                .Select(d => CloneBillDetail(d))
+                .OrderBy(d => d.BillDetailId)
+                .ToList() ?? new List<BillDetail>();
+
+            nextSNo = BillDetails.Any() ? BillDetails.Max(d => d.BillDetailSno) + 1 : 1;
+
+            int existingRowCount = BillDetails.Count;
+            int rowsToAdd = Math.Max(0, 5 - existingRowCount);
+
+            for (int i = 0; i < rowsToAdd; i++)
+            {
+                BillDetails.Add(new BillDetail
+                    {
+                        BillDetailSno = nextSNo++,
+                        BillDetailId = 0,
+                        BillDetailExchRate = EditModel?.BillExchRate ?? 1,
+                        BillDetailCurrencyId = EditModel.BillDefaultCurrencyId,
+                        BillDetailQty = 1,
+                        BillDetailRate = 0,
+                        BillDetailAmount = 0,
+                        BillDetailTaxableAmt = 0,
+                        BillDetailGstPer = 0,
+                        BillDetailCgstPer = 0,
+                        BillDetailSgstPer = 0,
+                        BillDetailIgstPer = 0,
+                        BillDetailCgst = 0,
+                        BillDetailSgst = 0,
+                        BillDetailIgst = 0,
+                        BillDetailTotal = 0,
+                        BillDetailStatus = true
+                    });
+            }
+
+            Title = "Edit Bill";
+        }
+        else
+        {
+            EditModel = new Bill
+                {
+                    BillDate = DateTime.Now,
+                    BillStatus = true,
+                    BillDetails = new List<BillDetail>()
+                };
+            BillDetails = new List<BillDetail>();
+            nextSNo = 1;
+            Title = "Add Bill";
+            InitializeInvoiceDetails();
+        }
+
+        UnsavedChanges.Clear();
+        Visible = true;
+        StateHasChanged();
     }
+
+    // ============================================
+    // 🎨 UI Helper: Show Loading Indicator
+    // ============================================
+    /// <summary>
+    /// Use this in your Blazor component to show loading state
+    /// Example: @if (!isCriticalDataLoaded) { <p>Loading...</p> }
+    /// </summary>
+    private string GetLoadingMessage()
+    {
+        if (!isCriticalDataLoaded)
+            return "Loading form data...";
+        if (!isBackgroundDataLoaded)
+            return "Loading additional options...";
+        return string.Empty;
+    }
+
+    // ============================================
+    // Rest of your existing methods remain same
+    // ============================================
+
+    private void ShowAccountPopup(MouseEventArgs e)
+    {
+        Accountpopup.Show(new Account());
+    }
+
+    private void ShowJobPopup(MouseEventArgs e)
+    {
+        Jobpopup.Show(new Job());
+    }
+
+    private void ShowServicePopup()
+    {
+        Servicepopup.Show(new Service());
+    }
+
+    [Parameter] public EventCallback OnSaved { get; set; }
+
+    void ColumnChooserButton_Click()
+    {
+        DetailGrid.ShowColumnChooser();
+    }
+
+    private bool Visible { get; set; }
+    private string Title { get; set; } = "Add/Edit Bill";
+    private Bill EditModel { get; set; } = new();
+    private IGrid DetailGrid { get; set; }
+
+    private List<BillDetail> BillDetails { get; set; } = new();
+    private Dictionary<BillDetail, DataChange> UnsavedChanges { get; } = new();
+    private bool BatchItemsEnabled => UnsavedChanges.Count > 0 || (DetailGrid?.IsEditing() ?? false);
+
+    private int? nextSNo = 1;
+
+    public class SelectItem
+    {
+        public string Text { get; set; }
+        public string Value { get; set; }
+    }
+
+    List<SelectItem> JobTypeList = new()
+{
+    new SelectItem { Text = "IMPORT", Value = "IMPORT" },
+    new SelectItem { Text = "EXPORT", Value = "EXPORT" }
+};
+
+    List<SelectItem> SupplyTypeList = new()
+{
+    new SelectItem { Text = "B2B", Value = "B2B" },
+    new SelectItem { Text = "B2CS", Value = "B2CS" },
+    new SelectItem { Text = "SEZWP", Value = "SEZWP" },
+    new SelectItem { Text = "SEZWOP", Value = "SEZWOP" },
+    new SelectItem { Text = "EXPWP", Value = "EXPWP" },
+    new SelectItem { Text = "EXPWOP", Value = "EXPWOP" },
+    new SelectItem { Text = "DEXP", Value = "DEXP" }
+};
+
+    private BillDetail CloneBillDetail(BillDetail source)
+    {
+        if (source == null) return null;
+
+        return new BillDetail
+            {
+                BillDetailSno = source.BillDetailSno,
+                BillDetailId = source.BillDetailId,
+                BillDetailBillId = source.BillDetailBillId,
+                BillDetailProductId = source.BillDetailProductId,
+                BillDetailHsnCode = source.BillDetailHsnCode,
+                BillDetailUnit = source.BillDetailUnit,
+                BillDetailUnitId = source.BillDetailUnitId,
+                BillDetailExchRate = source.BillDetailExchRate,
+                BillDetailRate = source.BillDetailRate,
+                BillDetailQty = source.BillDetailQty,
+                BillDetailAmount = source.BillDetailAmount,
+                BillDetailExtraChrg = source.BillDetailExtraChrg,
+                BillDetailCurrencyId = source.BillDetailCurrencyId,
+                BillDetailTaxableAmt = source.BillDetailTaxableAmt,
+                BillDetailAccountId = source.BillDetailAccountId,
+                BillDetailSgstAcId = source.BillDetailSgstAcId,
+                BillDetailCgstAcId = source.BillDetailCgstAcId,
+                BillDetailIgstAcId = source.BillDetailIgstAcId,
+                BillDetailGstPer = source.BillDetailGstPer,
+                BillDetailIgst = source.BillDetailIgst,
+                BillDetailCgst = source.BillDetailCgst,
+                BillDetailSgst = source.BillDetailSgst,
+                BillDetailTotal = source.BillDetailTotal,
+                BillDetailIgstPer = source.BillDetailIgstPer,
+                BillDetailCgstPer = source.BillDetailCgstPer,
+                BillDetailSlabId = source.BillDetailSlabId,
+                BillDetailRemarks = source.BillDetailRemarks,
+                BillDetailSgstPer = source.BillDetailSgstPer
+            };
+    }
+
     private void OnJobDetailsChanged(string selectedjobno)
     {
         EditModel.BillJobNo = selectedjobno;
@@ -1813,8 +2129,6 @@ verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body" >
             EditModel.BillShipperId = selectedjobdetails.JobShipperId ?? 0;
             EditModel.BillExchRate = selectedjobdetails.JobExchRate ?? 0;
             EditModel.BillCbmQty = selectedjobdetails.JobCbm ?? 0;
-            // EditModel.BillCust1 = selectedjobdetails.JobEtd??0;
-            //EditModel.BillCust2 = selectedjobdetails.JobEta??0;
             EditModel.Bill20Ft = selectedjobdetails.Job20Ft;
             EditModel.Bill40Ft = selectedjobdetails.Job40Ft;
             EditModel.BillContainerNo = selectedjobdetails.JobContainer20Ft + " , " + selectedjobdetails.JobContainer40Ft;
@@ -1825,7 +2139,7 @@ verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body" >
             EditModel.BillCust3 = selectedjobdetails.JobNo;
 
             var selectedparty = AccountList.FirstOrDefault(s => s.AccountId == EditModel.BillShipPartyId);
-            EditModel.BillAddress1 = selectedparty.AccountAddress1??" ";
+            EditModel.BillAddress1 = selectedparty.AccountAddress1 ?? " ";
             EditModel.BillContactNo = selectedparty.AccountMobile;
             EditModel.BillGstNo = selectedparty.AccountGstNo;
             EditModel.BillPincode = selectedparty.AccountPincode;
@@ -1835,9 +2149,9 @@ verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body" >
 
             var Duedate = selectedparty.AccountCreditDays ?? 30;
             EditModel.BillDueDate = DateTime.Now.AddDays(Duedate);
-
         }
     }
+
     private void shippartydetails(int shippartydetails)
     {
         EditModel.BillShipPartyId = shippartydetails;
@@ -1852,15 +2166,15 @@ verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body" >
             EditModel.BillStateId = selectedshipparty.AccountStateId ?? 0;
         }
     }
+
     private void OnJobTypeChanged(string selectedType)
     {
         EditModel.BillJobType = selectedType;
         FilteredJobList = JobList
-            .Where(j => j.JobType == selectedType) // assuming each job has Type
+            .Where(j => j.JobType == selectedType)
             .ToList();
-
-        // clear previous selection
     }
+
     private async Task OnvoucherChanged(Bill model, int? voucherId)
     {
         if (voucherId == null || voucherId == 0)
@@ -1884,171 +2198,12 @@ verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body" >
                 ToastService.Error("Error: " + ex.Message);
             }
         }
-
     }
 
-    public class SelectItem
-    {
-        public string Text { get; set; }
-        public string Value { get; set; }
-    }
-
-    List<SelectItem> JobTypeList = new()
-    {
-        new SelectItem { Text = "IMPORT", Value = "IMPORT" },
-        new SelectItem { Text = "EXPORT", Value = "EXPORT" }
-    };
-
-    List<SelectItem> SupplyTypeList = new()
-    {
-        new SelectItem { Text = "B2B", Value = "B2B" },
-        new SelectItem { Text = "B2CS", Value = "B2CS" },
-        new SelectItem { Text = "SEZWP", Value = "SEZWP" },
-        new SelectItem { Text = "SEZWOP", Value = "SEZWOP" },
-        new SelectItem { Text = "EXPWP", Value = "EXPWP" },
-        new SelectItem { Text = "EXPWOP", Value = "EXPWOP" },
-        new SelectItem { Text = "DEXP", Value = "DEXP" }
-    };
-
-    // Helper method to clone BillDetail
-    private BillDetail CloneBillDetail(BillDetail source)
-    {
-        if (source == null) return null;
-
-        return new BillDetail
-        {
-            BillDetailSno = source.BillDetailSno,
-            BillDetailId = source.BillDetailId,
-            BillDetailBillId = source.BillDetailBillId,
-            BillDetailProductId = source.BillDetailProductId,
-            BillDetailHsnCode = source.BillDetailHsnCode,
-            BillDetailUnit = source.BillDetailUnit,
-            BillDetailUnitId = source.BillDetailUnitId,
-            BillDetailExchRate = source.BillDetailExchRate,
-            BillDetailRate = source.BillDetailRate,
-            BillDetailQty = source.BillDetailQty,
-            BillDetailAmount = source.BillDetailAmount,
-            BillDetailExtraChrg = source.BillDetailExtraChrg,
-            BillDetailCurrencyId = source.BillDetailCurrencyId,
-            BillDetailTaxableAmt = source.BillDetailTaxableAmt,
-            BillDetailAccountId = source.BillDetailAccountId,
-            BillDetailSgstAcId = source.BillDetailSgstAcId,
-            BillDetailCgstAcId = source.BillDetailCgstAcId,
-            BillDetailIgstAcId = source.BillDetailIgstAcId,
-            BillDetailGstPer = source.BillDetailGstPer,
-            BillDetailIgst = source.BillDetailIgst,
-            BillDetailCgst = source.BillDetailCgst,
-            BillDetailSgst = source.BillDetailSgst,
-            BillDetailTotal = source.BillDetailTotal,
-            BillDetailIgstPer = source.BillDetailIgstPer,
-            BillDetailCgstPer = source.BillDetailCgstPer,
-            BillDetailSlabId = source.BillDetailSlabId,
-            BillDetailRemarks = source.BillDetailRemarks,
-            BillDetailSgstPer = source.BillDetailSgstPer
-
-        };
-    }
-
-    public async void Show(Bill bill)
-    {
-        //var loadTask = EnsureDataLoadedAsync();
-        if (bill?.BillId > 0)
-        {
-            EditModel = bill;
-            OnJobTypeChanged(EditModel.BillJobType);
-
-            BillDetails = bill.BillDetails?
-            .Select(d => CloneBillDetail(d))
-            .OrderBy(d => d.BillDetailId)
-            .ToList() ?? new List<BillDetail>();
-            //OriginalDetails = bill.BillDetails?.Select(d => CloneBillDetail(d)).ToList() ?? new List<BillDetail>();
-
-            // for (int i = 0; i < BillDetails.Count; i++)
-            // {
-            //     BillDetails[i].BillDetailSno = i + 1;
-
-
-
-
-            // }
-            // nextSNo = BillDetails.Count + 1;
-
-            // ✅ Set nextSNo based on max existing SNo
-            nextSNo = BillDetails.Any() ? BillDetails.Max(d => d.BillDetailSno) + 1 : 1;
-            // ✅ Add empty rows to make total 5 rows
-            int existingRowCount = BillDetails.Count;
-            int rowsToAdd = Math.Max(0, 5 - existingRowCount); // Ensure at least 5 rows total
-
-            for (int i = 0; i < rowsToAdd; i++)
-            {
-                BillDetails.Add(new BillDetail
-                {
-                    BillDetailSno = nextSNo++,
-                    BillDetailId = 0,
-                    BillDetailExchRate = EditModel?.BillExchRate ?? 1,
-                    BillDetailCurrencyId = EditModel.BillDefaultCurrencyId,
-                    BillDetailQty = 1,
-                    BillDetailRate = 0,
-                    BillDetailAmount = 0,
-                    BillDetailTaxableAmt = 0,
-                    BillDetailGstPer = 0,
-                    BillDetailCgstPer = 0,
-                    BillDetailSgstPer = 0,
-                    BillDetailIgstPer = 0,
-                    BillDetailCgst = 0,
-                    BillDetailSgst = 0,
-                    BillDetailIgst = 0,
-                    BillDetailTotal = 0,
-                    BillDetailStatus = true
-                });
-            }
-
-            Title = "Edit Bill";
-        }
-        else
-        {
-            EditModel = new Bill
-            {
-                BillDate = DateTime.Now,
-                // BillDueDate = DateTime.Now.AddDays(30),
-                BillStatus = true,
-                BillDetails = new List<BillDetail>()
-            };
-            BillDetails = new List<BillDetail>();
-            // OriginalDetails = new List<BillDetail>();
-            nextSNo = 1;
-            Title = "Add Bill";
-            InitializeInvoiceDetails();
-        }
-
-        UnsavedChanges.Clear();
-        Visible = true;
-        StateHasChanged();
-        // ✅ Wait for data to finish loading
-        //await loadTask;
-    }
-    // ✅ Cache dropdown data (load once, reuse)
-    private bool _dataLoaded = false;
-    private async Task EnsureDataLoadedAsync()
-    {
-        //if (_dataLoaded) return; // ✅ Already loaded
-
-        LoadingService.Show("Loading form data...");
-        try
-        {
-            await LoadBillsDataAsync();
-            _dataLoaded = true;
-        }
-        finally
-        {
-            LoadingService.Hide();
-        }
-    }
     private void Hide()
     {
         Visible = false;
         BillDetails.Clear();
-        //  OriginalDetails.Clear();
         UnsavedChanges.Clear();
     }
 
@@ -2059,7 +2214,6 @@ verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body" >
             await DetailGrid.CancelEditAsync();
         }
 
-        // Find next available SNo
         var activeDetails = BillDetails
             .Where(d => !UnsavedChanges.ContainsKey(d) || UnsavedChanges[d].Type != DataChangeType.Delete)
             .ToList();
@@ -2068,44 +2222,38 @@ verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body" >
             ? activeDetails.Max(d => d.BillDetailSno) + 1
             : 1;
 
-        // Create a new BillDetail with defaults
         var newItem = new BillDetail
-        {
-            BillDetailSno = nextAvailableSNo,
-            BillDetailQty = 1,
-            BillDetailRate = 0,
-            BillDetailAmount = 0,
-            BillDetailTaxableAmt = 0,
-            BillDetailGstPer = 0,
-            BillDetailCgstPer = 0,
-            BillDetailSgstPer = 0,
-            BillDetailIgstPer = 0,
-            BillDetailCgst = 0,
-            BillDetailSgst = 0,
-            BillDetailIgst = 0,
-            BillDetailTotal = 0,
-            BillDetailExchRate = EditModel?.BillExchRate ?? 1,
-            BillDetailCurrencyId = EditModel.BillDefaultCurrencyId,
-            BillDetailSlabId = string.Empty,
-            BillDetailStatus = true
-        };
+            {
+                BillDetailSno = nextAvailableSNo,
+                BillDetailQty = 1,
+                BillDetailRate = 0,
+                BillDetailAmount = 0,
+                BillDetailTaxableAmt = 0,
+                BillDetailGstPer = 0,
+                BillDetailCgstPer = 0,
+                BillDetailSgstPer = 0,
+                BillDetailIgstPer = 0,
+                BillDetailCgst = 0,
+                BillDetailSgst = 0,
+                BillDetailIgst = 0,
+                BillDetailTotal = 0,
+                BillDetailExchRate = EditModel?.BillExchRate ?? 1,
+                BillDetailCurrencyId = EditModel.BillDefaultCurrencyId,
+                BillDetailSlabId = string.Empty,
+                BillDetailStatus = true
+            };
 
         BillDetails.Add(newItem);
-
-        // Refresh grid
-        //DetailGrid.Reload();
         await InvokeAsync(StateHasChanged);
     }
 
-
-
     async Task Revert_Click()
     {
-
         await DetailGrid.CancelEditAsync();
         await ClearUnsavedChangesAsync();
         InitializeInvoiceDetails();
     }
+
     private void InitializeInvoiceDetails()
     {
         try
@@ -2115,12 +2263,12 @@ verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body" >
             for (int i = 1; i <= 5; i++)
             {
                 BillDetails.Add(new BillDetail
-                {
-                    BillDetailSno = i,
-                    BillDetailId = 0,
-                    BillDetailExchRate = EditModel?.BillExchRate ?? 1,
-                    BillDetailCurrencyId = EditModel.BillDefaultCurrencyId
-                });
+                    {
+                        BillDetailSno = i,
+                        BillDetailId = 0,
+                        BillDetailExchRate = EditModel?.BillExchRate ?? 1,
+                        BillDetailCurrencyId = EditModel.BillDefaultCurrencyId
+                    });
             }
 
             nextSNo = 6;
@@ -2130,9 +2278,9 @@ verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body" >
             ToastService.Error($"Error initializing details: {ex.Message}", "Error");
         }
     }
+
     async Task Submit_Click()
     {
-
         try
         {
             foreach (var unsavedChange in UnsavedChanges)
@@ -2143,13 +2291,10 @@ verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body" >
                 switch (changeType)
                 {
                     case DataChangeType.Addition:
-                        // New items will be added in final save
                         break;
                     case DataChangeType.Delete:
-                        // Mark for deletion
                         break;
                     case DataChangeType.Modification:
-                        // Update calculations
                         UpdateRowAmounts(changedItem);
                         break;
                 }
@@ -2162,7 +2307,7 @@ verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body" >
         {
             ToastService.Error($"Error applying changes: {ex.Message}");
         }
-
+        finally
         {
             LoadingService.Hide();
         }

@@ -9,6 +9,7 @@
 @inject EinvConfigService EinvConfigService
 @inject HttpClient HttpClient
 @inject IJSRuntime JSRuntime
+@inject GstinAuthTokenService GstinAuthTokenService
 
 <DxPopup @bind-Visible="Visible"
          Width="95%"
@@ -271,10 +272,10 @@
 @code {
     [Parameter] public EventCallback<List<Bill>> OnGenerateEInvoice { get; set; }
     [Parameter] public string ConfigUsername { get; set; } = "";
-    
+
     public bool Visible { get; set; }
     public List<Bill> SelectedBills { get; set; } = new();
-    
+
     private string jsonPreview = "";
     private string eInvoiceJson = "";
     private string errorMessage = "";
@@ -282,7 +283,9 @@
     private bool isLoading = false;
     private string loadingMessage = "Loading...";
 
-    // ------------------ SHOW -------------------
+    // --------------------------------------------------
+    // SHOW / HIDE POPUP
+    // --------------------------------------------------
     public void Show(List<Bill> bills)
     {
         SelectedBills = bills;
@@ -294,7 +297,6 @@
         StateHasChanged();
     }
 
-    // ------------------ HIDE -------------------
     public void Hide()
     {
         Visible = false;
@@ -306,10 +308,42 @@
         isLoading = false;
     }
 
-    // ------------------ PREVIEW JSON -------------------
+    // --------------------------------------------------
+    // HELPER: PRETTY PRINT JSON (but fall back to RAW)
+    // --------------------------------------------------
+    private string FormatJson(string input)
+    {
+        try
+        {
+            var parsed = JsonSerializer.Deserialize<JsonElement>(input);
+            return JsonSerializer.Serialize(parsed, new JsonSerializerOptions
+                {
+                    WriteIndented = true
+                });
+        }
+        catch
+        {
+            return input; // return raw JSON if invalid
+        }
+    }
+
+    // --------------------------------------------------
+    // HELPER: SAFE GET PROPERTY
+    // --------------------------------------------------
+    private string? SafeGet(JsonElement parent, string property)
+    {
+        if (parent.TryGetProperty(property, out var node))
+            return node.GetString();
+
+        return null;
+    }
+
+    // --------------------------------------------------
+    // PREVIEW JSON
+    // --------------------------------------------------
     private async Task PreviewJson()
     {
-        if (SelectedBills == null || SelectedBills.Count == 0)
+        if (!SelectedBills.Any())
         {
             ToastService.Error("No bills selected.");
             return;
@@ -334,17 +368,8 @@
                 return;
             }
 
-            try
-            {
-                var parsed = JsonSerializer.Deserialize<JsonElement>(rawJson);
-                jsonPreview = JsonSerializer.Serialize(parsed, new JsonSerializerOptions { WriteIndented = true });
-            }
-            catch
-            {
-                jsonPreview = rawJson;
-            }
-
-            ToastService.Success("JSON generated!");
+            jsonPreview = FormatJson(rawJson);
+            ToastService.Success("JSON Preview Ready!");
         }
         catch (Exception ex)
         {
@@ -358,10 +383,83 @@
         }
     }
 
-    // ------------------ GENERATE E-INVOICE -------------------
+    // --------------------------------------------------
+    // GENERATE E-INVOICE
+    // --------------------------------------------------
+
+    private async Task<EinvConfig> GetValidAuthTokenAsync()
+    {
+        // Load config
+        var configs = await EinvConfigService.GetAllAsync();
+        var config = configs.FirstOrDefault();
+
+        if (config == null)
+        {
+            ToastService.Error("E-Invoice config not found");
+            return null;
+        }
+
+        // 1️⃣ If Auth Token is missing → Generate new
+        if (string.IsNullOrWhiteSpace(config.AuthToken) || config.EInvoiceTokenExp == null)
+        {
+            ToastService.Warning("Auth Token not found. Generating new token...");
+            var newTokenResponse = await GstinAuthTokenService.GenerateAuthTokenAsync(config);
+
+            if (newTokenResponse == null)
+            {
+                ToastService.Error("Failed to generate Auth Token.");
+                return null;
+            }
+
+            ToastService.Success("New Auth Token generated!");
+            return await UpdateConfigAfterToken(config);
+        }
+
+        // 2️⃣ Check expiry
+        DateTime expiry;
+
+        if (!DateTime.TryParse(config.EInvoiceTokenExp, out expiry))
+        {
+            ToastService.Warning("Invalid expiry format. Regenerating token...");
+            var refreshed = await GstinAuthTokenService.GenerateAuthTokenAsync(config);
+            if (refreshed == null)
+                return null;
+
+            return await UpdateConfigAfterToken(config);
+        }
+
+        var remaining = expiry - DateTime.Now;
+
+        // If token expiring within 2 minutes
+        if (remaining.TotalMinutes < 2)
+        {
+            ToastService.Warning("Token expiring soon. Refreshing token...");
+            var refreshed = await GstinAuthTokenService.GenerateAuthTokenAsync(config);
+
+            if (refreshed == null)
+                return null;
+
+            ToastService.Success("Token refreshed!");
+            return await UpdateConfigAfterToken(config);
+        }
+
+
+        // Token valid → continue
+        return config;
+    }
+
+
+    // Helper: After token generate, reload fresh config from DB
+    private async Task<EinvConfig> UpdateConfigAfterToken(EinvConfig oldConfig)
+    {
+        var updatedList = await EinvConfigService.GetAllAsync();
+        return updatedList.FirstOrDefault(c => c.Gstin == oldConfig.Gstin);
+    }
+
+
     private async Task GenerateEInvoice()
     {
-        if (SelectedBills == null || !SelectedBills.Any())
+        if (!SelectedBills.Any())
         {
             ToastService.Error("No bills selected.");
             return;
@@ -378,32 +476,23 @@
 
         try
         {
-            // STEP 1: Load Config
-            EinvConfig? config = null;
-            if (!string.IsNullOrEmpty(ConfigUsername))
-                config = await EinvConfigService.GetByUsernameAsync(ConfigUsername);
-            else
-                config = (await EinvConfigService.GetAllAsync()).FirstOrDefault();
-
+            // ✅ Load validated config (auto token-refresh handled)
+            var config = await GetValidAuthTokenAsync();
             if (config == null)
-            {
-                errorMessage = "E-Invoice configuration not found.";
-                ToastService.Error(errorMessage);
                 return;
-            }
 
-            // STEP 2: Get Invoice JSON
+            // Load Invoice JSON
             var json = await BillService.GetEInvoiceRawAsync(bill.BillId);
             if (string.IsNullOrWhiteSpace(json))
             {
-                errorMessage = "Failed to prepare invoice JSON.";
-                ToastService.Error(errorMessage);
+                ToastService.Error("Failed to prepare invoice JSON.");
                 return;
             }
 
-            // STEP 3: Prepare API Request
+            // API URL
             string url = $"{config.BaseUrl.TrimEnd('/')}/eicore/dec/v1.03/Invoice?QrCodeSize=250";
 
+            // Prepare Request
             var req = new HttpRequestMessage(HttpMethod.Post, url);
             req.Headers.Add("aspid", config.AspUserId);
             req.Headers.Add("password", config.Password);
@@ -412,105 +501,84 @@
             req.Headers.Add("AuthToken", config.AuthToken);
             req.Content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            // STEP 4: Send Request
-            var res = await HttpClient.SendAsync(req);
-            var content = await res.Content.ReadAsStringAsync();
+            var response = await HttpClient.SendAsync(req);
+            var content = await response.Content.ReadAsStringAsync();
 
-            // STEP 5: Parse Response
-            var parsed = JsonSerializer.Deserialize<JsonElement>(content);
-            eInvoiceJson = JsonSerializer.Serialize(parsed, new JsonSerializerOptions { WriteIndented = true });
+            eInvoiceJson = FormatJson(content);
 
-            var status = parsed.GetProperty("Status").GetString();
-
-            if (status == "1")
+            JsonElement parsed;
+            try
             {
-                // STEP 6: Extract IRN and other data
-                string? irn = null;
-                string? ackNo = null;
-                DateTime? ackDate = null;
-                string? signedInvoice = null;
-                string? signedQrCode = null;
+                parsed = JsonSerializer.Deserialize<JsonElement>(content);
+            }
+            catch
+            {
+                ToastService.Error("Invalid response from server.");
+                return;
+            }
 
-                if (parsed.TryGetProperty("Data", out var dataNode))
-                {
-                    if (dataNode.TryGetProperty("Irn", out var irnNode))
-                        irn = irnNode.GetString();
+            // Check status
+            var status = SafeGet(parsed, "Status");
+            if (status != "1")
+            {
+                errorMessage = ExtractError(parsed);
+                ToastService.Error(errorMessage);
+                return;
+            }
 
-                    if (dataNode.TryGetProperty("AckNo", out var ackNoNode))
-                        ackNo = ackNoNode.GetString();
+            // Get the Data node
+            if (!parsed.TryGetProperty("Data", out var dataNode))
+            {
+                ToastService.Error("Invalid response: Data not found.");
+                return;
+            }
 
-                    if (dataNode.TryGetProperty("AckDt", out var ackDtNode))
-                    {
-                        var ackDtStr = ackDtNode.GetString();
-                        if (DateTime.TryParse(ackDtStr, out var parsedDate))
-                            ackDate = parsedDate;
-                    }
+            // Data is a JSON string, so parse it again
+            JsonElement data;
+            try
+            {
+                var dataString = dataNode.GetString();
+                data = JsonSerializer.Deserialize<JsonElement>(dataString);
+            }
+            catch
+            {
+                ToastService.Error("Invalid Data JSON.");
+                return;
+            }
 
-                    if (dataNode.TryGetProperty("SignedInvoice", out var signedInvNode))
-                        signedInvoice = signedInvNode.GetString();
+            // Now extract the fields
+            var irn = SafeGet(data, "Irn");
+            var ackNo = SafeGet(data, "AckNo");
+            var ackDt = SafeGet(data, "AckDt");
+            var signedInv = SafeGet(data, "SignedInvoice");
+            var signedQr = SafeGet(data, "SignedQRCode");
 
-                    if (dataNode.TryGetProperty("SignedQRCode", out var qrNode))
-                        signedQrCode = qrNode.GetString();
-                }
+            DateTime? ackDate = null;
+            if (DateTime.TryParse(ackDt, out var parsedDt))
+                ackDate = parsedDt;
 
-                if (!string.IsNullOrWhiteSpace(irn))
-                {
-                    generatedIrn = irn;
+            if (string.IsNullOrWhiteSpace(irn))
+            {
+                ToastService.Error("IRN missing in response.");
+                return;
+            }
 
-                    // STEP 7: Save IRN to Database
-                    try
-                    {
-                        bool saved = await BillService.SaveEInvoiceDataAsync(
-                            bill.BillId,
-                            irn,
-                            ackNo,
-                            ackDate,
-                            signedInvoice,
-                            signedQrCode
-                        );
+            bool saved = await BillService.SaveEInvoiceDataAsync(
+                bill.BillId, irn, ackNo, ackDate, signedInv, signedQr);
 
-                        if (saved)
-                        {
-                            ToastService.Success($"E-Invoice generated successfully! IRN: {irn}");
-                            
-                            // Trigger callback if provided
-                            if (OnGenerateEInvoice.HasDelegate)
-                            {
-                                await OnGenerateEInvoice.InvokeAsync(SelectedBills);
-                            }
-                        }
-                        else
-                        {
-                            ToastService.Warning("E-Invoice generated but failed to save to database.");
-                        }
-                    }
-                    catch (Exception dbEx)
-                    {
-                        errorMessage = $"E-Invoice generated but database save failed: {dbEx.Message}";
-                        ToastService.Warning(errorMessage);
-                    }
-                }
-                else
-                {
-                    errorMessage = "IRN not found in response.";
-                    ToastService.Error(errorMessage);
-                }
+            generatedIrn = irn;
+
+            if (saved)
+            {
+                ToastService.Success($"E-Invoice generated! IRN: {irn}");
+                if (OnGenerateEInvoice.HasDelegate)
+                    await OnGenerateEInvoice.InvokeAsync(SelectedBills);
             }
             else
             {
-                // Read Error Message
-                if (parsed.TryGetProperty("ErrorDetails", out var errArr) &&
-                    errArr.GetArrayLength() > 0)
-                {
-                    errorMessage = errArr[0].GetProperty("ErrorMessage").GetString();
-                }
-                else
-                {
-                    errorMessage = "Unknown error occurred.";
-                }
-
-                ToastService.Error(errorMessage);
+                ToastService.Warning("Generated but failed to save to DB.");
             }
+
         }
         catch (Exception ex)
         {
@@ -524,17 +592,40 @@
         }
     }
 
-    // ------------------ COPY TO CLIPBOARD -------------------
+
+
+    // --------------------------------------------------
+    // ERROR PARSER
+    // --------------------------------------------------
+    private string ExtractError(JsonElement parsed)
+    {
+        try
+        {
+            if (parsed.TryGetProperty("ErrorDetails", out var err) &&
+                err.ValueKind == JsonValueKind.Array &&
+                err.GetArrayLength() > 0)
+            {
+                return SafeGet(err[0], "ErrorMessage") ?? "Unknown error";
+            }
+        }
+        catch { }
+
+        return "Unknown error";
+    }
+
+    // --------------------------------------------------
+    // COPY TO CLIPBOARD
+    // --------------------------------------------------
     private async Task CopyToClipboard()
     {
         try
         {
             await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", jsonPreview);
-            ToastService.Success("JSON copied to clipboard!");
+            ToastService.Success("JSON copied!");
         }
         catch
         {
-            ToastService.Error("Failed to copy to clipboard.");
+            ToastService.Error("Failed to copy.");
         }
     }
 }

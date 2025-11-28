@@ -423,7 +423,7 @@ namespace FreightBKShippingWebApp
 
 
         public async Task<T1?> PutAsync<T1, T2>(string path, T2 postModel)
-        {
+            {
             try
             {
                 await SetAuthorizeHeader();

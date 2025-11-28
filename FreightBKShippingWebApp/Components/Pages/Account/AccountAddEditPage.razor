@@ -11,6 +11,7 @@
 @inject AccountGroupService AccountGroupService
 @inject AccountTypeService AccountTypeService
 @inject EinvConfigService EinvConfigService
+@inject GstinService GstinService
 
 <DxPopup @bind-Visible="Visible" ShowCloseButton="true" HeaderText="@Title" CloseOnOutsideClick="false" MaxWidth="1050px"  Width="90%"  
 horizontalAlignment="HorizontalAlignment.Center"
@@ -434,99 +435,112 @@ verticalAlignment="VerticalAlignment.Center"
         }
     }
 
-
     private async Task FetchGstinDetailsAsync()
     {
-        // Validation
-        if (string.IsNullOrWhiteSpace(EditModel.AccountGstNo))
+        var gstin = EditModel.AccountGstNo;
+        var configs = await EinvConfigService.GetAllAsync();
+        var einvConfig = configs.FirstOrDefault();
+
+        var result = await GstinService.FetchGstinDetails(gstin, einvConfig);
+
+        if (result != null)
         {
-            ToastService.Warning("Please enter GST Number");
-            return;
-        }
-
-        if (einvConfig == null)
-        {
-            ToastService.Warning("E-Invoice configuration not loaded");
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(einvConfig.AuthToken))
-        {
-            ToastService.Warning("Auth Token not found. Please generate token first.");
-            return;
-        }
-
-        LoadingService.Show("Fetching GSTIN details...");
-
-        try
-        {
-            using var httpClient = new HttpClient();
-
-            // Build URL with GSTIN in path
-            string apiUrl = $"{einvConfig.BaseUrl}Master/gstin/{EditModel.AccountGstNo}";
-
-            // Add required headers from EinvConfig
-            httpClient.DefaultRequestHeaders.Add("aspid", einvConfig.AspUserId);
-            httpClient.DefaultRequestHeaders.Add("password", einvConfig.Password);
-            httpClient.DefaultRequestHeaders.Add("Gstin", einvConfig.Gstin);
-            httpClient.DefaultRequestHeaders.Add("user_name", einvConfig.Username);
-            httpClient.DefaultRequestHeaders.Add("AuthToken", einvConfig.AuthToken);
-
-            // Make GET request
-            var response = await httpClient.GetAsync(apiUrl);
-            var responseBody = await response.Content.ReadAsStringAsync();
-
-            if (!response.IsSuccessStatusCode)
-            {
-                throw new Exception($"API Error {response.StatusCode}: {responseBody}");
-            }
-
-            // 🔥 Parse the weird API response structure
-            using var doc = JsonDocument.Parse(responseBody);
-            var root = doc.RootElement;
-
-            // Get Status as string and convert to int
-            string statusStr = root.GetProperty("Status").GetString() ?? "0";
-            int status = int.Parse(statusStr);
-
-            if (status != 1)
-            {
-                var errorDetails = root.TryGetProperty("ErrorDetails", out var err)
-                    ? err.ToString()
-                    : "Unknown error";
-                ToastService.Error($"Failed to fetch GSTIN: {errorDetails}");
-                return;
-            }
-
-            // Get Data as string and parse it again
-            string dataJson = root.GetProperty("Data").GetString() ?? "{}";
-
-            // Deserialize the nested JSON string
-            var gstinData = JsonSerializer.Deserialize<GstinData>(dataJson,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-            if (gstinData != null)
-            {
-                // Populate form fields with fetched data
-                PopulateFormWithGstinData(gstinData);
-
-                ToastService.Success($"✅ GSTIN details fetched for {gstinData.LegalName}");
-            }
-            else
-            {
-                ToastService.Error("Failed to parse GSTIN data");
-            }
-        }
-        catch (Exception ex)
-        {
-            ToastService.Error($"Error: {ex.Message}");
-            Console.WriteLine($"GSTIN Fetch Error: {ex}");
-        }
-        finally
-        {
-            LoadingService.Hide();
+            PopulateFormWithGstinData(result);
+            ToastService.Success("GSTIN details loaded successfully");
         }
     }
+    // private async Task FetchGstinDetailsAsync()
+    // {
+    //     // Validation
+    //     if (string.IsNullOrWhiteSpace(EditModel.AccountGstNo))
+    //     {
+    //         ToastService.Warning("Please enter GST Number");
+    //         return;
+    //     }
+
+    //     if (einvConfig == null)
+    //     {
+    //         ToastService.Warning("E-Invoice configuration not loaded");
+    //         return;
+    //     }
+
+    //     if (string.IsNullOrWhiteSpace(einvConfig.AuthToken))
+    //     {
+    //         ToastService.Warning("Auth Token not found. Please generate token first.");
+    //         return;
+    //     }
+
+    //     LoadingService.Show("Fetching GSTIN details...");
+
+    //     try
+    //     {
+    //         using var httpClient = new HttpClient();
+
+    //         // Build URL with GSTIN in path
+    //         string apiUrl = $"{einvConfig.BaseUrl}Master/gstin/{EditModel.AccountGstNo}";
+
+    //         // Add required headers from EinvConfig
+    //         httpClient.DefaultRequestHeaders.Add("aspid", einvConfig.AspUserId);
+    //         httpClient.DefaultRequestHeaders.Add("password", einvConfig.Password);
+    //         httpClient.DefaultRequestHeaders.Add("Gstin", einvConfig.Gstin);
+    //         httpClient.DefaultRequestHeaders.Add("user_name", einvConfig.Username);
+    //         httpClient.DefaultRequestHeaders.Add("AuthToken", einvConfig.AuthToken);
+
+    //         // Make GET request
+    //         var response = await httpClient.GetAsync(apiUrl);
+    //         var responseBody = await response.Content.ReadAsStringAsync();
+
+    //         if (!response.IsSuccessStatusCode)
+    //         {
+    //             throw new Exception($"API Error {response.StatusCode}: {responseBody}");
+    //         }
+
+    //         // 🔥 Parse the weird API response structure
+    //         using var doc = JsonDocument.Parse(responseBody);
+    //         var root = doc.RootElement;
+
+    //         // Get Status as string and convert to int
+    //         string statusStr = root.GetProperty("Status").GetString() ?? "0";
+    //         int status = int.Parse(statusStr);
+
+    //         if (status != 1)
+    //         {
+    //             var errorDetails = root.TryGetProperty("ErrorDetails", out var err)
+    //                 ? err.ToString()
+    //                 : "Unknown error";
+    //             ToastService.Error($"Failed to fetch GSTIN: {errorDetails}");
+    //             return;
+    //         }
+
+    //         // Get Data as string and parse it again
+    //         string dataJson = root.GetProperty("Data").GetString() ?? "{}";
+
+    //         // Deserialize the nested JSON string
+    //         var gstinData = JsonSerializer.Deserialize<GstinData>(dataJson,
+    //             new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+    //         if (gstinData != null)
+    //         {
+    //             // Populate form fields with fetched data
+    //             PopulateFormWithGstinData(gstinData);
+
+    //             ToastService.Success($"✅ GSTIN details fetched for {gstinData.LegalName}");
+    //         }
+    //         else
+    //         {
+    //             ToastService.Error("Failed to parse GSTIN data");
+    //         }
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         ToastService.Error($"Error: {ex.Message}");
+    //         Console.WriteLine($"GSTIN Fetch Error: {ex}");
+    //     }
+    //     finally
+    //     {
+    //         LoadingService.Hide();
+    //     }
+    // }
 
     // Updated GstinData model to match actual API response
     public class GstinData
