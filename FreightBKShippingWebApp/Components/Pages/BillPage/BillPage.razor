@@ -186,6 +186,7 @@
 
         // ✔ Pass selected bills to popup
         EInvoicePopupRef.Show(SelectedBills.ToList());
+        ClearSelection();
     }
 
 
@@ -205,7 +206,11 @@
         _ = LoadBillsAsync();
 
     }
-
+    private void ClearSelection()
+{
+    SelectedBills.Clear();
+    StateHasChanged();
+}
     // ✅ Check if user is admin
     private async Task CheckUserRole()
     {
@@ -222,65 +227,76 @@
     // ✅ Get lock button text based on selection
     private string GetLockButtonText()
     {
-        var selectedBill = MyGrid?.GetFocusedDataItem() as Bill;
+        if (SelectedBills == null || SelectedBills.Count == 0)
+            return "Lock";
 
-        if (selectedBill != null && !string.IsNullOrEmpty(selectedBill.BillLockedBy))
-        {
-            return "Unlock";
-        }
+        // If at least one bill is unlocked → show Lock
+        if (SelectedBills.Any(b => string.IsNullOrEmpty(b.BillLockedBy)))
+            return "Lock";
 
-        return "Lock";
+        return "Unlock";
     }
 
     // ✅ Get lock button icon
     private string GetLockButtonIcon()
     {
-        var selectedBill = MyGrid?.GetFocusedDataItem() as Bill;
+        if (SelectedBills == null || SelectedBills.Count == 0)
+            return "bi bi-lock";
 
-        if (selectedBill != null && !string.IsNullOrEmpty(selectedBill.BillLockedBy))
-        {
-            return "bi bi-unlock";
-        }
+        if (SelectedBills.Any(b => string.IsNullOrEmpty(b.BillLockedBy)))
+            return "bi bi-lock";
 
-        return "bi bi-lock";
+        return "bi bi-unlock";
     }
 
     // ✅ Toggle lock/unlock
     private async Task OnToggleLock(ToolbarItemClickEventArgs e)
     {
-        var bill = MyGrid.GetFocusedDataItem() as Bill;
-
-        if (bill == null)
+        if (SelectedBills == null || SelectedBills.Count == 0)
         {
-            ToastService.Warning("Please select a bill to lock/unlock.");
+            ToastService.Warning("Please select at least one bill.");
             return;
         }
 
         try
         {
             LoadingService.Show("Processing...");
-            // Store the current state
-            bool isCurrentlyLocked = !string.IsNullOrEmpty(bill.BillLockedBy);
 
-            // Call the API first
-            var result = await BillService.ToggleLockAsync(bill.BillId);
+            int locked = 0;
+            int unlocked = 0;
 
-            if (result)
+            foreach (var bill in SelectedBills)
             {
-                // Update local state after successful API call
-                bill.BillLockedBy = isCurrentlyLocked ? string.Empty : CurrentUserId;
-                bill.BillLockedByUsername = isCurrentlyLocked ? string.Empty : "You";
+                bool isCurrentlyLocked = !string.IsNullOrEmpty(bill.BillLockedBy);
 
-                var action = isCurrentlyLocked ? "unlocked" : "locked";
-                ToastService.Success($"Bill {action} successfully.");
+                // Call your existing API for each bill
+                var result = await BillService.ToggleLockAsync(bill.BillId);
 
-                await LoadBillsAsync();
+                if (result)
+                {
+                    if (isCurrentlyLocked)
+                    {
+                        // Unlock locally
+                        bill.BillLockedBy = string.Empty;
+                        bill.BillLockedByUsername = string.Empty;
+                        unlocked++;
+                    }
+                    else
+                    {
+                        // Lock locally
+                        bill.BillLockedBy = CurrentUserId;
+                        bill.BillLockedByUsername = "You";
+                        locked++;
+                    }
+                }
             }
-            else
-            {
+           
+            await LoadBillsAsync();
 
-                ToastService.Error("Failed to toggle bill lock.");
-            }
+            if (locked > 0)
+                ToastService.Success($"{locked} bill(s) locked.");
+            if (unlocked > 0)
+                ToastService.Success($"{unlocked} bill(s) unlocked.");
         }
         catch (Exception ex)
         {
@@ -289,8 +305,53 @@
         finally
         {
             LoadingService.Hide();
+            ClearSelection();
             await InvokeAsync(StateHasChanged);
         }
+        //FOR focused row 
+        // var bill = MyGrid.GetFocusedDataItem() as Bill;
+
+        // if (bill == null)
+        // {
+        //     ToastService.Warning("Please select a bill to lock/unlock.");
+        //     return;
+        // }
+
+        // try
+        // {
+        //     LoadingService.Show("Processing...");
+        //     // Store the current state
+        //     bool isCurrentlyLocked = !string.IsNullOrEmpty(bill.BillLockedBy);
+
+        //     // Call the API first
+        //     var result = await BillService.ToggleLockAsync(bill.BillId);
+
+        //     if (result)
+        //     {
+        //         // Update local state after successful API call
+        //         bill.BillLockedBy = isCurrentlyLocked ? string.Empty : CurrentUserId;
+        //         bill.BillLockedByUsername = isCurrentlyLocked ? string.Empty : "You";
+
+        //         var action = isCurrentlyLocked ? "unlocked" : "locked";
+        //         ToastService.Success($"Bill {action} successfully.");
+
+        //         await LoadBillsAsync();
+        //     }
+        //     else
+        //     {
+
+        //         ToastService.Error("Failed to toggle bill lock.");
+        //     }
+        // }
+        // catch (Exception ex)
+        // {
+        //     ToastService.Error($"Error: {ex.Message}");
+        // }
+        // finally
+        // {
+        //     LoadingService.Hide();
+        //     await InvokeAsync(StateHasChanged);
+        // }
     }
 
 
@@ -349,6 +410,7 @@
         }
 
         popup.Show(bill);
+        ClearSelection();
     }
     private async Task OnDelete(ToolbarItemClickEventArgs e)
     {
@@ -392,7 +454,7 @@
 
         if (failCount > 0)
             ToastService.Error($"{failCount} Bill(s) Failed To Delete.");
-
+        ClearSelection();
         await LoadBillsAsync();
     }
 
@@ -486,6 +548,7 @@
             // else: single report layout, already in ReportService.MergedReport
 
             Navigation.NavigateTo("/reportviewer");
+            
         }
         catch (Exception ex)
         {
@@ -494,6 +557,7 @@
         finally
         {
             LoadingService.Hide();
+            ClearSelection();
         }
     }
 
@@ -540,13 +604,23 @@
 
                 var dtoDict = groupBills.Select((bill, i) => new { bill, dto = dtoList[i] })
                                         .ToDictionary(x => x.bill, x => x.dto);
-
+                try
+                {
                 // Create report for this group
                 await ReportService.CreateMergedReportAsync(
                     groupBills,
                     bill => dtoDict.ContainsKey(bill) ? dtoDict[bill] : null,
                     layoutBytes);
+                }
+                catch (InvalidOperationException ex) when (ex.Message.Contains("CodeDOM"))
+                {
+                    ToastService.Error(
+                        "Report format incompatible. Please contact administrator to update report template. " +
+                        "Error: Report uses old .NET Framework format.");
 
+                    LoadingService.Hide();
+                    return;
+                }
                 if (ReportService.MergedReport != null)
                 {
                     allReports.Add(ReportService.MergedReport);
@@ -618,6 +692,8 @@
         finally
         {
             LoadingService.Hide();
+            ClearSelection();
+
         }
     }
 

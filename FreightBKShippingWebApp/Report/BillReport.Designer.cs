@@ -1185,7 +1185,7 @@
             this.table7.BackColor = System.Drawing.Color.LightSkyBlue;
             this.table7.Borders = DevExpress.XtraPrinting.BorderSide.None;
             this.table7.Font = new DevExpress.Drawing.DXFont("Tahoma", 9F, DevExpress.Drawing.DXFontStyle.Bold);
-            this.table7.LocationFloat = new DevExpress.Utils.PointFloat(1.041499F, 0F);
+            this.table7.LocationFloat = new DevExpress.Utils.PointFloat(1.041495F, 0F);
             this.table7.Name = "table7";
             this.table7.Padding = new DevExpress.XtraPrinting.PaddingInfo(2, 2, 0, 0, 100F);
             this.table7.Rows.AddRange(new DevExpress.XtraReports.UI.XRTableRow[] {
@@ -1230,7 +1230,7 @@
             this.tableCell32.StylePriority.UseTextAlignment = false;
             this.tableCell32.Text = "Sub Total";
             this.tableCell32.TextAlignment = DevExpress.XtraPrinting.TextAlignment.TopRight;
-            this.tableCell32.Weight = 3.2918422200230424D;
+            this.tableCell32.Weight = 3.5740632080633872D;
             // 
             // tableCell30
             // 
@@ -1242,7 +1242,7 @@
             this.tableCell30.StylePriority.UseBackColor = false;
             this.tableCell30.StylePriority.UseBorders = false;
             this.tableCell30.StylePriority.UseFont = false;
-            this.tableCell30.Weight = 0.29467591818892735D;
+            this.tableCell30.Weight = 0.012454930148582288D;
             // 
             // tableCell178
             // 
@@ -2993,8 +2993,6 @@
             // tableCell153
             // 
             this.tableCell153.Borders = DevExpress.XtraPrinting.BorderSide.Bottom;
-            this.tableCell153.ExpressionBindings.AddRange(new DevExpress.XtraReports.UI.ExpressionBinding[] {
-            new DevExpress.XtraReports.UI.ExpressionBinding("BeforePrint", "Text", "Iif(IsNullOrEmpty([bill].[bill_20ft]),[bill].[bill_20ft]+\' X 20FT  \' ,\' \')")});
             this.tableCell153.Font = new DevExpress.Drawing.DXFont("Tahoma", 8F);
             this.tableCell153.Multiline = true;
             this.tableCell153.Name = "tableCell153";
@@ -3005,14 +3003,11 @@
             // xrTableCell8
             // 
             this.xrTableCell8.Borders = DevExpress.XtraPrinting.BorderSide.Bottom;
-            this.xrTableCell8.ExpressionBindings.AddRange(new DevExpress.XtraReports.UI.ExpressionBinding[] {
-            new DevExpress.XtraReports.UI.ExpressionBinding("BeforePrint", "Text", "Iif(([bill].[bill_40ft])>0,[bill].[bill_40ft]+\' X 40FT \' ,\' \') ")});
             this.xrTableCell8.Font = new DevExpress.Drawing.DXFont("Tahoma", 8F);
             this.xrTableCell8.Multiline = true;
             this.xrTableCell8.Name = "xrTableCell8";
             this.xrTableCell8.StylePriority.UseBorders = false;
             this.xrTableCell8.StylePriority.UseFont = false;
-            this.xrTableCell8.Text = "xrTableCell8";
             this.xrTableCell8.Weight = 2.2646118409373042D;
             // 
             // tableCell157

@@ -181,7 +181,7 @@ horizontalAlignment="HorizontalAlignment.Center"
 verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body" >
 
 
-    <EditForm Model="@EditModel" OnValidSubmit="HandleValidSubmit" Context="cxbill">
+    <EditForm Model="@EditModel"  Context="cxbill">
 
         <DataAnnotationsValidator />
         <ValidationSummary />
@@ -1042,12 +1042,18 @@ verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body" >
                 </div>
 
                 <div class="d-flex gap-2">
+                    <DxButton Text="Save&Print"
+                              RenderStyle="ButtonRenderStyle.Warning"
+                              Click="@((async () => await HandleValidSubmit(true)))"
+                              IconCssClass="bi bi-save" />
+
                     <DxButton Text="Copy"
                     RenderStyle="ButtonRenderStyle.Info"
                     Click="CopyDetails"
                     IconCssClass="bi bi-copy" />
                     <DxButton Text="Save"
                     RenderStyle="ButtonRenderStyle.Primary"
+                              Click="@(() => HandleValidSubmit(false))"
                     SubmitFormOnClick="true"
                     IconCssClass="bi bi-save" />
                     <DxButton Text="Cancel"
@@ -2222,11 +2228,11 @@ verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body" >
 
         // Update main bill total
         //EditModel.BillNetAmount = (float)BillDetails.Sum(d => d.BillDetailTotal
-       //  EditModel.BillNetAmount = (float)BillDetails
-       // .Where(d => !UnsavedChanges.ContainsKey(d) || UnsavedChanges[d].Type != DataChangeType.Delete)
-       // .Sum(d => d.BillDetailTotal);
+        //  EditModel.BillNetAmount = (float)BillDetails
+        // .Where(d => !UnsavedChanges.ContainsKey(d) || UnsavedChanges[d].Type != DataChangeType.Delete)
+        // .Sum(d => d.BillDetailTotal);
 
-       // ✅ Use centralized calculation
+        // ✅ Use centralized calculation
         RecalculateNetAmount(EditModel.BillIsRoundOff);
     }
 
@@ -2574,7 +2580,7 @@ verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body" >
         )
         .Sum(d => d.BillDetailTaxableAmt);
 
-           // ApplyRoundOff(EditModel.BillIsRoundOff);
+            // ApplyRoundOff(EditModel.BillIsRoundOff);
             RecalculateNetAmount(EditModel.BillIsRoundOff);
         }
     }
@@ -2813,7 +2819,7 @@ verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body" >
 
 
 
-    private async Task HandleValidSubmit()
+    private async Task HandleValidSubmit(bool isprint= false)
     {
         LoadingService.Show();
         try
@@ -2894,13 +2900,17 @@ verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body" >
             LoadingService.Hide();
             // --- STEP 6: UI Cleanup ---
             //ToastService.Success("Changes applied successfully!");
-            var confirm = await ConfirmDialogService.ShowAsync("Are you sure you want to print selected bill(s)?");
-            if (confirm)
+            if (isprint == true)
             {
+                // var confirm = await ConfirmDialogService.ShowAsync("Are you sure you want to print selected bill(s)?");
+                // if (confirm)
+                // {
 
 
+                //     await PreviewMergedReports();
+
+                // }
                 await PreviewMergedReports();
-
             }
             UnsavedChanges.Clear();
             Visible = false;
