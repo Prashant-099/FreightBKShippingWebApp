@@ -341,6 +341,9 @@
     // --------------------------------------------------
     // PREVIEW JSON
     // --------------------------------------------------
+    // --------------------------------------------------
+    // PREVIEW JSON (Multiple Bills)
+    // --------------------------------------------------
     private async Task PreviewJson()
     {
         if (!SelectedBills.Any())
@@ -349,9 +352,8 @@
             return;
         }
 
-        var bill = SelectedBills.First();
         isLoading = true;
-        loadingMessage = "Generating JSON preview...";
+        loadingMessage = $"Generating JSON preview for {SelectedBills.Count} bill(s)...";
         errorMessage = "";
         eInvoiceJson = "";
         generatedIrn = "";
@@ -359,17 +361,30 @@
 
         try
         {
-            var rawJson = await BillService.GetEInvoiceRawAsync(bill.BillId);
+            var allJsons = new List<string>();
 
-            if (string.IsNullOrWhiteSpace(rawJson))
+            foreach (var bill in SelectedBills)
             {
-                errorMessage = "Unable to generate JSON.";
+                var rawJson = await BillService.GetEInvoiceRawAsync(bill.BillId);
+
+                if (string.IsNullOrWhiteSpace(rawJson))
+                {
+                    ToastService.Warning($"Unable to generate JSON for Bill #{bill.BillNo}");
+                    continue;
+                }
+
+                allJsons.Add($"// Bill #{bill.BillNo}\n{FormatJson(rawJson)}");
+            }
+
+            if (!allJsons.Any())
+            {
+                errorMessage = "No valid JSON generated.";
                 ToastService.Error(errorMessage);
                 return;
             }
 
-            jsonPreview = FormatJson(rawJson);
-            ToastService.Success("JSON Preview Ready!");
+            jsonPreview = string.Join("\n\n// ========================================\n\n", allJsons);
+            ToastService.Success($"JSON Preview Ready for {allJsons.Count} bill(s)!");
         }
         catch (Exception ex)
         {
@@ -382,7 +397,6 @@
             StateHasChanged();
         }
     }
-
     // --------------------------------------------------
     // GENERATE E-INVOICE
     // --------------------------------------------------
@@ -420,7 +434,7 @@
 
         if (!DateTime.TryParse(config.EInvoiceTokenExp, out expiry))
         {
-            ToastService.Warning("Invalid expiry format. Regenerating token...");
+            // ToastService.Warning("Invalid expiry format. Regenerating token...");
             var refreshed = await GstinAuthTokenService.GenerateAuthTokenAsync(config);
             if (refreshed == null)
                 return null;
@@ -433,13 +447,13 @@
         // If token expiring within 2 minutes
         if (remaining.TotalMinutes < 2)
         {
-            ToastService.Warning("Token expiring soon. Refreshing token...");
+            // ToastService.Warning("Token expiring soon. Refreshing token...");
             var refreshed = await GstinAuthTokenService.GenerateAuthTokenAsync(config);
 
             if (refreshed == null)
                 return null;
 
-            ToastService.Success("Token refreshed!");
+            // ToastService.Success("Token refreshed!");
             return await UpdateConfigAfterToken(config);
         }
 
@@ -457,6 +471,140 @@
     }
 
 
+    // private async Task GenerateEInvoice()
+    // {
+    //     if (!SelectedBills.Any())
+    //     {
+    //         ToastService.Error("No bills selected.");
+    //         return;
+    //     }
+
+    //     var bill = SelectedBills.First();
+
+    //     isLoading = true;
+    //     loadingMessage = "Processing E-Invoice...";
+    //     errorMessage = "";
+    //     generatedIrn = "";
+    //     eInvoiceJson = "";
+    //     StateHasChanged();
+
+    //     try
+    //     {
+    //         // ✅ Load validated config (auto token-refresh handled)
+    //         var config = await GetValidAuthTokenAsync();
+    //         if (config == null)
+    //             return;
+
+    //         // Load Invoice JSON
+    //         var json = await BillService.GetEInvoiceRawAsync(bill.BillId);
+    //         if (string.IsNullOrWhiteSpace(json))
+    //         {
+    //             ToastService.Error("Failed to prepare invoice JSON.");
+    //             return;
+    //         }
+
+    //         // API URL
+    //         string url = $"{config.BaseUrl.TrimEnd('/')}/eicore/dec/v1.03/Invoice?QrCodeSize=250";
+
+    //         // Prepare Request
+    //         var req = new HttpRequestMessage(HttpMethod.Post, url);
+    //         req.Headers.Add("aspid", config.AspUserId);
+    //         req.Headers.Add("password", config.Password);
+    //         req.Headers.Add("Gstin", config.Gstin);
+    //         req.Headers.Add("user_name", config.Username);
+    //         req.Headers.Add("AuthToken", config.AuthToken);
+    //         req.Content = new StringContent(json, Encoding.UTF8, "application/json");
+
+    //         var response = await HttpClient.SendAsync(req);
+    //         var content = await response.Content.ReadAsStringAsync();
+
+    //         eInvoiceJson = FormatJson(content);
+
+    //         JsonElement parsed;
+    //         try
+    //         {
+    //             parsed = JsonSerializer.Deserialize<JsonElement>(content);
+    //         }
+    //         catch
+    //         {
+    //             ToastService.Error("Invalid response from server.");
+    //             return;
+    //         }
+
+    //         // Check status
+    //         var status = SafeGet(parsed, "Status");
+    //         if (status != "1")
+    //         {
+    //             errorMessage = ExtractError(parsed);
+    //             ToastService.Error(errorMessage);
+    //             return;
+    //         }
+
+    //         // Get the Data node
+    //         if (!parsed.TryGetProperty("Data", out var dataNode))
+    //         {
+    //             ToastService.Error("Invalid response: Data not found.");
+    //             return;
+    //         }
+
+    //         // Data is a JSON string, so parse it again
+    //         JsonElement data;
+    //         try
+    //         {
+    //             var dataString = dataNode.GetString();
+    //             data = JsonSerializer.Deserialize<JsonElement>(dataString);
+    //         }
+    //         catch
+    //         {
+    //             ToastService.Error("Invalid Data JSON.");
+    //             return;
+    //         }
+
+    //         // Now extract the fields
+    //         var irn = SafeGet(data, "Irn");
+    //         var ackNo = SafeGet(data, "AckNo");
+    //         var ackDt = SafeGet(data, "AckDt");
+    //         var signedInv = SafeGet(data, "SignedInvoice");
+    //         var signedQr = SafeGet(data, "SignedQRCode");
+
+    //         DateTime? ackDate = null;
+    //         if (DateTime.TryParse(ackDt, out var parsedDt))
+    //             ackDate = parsedDt;
+
+    //         if (string.IsNullOrWhiteSpace(irn))
+    //         {
+    //             ToastService.Error("IRN missing in response.");
+    //             return;
+    //         }
+
+    //         bool saved = await BillService.SaveEInvoiceDataAsync(
+    //             bill.BillId, irn, ackNo, ackDate, signedInv, signedQr);
+
+    //         generatedIrn = irn;
+
+    //         if (saved)
+    //         {
+    //             ToastService.Success($"E-Invoice generated! IRN: {irn}");
+    //             if (OnGenerateEInvoice.HasDelegate)
+    //                 await OnGenerateEInvoice.InvokeAsync(SelectedBills);
+    //         }
+    //         else
+    //         {
+    //             ToastService.Warning("Generated but failed to save to DB.");
+    //         }
+
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         errorMessage = $"Error: {ex.Message}";
+    //         ToastService.Error(errorMessage);
+    //     }
+    //     finally
+    //     {
+    //         isLoading = false;
+    //         StateHasChanged();
+    //     }
+    // }
     private async Task GenerateEInvoice()
     {
         if (!SelectedBills.Any())
@@ -465,10 +613,8 @@
             return;
         }
 
-        var bill = SelectedBills.First();
-
         isLoading = true;
-        loadingMessage = "Processing E-Invoice...";
+        loadingMessage = $"Processing {SelectedBills.Count} E-Invoice(s)...";
         errorMessage = "";
         generatedIrn = "";
         eInvoiceJson = "";
@@ -481,102 +627,143 @@
             if (config == null)
                 return;
 
-            // Load Invoice JSON
-            var json = await BillService.GetEInvoiceRawAsync(bill.BillId);
-            if (string.IsNullOrWhiteSpace(json))
+            var allResponses = new List<string>();
+            var successCount = 0;
+            var failCount = 0;
+            var generatedIrns = new List<string>();
+
+            foreach (var bill in SelectedBills)
             {
-                ToastService.Error("Failed to prepare invoice JSON.");
-                return;
+                try
+                {
+                    // Load Invoice JSON
+                    var json = await BillService.GetEInvoiceRawAsync(bill.BillId);
+                    if (string.IsNullOrWhiteSpace(json))
+                    {
+                        ToastService.Warning($"Failed to prepare JSON for Bill #{bill.BillNo}");
+                        failCount++;
+                        continue;
+                    }
+
+                    // API URL
+                    string url = $"{config.BaseUrl.TrimEnd('/')}/eicore/dec/v1.03/Invoice?QrCodeSize=250";
+
+                    // Prepare Request
+                    var req = new HttpRequestMessage(HttpMethod.Post, url);
+                    req.Headers.Add("aspid", config.AspUserId);
+                    req.Headers.Add("password", config.Password);
+                    req.Headers.Add("Gstin", config.Gstin);
+                    req.Headers.Add("user_name", config.Username);
+                    req.Headers.Add("AuthToken", config.AuthToken);
+                    req.Content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                    var response = await HttpClient.SendAsync(req);
+                    var content = await response.Content.ReadAsStringAsync();
+
+                    allResponses.Add($"// Bill #{bill.BillNo}\n{FormatJson(content)}");
+
+                    JsonElement parsed;
+                    try
+                    {
+                        parsed = JsonSerializer.Deserialize<JsonElement>(content);
+                    }
+                    catch
+                    {
+                        ToastService.Warning($"Invalid response for Bill #{bill.BillNo}");
+                        failCount++;
+                        continue;
+                    }
+
+                    // Check status
+                    var status = SafeGet(parsed, "Status");
+                    if (status != "1")
+                    {
+                        var error = ExtractError(parsed);
+                        ToastService.Warning($"Bill #{bill.BillNo} failed: {error}");
+                        failCount++;
+                        continue;
+                    }
+
+                    // Get the Data node
+                    if (!parsed.TryGetProperty("Data", out var dataNode))
+                    {
+                        ToastService.Warning($"Invalid response for Bill #{bill.BillNo}: Data not found");
+                        failCount++;
+                        continue;
+                    }
+
+                    // Data is a JSON string, so parse it again
+                    JsonElement data;
+                    try
+                    {
+                        var dataString = dataNode.GetString();
+                        data = JsonSerializer.Deserialize<JsonElement>(dataString);
+                    }
+                    catch
+                    {
+                        ToastService.Warning($"Invalid Data JSON for Bill #{bill.BillNo}");
+                        failCount++;
+                        continue;
+                    }
+
+                    // Now extract the fields
+                    var irn = SafeGet(data, "Irn");
+                    var ackNo = SafeGet(data, "AckNo");
+                    var ackDt = SafeGet(data, "AckDt");
+                    var signedInv = SafeGet(data, "SignedInvoice");
+                    var signedQr = SafeGet(data, "SignedQRCode");
+
+                    DateTime? ackDate = null;
+                    if (DateTime.TryParse(ackDt, out var parsedDt))
+                        ackDate = parsedDt;
+
+                    if (string.IsNullOrWhiteSpace(irn))
+                    {
+                        ToastService.Warning($"IRN missing for Bill #{bill.BillNo}");
+                        failCount++;
+                        continue;
+                    }
+
+                    bool saved = await BillService.SaveEInvoiceDataAsync(
+                        bill.BillId, irn, ackNo, ackDate, signedInv, signedQr);
+
+                    if (saved)
+                    {
+                        generatedIrns.Add($"Bill #{bill.BillNo}: {irn}");
+                        successCount++;
+                        ToastService.Success($"Bill #{bill.BillNo} - IRN: {irn}");
+                    }
+                    else
+                    {
+                        ToastService.Warning($"Bill #{bill.BillNo} generated but failed to save");
+                        failCount++;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    ToastService.Error($"Bill #{bill.BillNo} Error: {ex.Message}");
+                    failCount++;
+                }
             }
 
-            // API URL
-            string url = $"{config.BaseUrl.TrimEnd('/')}/eicore/dec/v1.03/Invoice?QrCodeSize=250";
-
-            // Prepare Request
-            var req = new HttpRequestMessage(HttpMethod.Post, url);
-            req.Headers.Add("aspid", config.AspUserId);
-            req.Headers.Add("password", config.Password);
-            req.Headers.Add("Gstin", config.Gstin);
-            req.Headers.Add("user_name", config.Username);
-            req.Headers.Add("AuthToken", config.AuthToken);
-            req.Content = new StringContent(json, Encoding.UTF8, "application/json");
-
-            var response = await HttpClient.SendAsync(req);
-            var content = await response.Content.ReadAsStringAsync();
-
-            eInvoiceJson = FormatJson(content);
-
-            JsonElement parsed;
-            try
+            // Combine all responses
+            if (allResponses.Any())
             {
-                parsed = JsonSerializer.Deserialize<JsonElement>(content);
-            }
-            catch
-            {
-                ToastService.Error("Invalid response from server.");
-                return;
+                eInvoiceJson = string.Join("\n\n// ========================================\n\n", allResponses);
             }
 
-            // Check status
-            var status = SafeGet(parsed, "Status");
-            if (status != "1")
+            // Final summary
+            generatedIrn = string.Join("\n", generatedIrns);
+
+            if (successCount > 0)
             {
-                errorMessage = ExtractError(parsed);
-                ToastService.Error(errorMessage);
-                return;
-            }
-
-            // Get the Data node
-            if (!parsed.TryGetProperty("Data", out var dataNode))
-            {
-                ToastService.Error("Invalid response: Data not found.");
-                return;
-            }
-
-            // Data is a JSON string, so parse it again
-            JsonElement data;
-            try
-            {
-                var dataString = dataNode.GetString();
-                data = JsonSerializer.Deserialize<JsonElement>(dataString);
-            }
-            catch
-            {
-                ToastService.Error("Invalid Data JSON.");
-                return;
-            }
-
-            // Now extract the fields
-            var irn = SafeGet(data, "Irn");
-            var ackNo = SafeGet(data, "AckNo");
-            var ackDt = SafeGet(data, "AckDt");
-            var signedInv = SafeGet(data, "SignedInvoice");
-            var signedQr = SafeGet(data, "SignedQRCode");
-
-            DateTime? ackDate = null;
-            if (DateTime.TryParse(ackDt, out var parsedDt))
-                ackDate = parsedDt;
-
-            if (string.IsNullOrWhiteSpace(irn))
-            {
-                ToastService.Error("IRN missing in response.");
-                return;
-            }
-
-            bool saved = await BillService.SaveEInvoiceDataAsync(
-                bill.BillId, irn, ackNo, ackDate, signedInv, signedQr);
-
-            generatedIrn = irn;
-
-            if (saved)
-            {
-                ToastService.Success($"E-Invoice generated! IRN: {irn}");
+                ToastService.Success($"✅ Success: {successCount} | ❌ Failed: {failCount}");
                 if (OnGenerateEInvoice.HasDelegate)
                     await OnGenerateEInvoice.InvokeAsync(SelectedBills);
             }
             else
             {
-                ToastService.Warning("Generated but failed to save to DB.");
+                ToastService.Error("All invoices failed to generate.");
             }
 
         }
@@ -591,7 +778,6 @@
             StateHasChanged();
         }
     }
-
 
 
     // --------------------------------------------------
