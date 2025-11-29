@@ -1731,13 +1731,20 @@ verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body" >
             var hsnTask = HsnSacService.GetAllAsync();
             var gstTask = GstSlabService.GetAllAsync();
             var notifyTask = NotifyService.GetAllAsync();
-
+            var locationTask = LocationService.GetAllAsync();
+            var vesselTask = VesselService.GetAllAsync();
+            var cargoTask = CargoService.GetAllAsync();
+            var reportTask = ReportDataService.GetAllAsync();
             await Task.WhenAll(
                 serviceTask, voucherTask, currTask, unitTask,
-                hsnTask, gstTask, notifyTask
+                hsnTask, gstTask, notifyTask, locationTask, vesselTask, cargoTask, reportTask
             );
 
             // Assign results
+            ReportDataList  = reportTask.Result;
+            CargoList = cargoTask.Result;
+            VesselList = vesselTask.Result;
+            locationList = locationTask.Result;
             ServiceList = serviceTask.Result;
             VoucherList = voucherTask.Result;
             CurrList = currTask.Result;
