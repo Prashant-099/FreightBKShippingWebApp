@@ -117,7 +117,7 @@
         <DxGridDataColumn FieldName="BillIgst" Caption="IGST" Width="120" />
         <DxGridDataColumn FieldName="BillNetAmount" Caption="Total Amount" Width="120" />
         <DxGridDataColumn FieldName="BillSupplyType" Caption="Supply Type" Width="120" />
-        <DxGridDataColumn FieldName="BillShipParty" Caption="Ship To" Width="120" />
+        <DxGridDataColumn FieldName="BillShipParty" Caption="Ship To" Width="180" />
         <DxGridDataColumn FieldName="BillCreated" Caption="Created At" Width="120" />
         <DxGridDataColumn FieldName="BillUpdated" Caption="Updated At" Width="120" />
         <DxGridDataColumn FieldName="BillStatus" Caption="Status" Width="100" Visible="false" />
@@ -186,7 +186,7 @@
 
         // ✔ Pass selected bills to popup
         EInvoicePopupRef.Show(SelectedBills.ToList());
-        ClearSelection();
+        LoadBillsAsync();
     }
 
 
@@ -454,7 +454,7 @@
 
         if (failCount > 0)
             ToastService.Error($"{failCount} Bill(s) Failed To Delete.");
-        ClearSelection();
+        
         await LoadBillsAsync();
     }
 
