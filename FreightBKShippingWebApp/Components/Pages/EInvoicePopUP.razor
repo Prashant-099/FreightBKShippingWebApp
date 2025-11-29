@@ -12,260 +12,188 @@
 @inject GstinAuthTokenService GstinAuthTokenService
 
 <DxPopup @bind-Visible="Visible"
-         Width="95%"
-         MaxWidth="1600px"
+         MaxWidth="max(60%, 600px)"
+         MaxHeight="91%"
          ShowCloseButton="true"
+         Scrollable="true"
          CloseOnOutsideClick="false"
-         HeaderText="E-Invoice Preview & Submission"
-         BodyCssClass="popup-body"
+         HeaderText="E-Invoice Generator"
          HorizontalAlignment="HorizontalAlignment.Center"
          VerticalAlignment="VerticalAlignment.Center">
 
-    <BodyTemplate>
 
-        <div class="einvoice-container">
 
-            <!-- SELECTED BILLS SECTION -->
-            <div class="bills-summary">
-                <h6 class="section-title">
-                    <i class="bi bi-file-earmark-text"></i> Selected Bills
-                </h6>
-
+        <!-- SELECTED BILLS -->
+        <DxFormLayout CssClass="mb-3">
+            <DxFormLayoutItem Caption="Selected Bills" ColSpanMd="12">
                 @if (SelectedBills?.Any() == true)
                 {
-                    <div class="bills-list">
-                        @foreach (var b in SelectedBills)
+                    <div class="selected-bills-box">
+                        @foreach (var bill in SelectedBills)
                         {
-                            <div class="bill-item">
-                                <span class="bill-number">@b.BillNo</span>
-                                <span class="bill-amount">₹@b.BillAmount.ToString("N2")</span>
-                            </div>
+                            <span class="badge bg-primary me-2 mb-1 ">
+                                Bill - @bill.BillNo - ₹@bill.BillAmount.ToString("N2")
+                            </span>
                         }
                     </div>
                 }
                 else
                 {
-                    <div class="empty-state">
-                        <i class="bi bi-inbox"></i>
-                        <p>No bills selected</p>
+                    <div class="text-muted text-center py-2">
+                        <small>No bills selected</small>
                     </div>
                 }
-            </div>
+            </DxFormLayoutItem>
+        </DxFormLayout>
 
-            <!-- JSON PREVIEW SECTION -->
-            @if (!string.IsNullOrWhiteSpace(jsonPreview))
-            {
-                <div class="json-preview-section">
-                    <div class="json-header">
-                        <h6 class="section-title">
-                            <i class="bi bi-code-square"></i> JSON Preview
-                        </h6>
+        <!-- JSON PREVIEW -->
+        @if (!string.IsNullOrWhiteSpace(jsonPreview))
+        {
+            <DxFormLayout CssClass="mb-3">
+                <DxFormLayoutItem Caption="JSON Preview" ColSpanMd="12">
+                    <Template>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <small class="text-muted">Request Payload</small>
+                            <DxButton Text="Copy" 
+                                    IconCssClass="bi bi-clipboard"
+                                    RenderStyle="ButtonRenderStyle.Secondary"
+                                    SizeMode="SizeMode.Small"
+                                    Click="CopyToClipboard" />
+                        </div>
+                        <DxMemo Text="@jsonPreview"
+                                ReadOnly="true"
+                                Rows="8"
+                                CssClass="code-preview" />
+                    </Template>
+                </DxFormLayoutItem>
+            </DxFormLayout>
+        }
 
-                        <button class="btn btn-sm btn-outline-secondary copy-btn"
-                                @onclick="CopyToClipboard">
-                            <i class="bi bi-clipboard"></i> Copy
-                        </button>
-                    </div>
+        <!-- API RESPONSE -->
+        @if (!string.IsNullOrWhiteSpace(eInvoiceJson))
+        {
+            <DxFormLayout CssClass="mb-3">
+                <DxFormLayoutItem Caption="API Response" ColSpanMd="12">
+                    <DxMemo Text="@eInvoiceJson"
+                            ReadOnly="true"
+                            Rows="8"
+                            CssClass="code-preview" />
+                </DxFormLayoutItem>
+            </DxFormLayout>
+        }
 
-                    <div class="json-preview-wrapper">
-                        <pre class="json-content">@jsonPreview</pre>
-                    </div>
-                </div>
-            }
+        <!-- ERROR MESSAGE -->
+    @if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show mb-3 p-3 shadow-sm"
+             role="alert" style="font-size: 0.95rem;">
 
-            <!-- API RESPONSE JSON -->
-            @if (!string.IsNullOrWhiteSpace(eInvoiceJson))
-            {
-                <div class="response-section">
-                    <div class="json-header">
-                        <h6 class="section-title">
-                            <i class="bi bi-file-text"></i> Response JSON
-                        </h6>
-                    </div>
+            <strong>Error:</strong>
+            <div class="mt-1">@errorMessage</div>
 
-                    <div class="json-preview-wrapper">
-                        <pre class="json-content">@eInvoiceJson</pre>
-                    </div>
-                </div>
-            }
+            <button type="button"
+                    class="btn-close"
+                    style="transform: scale(1.2);"
+                    @onclick="() => errorMessage = string.Empty">
+            </button>
+        </div>
+    }
 
-            <!-- ERROR BOX -->
-            @if (!string.IsNullOrWhiteSpace(errorMessage))
-            {
-                <div class="error-box">
-                    <i class="bi bi-exclamation-triangle-fill"></i>
-                    @errorMessage
-                </div>
-            }
+        <!-- SUCCESS IRN -->
+    @if (!string.IsNullOrWhiteSpace(generatedIrn))
+    {
+        <div class="alert alert-success alert-dismissible fade show mb-3 p-3 shadow-sm"
+             role="alert" style="font-size: 0.95rem;">
 
-            <!-- SUCCESS IRN BADGE -->
-            @if (!string.IsNullOrWhiteSpace(generatedIrn))
-            {
-                <div class="success-box">
-                    <i class="bi bi-check-circle-fill"></i>
-                    <strong>IRN:</strong> @generatedIrn
-                </div>
-            }
+            <strong>IRN Generated:</strong>
 
-            <!-- LOADING -->
-            @if (isLoading)
-            {
-                <div class="loading-state">
-                    <div class="spinner-border text-primary"></div>
-                    <p class="mt-2">@loadingMessage</p>
-                </div>
-            }
+            <pre class="mt-2 mb-0 p-2 bg-light rounded small text-break"
+                 style="white-space: pre-wrap;">
+                @generatedIrn
+    </pre>
 
-            <!-- ACTION BUTTONS -->
-            <div class="action-buttons">
-                <button class="btn btn-primary" @onclick="PreviewJson" disabled="@isLoading">
-                    <i class="bi bi-eye"></i> Preview JSON
-                </button>
+            <button type="button"
+                    class="btn-close"
+                    style="transform: scale(1.2);"
+                    @onclick="() => generatedIrn = string.Empty">
+            </button>
+        </div>
+    }
 
-                <button class="btn btn-success" @onclick="GenerateEInvoice" disabled="@isLoading">
-                    <i class="bi bi-file-earmark-check"></i>
-                    @(isLoading ? "Processing..." : "Generate E-Invoice")
-                </button>
+        <!-- LOADING -->
+    @if (isLoading)
+    {
+        <div class="text-center py-3 mb-3">
+            <div class="spinner-border text-primary mb-2" style="width: 2rem; height: 2rem;"></div>
+            <div><small class="text-muted">@loadingMessage</small></div>
+        </div>
+    }
 
-                <button class="btn btn-secondary" @onclick="Hide" disabled="@isLoading">
-                    <i class="bi bi-x-circle"></i> Close
-                </button>
-            </div>
 
+        <!-- ACTION BUTTONS -->
+        <div class="d-flex gap-2 justify-content-end flex-wrap">
+            <DxButton Text="Preview JSON"
+                      IconCssClass="bi bi-eye"
+                      RenderStyle="ButtonRenderStyle.Primary"
+                      RenderStyleMode="ButtonRenderStyleMode.Outline"
+                      Click="PreviewJson"
+                      Enabled="@(!isLoading)" />
+
+            <DxButton Text="@(isLoading ? "Processing..." : "Generate E-Invoice")"
+                      IconCssClass="bi bi-file-earmark-check"
+                      RenderStyle="ButtonRenderStyle.Success"
+                      Click="GenerateEInvoice"
+                      Enabled="@(!isLoading)" />
+
+            <DxButton Text="Close"
+                      IconCssClass="bi bi-x-circle"
+                      RenderStyle="ButtonRenderStyle.Secondary"
+                      Click="Hide"
+                      Enabled="@(!isLoading)" />
         </div>
 
-    </BodyTemplate>
 
 </DxPopup>
 
 <style>
-    .einvoice-container {
-        display: flex;
-        flex-direction: column;
-        gap: 1.5rem;
-        padding: 0.5rem;
-    }
-
-    .section-title {
-        font-weight: 600;
-        color: #2c3e50;
-        display: flex;
-        align-items: center;
-        gap: .5rem;
-    }
-
-    .bills-summary {
-        background: #f8f9fa;
-        padding: 1rem;
-        border-radius: 8px;
-        border: 1px solid #ddd;
-    }
-
-    .bills-list {
-        margin-top: .75rem;
-        display: grid;
-        gap: .5rem;
-    }
-
-    .bill-item {
-        display: flex;
-        justify-content: space-between;
-        padding: .6rem .8rem;
-        background: #fff;
-        border: 1px solid #ccc;
-        border-radius: 6px;
-    }
-
-    .json-preview-section,
-    .response-section {
-        background: #f8f9fa;
-        padding: 1rem;
-        border-radius: 8px;
-        border: 1px solid #ddd;
-    }
-
-    .json-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: .75rem;
-    }
-
-    .json-preview-wrapper {
-        max-height: 250px;
-        overflow-y: auto;
+    .code-preview {
+        font-family: 'Consolas', 'Monaco', monospace;
+        font-size: 12px;
         background: #1e1e1e;
-        border-radius: 6px;
-        border: 1px solid #444;
-    }
-
-    .json-content {
-        padding: 1rem;
         color: #dcdcdc;
-        font-size: 13px;
-        white-space: pre;
-        margin: 0;
     }
 
-    .error-box {
-        background: #f8d7da;
-        border-left: 5px solid #dc3545;
-        padding: 1rem;
-        border-radius: 6px;
-        color: #842029;
+    .code-preview .dxbl-edit-area {
+        background: black !important;
+        color: #dcdcdc !important;
+    }
+
+    .selected-bills-box {
         display: flex;
-        align-items: center;
-        gap: .75rem;
-        font-weight: 600;
-    }
-
-    .success-box {
-        background: #d1e7dd;
-        border-left: 5px solid #198754;
-        padding: 1rem;
-        border-radius: 6px;
-        color: #0f5132;
-        display: flex;
-        align-items: center;
-        gap: .75rem;
-        font-weight: 600;
-    }
-
-    .loading-state {
-        text-align: center;
-        padding: 2rem;
-    }
-
-    .action-buttons {
-        display: flex;
-        justify-content: flex-end;
-        gap: .75rem;
         flex-wrap: wrap;
+        gap: 0.5rem;
+        padding: 0.5rem;
+        background: #f8f9fa;
+        border-radius: 4px;
+        min-height: 50px;
+    }
+    @@media (max-width: 576px) {
+        .alert
+
+    {
+        font-size: 0.9rem;
+        padding: 12px 16px !important;
     }
 
-    .empty-state {
-        text-align: center;
-        padding: 2rem;
-        color: #6c757d;
+    pre {
+        font-size: 0.85rem !important;
+        word-wrap: break-word;
     }
 
-    .empty-state i {
-        font-size: 3rem;
-        margin-bottom: 1rem;
+    .btn-close {
+        transform: scale(1.3);
     }
 
-    @@media (max-width: 768px) {
-        .json-preview-wrapper {
-            max-height: 200px !important;
-        }
-
-        .action-buttons {
-            justify-content: stretch;
-        }
-
-        .action-buttons button {
-            flex: 1;
-        }
     }
 </style>
 
@@ -283,9 +211,6 @@
     private bool isLoading = false;
     private string loadingMessage = "Loading...";
 
-    // --------------------------------------------------
-    // SHOW / HIDE POPUP
-    // --------------------------------------------------
     public void Show(List<Bill> bills)
     {
         SelectedBills = bills;
@@ -308,9 +233,6 @@
         isLoading = false;
     }
 
-    // --------------------------------------------------
-    // HELPER: PRETTY PRINT JSON (but fall back to RAW)
-    // --------------------------------------------------
     private string FormatJson(string input)
     {
         try
@@ -323,13 +245,10 @@
         }
         catch
         {
-            return input; // return raw JSON if invalid
+            return input;
         }
     }
 
-    // --------------------------------------------------
-    // HELPER: SAFE GET PROPERTY
-    // --------------------------------------------------
     private string? SafeGet(JsonElement parent, string property)
     {
         if (parent.TryGetProperty(property, out var node))
@@ -338,12 +257,6 @@
         return null;
     }
 
-    // --------------------------------------------------
-    // PREVIEW JSON
-    // --------------------------------------------------
-    // --------------------------------------------------
-    // PREVIEW JSON (Multiple Bills)
-    // --------------------------------------------------
     private async Task PreviewJson()
     {
         if (!SelectedBills.Any())
@@ -397,13 +310,9 @@
             StateHasChanged();
         }
     }
-    // --------------------------------------------------
-    // GENERATE E-INVOICE
-    // --------------------------------------------------
 
     private async Task<EinvConfig> GetValidAuthTokenAsync()
     {
-        // Load config
         var configs = await EinvConfigService.GetAllAsync();
         var config = configs.FirstOrDefault();
 
@@ -413,7 +322,6 @@
             return null;
         }
 
-        // 1️⃣ If Auth Token is missing → Generate new
         if (string.IsNullOrWhiteSpace(config.AuthToken) || config.EInvoiceTokenExp == null)
         {
             ToastService.Warning("Auth Token not found. Generating new token...");
@@ -429,12 +337,10 @@
             return await UpdateConfigAfterToken(config);
         }
 
-        // 2️⃣ Check expiry
         DateTime expiry;
 
         if (!DateTime.TryParse(config.EInvoiceTokenExp, out expiry))
         {
-            // ToastService.Warning("Invalid expiry format. Regenerating token...");
             var refreshed = await GstinAuthTokenService.GenerateAuthTokenAsync(config);
             if (refreshed == null)
                 return null;
@@ -444,167 +350,25 @@
 
         var remaining = expiry - DateTime.Now;
 
-        // If token expiring within 2 minutes
         if (remaining.TotalMinutes < 2)
         {
-            // ToastService.Warning("Token expiring soon. Refreshing token...");
             var refreshed = await GstinAuthTokenService.GenerateAuthTokenAsync(config);
 
             if (refreshed == null)
                 return null;
 
-            // ToastService.Success("Token refreshed!");
             return await UpdateConfigAfterToken(config);
         }
 
-
-        // Token valid → continue
         return config;
     }
 
-
-    // Helper: After token generate, reload fresh config from DB
     private async Task<EinvConfig> UpdateConfigAfterToken(EinvConfig oldConfig)
     {
         var updatedList = await EinvConfigService.GetAllAsync();
         return updatedList.FirstOrDefault(c => c.Gstin == oldConfig.Gstin);
     }
 
-
-    // private async Task GenerateEInvoice()
-    // {
-    //     if (!SelectedBills.Any())
-    //     {
-    //         ToastService.Error("No bills selected.");
-    //         return;
-    //     }
-
-    //     var bill = SelectedBills.First();
-
-    //     isLoading = true;
-    //     loadingMessage = "Processing E-Invoice...";
-    //     errorMessage = "";
-    //     generatedIrn = "";
-    //     eInvoiceJson = "";
-    //     StateHasChanged();
-
-    //     try
-    //     {
-    //         // ✅ Load validated config (auto token-refresh handled)
-    //         var config = await GetValidAuthTokenAsync();
-    //         if (config == null)
-    //             return;
-
-    //         // Load Invoice JSON
-    //         var json = await BillService.GetEInvoiceRawAsync(bill.BillId);
-    //         if (string.IsNullOrWhiteSpace(json))
-    //         {
-    //             ToastService.Error("Failed to prepare invoice JSON.");
-    //             return;
-    //         }
-
-    //         // API URL
-    //         string url = $"{config.BaseUrl.TrimEnd('/')}/eicore/dec/v1.03/Invoice?QrCodeSize=250";
-
-    //         // Prepare Request
-    //         var req = new HttpRequestMessage(HttpMethod.Post, url);
-    //         req.Headers.Add("aspid", config.AspUserId);
-    //         req.Headers.Add("password", config.Password);
-    //         req.Headers.Add("Gstin", config.Gstin);
-    //         req.Headers.Add("user_name", config.Username);
-    //         req.Headers.Add("AuthToken", config.AuthToken);
-    //         req.Content = new StringContent(json, Encoding.UTF8, "application/json");
-
-    //         var response = await HttpClient.SendAsync(req);
-    //         var content = await response.Content.ReadAsStringAsync();
-
-    //         eInvoiceJson = FormatJson(content);
-
-    //         JsonElement parsed;
-    //         try
-    //         {
-    //             parsed = JsonSerializer.Deserialize<JsonElement>(content);
-    //         }
-    //         catch
-    //         {
-    //             ToastService.Error("Invalid response from server.");
-    //             return;
-    //         }
-
-    //         // Check status
-    //         var status = SafeGet(parsed, "Status");
-    //         if (status != "1")
-    //         {
-    //             errorMessage = ExtractError(parsed);
-    //             ToastService.Error(errorMessage);
-    //             return;
-    //         }
-
-    //         // Get the Data node
-    //         if (!parsed.TryGetProperty("Data", out var dataNode))
-    //         {
-    //             ToastService.Error("Invalid response: Data not found.");
-    //             return;
-    //         }
-
-    //         // Data is a JSON string, so parse it again
-    //         JsonElement data;
-    //         try
-    //         {
-    //             var dataString = dataNode.GetString();
-    //             data = JsonSerializer.Deserialize<JsonElement>(dataString);
-    //         }
-    //         catch
-    //         {
-    //             ToastService.Error("Invalid Data JSON.");
-    //             return;
-    //         }
-
-    //         // Now extract the fields
-    //         var irn = SafeGet(data, "Irn");
-    //         var ackNo = SafeGet(data, "AckNo");
-    //         var ackDt = SafeGet(data, "AckDt");
-    //         var signedInv = SafeGet(data, "SignedInvoice");
-    //         var signedQr = SafeGet(data, "SignedQRCode");
-
-    //         DateTime? ackDate = null;
-    //         if (DateTime.TryParse(ackDt, out var parsedDt))
-    //             ackDate = parsedDt;
-
-    //         if (string.IsNullOrWhiteSpace(irn))
-    //         {
-    //             ToastService.Error("IRN missing in response.");
-    //             return;
-    //         }
-
-    //         bool saved = await BillService.SaveEInvoiceDataAsync(
-    //             bill.BillId, irn, ackNo, ackDate, signedInv, signedQr);
-
-    //         generatedIrn = irn;
-
-    //         if (saved)
-    //         {
-    //             ToastService.Success($"E-Invoice generated! IRN: {irn}");
-    //             if (OnGenerateEInvoice.HasDelegate)
-    //                 await OnGenerateEInvoice.InvokeAsync(SelectedBills);
-    //         }
-    //         else
-    //         {
-    //             ToastService.Warning("Generated but failed to save to DB.");
-    //         }
-
-    //     }
-    //     catch (Exception ex)
-    //     {
-    //         errorMessage = $"Error: {ex.Message}";
-    //         ToastService.Error(errorMessage);
-    //     }
-    //     finally
-    //     {
-    //         isLoading = false;
-    //         StateHasChanged();
-    //     }
-    // }
     private async Task GenerateEInvoice()
     {
         if (!SelectedBills.Any())
@@ -622,7 +386,6 @@
 
         try
         {
-            // ✅ Load validated config (auto token-refresh handled)
             var config = await GetValidAuthTokenAsync();
             if (config == null)
                 return;
@@ -636,7 +399,6 @@
             {
                 try
                 {
-                    // Load Invoice JSON
                     var json = await BillService.GetEInvoiceRawAsync(bill.BillId);
                     if (string.IsNullOrWhiteSpace(json))
                     {
@@ -645,10 +407,8 @@
                         continue;
                     }
 
-                    // API URL
                     string url = $"{config.BaseUrl.TrimEnd('/')}/eicore/dec/v1.03/Invoice?QrCodeSize=250";
 
-                    // Prepare Request
                     var req = new HttpRequestMessage(HttpMethod.Post, url);
                     req.Headers.Add("aspid", config.AspUserId);
                     req.Headers.Add("password", config.Password);
@@ -674,7 +434,6 @@
                         continue;
                     }
 
-                    // Check status
                     var status = SafeGet(parsed, "Status");
                     if (status != "1")
                     {
@@ -684,7 +443,6 @@
                         continue;
                     }
 
-                    // Get the Data node
                     if (!parsed.TryGetProperty("Data", out var dataNode))
                     {
                         ToastService.Warning($"Invalid response for Bill #{bill.BillNo}: Data not found");
@@ -692,7 +450,6 @@
                         continue;
                     }
 
-                    // Data is a JSON string, so parse it again
                     JsonElement data;
                     try
                     {
@@ -706,7 +463,6 @@
                         continue;
                     }
 
-                    // Now extract the fields
                     var irn = SafeGet(data, "Irn");
                     var ackNo = SafeGet(data, "AckNo");
                     var ackDt = SafeGet(data, "AckDt");
@@ -746,13 +502,11 @@
                 }
             }
 
-            // Combine all responses
             if (allResponses.Any())
             {
                 eInvoiceJson = string.Join("\n\n// ========================================\n\n", allResponses);
             }
 
-            // Final summary
             generatedIrn = string.Join("\n", generatedIrns);
 
             if (successCount > 0)
@@ -779,10 +533,6 @@
         }
     }
 
-
-    // --------------------------------------------------
-    // ERROR PARSER
-    // --------------------------------------------------
     private string ExtractError(JsonElement parsed)
     {
         try
@@ -799,9 +549,6 @@
         return "Unknown error";
     }
 
-    // --------------------------------------------------
-    // COPY TO CLIPBOARD
-    // --------------------------------------------------
     private async Task CopyToClipboard()
     {
         try
