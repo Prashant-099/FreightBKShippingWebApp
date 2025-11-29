@@ -206,11 +206,15 @@
         _ = LoadBillsAsync();
 
     }
-    private void ClearSelection()
-{
-    SelectedBills.Clear();
-    StateHasChanged();
-}
+    private async Task ClearSelection()
+    {
+        SelectedBills.Clear();
+        if (MyGrid != null)
+        {
+           MyGrid.ClearSelection();
+        }
+        await InvokeAsync(StateHasChanged);
+    }
     // ✅ Check if user is admin
     private async Task CheckUserRole()
     {
@@ -378,9 +382,10 @@
 
     }
 
-    private void OnSelectedBillsChanged(IEnumerable<object> bills)
+    private async Task OnSelectedBillsChanged(IEnumerable<object> bills)
     {
-        SelectedBills = bills.Cast<Bill>().ToList();
+        SelectedBills = bills?.Cast<Bill>().ToList() ?? new List<Bill>();
+        await InvokeAsync(StateHasChanged);
     }
 
     private void OnCreateNew(ToolbarItemClickEventArgs e)
