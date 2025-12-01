@@ -71,69 +71,126 @@
         IsLoading = false;
     }
 } *@
+@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Services
 
 @inject ChatwayService ChatwayService
 @inject SendWpMailService SendWpMailService
 @inject ToasteService ToasteService
 @inject LoadingService LoadingService
-@inject ChatwayService ChatwayService
 @inject WpMailConfigService WpMailConfigService
+
+<style>
+    .readonly-value {
+        background-color: #f5f5f5;
+        border: 1px solid #ccc;
+        padding: 8px 10px;
+        border-radius: 4px;
+        font-size: 1rem;
+        color: #333;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .credits-badge {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 5px 10px;
+        border-radius: 8px;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-weight: 600;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        margin-bottom: 10px;
+    }
+
+        .credits-badge i {
+            font-size: 1.2rem;
+        }
+
+    .low-credit-warning {
+        background-color: #fff3cd;
+        border: 1px solid #ffc107;
+        border-radius: 8px;
+        padding: 15px;
+        margin: 20px 0;
+        text-align: center;
+    }
+
+        .low-credit-warning p {
+            margin: 10px 0;
+            color: #856404;
+        }
+
+        .low-credit-warning b {
+            color: #d63384;
+            font-size: 1.1rem;
+        }
+
+    .popup-footer-buttons {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+    }
+
+    .form-layout-container {
+        padding: 10px 0;
+    }
+</style>
 
 <DxPopup @bind-Visible="IsVisible"
          ShowFooter="true"
          HeaderText="Send File via WhatsApp"
-         Width="700px"
+         MaxWidth="700px"
          CloseOnOutsideClick="false"
          ShowCloseButton="true"
+         Scrollable="true"
          HorizontalAlignment="HorizontalAlignment.Center"
-         VerticalAlignment="VerticalAlignment.Center" Closing="OnClose">
+         VerticalAlignment="VerticalAlignment.Center"
+         Closing="OnClose">
 
     <BodyContentTemplate Context="ctxsent">
-        <DxFormLayout>
-            <DxFormLayoutItem Caption="Whataspp Credit " ColSpanMd="12">
-            </DxFormLayoutItem>
-            @* <DxFormLayoutItem Caption="User Name" ColSpanMd="12">
-                <DxTextBox @bind-Text="UserName" ReadOnly="true" />
-            </DxFormLayoutItem>
+        <div class="form-layout-container">
+            <!-- Display total credits / balance -->
+            <div class="credits-badge">
+                <i class="bi bi-wallet2"></i>
+                <span>Available Credits: @totalwpcredit</span>
+            </div>
 
-            <DxFormLayoutItem Caption="Token" ColSpanMd="12">
-                <DxTextBox @bind-Text="Token" ReadOnly="true" />
-            </DxFormLayoutItem> *@
+            <DxFormLayout>
+                <DxFormLayoutItem Caption="Country Code" ColSpanMd="3">
+                    <DxTextBox @bind-Text="CountryCode" />
+                </DxFormLayoutItem>
 
-            <DxFormLayoutItem Caption="Country Code" ColSpanMd="3">
-                <DxTextBox @bind-Text="CountryCode" />
-            </DxFormLayoutItem>
+                <DxFormLayoutItem Caption="Mobile Numbers" ColSpanMd="9">
+                    <DxMemo @bind-Text="PhoneNumbersText" Rows="1"
+                            NullText="Enter numbers separated by comma or newline" />
+                </DxFormLayoutItem>
 
-            <DxFormLayoutItem Caption="Mobile Numbers" ColSpanMd="9">
-                <DxMemo @bind-Text="PhoneNumbersText" Rows="1"
-                        NullText="Enter numbers separated by comma or newline" />
-            </DxFormLayoutItem>
+                <DxFormLayoutItem Caption="Message" ColSpanMd="12">
+                    <DxMemo @bind-Text="Message" Rows="3" />
+                </DxFormLayoutItem>
 
-            <DxFormLayoutItem Caption="Message" ColSpanMd="12">
-                <DxMemo @bind-Text="Message" Rows="3" />
-            </DxFormLayoutItem>
-
-            @* <DxFormLayoutItem Caption="File URL" ColSpanMd="12">
-                <DxTextBox @bind-Text="FileUrl" ReadOnly="true" />
-            </DxFormLayoutItem> *@
-
-            <DxFormLayoutItem Caption="File Name" ColSpanMd="12">
-                <DxTextBox @bind-Text="FileName" ReadOnly="true" />
-            </DxFormLayoutItem>
-        </DxFormLayout>
+                <DxFormLayoutItem Caption="File Name" ColSpanMd="12">
+                    <DxTextBox @bind-Text="FileName" ReadOnly="true" />
+                </DxFormLayoutItem>
+            </DxFormLayout>
+        </div>
     </BodyContentTemplate>
 
     <FooterContentTemplate>
-        <DxButton Text="Send File" Click="SendFile" RenderStyle="ButtonRenderStyle.Primary"
-                  Enabled="@IsSendEnabled" />
-
-        <DxButton Text="Close" Click="OnClose" RenderStyle="ButtonRenderStyle.Danger" />
+        <div class="popup-footer-buttons">
+            <DxButton Text="Send File" Click="SendFile" RenderStyle="ButtonRenderStyle.Primary"
+                      Enabled="@IsSendEnabled" />
+            <DxButton Text="Close" Click="OnClose" RenderStyle="ButtonRenderStyle.Secondary" />
+        </div>
     </FooterContentTemplate>
 </DxPopup>
 
 <DxPopup @bind-Visible="IsVisibleCreditPopup"
          ShowFooter="true"
-         HeaderText="Low WhatsApp Credits"
+         HeaderText="⚠️ Low WhatsApp Credits"
          Width="500px"
          CloseOnOutsideClick="false"
          ShowCloseButton="true"
@@ -141,21 +198,25 @@
          VerticalAlignment="VerticalAlignment.Center">
 
     <BodyContentTemplate>
-        <div style="text-align:center; padding:20px;">
-            <p style="font-size:16px;">
-                ⚠️ You have <b>@totalwpcredit</b> WhatsApp credits left.<br />
-                Please buy more credits to continue sending messages.
+        <div class="low-credit-warning">
+            <i class="bi bi-exclamation-triangle" style="font-size: 3rem; color: #ffc107;"></i>
+            <p style="font-size:16px; margin-top: 15px;">
+                You have <b>@totalwpcredit</b> WhatsApp credits remaining.<br />
+                Please purchase additional credits to continue sending messages.
             </p>
-            <p style="margin-top:10px;">Call or WhatsApp us at <b>@SupportNumber</b> to recharge.</p>
+            <p style="margin-top:15px;">
+                <i class="bi bi-telephone-fill"></i> Contact us at <b>@SupportNumber</b> to recharge.
+            </p>
         </div>
     </BodyContentTemplate>
 
     <FooterContentTemplate>
-        <DxButton Text="Close" RenderStyle="ButtonRenderStyle.Secondary" Click="() => IsVisibleCreditPopup = false" />
+        <DxButton Text="Close" RenderStyle="ButtonRenderStyle.Secondary"
+                  Click="() => IsVisibleCreditPopup = false" />
     </FooterContentTemplate>
 </DxPopup>
+
 @code {
-    //2nd popup of meassge!!!
     List<WpMailConfig> Configs = new();
 
     private bool IsVisibleCreditPopup { get; set; }
@@ -168,7 +229,6 @@
     {
         try
         {
-            // Example: Call your service to get remaining credits
             Configs = (await WpMailConfigService.GetAllAsync()).ToList();
             var config = (await SendWpMailService.GetByCompanyAsync())?.FirstOrDefault();
             if (config != null)
@@ -195,12 +255,10 @@
                 totalwpcredit = "No creds";
             }
 
-
-            if (int.TryParse(totalwpcredit, out var credits) && credits < 2000)
+            if (int.TryParse(totalwpcredit, out var credits) && credits < 100)
             {
                 IsVisibleCreditPopup = true;
             }
-
         }
         catch (Exception ex)
         {
@@ -208,7 +266,6 @@
         }
     }
 
-    //
     [Parameter] public bool IsVisible { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
     [Parameter] public string DefaultFileUrl { get; set; }
@@ -223,7 +280,7 @@
     private string FileName { get; set; }
     private string UserName { get; set; }
     private string Token { get; set; }
-   
+
     protected override async Task OnInitializedAsync()
     {
         var config = (await SendWpMailService.GetByCompanyAsync())?.FirstOrDefault();
@@ -232,8 +289,6 @@
             UserName = config.SendWpMailUserName;
             Token = config.SendWpMailWpToken;
         }
-
-        // var totalcrdits = await ChatwayService.CheckBalanceAsync(UserName, Token);
     }
 
     protected override void OnParametersSet()
@@ -248,9 +303,9 @@
     {
         var numbers = PhoneNumbersText
             .Split(new[] { ',', '\n', ';' }, StringSplitOptions.RemoveEmptyEntries)
-            .Select(n => new string(n.Where(char.IsDigit).ToArray())) // digits only
-            .Where(n => n.Length == 10) // sirf exact 10 digit wale numbers
-            .Select(n => "91" + n) // backend ke liye 91 prepend
+            .Select(n => new string(n.Where(char.IsDigit).ToArray()))
+            .Where(n => n.Length == 10)
+            .Select(n => "91" + n)
             .ToList();
 
         return numbers;
@@ -260,18 +315,32 @@
                                   && !string.IsNullOrEmpty(FileUrl)
                                   && !string.IsNullOrEmpty(FileName);
 
-
     private async Task SendFile()
     {
         var numbers = GetPreparedNumbers();
-        if (!numbers.Any() || string.IsNullOrEmpty(FileUrl) || string.IsNullOrEmpty(FileName))
-            return; // simple validation
+
+        if (!numbers.Any())
+        {
+            ToasteService.Warning("Please enter at least one valid 10-digit mobile number.");
+            return;
+        }
+
+        if (string.IsNullOrEmpty(FileUrl))
+        {
+            ToasteService.Warning("File URL is required.");
+            return;
+        }
+
+        if (string.IsNullOrEmpty(FileName))
+        {
+            ToasteService.Warning("File name is required.");
+            return;
+        }
 
         LoadingService.Show();
 
         try
         {
-            // Send numbers as comma-separated to API
             var response = await ChatwayService.SendFileAsync(
                 username: UserName,
                 number: string.Join(",", numbers),
@@ -280,19 +349,32 @@
                 fileUrl: FileUrl,
                 fileName: FileName
             );
+
+            if (response.Success)
+            {
+                ToasteService.Success($"✅ File sent successfully to {numbers.Count} number(s)!");
+
+                // Close popup and reset fields
+                IsVisible = false;
+                PhoneNumbersText = "";
+                Message = "Here is the document you requested.";
+                FileUrl = "";
+                FileName = "";
+
+                await OnClose.InvokeAsync();
+            }
+            else
+            {
+                ToasteService.Error($"❌ Failed to send file: {response.Message ?? "Unknown error"}");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToasteService.Error($"❌ Error sending file: {ex.Message}");
         }
         finally
         {
             LoadingService.Hide();
         }
-                
     }
-
-    // private async Task ClosePopup()
-    // {
-    //     IsVisible = false;
-
-    //     PhoneNumbersText = Message = FileUrl = FileName = "";
-    //     await OnClose.InvokeAsync();
-    // }
 }

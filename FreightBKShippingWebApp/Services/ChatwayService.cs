@@ -1,18 +1,31 @@
 ﻿namespace FreightBKShippingWebApp.Services
 {
     using System;
+    using System.Collections.Generic;
     using System.Net.Http;
     using System.Text.Json;
     using System.Threading.Tasks;
 
-    // Model for API response
+    // MODEL FOR SEND FILE API
     public class ChatwayResponse
     {
         public string Status { get; set; }
         public string Message { get; set; }
         public string Number { get; set; }
 
-        public bool Success => Status?.Equals("success", StringComparison.OrdinalIgnoreCase) == true;
+        public bool Success =>
+            Status?.Equals("success", StringComparison.OrdinalIgnoreCase) == true;
+    }
+
+    // MODEL FOR BALANCE API
+    public class ChatwayBalanceResponse
+    {
+        public string Status { get; set; }
+        public string Message { get; set; }
+        public decimal? Balance { get; set; }
+
+        public bool Success =>
+            Status?.Equals("success", StringComparison.OrdinalIgnoreCase) == true;
     }
 
     public class ChatwayService
@@ -25,6 +38,9 @@
             _httpClient = httpClient;
         }
 
+        // ######################################################################
+        //  FIXED: SEND FILE FUNCTION
+        // ######################################################################
         public async Task<ChatwayResponse> SendFileAsync(
             string username,
             string number,
@@ -37,7 +53,6 @@
 
             try
             {
-                // Build query params
                 var requestUrl = $"{_baseUrl}send-file?username={Uri.EscapeDataString(username)}" +
                                  $"&number={Uri.EscapeDataString(number)}" +
                                  $"&message={Uri.EscapeDataString(message)}" +
@@ -49,34 +64,61 @@
                 response.EnsureSuccessStatusCode();
 
                 responseContent = await response.Content.ReadAsStringAsync();
-                Console.WriteLine(responseContent); // Inspect API response
+                Console.WriteLine("RAW RESPONSE: " + responseContent);
 
-                // Deserialize JSON into single object
-                var result = JsonSerializer.Deserialize<ChatwayResponse>(
-                    responseContent,
-                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-                 
-                // If API returns null or invalid object, return error
-                return result ?? new ChatwayResponse
+                string trim = responseContent.TrimStart();
+
+                var jsonOptions = new JsonSerializerOptions
                 {
-                    Status = "error",
-                    Message = "Invalid response from API",
-                    Number = number
+                    PropertyNameCaseInsensitive = true
                 };
-            }
-            catch (JsonException jex)
-            {
-                // Handle JSON parse errors
+
+
+                // CASE 1: API RETURNS ARRAY
+                if (trim.StartsWith("["))
+                {
+                    var list = JsonSerializer.Deserialize<List<ChatwayResponse>>(responseContent, jsonOptions);
+                    return list?.Count > 0
+                        ? list[0]
+                        : new ChatwayResponse
+                        {
+                            Status = "error",
+                            Message = "API returned empty array.",
+                            Number = number
+                        };
+                }
+
+                // CASE 2: API RETURNS OBJECT
+                if (trim.StartsWith("{"))
+                {
+                    var obj = JsonSerializer.Deserialize<ChatwayResponse>(responseContent, jsonOptions);
+                    return obj ?? new ChatwayResponse
+                    {
+                        Status = "error",
+                        Message = "API returned null object.",
+                        Number = number
+                    };
+                }
+
+                // CASE 3: NON-JSON RESPONSE
                 return new ChatwayResponse
                 {
                     Status = "error",
-                    Message = $"JSON parse error: {jex.Message}. Response: {responseContent}",
+                    Message = "API returned non-JSON response: " + responseContent,
+                    Number = number
+                };
+            }
+            catch (JsonException ex)
+            {
+                return new ChatwayResponse
+                {
+                    Status = "error",
+                    Message = $"JSON parse error: {ex.Message}. RAW: {responseContent}",
                     Number = number
                 };
             }
             catch (Exception ex)
             {
-                // Handle any other exceptions
                 return new ChatwayResponse
                 {
                     Status = "error",
@@ -85,7 +127,6 @@
                 };
             }
         }
-
         public class ChatwayBalanceResponse
         {
             public string Status { get; set; }
@@ -132,6 +173,18 @@
             }
         }
 
-
     }
 }
+
+        // ######################################################################
+        //  FIXED: CHECK BALANCE FUNCTION
+        // ######################################################################
+
+
+
+
+
+
+
+
+
