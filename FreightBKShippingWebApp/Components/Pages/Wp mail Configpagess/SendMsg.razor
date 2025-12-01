@@ -1,0 +1,298 @@
+﻿@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Services
+
+
+@* @page "/send-file"
+@inject BlazorApp.Services.ChatwayService ChatwayService
+
+<h3 class="mb-3">Send File via WhatsApp</h3>
+
+<div class="card p-3 shadow">
+    <div class="mb-3">
+        <label class="form-label">Mobile Number (with country code)</label>
+        <input class="form-control" @bind="Number" placeholder="919876543210" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Message</label>
+        <textarea class="form-control" @bind="Message" rows="2"></textarea>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">File URL</label>
+        <input class="form-control" @bind="FileUrl" placeholder="https://example.com/mydoc.pdf" />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">File Name</label>
+        <input class="form-control" @bind="FileName" placeholder="mydoc.pdf" />
+    </div>
+
+    <button class="btn btn-primary" @onclick="SendFile" disabled="@IsLoading">
+        @(IsLoading ? "Sending..." : "Send File")
+    </button>
+</div>
+
+@if (!string.IsNullOrEmpty(ResultMessage))
+{
+    <div class="alert mt-3 @(IsSuccess ? "alert-success" : "alert-danger")">
+        @ResultMessage
+    </div>
+}
+
+@code {
+    private string Number { get; set; }
+    private string Message { get; set; }
+    private string FileUrl { get; set; }
+    private string FileName { get; set; }
+
+    private bool IsLoading { get; set; }
+    private string ResultMessage { get; set; }
+    private bool IsSuccess { get; set; }
+
+    private async Task SendFile()
+    {
+        IsLoading = true;
+        ResultMessage = string.Empty;
+
+        var response = await ChatwayService.SendFileAsync(
+            username: "YS00002",  // Or load from config
+            number: Number,
+            message: Message,
+            token: "UE5sbEY1RjJXN2IzN0ZrbFFlenhFdz09",  // Store this securely (not hardcoded)
+            fileUrl: FileUrl,
+            fileName: FileName);
+
+        IsSuccess = response.Success;
+        ResultMessage = response.Success
+            ? $"✅ Sent: {response.Message}"
+            : $"❌ Failed: {response.Message ?? response.Message}";
+
+        IsLoading = false;
+    }
+} *@
+
+@inject ChatwayService ChatwayService
+@inject SendWpMailService SendWpMailService
+@inject ToasteService ToasteService
+@inject LoadingService LoadingService
+@inject ChatwayService ChatwayService
+@inject WpMailConfigService WpMailConfigService
+
+<DxPopup @bind-Visible="IsVisible"
+         ShowFooter="true"
+         HeaderText="Send File via WhatsApp"
+         Width="700px"
+         CloseOnOutsideClick="false"
+         ShowCloseButton="true"
+         HorizontalAlignment="HorizontalAlignment.Center"
+         VerticalAlignment="VerticalAlignment.Center" Closing="OnClose">
+
+    <BodyContentTemplate Context="ctxsent">
+        <DxFormLayout>
+            <DxFormLayoutItem Caption="Whataspp Credit " ColSpanMd="12">
+            </DxFormLayoutItem>
+            @* <DxFormLayoutItem Caption="User Name" ColSpanMd="12">
+                <DxTextBox @bind-Text="UserName" ReadOnly="true" />
+            </DxFormLayoutItem>
+
+            <DxFormLayoutItem Caption="Token" ColSpanMd="12">
+                <DxTextBox @bind-Text="Token" ReadOnly="true" />
+            </DxFormLayoutItem> *@
+
+            <DxFormLayoutItem Caption="Country Code" ColSpanMd="3">
+                <DxTextBox @bind-Text="CountryCode" />
+            </DxFormLayoutItem>
+
+            <DxFormLayoutItem Caption="Mobile Numbers" ColSpanMd="9">
+                <DxMemo @bind-Text="PhoneNumbersText" Rows="1"
+                        NullText="Enter numbers separated by comma or newline" />
+            </DxFormLayoutItem>
+
+            <DxFormLayoutItem Caption="Message" ColSpanMd="12">
+                <DxMemo @bind-Text="Message" Rows="3" />
+            </DxFormLayoutItem>
+
+            @* <DxFormLayoutItem Caption="File URL" ColSpanMd="12">
+                <DxTextBox @bind-Text="FileUrl" ReadOnly="true" />
+            </DxFormLayoutItem> *@
+
+            <DxFormLayoutItem Caption="File Name" ColSpanMd="12">
+                <DxTextBox @bind-Text="FileName" ReadOnly="true" />
+            </DxFormLayoutItem>
+        </DxFormLayout>
+    </BodyContentTemplate>
+
+    <FooterContentTemplate>
+        <DxButton Text="Send File" Click="SendFile" RenderStyle="ButtonRenderStyle.Primary"
+                  Enabled="@IsSendEnabled" />
+
+        <DxButton Text="Close" Click="OnClose" RenderStyle="ButtonRenderStyle.Danger" />
+    </FooterContentTemplate>
+</DxPopup>
+
+<DxPopup @bind-Visible="IsVisibleCreditPopup"
+         ShowFooter="true"
+         HeaderText="Low WhatsApp Credits"
+         Width="500px"
+         CloseOnOutsideClick="false"
+         ShowCloseButton="true"
+         HorizontalAlignment="HorizontalAlignment.Center"
+         VerticalAlignment="VerticalAlignment.Center">
+
+    <BodyContentTemplate>
+        <div style="text-align:center; padding:20px;">
+            <p style="font-size:16px;">
+                ⚠️ You have <b>@totalwpcredit</b> WhatsApp credits left.<br />
+                Please buy more credits to continue sending messages.
+            </p>
+            <p style="margin-top:10px;">Call or WhatsApp us at <b>@SupportNumber</b> to recharge.</p>
+        </div>
+    </BodyContentTemplate>
+
+    <FooterContentTemplate>
+        <DxButton Text="Close" RenderStyle="ButtonRenderStyle.Secondary" Click="() => IsVisibleCreditPopup = false" />
+    </FooterContentTemplate>
+</DxPopup>
+@code {
+    //2nd popup of meassge!!!
+    List<WpMailConfig> Configs = new();
+
+    private bool IsVisibleCreditPopup { get; set; }
+    private int RemainingCredits { get; set; }
+    private string SupportNumber { get; set; } = "+91-9876543210";
+    private string BalnaceToken { get; set; }
+    private string totalwpcredit = "Loading...";
+
+    public async Task CheckCreditsAsync()
+    {
+        try
+        {
+            // Example: Call your service to get remaining credits
+            Configs = (await WpMailConfigService.GetAllAsync()).ToList();
+            var config = (await SendWpMailService.GetByCompanyAsync())?.FirstOrDefault();
+            if (config != null)
+            {
+                UserName = config.SendWpMailUserName;
+                BalnaceToken = config.SendWpMailWpBalanceToken;
+            }
+
+            if (!string.IsNullOrEmpty(UserName) && !string.IsNullOrEmpty(BalnaceToken))
+            {
+                var balanceResponse = await ChatwayService.CheckBalanceAsync(UserName, BalnaceToken);
+
+                if (!string.IsNullOrEmpty(balanceResponse))
+                {
+                    totalwpcredit = balanceResponse;
+                }
+                else
+                {
+                    totalwpcredit = "Error";
+                }
+            }
+            else
+            {
+                totalwpcredit = "No creds";
+            }
+
+
+            if (int.TryParse(totalwpcredit, out var credits) && credits < 2000)
+            {
+                IsVisibleCreditPopup = true;
+            }
+
+        }
+        catch (Exception ex)
+        {
+            ToasteService.Warning($"Unable to check WhatsApp credits: {ex.Message}");
+        }
+    }
+
+    //
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public string DefaultFileUrl { get; set; }
+    [Parameter] public string DefaultFileName { get; set; }
+    [Parameter] public string DefaultNumber { get; set; }
+    [Parameter] public string DefaultMessage { get; set; }
+
+    private string CountryCode { get; set; } = "91";
+    private string PhoneNumbersText { get; set; } = "";
+    private string Message { get; set; } = "Here is the document you requested.";
+    private string FileUrl { get; set; }
+    private string FileName { get; set; }
+    private string UserName { get; set; }
+    private string Token { get; set; }
+   
+    protected override async Task OnInitializedAsync()
+    {
+        var config = (await SendWpMailService.GetByCompanyAsync())?.FirstOrDefault();
+        if (config != null)
+        {
+            UserName = config.SendWpMailUserName;
+            Token = config.SendWpMailWpToken;
+        }
+
+        // var totalcrdits = await ChatwayService.CheckBalanceAsync(UserName, Token);
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrEmpty(DefaultNumber)) PhoneNumbersText = DefaultNumber;
+        if (!string.IsNullOrEmpty(DefaultFileUrl)) FileUrl = DefaultFileUrl;
+        if (!string.IsNullOrEmpty(DefaultFileName)) FileName = DefaultFileName;
+        if (!string.IsNullOrEmpty(DefaultMessage)) Message = DefaultMessage;
+    }
+
+    private List<string> GetPreparedNumbers()
+    {
+        var numbers = PhoneNumbersText
+            .Split(new[] { ',', '\n', ';' }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(n => new string(n.Where(char.IsDigit).ToArray())) // digits only
+            .Where(n => n.Length == 10) // sirf exact 10 digit wale numbers
+            .Select(n => "91" + n) // backend ke liye 91 prepend
+            .ToList();
+
+        return numbers;
+    }
+
+    private bool IsSendEnabled => GetPreparedNumbers().Count > 0
+                                  && !string.IsNullOrEmpty(FileUrl)
+                                  && !string.IsNullOrEmpty(FileName);
+
+
+    private async Task SendFile()
+    {
+        var numbers = GetPreparedNumbers();
+        if (!numbers.Any() || string.IsNullOrEmpty(FileUrl) || string.IsNullOrEmpty(FileName))
+            return; // simple validation
+
+        LoadingService.Show();
+
+        try
+        {
+            // Send numbers as comma-separated to API
+            var response = await ChatwayService.SendFileAsync(
+                username: UserName,
+                number: string.Join(",", numbers),
+                message: Message,
+                token: Token,
+                fileUrl: FileUrl,
+                fileName: FileName
+            );
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+                
+    }
+
+    // private async Task ClosePopup()
+    // {
+    //     IsVisible = false;
+
+    //     PhoneNumbersText = Message = FileUrl = FileName = "";
+    //     await OnClose.InvokeAsync();
+    // }
+}

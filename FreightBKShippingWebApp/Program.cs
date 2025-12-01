@@ -90,7 +90,12 @@ builder.Services.AddScoped<FreightBKShippingWebApp.Services.PdfReaderAndHelperSe
 builder.Services.AddScoped<JobDataCreationService>();
 builder.Services.AddScoped<JobBuilderService>();
 
-
+//wpmail send dhruv
+builder.Services.AddScoped<ChatwayService>();
+builder.Services.AddScoped<SendWpMailService>();
+builder.Services.AddScoped<WpMailConfigService>();
+builder.Services.AddScoped<Sentwpcerti>();
+builder.Services.AddScoped<BillUploadService>();
 //
 builder.Services.AddScoped<AuthTokenService>();
 
@@ -103,14 +108,14 @@ builder.Services.AddScoped<AuthTokenService>();
 //{
 //    client.BaseAddress = new Uri("https://localhost:5003/");
 //});
-//builder.Services.AddHttpClient<ApiClient>(client =>
-//{
-//    client.BaseAddress = new Uri("https://localhost:5003/");
-//});
 builder.Services.AddHttpClient<ApiClient>(client =>
 {
-    client.BaseAddress = new Uri("https://apihost.freightbook.in/");
+    client.BaseAddress = new Uri("https://localhost:5003/");
 });
+//builder.Services.AddHttpClient<ApiClient>(client =>
+//{
+//    client.BaseAddress = new Uri("https://apihost.freightbook.in/");
+//});
 builder.Services.AddLocalization();
 builder.Services.AddControllers();
 var app = builder.Build();

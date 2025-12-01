@@ -21,96 +21,78 @@
          HorizontalAlignment="HorizontalAlignment.Center"
          VerticalAlignment="VerticalAlignment.Center">
 
+    <!-- SELECTED BILLS -->
+    <DxFormLayout CssClass="mb-3">
+        <DxFormLayoutItem Caption="Selected Bills" ColSpanMd="12">
+            @if (SelectedBills?.Any() == true)
+            {
+                <div class="selected-bills-box">
+                    @foreach (var bill in SelectedBills)
+                    {
+                        <span class="badge bg-primary me-2 mb-1 ">
+                            Bill - @bill.BillNo - ₹@bill.BillAmount.ToString("N2")
+                        </span>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="text-muted text-center py-2">
+                    <small>No bills selected</small>
+                </div>
+            }
+        </DxFormLayoutItem>
+    </DxFormLayout>
 
-
-        <!-- SELECTED BILLS -->
+    <!-- JSON PREVIEW -->
+    @if (!string.IsNullOrWhiteSpace(jsonPreview))
+    {
         <DxFormLayout CssClass="mb-3">
-            <DxFormLayoutItem Caption="Selected Bills" ColSpanMd="12">
-                @if (SelectedBills?.Any() == true)
-                {
-                    <div class="selected-bills-box">
-                        @foreach (var bill in SelectedBills)
-                        {
-                            <span class="badge bg-primary me-2 mb-1 ">
-                                Bill - @bill.BillNo - ₹@bill.BillAmount.ToString("N2")
-                            </span>
-                        }
+            <DxFormLayoutItem Caption="JSON Preview" ColSpanMd="12">
+                <Template>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <small class="text-muted">Request Payload</small>
+                        <DxButton Text="Copy"
+                                  IconCssClass="bi bi-clipboard"
+                                  RenderStyle="ButtonRenderStyle.Secondary"
+                                  SizeMode="SizeMode.Small"
+                                  Click="CopyToClipboard" />
                     </div>
-                }
-                else
-                {
-                    <div class="text-muted text-center py-2">
-                        <small>No bills selected</small>
-                    </div>
-                }
-            </DxFormLayoutItem>
-        </DxFormLayout>
-
-        <!-- JSON PREVIEW -->
-        @if (!string.IsNullOrWhiteSpace(jsonPreview))
-        {
-            <DxFormLayout CssClass="mb-3">
-                <DxFormLayoutItem Caption="JSON Preview" ColSpanMd="12">
-                    <Template>
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <small class="text-muted">Request Payload</small>
-                            <DxButton Text="Copy" 
-                                    IconCssClass="bi bi-clipboard"
-                                    RenderStyle="ButtonRenderStyle.Secondary"
-                                    SizeMode="SizeMode.Small"
-                                    Click="CopyToClipboard" />
-                        </div>
-                        <DxMemo Text="@jsonPreview"
-                                ReadOnly="true"
-                                Rows="8"
-                                CssClass="code-preview" />
-                    </Template>
-                </DxFormLayoutItem>
-            </DxFormLayout>
-        }
-
-        <!-- API RESPONSE -->
-        @if (!string.IsNullOrWhiteSpace(eInvoiceJson))
-        {
-            <DxFormLayout CssClass="mb-3">
-                <DxFormLayoutItem Caption="API Response" ColSpanMd="12">
-                    <DxMemo Text="@eInvoiceJson"
+                    <DxMemo Text="@jsonPreview"
                             ReadOnly="true"
                             Rows="8"
                             CssClass="code-preview" />
-                </DxFormLayoutItem>
-            </DxFormLayout>
-        }
-
-        <!-- ERROR MESSAGE -->
-    @if (!string.IsNullOrWhiteSpace(errorMessage))
-    {
-        <div class="alert alert-danger alert-dismissible fade show mb-3 p-3 shadow-sm"
-             role="alert" style="font-size: 0.95rem;">
-
-            <strong>Error:</strong>
-            <div class="mt-1">@errorMessage</div>
-
-            <button type="button"
-                    class="btn-close"
-                    style="transform: scale(1.2);"
-                    @onclick="() => errorMessage = string.Empty">
-            </button>
-        </div>
+                </Template>
+            </DxFormLayoutItem>
+        </DxFormLayout>
     }
 
-        <!-- SUCCESS IRN -->
+    <!-- API RESPONSE -->
+    @if (!string.IsNullOrWhiteSpace(eInvoiceJson))
+    {
+        <DxFormLayout CssClass="mb-3">
+            <DxFormLayoutItem Caption="API Response" ColSpanMd="12">
+                <DxMemo Text="@eInvoiceJson"
+                        ReadOnly="true"
+                        Rows="8"
+                        CssClass="code-preview" />
+            </DxFormLayoutItem>
+        </DxFormLayout>
+    }
+
+    <!-- SUCCESS MESSAGE -->
     @if (!string.IsNullOrWhiteSpace(generatedIrn))
     {
         <div class="alert alert-success alert-dismissible fade show mb-3 p-3 shadow-sm"
              role="alert" style="font-size: 0.95rem;">
 
-            <strong>IRN Generated:</strong>
+            <div class="d-flex align-items-center mb-2">
+                <i class="bi bi-check-circle-fill me-2" style="font-size: 1.2rem;"></i>
+                <strong>IRN Generated Successfully!</strong>
+            </div>
 
             <pre class="mt-2 mb-0 p-2 bg-light rounded small text-break"
-                 style="white-space: pre-wrap;">
-                @generatedIrn
-    </pre>
+                 style="white-space: pre-wrap; max-height: 200px; overflow-y: auto;">@generatedIrn</pre>
 
             <button type="button"
                     class="btn-close"
@@ -120,7 +102,78 @@
         </div>
     }
 
-        <!-- LOADING -->
+    <!-- ERROR MESSAGE -->
+    @if (errorMessages.Any())
+    {
+        <div class="alert alert-danger alert-dismissible fade show mb-3 p-3 shadow-sm"
+             role="alert" style="font-size: 0.95rem;">
+
+            <div class="d-flex align-items-center mb-2">
+                <i class="bi bi-exclamation-triangle-fill me-2" style="font-size: 1.2rem;"></i>
+                <strong>Error(s) Occurred</strong>
+            </div>
+
+            <div class="mt-2" style="max-height: 250px; overflow-y: auto;">
+                @foreach (var error in errorMessages)
+                {
+                    <div class="error-item p-2 mb-2 bg-light rounded">
+                        <div class="fw-bold text-danger small">
+                            <i class="bi bi-x-circle me-1"></i>
+                            @error.BillInfo
+                        </div>
+                        <div class="text-dark small mt-1 ms-3">
+                            @error.Message
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(error.Details))
+                        {
+                            <div class="text-muted small mt-1 ms-3" style="font-size: 0.85rem;">
+                                <em>@error.Details</em>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+
+            <button type="button"
+                    class="btn-close"
+                    style="transform: scale(1.2);"
+                    @onclick="ClearErrors">
+            </button>
+        </div>
+    }
+
+    <!-- WARNING MESSAGE -->
+    @if (warningMessages.Any())
+    {
+        <div class="alert alert-warning alert-dismissible fade show mb-3 p-3 shadow-sm"
+             role="alert" style="font-size: 0.95rem;">
+
+            <div class="d-flex align-items-center mb-2">
+                <i class="bi bi-exclamation-circle-fill me-2" style="font-size: 1.2rem;"></i>
+                <strong>Warning(s)</strong>
+            </div>
+
+            <div class="mt-2" style="max-height: 200px; overflow-y: auto;">
+                @foreach (var warning in warningMessages)
+                {
+                    <div class="warning-item p-2 mb-2 bg-light rounded">
+                        <div class="text-dark small">
+                            <i class="bi bi-info-circle me-1"></i>
+                            @warning
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <button type="button"
+                    class="btn-close"
+                    style="transform: scale(1.2);"
+                    @onclick="ClearWarnings">
+            </button>
+        </div>
+    }
+
+    <!-- LOADING -->
     @if (isLoading)
     {
         <div class="text-center py-3 mb-3">
@@ -129,29 +182,27 @@
         </div>
     }
 
+    <!-- ACTION BUTTONS -->
+    <div class="d-flex gap-2 justify-content-end flex-wrap">
+        <DxButton Text="Preview JSON"
+                  IconCssClass="bi bi-eye"
+                  RenderStyle="ButtonRenderStyle.Primary"
+                  RenderStyleMode="ButtonRenderStyleMode.Outline"
+                  Click="PreviewJson"
+                  Enabled="@(!isLoading)" />
 
-        <!-- ACTION BUTTONS -->
-        <div class="d-flex gap-2 justify-content-end flex-wrap">
-            <DxButton Text="Preview JSON"
-                      IconCssClass="bi bi-eye"
-                      RenderStyle="ButtonRenderStyle.Primary"
-                      RenderStyleMode="ButtonRenderStyleMode.Outline"
-                      Click="PreviewJson"
-                      Enabled="@(!isLoading)" />
+        <DxButton Text="@(isLoading ? "Processing..." : "Generate E-Invoice")"
+                  IconCssClass="bi bi-file-earmark-check"
+                  RenderStyle="ButtonRenderStyle.Success"
+                  Click="GenerateEInvoice"
+                  Enabled="@(!isLoading)" />
 
-            <DxButton Text="@(isLoading ? "Processing..." : "Generate E-Invoice")"
-                      IconCssClass="bi bi-file-earmark-check"
-                      RenderStyle="ButtonRenderStyle.Success"
-                      Click="GenerateEInvoice"
-                      Enabled="@(!isLoading)" />
-
-            <DxButton Text="Close"
-                      IconCssClass="bi bi-x-circle"
-                      RenderStyle="ButtonRenderStyle.Secondary"
-                      Click="Hide"
-                      Enabled="@(!isLoading)" />
-        </div>
-
+        <DxButton Text="Close"
+                  IconCssClass="bi bi-x-circle"
+                  RenderStyle="ButtonRenderStyle.Secondary"
+                  Click="Hide"
+                  Enabled="@(!isLoading)" />
+    </div>
 
 </DxPopup>
 
@@ -163,10 +214,10 @@
         color: #dcdcdc;
     }
 
-    .code-preview .dxbl-edit-area {
-        background: black !important;
-        color: #dcdcdc !important;
-    }
+        .code-preview .dxbl-edit-area {
+            background: black !important;
+            color: #dcdcdc !important;
+        }
 
     .selected-bills-box {
         display: flex;
@@ -177,23 +228,29 @@
         border-radius: 4px;
         min-height: 50px;
     }
+
+    .error-item {
+        border-left: 3px solid #dc3545;
+    }
+
+    .warning-item {
+        border-left: 3px solid #ffc107;
+    }
+
     @@media (max-width: 576px) {
-        .alert
+        .alert {
+            font-size: 0.9rem;
+            padding: 12px 16px !important;
+        }
 
-    {
-        font-size: 0.9rem;
-        padding: 12px 16px !important;
-    }
+        pre {
+            font-size: 0.85rem !important;
+            word-wrap: break-word;
+        }
 
-    pre {
-        font-size: 0.85rem !important;
-        word-wrap: break-word;
-    }
-
-    .btn-close {
-        transform: scale(1.3);
-    }
-
+        .btn-close {
+            transform: scale(1.3);
+        }
     }
 </style>
 
@@ -206,17 +263,27 @@
 
     private string jsonPreview = "";
     private string eInvoiceJson = "";
-    private string errorMessage = "";
+    private List<ErrorDetail> errorMessages = new();
+    private List<string> warningMessages = new();
     private string generatedIrn = "";
     private bool isLoading = false;
     private string loadingMessage = "Loading...";
+
+    // Error detail class
+    private class ErrorDetail
+    {
+        public string BillInfo { get; set; } = "";
+        public string Message { get; set; } = "";
+        public string Details { get; set; } = "";
+    }
 
     public void Show(List<Bill> bills)
     {
         SelectedBills = bills;
         jsonPreview = "";
         eInvoiceJson = "";
-        errorMessage = "";
+        ClearErrors();
+        ClearWarnings();
         generatedIrn = "";
         Visible = true;
         StateHasChanged();
@@ -228,9 +295,30 @@
         SelectedBills.Clear();
         jsonPreview = "";
         eInvoiceJson = "";
-        errorMessage = "";
+        ClearErrors();
+        ClearWarnings();
         generatedIrn = "";
         isLoading = false;
+    }
+
+    private void ClearErrors()
+    {
+        errorMessages.Clear();
+    }
+
+    private void ClearWarnings()
+    {
+        warningMessages.Clear();
+    }
+
+    private void AddError(string billInfo, string message, string details = "")
+    {
+        errorMessages.Add(new ErrorDetail
+            {
+                BillInfo = billInfo,
+                Message = message,
+                Details = details
+            });
     }
 
     private string FormatJson(string input)
@@ -267,7 +355,8 @@
 
         isLoading = true;
         loadingMessage = $"Generating JSON preview for {SelectedBills.Count} bill(s)...";
-        errorMessage = "";
+        ClearErrors();
+        ClearWarnings();
         eInvoiceJson = "";
         generatedIrn = "";
         StateHasChanged();
@@ -282,7 +371,7 @@
 
                 if (string.IsNullOrWhiteSpace(rawJson))
                 {
-                    ToastService.Warning($"Unable to generate JSON for Bill #{bill.BillNo}");
+                    warningMessages.Add($"Unable to generate JSON for Bill #{bill.BillNo}");
                     continue;
                 }
 
@@ -291,18 +380,19 @@
 
             if (!allJsons.Any())
             {
-                errorMessage = "No valid JSON generated.";
-                ToastService.Error(errorMessage);
+                AddError("Preview Failed", "No valid JSON generated for any selected bills.",
+                    "Please check if the bills have all required data.");
+                ToastService.Error("Preview failed!");
                 return;
             }
 
             jsonPreview = string.Join("\n\n// ========================================\n\n", allJsons);
-            ToastService.Success($"JSON Preview Ready for {allJsons.Count} bill(s)!");
+            ToastService.Success($"Preview ready for {allJsons.Count} bill(s)!");
         }
         catch (Exception ex)
         {
-            errorMessage = "Error: " + ex.Message;
-            ToastService.Error(errorMessage);
+            AddError("Preview Error", "Failed to generate JSON preview", ex.Message);
+            ToastService.Error("Preview failed!");
         }
         finally
         {
@@ -318,18 +408,22 @@
 
         if (config == null)
         {
-            ToastService.Error("E-Invoice config not found");
+            AddError("Configuration Error", "E-Invoice configuration not found",
+                "Please set up E-Invoice configuration in settings.");
+            ToastService.Error("Config not found!");
             return null;
         }
 
         if (string.IsNullOrWhiteSpace(config.AuthToken) || config.EInvoiceTokenExp == null)
         {
-            ToastService.Warning("Auth Token not found. Generating new token...");
+            warningMessages.Add("Auth Token not found. Generating new token...");
             var newTokenResponse = await GstinAuthTokenService.GenerateAuthTokenAsync(config);
 
             if (newTokenResponse == null)
             {
-                ToastService.Error("Failed to generate Auth Token.");
+                AddError("Authentication Error", "Failed to generate Auth Token",
+                    "Please check your credentials and try again.");
+                ToastService.Error("Auth Token generation failed!");
                 return null;
             }
 
@@ -343,7 +437,11 @@
         {
             var refreshed = await GstinAuthTokenService.GenerateAuthTokenAsync(config);
             if (refreshed == null)
+            {
+                AddError("Authentication Error", "Failed to refresh Auth Token",
+                    "Token expiry format is invalid.");
                 return null;
+            }
 
             return await UpdateConfigAfterToken(config);
         }
@@ -355,7 +453,10 @@
             var refreshed = await GstinAuthTokenService.GenerateAuthTokenAsync(config);
 
             if (refreshed == null)
+            {
+                AddError("Authentication Error", "Failed to refresh expired Auth Token");
                 return null;
+            }
 
             return await UpdateConfigAfterToken(config);
         }
@@ -379,7 +480,8 @@
 
         isLoading = true;
         loadingMessage = $"Processing {SelectedBills.Count} E-Invoice(s)...";
-        errorMessage = "";
+        ClearErrors();
+        ClearWarnings();
         generatedIrn = "";
         eInvoiceJson = "";
         StateHasChanged();
@@ -402,7 +504,8 @@
                     var json = await BillService.GetEInvoiceRawAsync(bill.BillId);
                     if (string.IsNullOrWhiteSpace(json))
                     {
-                        ToastService.Warning($"Failed to prepare JSON for Bill #{bill.BillNo}");
+                        AddError($"Bill #{bill.BillNo}", "Failed to prepare JSON payload",
+                            "Check if all required fields are filled.");
                         failCount++;
                         continue;
                     }
@@ -429,7 +532,8 @@
                     }
                     catch
                     {
-                        ToastService.Warning($"Invalid response for Bill #{bill.BillNo}");
+                        AddError($"Bill #{bill.BillNo}", "Invalid API response received",
+                            "The response from server could not be parsed.");
                         failCount++;
                         continue;
                     }
@@ -438,14 +542,15 @@
                     if (status != "1")
                     {
                         var error = ExtractError(parsed);
-                        ToastService.Warning($"Bill #{bill.BillNo} failed: {error}");
+                        AddError($"Bill #{bill.BillNo}", "E-Invoice generation failed", error);
                         failCount++;
                         continue;
                     }
 
                     if (!parsed.TryGetProperty("Data", out var dataNode))
                     {
-                        ToastService.Warning($"Invalid response for Bill #{bill.BillNo}: Data not found");
+                        AddError($"Bill #{bill.BillNo}", "Invalid response structure",
+                            "'Data' field not found in API response.");
                         failCount++;
                         continue;
                     }
@@ -458,7 +563,8 @@
                     }
                     catch
                     {
-                        ToastService.Warning($"Invalid Data JSON for Bill #{bill.BillNo}");
+                        AddError($"Bill #{bill.BillNo}", "Failed to parse response data",
+                            "Data field contains invalid JSON.");
                         failCount++;
                         continue;
                     }
@@ -475,7 +581,8 @@
 
                     if (string.IsNullOrWhiteSpace(irn))
                     {
-                        ToastService.Warning($"IRN missing for Bill #{bill.BillNo}");
+                        AddError($"Bill #{bill.BillNo}", "IRN not generated",
+                            "IRN field is missing in successful response.");
                         failCount++;
                         continue;
                     }
@@ -487,17 +594,22 @@
                     {
                         generatedIrns.Add($"Bill #{bill.BillNo}: {irn}");
                         successCount++;
-                        ToastService.Success($"Bill #{bill.BillNo} - IRN: {irn}");
                     }
                     else
                     {
-                        ToastService.Warning($"Bill #{bill.BillNo} generated but failed to save");
+                        AddError($"Bill #{bill.BillNo}", "Failed to save E-Invoice data",
+                            $"IRN generated ({irn}) but database save failed.");
                         failCount++;
                     }
                 }
+                catch (HttpRequestException httpEx)
+                {
+                    AddError($"Bill #{bill.BillNo}", "Network error occurred", httpEx.Message);
+                    failCount++;
+                }
                 catch (Exception ex)
                 {
-                    ToastService.Error($"Bill #{bill.BillNo} Error: {ex.Message}");
+                    AddError($"Bill #{bill.BillNo}", "Unexpected error", ex.Message);
                     failCount++;
                 }
             }
@@ -509,22 +621,31 @@
 
             generatedIrn = string.Join("\n", generatedIrns);
 
+            // Show toast notification with summary
+            if (successCount > 0 && failCount == 0)
+            {
+                ToastService.Success($"✅ All {successCount} invoice(s) generated successfully!");
+            }
+            else if (successCount > 0 && failCount > 0)
+            {
+                ToastService.Warning($"⚠️ Partial Success: {successCount} succeeded, {failCount} failed");
+            }
+            else if (failCount > 0)
+            {
+                ToastService.Error($"❌ All {failCount} invoice(s) failed to generate");
+            }
+
             if (successCount > 0)
             {
-                ToastService.Success($"✅ Success: {successCount} | ❌ Failed: {failCount}");
                 if (OnGenerateEInvoice.HasDelegate)
                     await OnGenerateEInvoice.InvokeAsync(SelectedBills);
-            }
-            else
-            {
-                ToastService.Error("All invoices failed to generate.");
             }
 
         }
         catch (Exception ex)
         {
-            errorMessage = $"Error: {ex.Message}";
-            ToastService.Error(errorMessage);
+            AddError("Critical Error", "E-Invoice generation process failed", ex.Message);
+            ToastService.Error("Generation failed!");
         }
         finally
         {
@@ -541,12 +662,18 @@
                 err.ValueKind == JsonValueKind.Array &&
                 err.GetArrayLength() > 0)
             {
-                return SafeGet(err[0], "ErrorMessage") ?? "Unknown error";
+                var errorMsg = SafeGet(err[0], "ErrorMessage") ?? "Unknown error";
+                var errorCode = SafeGet(err[0], "ErrorCode");
+
+                if (!string.IsNullOrWhiteSpace(errorCode))
+                    return $"[{errorCode}] {errorMsg}";
+
+                return errorMsg;
             }
         }
         catch { }
 
-        return "Unknown error";
+        return "Unknown error occurred";
     }
 
     private async Task CopyToClipboard()

@@ -1,11 +1,11 @@
 ﻿
-using BlazorApp.Model;
+
 using FreightBKShippingWebApp;
 using FreightBKShippingWebApp.Model;
-using global::BlazorApp.Model;
+
 using System.Net.Http.Json;
 
-namespace BlazorApp.Services
+namespace FreightBKShippingWebApp.Services
 {
     public class WpMailConfigService
     {
