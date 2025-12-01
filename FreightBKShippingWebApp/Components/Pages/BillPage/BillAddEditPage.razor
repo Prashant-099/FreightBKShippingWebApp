@@ -1731,20 +1731,16 @@ verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body" >
             var hsnTask = HsnSacService.GetAllAsync();
             var gstTask = GstSlabService.GetAllAsync();
             var notifyTask = NotifyService.GetAllAsync();
-            var locationTask = LocationService.GetAllAsync();
-            var vesselTask = VesselService.GetAllAsync();
-            var cargoTask = CargoService.GetAllAsync();
+            var companyTask = CompanyService.GetAllAsync();
             var reportTask = ReportDataService.GetAllAsync();
             await Task.WhenAll(
                 serviceTask, voucherTask, currTask, unitTask,
-                hsnTask, gstTask, notifyTask, locationTask, vesselTask, cargoTask, reportTask
+                hsnTask, gstTask, notifyTask,  reportTask, companyTask
             );
 
             // Assign results
             ReportDataList  = reportTask.Result;
-            CargoList = cargoTask.Result;
-            VesselList = vesselTask.Result;
-            locationList = locationTask.Result;
+            CompanyList = companyTask.Result;
             ServiceList = serviceTask.Result;
             VoucherList = voucherTask.Result;
             CurrList = currTask.Result;
@@ -1828,23 +1824,23 @@ verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body" >
         return locationList;
     }
 
-    private async Task<List<Company>> GetCompanyListAsync()
-    {
-        if (!lazyLoadedData.ContainsKey("Company"))
-        {
-            try
-            {
-                CompanyList = await CompanyService.GetAllAsync();
-                lazyLoadedData["Company"] = true;
-            }
-            catch (Exception ex)
-            {
-                ToastService.Error("Error loading company data: " + ex.Message);
-                CompanyList = new List<Company>();
-            }
-        }
-        return CompanyList;
-    }
+    // private async Task<List<Company>> GetCompanyListAsync()
+    // {
+    //     if (!lazyLoadedData.ContainsKey("Company"))
+    //     {
+    //         try
+    //         {
+    //             CompanyList = await CompanyService.GetAllAsync();
+    //             lazyLoadedData["Company"] = true;
+    //         }
+    //         catch (Exception ex)
+    //         {
+    //             ToastService.Error("Error loading company data: " + ex.Message);
+    //             CompanyList = new List<Company>();
+    //         }
+    //     }
+    //     return CompanyList;
+    // }
 
     private async Task<List<Branch>> GetBranchListAsync()
     {
@@ -1994,6 +1990,9 @@ verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body" >
         UnsavedChanges.Clear();
         Visible = true;
         StateHasChanged();
+        _ =GetLocationListAsync();
+         _ =GetCargoListAsync();
+         _ =GetVesselListAsync();
     }
 
     // ============================================
@@ -2157,6 +2156,9 @@ verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body" >
             var Duedate = selectedparty.AccountCreditDays ?? 30;
             EditModel.BillDueDate = DateTime.Now.AddDays(Duedate);
         }
+          _ =GetLocationListAsync();
+         _ =GetCargoListAsync();
+         _ =GetVesselListAsync();
     }
 
     private void shippartydetails(int shippartydetails)
@@ -2731,6 +2733,15 @@ verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body" >
         )
         .Sum(d => d.BillDetailTaxableAmt);
 
+        EditModel.BillIgst = (float)BillDetails
+           .Where(d => !UnsavedChanges.ContainsKey(d) || UnsavedChanges[d].Type != DataChangeType.Delete)
+           .Sum(d => d.BillDetailIgst);
+           EditModel.BillCgst = (float)BillDetails
+           .Where(d => !UnsavedChanges.ContainsKey(d) || UnsavedChanges[d].Type != DataChangeType.Delete)
+           .Sum(d => d.BillDetailCgst);
+           EditModel.BillSgst = (float)BillDetails
+           .Where(d => !UnsavedChanges.ContainsKey(d) || UnsavedChanges[d].Type != DataChangeType.Delete)
+           .Sum(d => d.BillDetailSgst);
             // ApplyRoundOff(EditModel.BillIsRoundOff);
             RecalculateNetAmount(EditModel.BillIsRoundOff);
         }
@@ -2914,9 +2925,9 @@ verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body" >
             //EditModel.BillNetAmount = (float)activeDetails.Sum(d => d.BillDetailTotal);
             EditModel.BillAmount = activeDetails.Sum(d => d.BillDetailAmount);
             EditModel.BillTaxableAmt = activeDetails.Sum(d => d.BillDetailTaxableAmt);
-            EditModel.BillIgst = activeDetails.Sum(d => d.BillDetailIgst);
-            EditModel.BillCgst = activeDetails.Sum(d => d.BillDetailCgst);
-            EditModel.BillSgst = activeDetails.Sum(d => d.BillDetailSgst);
+            // EditModel.BillIgst = activeDetails.Sum(d => d.BillDetailIgst);
+            // EditModel.BillCgst = activeDetails.Sum(d => d.BillDetailCgst);
+            // EditModel.BillSgst = activeDetails.Sum(d => d.BillDetailSgst);
             EditModel.BillTotal = EditModel.BillNetAmount;
             EditModel.BillYearId = YearStatechangeService.SelectedYearId;
             EditModel.BillNo = EditModel.BillNo;
@@ -3009,9 +3020,9 @@ verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body" >
             //EditModel.BillNetAmount = (float)activeDetails.Sum(d => d.BillDetailTotal);
             EditModel.BillAmount = activeDetails.Sum(d => d.BillDetailAmount);
             EditModel.BillTaxableAmt = activeDetails.Sum(d => d.BillDetailTaxableAmt);
-            EditModel.BillIgst = activeDetails.Sum(d => d.BillDetailIgst);
-            EditModel.BillCgst = activeDetails.Sum(d => d.BillDetailCgst);
-            EditModel.BillSgst = activeDetails.Sum(d => d.BillDetailSgst);
+            // EditModel.BillIgst = activeDetails.Sum(d => d.BillDetailIgst);
+            // EditModel.BillCgst = activeDetails.Sum(d => d.BillDetailCgst);
+            // EditModel.BillSgst = activeDetails.Sum(d => d.BillDetailSgst);
             EditModel.BillTotal = EditModel.BillNetAmount;
             EditModel.BillYearId = YearStatechangeService.SelectedYearId;
             EditModel.BillNo = EditModel.BillNo;
