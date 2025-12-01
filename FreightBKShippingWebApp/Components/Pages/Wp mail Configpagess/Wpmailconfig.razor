@@ -1,0 +1,424 @@
+﻿@page "/wpmailconfig"
+
+@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Services
+@using Microsoft.Extensions.Logging
+@inject WpMailConfigService WpMailConfigService
+@inject ToasteService ToastService
+@inject IJSRuntime JSRuntime
+@inject LoadingService LoadingService
+@inject ConfirmationDialogService ConfirmDialogService
+@inject SendWpMailService SendWpMailService
+@inject ChatwayService ChatwayService
+<div class="px-3 py-3">
+ 
+
+<DxGrid Data="@Configs"
+        @ref="MyGrid"
+        KeyFieldName="Id"
+        ShowFilterRow="true"
+        PageSize="10"
+        FocusedRowEnabled="true"
+        DataItemDeleting="OnDataItemDeleting"
+        EditModelSaving="OnEditModelSaving" SelectedDataItems="@selectedItems"
+        SelectionMode="GridSelectionMode.Multiple"
+        SelectedDataItemsChanged="OnSelectionChanged" >
+    <ToolbarTemplate Context="grid">
+        <DxToolbar>
+            <TitleTemplate>
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-envelope me-2"></i>
+                    <span class="fs-5">WP Mail Configs</span>
+                </div>
+            </TitleTemplate>
+            <Items>
+                <DxToolbarItem Name="New"
+                               Text="New"
+                               IconCssClass="bi bi-plus-circle"
+                               Click="OnNewClick" />
+                <DxToolbarItem Name="Edit"
+                               Text="Edit"
+                               IconCssClass="bi bi-pencil-square"
+                               Click="OnEditClick" />
+                <DxToolbarItem Name="Delete"
+                               Text="Delete"
+                               IconCssClass="bi bi-trash"
+                               Click="OnDelete" />
+                <DxToolbarItem Name="Refresh"
+                               Text="Refresh"
+                               IconCssClass="bi bi-arrow-clockwise"
+                               Click="@( (_) => LoadConfigsAsync() )" />
+                        <DxToolbarItem Name="Credits"
+                                       Alignment="ToolbarItemAlignment.Right"
+                                       Enabled="false">
+                            <Template>
+                                <span class="fw-bold text-success">
+                                    <i class="bi bi-cash-stack me-1"></i>
+                                    Credits: @totalwpcredit
+                                </span>
+                            </Template>
+                        </DxToolbarItem>
+
+
+            </Items>
+        </DxToolbar>
+    </ToolbarTemplate>
+
+    <Columns>
+        <!-- Command column so grid shows built-in Save/Cancel/Delete in edit mode -->
+        <DxGridSelectionColumn AllowSelectAll="true" Width="30" MinWidth="50" />
+
+        <DxGridDataColumn FieldName="MsgType" Caption="Message Type" />
+        <DxGridDataColumn FieldName="MailSub" Caption="Mail Subject" />
+        <DxGridDataColumn FieldName="TemplateText" Caption="Template" />
+        <DxGridDataColumn FieldName="IsDefault" Caption="Default" />
+
+        @* <DxGridDataColumn FieldName="CompanyId" Caption="Company ID" /> *@
+        @* <DxGridDataColumn FieldName="Created" Caption="Created" DisplayFormat="yyyy-MM-dd HH:mm" />
+        <DxGridDataColumn FieldName="Updated" Caption="Updated" DisplayFormat="yyyy-MM-dd HH:mm" /> *@
+    </Columns>
+</DxGrid>
+
+</div>
+<DxPopup @bind-Visible="IsPopupVisible"
+         ShowCloseButton="true"
+         Width="600px"
+         HeaderText="@PopupTitle"
+         CloseOnEscape="true" CloseOnOutsideClick="false">
+
+    <!-- Validation Summary -->
+    @if (ValidationErrors.Any())
+    {
+        <div class="alert alert-danger">
+            <ul class="mb-0">
+                @foreach (var err in ValidationErrors)
+                {
+                    <li>@err</li>
+                }
+            </ul>
+        </div>
+    }
+
+    <DxFormLayout>
+        <DxFormLayoutItem Caption="Message Type" ColSpanMd="12">
+            <DxComboBox @bind-Value="EditingConfig.MsgType"
+                        Data="@MsgTypes"
+                        TextFieldName="Text"
+                        ValueFieldName="Value"
+                        ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Never" />
+        </DxFormLayoutItem>
+
+        @if (EditingConfig.MsgType == "MAIL")
+        {
+            <DxFormLayoutItem Caption="Mail Subject" ColSpanMd="12">
+                <DxTextBox @bind-Text="EditingConfig.MailSub" />
+            </DxFormLayoutItem>
+        }
+
+        <DxFormLayoutItem Caption="Template Text" ColSpanMd="12">
+            <DxMemo @bind-Text="EditingConfig.TemplateText" Height="150px" />
+            <div class="mt-1 text-muted">
+                Use placeholders like <b>{FirstName}</b>, <b>{CertiNo}</b>, <b>{Email}</b>
+            </div>
+        </DxFormLayoutItem>
+
+        <DxFormLayoutItem Caption="Set as Default" ColSpanMd="12">
+            <DxCheckBox @bind-Checked="EditingConfig.IsDefault" Text="Default Email" />
+        </DxFormLayoutItem>
+    </DxFormLayout>
+
+    <div class="mt-3 text-end">
+        <DxButton Text="Save" Click="SaveConfigAsync" CssClass="mt-3 me-2" Size="Small" />
+        <DxButton Text="Cancel" Click="@ClosePopup" CssClass="mt-3" Size="Small" />
+    </div>
+</DxPopup>
+
+
+@code {
+    DxGrid MyGrid;
+    List<WpMailConfig> Configs = new();
+    bool IsPopupVisible = false;
+    WpMailConfig EditingConfig = new WpMailConfig();
+    string PopupTitle = "Add Config";
+    private IReadOnlyList<object> selectedItems = new List<object>();
+    public class MsgTypeOption
+    {
+        public string Text { get; set; }
+        public string Value { get; set; }
+    }
+
+    List<MsgTypeOption> MsgTypes = new()
+    {
+        new MsgTypeOption { Text = "WP", Value = "WP" },
+        new MsgTypeOption { Text = "MAIL", Value = "MAIL" }
+    };
+
+    private void OnMsgTypeChanged(string value)
+    {
+        // Agar user "WP" select kare to mail subject clear kar do
+        if (value == "WP")
+        {
+            EditingConfig.MailSub = string.Empty;
+        }
+    }
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadConfigsAsync();
+    }
+    private string UserName { get; set; }
+    private string BalnaceToken { get; set; }
+    private string totalwpcredit = "Loading...";
+
+    private async Task LoadConfigsAsync()
+    {
+         Configs = (await WpMailConfigService.GetAllAsync()).ToList();
+        var config = (await SendWpMailService.GetByCompanyAsync())?.FirstOrDefault();
+        if (config != null)
+        {
+            UserName = config.SendWpMailUserName;
+            BalnaceToken = config.SendWpMailWpBalanceToken;
+        }
+
+        if (!string.IsNullOrEmpty(UserName) && !string.IsNullOrEmpty(BalnaceToken))
+        {
+            var balanceResponse = await ChatwayService.CheckBalanceAsync(UserName, BalnaceToken);
+
+            if (!string.IsNullOrEmpty(balanceResponse))
+            {
+                totalwpcredit = balanceResponse;
+            }
+            else
+            {
+                totalwpcredit = "Error";
+            }
+        }
+        else
+        {
+            totalwpcredit = "No creds";
+        }
+
+
+        StateHasChanged();
+    }
+
+    // Toolbar actions
+    private async Task OnNewClick(ToolbarItemClickEventArgs e)
+    {
+        // Show popup or start editing new row
+        // If you want inline edit, you could: await grid.StartEditNewRowAsync();
+        ShowPopup(null);
+    }
+
+    private async Task OnEditClick(ToolbarItemClickEventArgs e)
+    {
+        var config = MyGrid.GetFocusedDataItem() as WpMailConfig;
+        if (config == null)
+        {
+            ToastService.Warning("Select a config to edit.", "No Selection");
+            return;
+        }
+        ShowPopup(config);
+    }
+    private List<WpMailConfig> Selectedconfig = new();
+
+    async Task OnDelete(ToolbarItemClickEventArgs e)
+    {
+        if (Selectedconfig.Any())
+        {
+            if (Selectedconfig.Count == 1)
+            {
+                var item = Selectedconfig.First();
+                MyGrid.ShowDataItemDeleteConfirmation(item);  // DevExpress Built-in Confirm (single delete)
+            }
+            else
+            {
+                // Multi-Select Delete → Custom Confirmation Dialog
+                var confirmed = await ConfirmDialogService.ShowAsync($"Are you sure you want to delete {Selectedconfig.Count} selected certificate(s)?");
+
+                if (confirmed)
+                {
+                    LoadingService.Show();
+                    int deletedCount = 0;
+
+                    try
+                    {
+                        foreach (var config in Selectedconfig.ToList())
+                        {
+                            var result = await WpMailConfigService.DeleteAsync(config.Id);
+                            if (result)
+                            {
+                                Configs.Remove(config);
+                                deletedCount++;
+                            }
+                        }
+
+                        ToastService.Success($"{deletedCount} certificate(s) deleted successfully!", "Deleted");
+                        Selectedconfig.Clear();
+                        await LoadConfigsAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        ToastService.Error($"Error deleting certificates: {ex.Message}", "Delete Failed");
+                    }
+                    finally
+                    {
+                        LoadingService.Hide();
+                    }
+                }
+            }
+        }
+        else
+        {
+            var focusedItem = MyGrid.GetFocusedDataItem() as WpMailConfig;
+            if (focusedItem != null)
+            {
+                MyGrid.ShowDataItemDeleteConfirmation(focusedItem);  // DevExpress Built-in Confirm
+            }
+            else
+            {
+                ToastService.Warning("Please select or focus a certificate to delete.", "No Selection");
+            }
+        }
+        Selectedconfig = null;
+
+    }
+
+
+    async Task OnDataItemDeleting(GridDataItemDeletingEventArgs e)
+    {
+        LoadingService.Show();
+        try
+        {
+            var congig = e.DataItem as WpMailConfig;
+            if (congig is null)
+            {
+                ToastService.Error("Certificate not found.", "Delete Error");
+                return;
+            }
+
+            await WpMailConfigService.DeleteAsync(congig.Id);
+            ToastService.Success("Certificate deleted successfully!", "Deleted");
+            await LoadConfigsAsync();
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Delete failed: {ex.Message}", "Error");
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+
+    private void OnSelectionChanged(IEnumerable<object> items)
+    {
+        Selectedconfig = items.Cast<WpMailConfig>().ToList();
+        selectedItems = items.ToList();
+        var certi = Selectedconfig.FirstOrDefault() as WpMailConfig;
+
+    }
+
+    void ShowPopup(WpMailConfig config)
+    {
+        if (config == null || config.Id == 0)
+        {
+            PopupTitle = "Add New Config";
+            EditingConfig = new WpMailConfig();
+        }
+        else
+        {
+            PopupTitle = "Edit Config";
+            EditingConfig = new WpMailConfig
+            {
+                Id = config.Id,
+                MsgType = config.MsgType,
+                MailSub = config.MailSub,
+                TemplateText = config.TemplateText,
+                CompanyId = config.CompanyId,
+                Created = config.Created,
+                Updated = config.Updated,
+                CreateUid = config.CreateUid,
+                EditedUid = config.EditedUid
+            };
+        }
+        IsPopupVisible = true;
+    }
+
+    void ClosePopup()
+    {
+        IsPopupVisible = false;
+        EditingConfig = new WpMailConfig();
+    }
+
+    List<string> ValidationErrors = new();
+
+    private async Task SaveConfigAsync()
+    {
+        ValidationErrors.Clear(); // reset
+
+        if (string.IsNullOrWhiteSpace(EditingConfig.MsgType))
+            ValidationErrors.Add("Message Type is required.");
+
+        if (EditingConfig.MsgType == "MAIL" && string.IsNullOrWhiteSpace(EditingConfig.MailSub))
+            ValidationErrors.Add("Mail Subject is required.");
+
+        if (string.IsNullOrWhiteSpace(EditingConfig.TemplateText))
+            ValidationErrors.Add("Template Text is required.");
+
+        if (ValidationErrors.Any())
+        {
+            StateHasChanged(); // refresh to show summary
+            return;
+        }
+
+        // ---- Save logic ----
+        bool success;
+        EditingConfig.Updated = DateTime.UtcNow;
+
+        if (EditingConfig.Id == 0)
+        {
+            EditingConfig.Created = DateTime.UtcNow;
+            success = await WpMailConfigService.CreateAsync(EditingConfig);
+        }
+        else
+        {
+            success = await WpMailConfigService.UpdateAsync(EditingConfig);
+        }
+
+        if (success)
+        {
+            ToastService.Success("Config saved successfully!");
+            ClosePopup();
+            await LoadConfigsAsync();
+        }
+        else
+        {
+            ToastService.Error("Failed to save config.");
+        }
+    }
+
+
+    // Grid event handlers for inline/new deletion if used
+    private async Task OnEditModelSaving(GridEditModelSavingEventArgs e)
+    {
+        var model = (WpMailConfig)e.EditModel;
+        model.Updated = DateTime.UtcNow;
+
+        if (e.IsNew)
+        {
+            model.Created = DateTime.UtcNow;
+            bool ok = await WpMailConfigService.CreateAsync(model);
+            if (!ok) e.Cancel = true;
+        }
+        else
+        {
+            bool ok = await WpMailConfigService.UpdateAsync(model);
+            if (!ok) e.Cancel = true;
+        }
+
+        if (!e.Cancel)
+            await LoadConfigsAsync();
+    }
+
+    
+}

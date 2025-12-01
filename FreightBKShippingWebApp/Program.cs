@@ -90,7 +90,12 @@ builder.Services.AddScoped<FreightBKShippingWebApp.Services.PdfReaderAndHelperSe
 builder.Services.AddScoped<JobDataCreationService>();
 builder.Services.AddScoped<JobBuilderService>();
 
-
+//wpmail send dhruv
+builder.Services.AddScoped<ChatwayService>();
+builder.Services.AddScoped<SendWpMailService>();
+builder.Services.AddScoped<WpMailConfigService>();
+builder.Services.AddScoped<Sentwpcerti>();
+builder.Services.AddScoped<BillUploadService>();
 //
 builder.Services.AddScoped<AuthTokenService>();
 

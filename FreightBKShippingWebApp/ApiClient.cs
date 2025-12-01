@@ -364,32 +364,42 @@ namespace FreightBKShippingWebApp
         // FOR MULTIFDATA FORM  NOT AS PostAsJsonAsync 
         public async Task<T1?> PostAsync<T1>(string path, HttpContent content)
         {
-            await SetAuthorizeHeader();
-
-            var res = await httpClient.PostAsync(path, content);
-            var responseContent = await res.Content.ReadAsStringAsync();
-
-            Console.WriteLine($"📤 POST {path} => {res.StatusCode}");
-            Console.WriteLine($"📥 Content: {responseContent}");
-
-            if (!res.IsSuccessStatusCode)
-                return default;
-
             try
             {
-                // If T1 is string, just return the raw JSON response
-                if (typeof(T1) == typeof(string))
-                    return (T1)(object)responseContent;
+                await SetAuthorizeHeader();
+               
+                var response = await httpClient.PostAsync(path, content);
+                var responseContent = await response.Content.ReadAsStringAsync();
 
-                // Otherwise, deserialize normally
-                return System.Text.Json.JsonSerializer.Deserialize<T1>(responseContent);
+                Console.WriteLine($"📤 POST {path} => {response.StatusCode}");
+                Console.WriteLine($"📥 Content: {responseContent}");
+
+                if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                    throw new UnauthorizedAccessException("Token expired");
+
+                if (!response.IsSuccessStatusCode)
+                    return default;
+
+                try
+                {
+                    if (typeof(T1) == typeof(string))
+                        return (T1)(object)responseContent;
+
+                    return System.Text.Json.JsonSerializer.Deserialize<T1>(responseContent);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"❌ Deserialization failed: {ex.Message}");
+                    return default;
+                }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Deserialization failed: {ex.Message}");
+                Console.WriteLine($"❌ POST failed: {ex.Message}");
                 return default;
             }
         }
+
 
         public async Task<T1> PutAsync<T1>(string path, HttpContent content)
         {

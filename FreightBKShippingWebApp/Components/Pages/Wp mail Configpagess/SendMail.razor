@@ -1,0 +1,127 @@
+﻿@using FreightBKShippingWebApp.Services
+
+@inject SendWpMailService SendWpMailService
+@inject ToasteService ToasteService
+@inject LoadingService LoadingService
+@inject ChatwayService ChatwayService
+@inject WpMailConfigService WpMailConfigService
+
+
+<DxPopup @bind-Visible="IsVisiblesendmail"
+         ShowFooter="true"
+         HeaderText="Send Email"
+         Width="700px"
+         CloseOnOutsideClick="false"
+         ShowCloseButton="true"
+         HorizontalAlignment="HorizontalAlignment.Center"
+         VerticalAlignment="VerticalAlignment.Center" Closing="Closemailpopup">
+
+    <BodyContentTemplate Context="ctxsentmail">
+        <DxFormLayout>
+            <DxFormLayoutItem Caption="To" ColSpanMd="12">
+                <DxTextBox @bind-Text="EmailDto.ToEmail" Placeholder="Recipient email" />
+            </DxFormLayoutItem>
+
+            <DxFormLayoutItem Caption="CC" ColSpanMd="12">
+                <DxTextBox @bind-Text="EmailDto.CcEmails" Placeholder="CC emails, comma separated" />
+            </DxFormLayoutItem>
+
+            <DxFormLayoutItem Caption="Subject" ColSpanMd="12">
+                <DxTextBox @bind-Text="EmailDto.Subject" Placeholder="Email subject" />
+            </DxFormLayoutItem>
+
+            <DxFormLayoutItem Caption="Body" ColSpanMd="12">
+                <DxMemo @bind-Text="EmailDto.Body" Rows="5" Placeholder="Email body (HTML allowed)" />
+            </DxFormLayoutItem>
+
+            <DxFormLayoutItem Caption="File URL" ColSpanMd="12">
+                <DxTextBox @bind-Text="EmailDto.AttachmentFileName" ReadOnly="true" />
+            </DxFormLayoutItem>
+          
+        </DxFormLayout>
+    </BodyContentTemplate>
+
+    <FooterContentTemplate>
+        <DxButton Text="Send Email" RenderStyle="ButtonRenderStyle.Primary" Click="SendEmail" Enabled="@IsSendEnabled" />
+        <DxButton Text="Close" RenderStyle="ButtonRenderStyle.Danger" Click="Closemailpopup" />
+    </FooterContentTemplate>
+</DxPopup>
+
+
+
+
+@code {
+    
+
+
+    [Parameter] public bool IsVisiblesendmail { get; set; }
+    [Parameter] public EventCallback Closemailpopup { get; set; }
+    [Parameter] public string FileUrl { get; set; }
+    [Parameter] public string FileName { get; set; }
+    [Parameter] public string DefaultToEmail { get; set; }
+    [Parameter] public string DefaultMailSub { get; set; }
+    [Parameter] public string DefaultMailBody { get; set; }
+
+
+    private SendEmailRequestDto EmailDto { get; set; } = new();
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrEmpty(DefaultToEmail))
+            EmailDto.ToEmail = DefaultToEmail;
+
+        if (!string.IsNullOrEmpty(FileUrl))
+            EmailDto.AttachmentBase64 = FileUrl; //send URL as attachment reference
+
+        if (!string.IsNullOrEmpty(FileName))
+            EmailDto.AttachmentFileName = FileName;
+
+        if (!string.IsNullOrEmpty(DefaultMailSub))
+            EmailDto.Subject = DefaultMailSub;
+        if (!string.IsNullOrEmpty(DefaultMailBody))
+            EmailDto.Body = DefaultMailBody;
+
+
+    }
+
+    private bool IsSendEnabled =>
+        !string.IsNullOrWhiteSpace(EmailDto.ToEmail) &&
+        !string.IsNullOrWhiteSpace(EmailDto.Subject) &&
+        !string.IsNullOrWhiteSpace(EmailDto.Body);
+
+    private async Task SendEmail()
+    {
+        if (string.IsNullOrEmpty(EmailDto.ToEmail))
+        {
+            ToasteService.Warning("Please enter recipient email.");
+            return;
+        }
+
+        LoadingService.Show("Sending Email...");
+        try
+        {
+            var success = await SendWpMailService.SendEmailAsync(EmailDto);
+            if (success)
+            {
+                ToasteService.Success("Email sent successfully.");
+            }
+            else
+            {
+                ToasteService.Error("Failed to send email.");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToasteService.Error($"Error sending email: {ex.Message}");
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+        IsVisiblesendmail = false;
+
+    }
+
+  
+  
+}
