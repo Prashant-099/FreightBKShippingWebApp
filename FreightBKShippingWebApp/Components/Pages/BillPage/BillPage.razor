@@ -1,4 +1,5 @@
 ﻿@page "/bill"
+@using FreightBKShippingWebApp.Components.Pages.Eiinvoice_IRN_
 @using FreightBKShippingWebApp.Components.Pages.Wp_mail_Configpagess
 @using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Services
@@ -15,19 +16,19 @@
 @inject IJSRuntime JSRuntime
 
 <DxGrid @ref="MyGrid"
-        TItem="Bill"
-        Data="@billList"
-        KeyFieldName="BillId"
-        ShowSearchBox="true"
-        PageSize="10"
-        PageSizeSelectorVisible="true"
-        ShowGroupPanel="true"
-        FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always"
-        FocusedRowEnabled="true"
-        SelectionMode="GridSelectionMode.Multiple"
-        SelectedDataItems="@SelectedBills"
-        SelectedDataItemsChanged="OnSelectedBillsChanged"
-        AllowSelectRowByClick="true">
+TItem="Bill"
+Data="@billList"
+KeyFieldName="BillId"
+ShowSearchBox="true"
+PageSize="10"
+PageSizeSelectorVisible="true"
+ShowGroupPanel="true"
+FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always"
+FocusedRowEnabled="true"
+SelectionMode="GridSelectionMode.Multiple"
+SelectedDataItems="@SelectedBills"
+SelectedDataItemsChanged="OnSelectedBillsChanged"
+AllowSelectRowByClick="true">
 
     <ToolbarTemplate>
         <DxToolbar>
@@ -35,7 +36,7 @@
                 <div class="d-flex align-items-center">
                     <i class="bi bi-receipt-cutoff"></i>
                     <span class="fs-5">Sale Invoice</span>
-              @*       @if (SelectedBills?.Count > 0)
+                    @*       @if (SelectedBills?.Count > 0)
                     {
                         <span class="badge bg-primary ms-2">@SelectedBills.Count Selected</span>
                     } *@
@@ -46,6 +47,8 @@
                 <DxToolbarItem Text="Edit" IconCssClass="bi bi-pencil-square" Click="OnEdit" />
                 <DxToolbarItem Text="Delete" IconCssClass="bi bi-trash" Click="OnDelete" />
                 <DxToolbarItem Text="E-Invoice" IconCssClass="bi bi-file-earmark-text" Click="OnEInvoiceClick" />
+                <DxToolbarItem Text="Cancel E-Invoice" IconCssClass="bi bi-file-earmark-text" Click="OnCancelIrnClick" />
+                <DxToolbarItem Text="IRN Details" IconCssClass="bi bi-file-earmark-text" Click="ShowIrnDetails" />
                 <DxToolbarItem Text="Send WhatsApp" IconCssClass="bi bi-whatsapp" Click="@(async () => await DownloadReport(true))" />
                 <DxToolbarItem Text="Print PDF" IconCssClass="bi bi-printer" Click="@(async () => await PrintReports(false))" />
                 <DxToolbarItem Text="Print" IconCssClass="bi bi-printer" Click="@((_) => ShowReportPopup())"></DxToolbarItem>
@@ -109,23 +112,23 @@
 </DxGrid>
 
 <DxPopup @bind-Visible="IsReportPopupVisible"
-         ShowCloseButton="true"
-         Width="400px"
-         HeaderText="Select Report"
-         CloseOnOutsideClick="true"
-         CloseOnEscape="true">
+ShowCloseButton="true"
+Width="400px"
+HeaderText="Select Report"
+CloseOnOutsideClick="true"
+CloseOnEscape="true">
     <div class="p-3">
         <DxFormLayout>
             <DxFormLayoutItem Caption="Report" ColSpanMd="12">
                 <DxComboBox Data="@ReportDataList"
-                            TextFieldName="FormatName"
-                            ValueFieldName="ReportDataId"
-                            AllowUserInput="true"
-                            NullText="-- Select Report --"
-                            @bind-Value="SelectedReportId"
-                            SearchMode="ListSearchMode.AutoSearch"
-                            SearchFilterCondition="ListSearchFilterCondition.StartsWith"
-                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                TextFieldName="FormatName"
+                ValueFieldName="ReportDataId"
+                AllowUserInput="true"
+                NullText="-- Select Report --"
+                @bind-Value="SelectedReportId"
+                SearchMode="ListSearchMode.AutoSearch"
+                SearchFilterCondition="ListSearchFilterCondition.StartsWith"
+                ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
             </DxFormLayoutItem>
         </DxFormLayout>
         <div class="mt-3 d-flex justify-content-end gap-2">
@@ -137,28 +140,86 @@
 
 <BillAddEditPage @ref="popup" OnSaved="LoadBillsAsync" />
 <EInvoicePopUP @ref="EInvoicePopupRef" />
+<FreightBKShippingWebApp.Components.Pages.Eiinvoice_IRN_.CancelingEInvoices @ref="EInvoiceCancelPopupRef" OnCancelIRN="HandleIRNCancelled"></FreightBKShippingWebApp.Components.Pages.Eiinvoice_IRN_.CancelingEInvoices>
 <SendMsg IsVisible="visiblemsgsendwin"
-         OnClose="closemsgsendwin"
-         DefaultNumber="@PendingMobileNo"
-         DefaultFileUrl="@PendingFileUrl"
-         DefaultFileName="@PendingFileName"
-         @ref="sendMsgPopup" />
+OnClose="closemsgsendwin"
+DefaultNumber="@PendingMobileNo"
+DefaultFileUrl="@PendingFileUrl"
+DefaultFileName="@PendingFileName"
+@ref="sendMsgPopup" />
 <ConfirmationDialog />
 
 <script>
     window.downloadFileFromStream = async (fileName, contentStreamReference) => {
-        const arrayBuffer = await contentStreamReference.arrayBuffer();
-        const blob = new Blob([arrayBuffer]);
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        a.click();
-        URL.revokeObjectURL(url);
+    const arrayBuffer = await contentStreamReference.arrayBuffer();
+    const blob = new Blob([arrayBuffer]);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    a.click();
+    URL.revokeObjectURL(url);
     };
 </script>
-
+<IRNDetailsFetch @ref="irnDetailsPopup" />
 @code {
+	private IRNDetailsFetch irnDetailsPopup;
+    private void ShowIrnDetails(ToolbarItemClickEventArgs e)
+    {
+        var bills = SelectedBills.Cast<Bill>().ToList();
+        irnDetailsPopup.Show(bills);
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="e"></param>
+    /// <returns></returns>
+
+    // Cancel IRN
+
+    private async Task OnCancelIrnClick(ToolbarItemClickEventArgs e)
+    {
+        if (SelectedBills == null || SelectedBills.Count == 0)
+        {
+            ToastService.Warning("Please select at least one bill.");
+            return;
+        }
+
+        // Cast to Bill objects first
+        var bills = SelectedBills.Cast<Bill>().ToList();
+
+        // Check if any selected bills have IRN
+        var billsWithIrn = bills.Where(b => !string.IsNullOrWhiteSpace(b.BillIrnNo)).ToList();
+
+        if (!billsWithIrn.Any())
+        {
+            ToastService.Error("Selected bills don't have any generated IRN.");
+            return;
+        }
+
+        // Pass the typed list to the popup
+        EInvoiceCancelPopupRef.Show(bills);
+    }
+    // Handle after E-Invoice generation
+    private async Task HandleEInvoiceGenerated(List<Bill> bills)
+    {
+        await LoadBillsAsync();
+        await ClearSelection();
+    }
+
+    // Handle after IRN cancellation
+    private async Task HandleIRNCancelled(List<Bill> bills)
+    {
+        await LoadBillsAsync();
+        await ClearSelection();
+    }
+
+
+
+    /// <summary>
+    /// =====================================================================
+    /// </summary>
     private IGrid? MyGrid { get; set; }
     private List<Bill> billList = new();
     private IReadOnlyList<object> SelectedBills { get; set; } = new List<object>();
@@ -167,6 +228,7 @@
     private bool IsAdmin = false;
     private string CurrentUserId = string.Empty;
     private EInvoicePopUP EInvoicePopupRef { get; set; }
+    private CancelingEInvoices EInvoiceCancelPopupRef { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -389,7 +451,7 @@
         }
     }
 
-    // ✅ FIXED: E-Invoice with proper cleanup
+    // ✅ FIXED: E-Invoice with proper cleanup   
     private async Task OnEInvoiceClick(ToolbarItemClickEventArgs e)
     {
         if (SelectedBills == null || SelectedBills.Count == 0)

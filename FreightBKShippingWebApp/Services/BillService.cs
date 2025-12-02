@@ -203,5 +203,32 @@ namespace FreightBKShippingWebApp.Services
             }
         }
 
+
+        public async Task<bool> CancelEInvoiceAsync(int billId)
+        {
+            try
+            {
+                var bill = await _api.GetFromJsonAsync<Bill>($"api/Bills/{billId}");
+                if (bill == null)
+                {
+                    Console.WriteLine($"❌ Bill not found: {billId}");
+                    return false;
+                }
+
+                // Clear IRN fields
+                bill.BillIrnNo = null;
+                bill.BillAckNo = null;
+                bill.BillAckDate = null;
+                bill.BillQRCode = null;
+
+                var result = await _api.PutAsync<bool, Bill>($"api/Bills/{billId}", bill);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Error: {ex.Message}");
+                return false;
+            }
+        }
     }
 }
