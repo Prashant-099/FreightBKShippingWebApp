@@ -1,0 +1,606 @@
+﻿@using System.Text.Json
+@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Models
+@using FreightBKShippingWebApp.Services
+@using System.Text
+@using Microsoft.JSInterop
+@inject ToasteService ToastService
+@inject BillService BillService
+@inject EinvConfigService EinvConfigService
+@inject HttpClient HttpClient
+@inject IJSRuntime JSRuntime
+@inject GstinAuthTokenService GstinAuthTokenService
+
+<DxPopup @bind-Visible="Visible"
+         MaxWidth="max(70%, 700px)"
+         MaxHeight="91%"
+         ShowCloseButton="true"
+         Scrollable="true"
+         CloseOnOutsideClick="false"
+         HeaderText="Get IRN Details"
+         HorizontalAlignment="HorizontalAlignment.Center"
+         VerticalAlignment="VerticalAlignment.Center">
+
+    <!-- SEARCH FORM -->
+    <DxFormLayout CssClass="mb-3">
+        <DxFormLayoutItem Caption="Document Type" ColSpanMd="4">
+            <DxTextBox @bind-Text="docType"
+                       Placeholder="e.g., INV"
+                       ReadOnly="@isLoading" />
+        </DxFormLayoutItem>
+
+        <DxFormLayoutItem Caption="Document Number" ColSpanMd="4">
+            <DxTextBox @bind-Text="docNum"
+                       Placeholder="e.g., DOC123"
+                       ReadOnly="@isLoading" />
+        </DxFormLayoutItem>
+
+        <DxFormLayoutItem Caption="Document Date" ColSpanMd="4">
+            <DxDateEdit @bind-Date="docDate"
+                        DisplayFormat="dd/MM/yyyy"
+                        EditFormat="dd/MM/yyyy"
+                        ReadOnly="@isLoading" />
+        </DxFormLayoutItem>
+    </DxFormLayout>
+
+    <!-- IRN DETAILS DISPLAY -->
+    @if (!string.IsNullOrWhiteSpace(irnDetailsJson))
+    {
+        <DxFormLayout CssClass="mb-3">
+            <DxFormLayoutItem Caption="IRN Details Response" ColSpanMd="12">
+                <Template>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <small class="text-muted">Response Data</small>
+                        <DxButton Text="Copy"
+                                  IconCssClass="bi bi-clipboard"
+                                  RenderStyle="ButtonRenderStyle.Secondary"
+                                  SizeMode="SizeMode.Small"
+                                  Click="CopyResponseToClipboard" />
+                    </div>
+                    <DxMemo Text="@irnDetailsJson"
+                            ReadOnly="true"
+                            Rows="10"
+                            CssClass="code-preview" />
+                </Template>
+            </DxFormLayoutItem>
+        </DxFormLayout>
+    }
+
+    <!-- SUCCESS MESSAGE WITH IRN -->
+    @if (!string.IsNullOrWhiteSpace(extractedIrn))
+    {
+        <div class="alert alert-success alert-dismissible fade show mb-3 p-3 shadow-sm"
+             role="alert" style="font-size: 0.95rem;">
+
+            <div class="d-flex align-items-center mb-2">
+                <i class="bi bi-check-circle-fill me-2" style="font-size: 1.2rem;"></i>
+                <strong>IRN Details Retrieved!</strong>
+            </div>
+
+            <div class="mt-2">
+                <div class="mb-2">
+                    <strong>IRN:</strong>
+                    <pre class="mt-1 mb-2 p-2 bg-light rounded small text-break"
+                         style="white-space: pre-wrap;">@extractedIrn</pre>
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(extractedAckNo))
+                {
+                    <div class="mb-2">
+                        <strong>Acknowledgment No:</strong> <span class="text-dark">@extractedAckNo</span>
+                    </div>
+                }
+
+                @if (extractedAckDt.HasValue)
+                {
+                    <div class="mb-2">
+                        <strong>Acknowledgment Date:</strong> <span class="text-dark">@extractedAckDt.Value.ToString("dd/MM/yyyy HH:mm:ss")</span>
+                    </div>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(extractedStatus))
+                {
+                    <div class="mb-2">
+                        <strong>Status:</strong>
+                        <span class="badge @(extractedStatus == "ACT" ? "bg-success" : "bg-secondary")">
+                            @extractedStatus
+                        </span>
+                    </div>
+                }
+            </div>
+
+            <button type="button"
+                    class="btn-close"
+                    style="transform: scale(1.2);"
+                    @onclick="ClearIrnDetails">
+            </button>
+        </div>
+    }
+
+    <!-- ERROR MESSAGE -->
+    @if (errorMessages.Any())
+    {
+        <div class="alert alert-danger alert-dismissible fade show mb-3 p-3 shadow-sm"
+             role="alert" style="font-size: 0.95rem;">
+
+            <div class="d-flex align-items-center mb-2">
+                <i class="bi bi-exclamation-triangle-fill me-2" style="font-size: 1.2rem;"></i>
+                <strong>Error(s) Occurred</strong>
+            </div>
+
+            <div class="mt-2" style="max-height: 250px; overflow-y: auto;">
+                @foreach (var error in errorMessages)
+                {
+                    <div class="error-item p-2 mb-2 bg-light rounded">
+                        <div class="fw-bold text-danger small">
+                            <i class="bi bi-x-circle me-1"></i>
+                            @error.Title
+                        </div>
+                        <div class="text-dark small mt-1 ms-3">
+                            @error.Message
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(error.Details))
+                        {
+                            <div class="text-muted small mt-1 ms-3" style="font-size: 0.85rem;">
+                                <em>@error.Details</em>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+
+            <button type="button"
+                    class="btn-close"
+                    style="transform: scale(1.2);"
+                    @onclick="ClearErrors">
+            </button>
+        </div>
+    }
+
+    <!-- LOADING -->
+    @if (isLoading)
+    {
+        <div class="text-center py-3 mb-3">
+            <div class="spinner-border text-primary mb-2" style="width: 2rem; height: 2rem;"></div>
+            <div><small class="text-muted">@loadingMessage</small></div>
+        </div>
+    }
+
+    <!-- ACTION BUTTONS -->
+    <div class="d-flex gap-2 justify-content-end flex-wrap">
+        <DxButton Text="@(isLoading ? "Fetching..." : "Get IRN Details")"
+                  IconCssClass="bi bi-search"
+                  RenderStyle="ButtonRenderStyle.Primary"
+                  Click="GetIrnDetails"
+                  Enabled="@(!isLoading && CanSearch())" />
+
+        <DxButton Text="Clear"
+                  IconCssClass="bi bi-x-square"
+                  RenderStyle="ButtonRenderStyle.Secondary"
+                  RenderStyleMode="ButtonRenderStyleMode.Outline"
+                  Click="ClearForm"
+                  Enabled="@(!isLoading)" />
+
+        <DxButton Text="Close"
+                  IconCssClass="bi bi-x-circle"
+                  RenderStyle="ButtonRenderStyle.Secondary"
+                  Click="Hide"
+                  Enabled="@(!isLoading)" />
+    </div>
+
+</DxPopup>
+
+<style>
+    .code-preview {
+        font-family: 'Consolas', 'Monaco', monospace;
+        font-size: 12px;
+        background: #1e1e1e;
+        color: #dcdcdc;
+    }
+
+        .code-preview .dxbl-edit-area {
+            background: black !important;
+            color: #dcdcdc !important;
+        }
+
+    .error-item {
+        border-left: 3px solid #dc3545;
+    }
+
+    @@media (max-width: 576px) {
+        .alert {
+            font-size: 0.9rem;
+            padding: 12px 16px !important;
+        }
+
+        pre {
+            font-size: 0.85rem !important;
+            word-wrap: break-word;
+        }
+
+        .btn-close {
+            transform: scale(1.3);
+        }
+    }
+</style>
+
+@code {
+    public bool Visible { get; set; }
+
+    private string docType = "INV";
+    private string docNum = "";
+    private DateTime? docDate = DateTime.Today;
+
+    private string irnDetailsJson = "";
+    private string extractedIrn = "";
+    private string extractedAckNo = "";
+    private DateTime? extractedAckDt;
+    private string extractedStatus = "";
+    private Bill currentBill;
+
+    private List<ErrorDetail> errorMessages = new();
+    private bool isLoading = false;
+    private string loadingMessage = "Loading...";
+
+    // Error detail class
+    private class ErrorDetail
+    {
+        public string Title { get; set; } = "";
+        public string Message { get; set; } = "";
+        public string Details { get; set; } = "";
+    }
+
+    public void Show(List<Bill> bills)
+    {
+        Visible = true;
+        ClearForm();
+
+        // If bills list has at least one selected bill
+        if (bills != null && bills.Any())
+        {
+            currentBill = bills.First();
+
+            // Set document details from bill
+            docNum = currentBill.BillNo;
+            docDate = currentBill.BillDate;
+
+            // Optional: Auto-set docType if available
+            if (!string.IsNullOrWhiteSpace(currentBill.BillType))
+            {
+                docType = currentBill.BillType;
+            }
+        }
+
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    public void Hide()
+    {
+        Visible = false;
+        ClearForm();
+    }
+
+    private void ClearForm()
+    {
+        docType = "INV";
+        docNum = "";
+        docDate = DateTime.Today;
+        irnDetailsJson = "";
+        ClearIrnDetails();
+        ClearErrors();
+        isLoading = false;
+    }
+
+    private void ClearErrors()
+    {
+        errorMessages.Clear();
+    }
+
+    private void ClearIrnDetails()
+    {
+        extractedIrn = "";
+        extractedAckNo = "";
+        extractedAckDt = null;
+        extractedStatus = "";
+    }
+
+    private void AddError(string title, string message, string details = "")
+    {
+        errorMessages.Add(new ErrorDetail
+            {
+                Title = title,
+                Message = message,
+                Details = details
+            });
+    }
+
+    private bool CanSearch()
+    {
+        return !string.IsNullOrWhiteSpace(docType) &&
+               !string.IsNullOrWhiteSpace(docNum) &&
+               docDate.HasValue;
+    }
+
+    private string FormatJson(string input)
+    {
+        try
+        {
+            var parsed = JsonSerializer.Deserialize<JsonElement>(input);
+            return JsonSerializer.Serialize(parsed, new JsonSerializerOptions
+                {
+                    WriteIndented = true
+                });
+        }
+        catch
+        {
+            return input;
+        }
+    }
+
+    private string? SafeGet(JsonElement parent, string property)
+    {
+        if (parent.TryGetProperty(property, out var node))
+            return node.GetString();
+
+        return null;
+    }
+
+    private async Task<EinvConfig> GetValidAuthTokenAsync()
+    {
+        var configs = await EinvConfigService.GetAllAsync();
+        var config = configs.FirstOrDefault();
+
+        if (config == null)
+        {
+            AddError("Configuration Error", "E-Invoice configuration not found",
+                "Please set up E-Invoice configuration in settings.");
+            ToastService.Error("Config not found!");
+            return null;
+        }
+
+        if (string.IsNullOrWhiteSpace(config.AuthToken) || config.EInvoiceTokenExp == null)
+        {
+            var newTokenResponse = await GstinAuthTokenService.GenerateAuthTokenAsync(config);
+
+            if (newTokenResponse == null)
+            {
+                AddError("Authentication Error", "Failed to generate Auth Token",
+                    "Please check your credentials and try again.");
+                ToastService.Error("Auth Token generation failed!");
+                return null;
+            }
+
+            ToastService.Success("New Auth Token generated!");
+            return await UpdateConfigAfterToken(config);
+        }
+
+        DateTime expiry;
+
+        if (!DateTime.TryParse(config.EInvoiceTokenExp, out expiry))
+        {
+            var refreshed = await GstinAuthTokenService.GenerateAuthTokenAsync(config);
+            if (refreshed == null)
+            {
+                AddError("Authentication Error", "Failed to refresh Auth Token",
+                    "Token expiry format is invalid.");
+                return null;
+            }
+
+            return await UpdateConfigAfterToken(config);
+        }
+
+        var remaining = expiry - DateTime.Now;
+
+        if (remaining.TotalMinutes < 2)
+        {
+            var refreshed = await GstinAuthTokenService.GenerateAuthTokenAsync(config);
+
+            if (refreshed == null)
+            {
+                AddError("Authentication Error", "Failed to refresh expired Auth Token");
+                return null;
+            }
+
+            return await UpdateConfigAfterToken(config);
+        }
+
+        return config;
+    }
+
+    private async Task<EinvConfig> UpdateConfigAfterToken(EinvConfig oldConfig)
+    {
+        var updatedList = await EinvConfigService.GetAllAsync();
+        return updatedList.FirstOrDefault(c => c.Gstin == oldConfig.Gstin);
+    }
+
+    private async Task GetIrnDetails()
+    {
+        if (!CanSearch())
+        {
+            ToastService.Error("Please fill all required fields.");
+            return;
+        }
+
+        isLoading = true;
+        loadingMessage = "Fetching IRN details...";
+        ClearErrors();
+        ClearIrnDetails();
+        irnDetailsJson = "";
+        StateHasChanged();
+
+        try
+        {
+            var config = await GetValidAuthTokenAsync();
+            if (config == null)
+                return;
+
+            // Format date as dd/MM/yyyy using InvariantCulture
+            DateTime dateValue = docDate ?? DateTime.Today;
+            string formattedDate = $"{dateValue.Day:D2}/{dateValue.Month:D2}/{dateValue.Year}";
+
+            // Build URL with query parameters
+            string url = $"{config.BaseUrl.TrimEnd('/')}/eicore/dec/v1.03/Invoice/irnbydocdetails?QrCodeSize=250&doctype={Uri.EscapeDataString(docType)}&docnum={Uri.EscapeDataString(docNum)}&docdate={Uri.EscapeDataString(formattedDate)}";
+
+            var req = new HttpRequestMessage(HttpMethod.Get, url);
+            req.Headers.Add("aspid", config.AspUserId);
+            req.Headers.Add("password", config.Password);
+            req.Headers.Add("Gstin", config.Gstin);
+            req.Headers.Add("user_name", config.Username);
+            req.Headers.Add("AuthToken", config.AuthToken);
+
+            var response = await HttpClient.SendAsync(req);
+            var content = await response.Content.ReadAsStringAsync();
+
+            irnDetailsJson = FormatJson(content);
+
+            // Parse response
+            JsonElement parsed;
+            try
+            {
+                parsed = JsonSerializer.Deserialize<JsonElement>(content);
+            }
+            catch
+            {
+                AddError("Parse Error", "Invalid API response received",
+                    "The response from server could not be parsed.");
+                ToastService.Error("Failed to parse response!");
+                return;
+            }
+
+            var status = SafeGet(parsed, "Status");
+            if (status != "1")
+            {
+                var error = ExtractError(parsed);
+                AddError("API Error", "Failed to retrieve IRN details", error);
+                ToastService.Error("Failed to get IRN details!");
+                return;
+            }
+
+            // Extract Data field
+            if (!parsed.TryGetProperty("Data", out var dataNode))
+            {
+                AddError("Response Error", "Invalid response structure",
+                    "'Data' field not found in API response.");
+                ToastService.Error("Invalid response!");
+                return;
+            }
+
+            JsonElement data;
+            try
+            {
+                var dataString = dataNode.GetString();
+                data = JsonSerializer.Deserialize<JsonElement>(dataString);
+            }
+            catch
+            {
+                AddError("Parse Error", "Failed to parse response data",
+                    "Data field contains invalid JSON.");
+                ToastService.Error("Failed to parse data!");
+                return;
+            }
+
+            // Extract key details
+            extractedIrn = SafeGet(data, "Irn") ?? "";
+            extractedAckNo = SafeGet(data, "AckNo") ?? "";
+
+            // Parse AckDt string to DateTime
+            var ackDtString = SafeGet(data, "AckDt");
+            if (!string.IsNullOrWhiteSpace(ackDtString))
+            {
+                if (DateTime.TryParse(ackDtString, out var parsedAckDt))
+                {
+                    extractedAckDt = parsedAckDt;
+                }
+            }
+
+            extractedStatus = SafeGet(data, "Status") ?? "";
+            string signedInvoice = SafeGet(data, "SignedInvoice") ?? "";
+            string signedQr = SafeGet(data, "SignedQRCode") ?? "";
+
+            if (string.IsNullOrWhiteSpace(extractedIrn))
+            {
+                AddError("No IRN Found", "IRN not generated for this document.");
+                ToastService.Warning("No IRN found!");
+                return;
+            }
+
+            // Save into database
+            if (currentBill != null)
+            {
+                bool saved = await BillService.SaveEInvoiceDataAsync(
+                    currentBill.BillId,
+                    extractedIrn,
+                    extractedAckNo,
+                    extractedAckDt,
+                    signedInvoice,
+                    signedQr
+                );
+
+                if (!saved)
+                {
+                    AddError($"Bill #{currentBill.BillNo}", "Failed to save IRN in database");
+                    ToastService.Error("Failed to save IRN!");
+                }
+                else
+                {
+                    ToastService.Success("IRN details retrieved & saved successfully!");
+                }
+            }
+            else
+            {
+                ToastService.Success("IRN details retrieved successfully!");
+            }
+        }
+        catch (HttpRequestException httpEx)
+        {
+            AddError("Network Error", "Failed to connect to API", httpEx.Message);
+            ToastService.Error("Network error!");
+        }
+        catch (Exception ex)
+        {
+            AddError("Unexpected Error", "An error occurred", ex.Message);
+            ToastService.Error("Failed to get IRN details!");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private string ExtractError(JsonElement parsed)
+    {
+        try
+        {
+            if (parsed.TryGetProperty("ErrorDetails", out var err) &&
+                err.ValueKind == JsonValueKind.Array &&
+                err.GetArrayLength() > 0)
+            {
+                var errorMsg = SafeGet(err[0], "ErrorMessage") ?? "Unknown error";
+                var errorCode = SafeGet(err[0], "ErrorCode");
+
+                if (!string.IsNullOrWhiteSpace(errorCode))
+                    return $"[{errorCode}] {errorMsg}";
+
+                return errorMsg;
+            }
+        }
+        catch { }
+
+        return "Unknown error occurred";
+    }
+
+    private async Task CopyResponseToClipboard()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("navigator.clipboard.writeText", irnDetailsJson);
+            ToastService.Success("Response copied!");
+        }
+        catch
+        {
+            ToastService.Error("Failed to copy.");
+        }
+    }
+}

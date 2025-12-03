@@ -1,0 +1,581 @@
+﻿    @using System.Text.Json
+    @using FreightBKShippingWebApp.Model
+    @using FreightBKShippingWebApp.Models
+    @using FreightBKShippingWebApp.Services
+    @using System.Text
+    @using Microsoft.JSInterop
+    @inject ToasteService ToastService
+    @inject BillService BillService
+    @inject EinvConfigService EinvConfigService
+    @inject HttpClient HttpClient
+    @inject IJSRuntime JSRuntime
+    @inject GstinAuthTokenService GstinAuthTokenService
+
+    <DxPopup @bind-Visible="Visible"
+             MaxWidth="max(60%, 600px)"
+             MaxHeight="91%"
+             ShowCloseButton="true"
+             Scrollable="true"
+             CloseOnOutsideClick="false"
+             HeaderText="Cancel E-Invoice (IRN)"
+             HorizontalAlignment="HorizontalAlignment.Center"
+             VerticalAlignment="VerticalAlignment.Center">
+
+        <!-- SELECTED BILLS -->
+        <DxFormLayout CssClass="mb-3">
+            <DxFormLayoutItem Caption="Selected Bills for Cancellation" ColSpanMd="12">
+                @if (SelectedBills?.Any() == true)
+                {
+                    <div class="selected-bills-box">
+                        @foreach (var bill in SelectedBills)
+                        {
+                            <div class="bill-card  p-2 bg-light rounded">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <span class="fw-bold">Bill #@bill.BillNo</span>
+                                        <span class="text-muted ms-2">₹@bill.BillAmount.ToString("N2")</span>
+                                    </div>
+                                    @if (!string.IsNullOrWhiteSpace(bill.BillIrnNo))
+                                    {
+                                        <span class="badge bg-success">Has IRN</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-danger">No IRN</span>
+                                    }
+                                </div>
+                                @if (!string.IsNullOrWhiteSpace(bill.BillIrnNo))
+                                {
+                                    <div class="small text-muted mt-1">
+                                        <strong>IRN:</strong> @bill.BillIrnNo.Substring(0, Math.Min(40, bill.BillIrnNo.Length))...
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="text-muted text-center py-2">
+                        <small>No bills selected</small>
+                    </div>
+                }
+            </DxFormLayoutItem>
+        </DxFormLayout>
+
+        <!-- CANCELLATION FORM -->
+        <DxFormLayout CssClass="mb-3">
+            <DxFormLayoutItem Caption="Cancellation Reason *" ColSpanMd="12">
+                <DxComboBox Data="@cancellationReasons"
+                            @bind-Value="@selectedCancelReason"
+                            TextFieldName="Text"
+                            ValueFieldName="Value"
+                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto">
+                </DxComboBox>
+            </DxFormLayoutItem>
+
+            <DxFormLayoutItem Caption="Cancellation Remarks *" ColSpanMd="12">
+                <DxTextBox @bind-Text="@cancellationRemarks"
+                           Placeholder="Enter reason for cancellation (e.g., Wrong entry, Duplicate invoice)"
+                           MaxLength="100" />
+            </DxFormLayoutItem>
+        </DxFormLayout>
+
+        <!-- API RESPONSE -->
+        @if (!string.IsNullOrWhiteSpace(cancelResponseJson))
+        {
+            <DxFormLayout CssClass="mb-3">
+                <DxFormLayoutItem Caption="API Response" ColSpanMd="12">
+                    <DxMemo Text="@cancelResponseJson"
+                            ReadOnly="true"
+                            Rows="8"
+                            CssClass="code-preview" />
+                </DxFormLayoutItem>
+            </DxFormLayout>
+        }
+
+        <!-- SUCCESS MESSAGE -->
+        @if (successMessages.Any())
+        {
+            <div class="alert alert-success alert-dismissible fade show mb-3 p-3 shadow-sm"
+                 role="alert" style="font-size: 0.95rem;">
+
+                <div class="d-flex align-items-center mb-2">
+                    <i class="bi bi-check-circle-fill me-2" style="font-size: 1.2rem;"></i>
+                    <strong>IRN Cancelled Successfully!</strong>
+                </div>
+
+                <div class="mt-2">
+                    @foreach (var msg in successMessages)
+                    {
+                        <div class="p-2 mb-2 bg-light rounded">
+                            <div class="small">@msg</div>
+                        </div>
+                    }
+                </div>
+
+                <button type="button"
+                        class="btn-close"
+                        style="transform: scale(1.2);"
+                        @onclick="() => successMessages.Clear()">
+                </button>
+            </div>
+        }
+
+        <!-- ERROR MESSAGE -->
+        @if (errorMessages.Any())
+        {
+            <div class="alert alert-danger alert-dismissible fade show mb-3 p-3 shadow-sm"
+                 role="alert" style="font-size: 0.95rem;">
+
+                <div class="d-flex align-items-center mb-2">
+                    <i class="bi bi-exclamation-triangle-fill me-2" style="font-size: 1.2rem;"></i>
+                    <strong>Error(s) Occurred</strong>
+                </div>
+
+                <div class="mt-2" style="max-height: 250px; overflow-y: auto;">
+                    @foreach (var error in errorMessages)
+                    {
+                        <div class="error-item p-2 mb-2 bg-light rounded">
+                            <div class="fw-bold text-danger small">
+                                <i class="bi bi-x-circle me-1"></i>
+                                @error.BillInfo
+                            </div>
+                            <div class="text-dark small mt-1 ms-3">
+                                @error.Message
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(error.Details))
+                            {
+                                <div class="text-muted small mt-1 ms-3" style="font-size: 0.85rem;">
+                                    <em>@error.Details</em>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+
+                <button type="button"
+                        class="btn-close"
+                        style="transform: scale(1.2);"
+                        @onclick="ClearErrors">
+                </button>
+            </div>
+        }
+
+        <!-- WARNING MESSAGE -->
+        @if (warningMessages.Any())
+        {
+            <div class="alert alert-warning alert-dismissible fade show mb-3 p-3 shadow-sm"
+                 role="alert" style="font-size: 0.95rem;">
+
+                <div class="d-flex align-items-center mb-2">
+                    <i class="bi bi-exclamation-circle-fill me-2" style="font-size: 1.2rem;"></i>
+                    <strong>Warning(s)</strong>
+                </div>
+
+                <div class="mt-2" style="max-height: 200px; overflow-y: auto;">
+                    @foreach (var warning in warningMessages)
+                    {
+                        <div class="warning-item p-2 mb-2 bg-light rounded">
+                            <div class="text-dark small">
+                                <i class="bi bi-info-circle me-1"></i>
+                                @warning
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <button type="button"
+                        class="btn-close"
+                        style="transform: scale(1.2);"
+                        @onclick="ClearWarnings">
+                </button>
+            </div>
+        }
+
+        <!-- LOADING -->
+        @if (isLoading)
+        {
+            <div class="text-center py-3 mb-3">
+                <div class="spinner-border text-danger mb-2" style="width: 2rem; height: 2rem;"></div>
+                <div><small class="text-muted">@loadingMessage</small></div>
+            </div>
+        }
+
+        <!-- ACTION BUTTONS -->
+        <div class="d-flex gap-2 justify-content-end flex-wrap">
+            <DxButton Text="@(isLoading ? "Processing..." : "Cancel IRN")"
+                      IconCssClass="bi bi-x-circle-fill"
+                      RenderStyle="ButtonRenderStyle.Danger"
+                      Click="CancelIRN"
+                      Enabled="@(!isLoading && !string.IsNullOrWhiteSpace(selectedCancelReason) && !string.IsNullOrWhiteSpace(cancellationRemarks))" />
+
+            <DxButton Text="Close"
+                      IconCssClass="bi bi-x-circle"
+                      RenderStyle="ButtonRenderStyle.Secondary"
+                      Click="Hide"
+                      Enabled="@(!isLoading)" />
+        </div>
+
+    </DxPopup>
+
+    <style>
+        .code-preview {
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 12px;
+            background: #1e1e1e;
+            color: #dcdcdc;
+        }
+
+            .code-preview .dxbl-edit-area {
+                background: black !important;
+                color: #dcdcdc !important;
+            }
+
+        .selected-bills-box {
+            padding: 0.5rem;
+            background: #f8f9fa;
+            border-radius: 4px;
+            min-height: 30px;
+        }
+
+        .bill-card {
+            border-left: 3px solid #0d6efd;
+        }
+
+        .error-item {
+            border-left: 3px solid #dc3545;
+        }
+
+        .warning-item {
+            border-left: 3px solid #ffc107;
+        }
+    </style>
+
+    @code {
+        [Parameter] public EventCallback<List<Bill>> OnCancelIRN { get; set; }
+
+        public bool Visible { get; set; }
+        public List<Bill> SelectedBills { get; set; } = new();
+
+        private string selectedCancelReason = "1";
+        private string cancellationRemarks = "";
+        private string cancelResponseJson = "";
+        private List<ErrorDetail> errorMessages = new();
+        private List<string> warningMessages = new();
+        private List<string> successMessages = new();
+        private bool isLoading = false;
+        private string loadingMessage = "Loading...";
+
+        private List<CancellationReason> cancellationReasons = new()
+        {
+            new CancellationReason { Value = "1", Text = "1 - Duplicate" },
+            new CancellationReason { Value = "2", Text = "2 - Data Entry Mistake" },
+            new CancellationReason { Value = "3", Text = "3 - Order Cancelled" },
+            new CancellationReason { Value = "4", Text = "4 - Others" }
+        };
+
+        private class CancellationReason
+        {
+            public string Value { get; set; } = "";
+            public string Text { get; set; } = "";
+        }
+
+        private class ErrorDetail
+        {
+            public string BillInfo { get; set; } = "";
+            public string Message { get; set; } = "";
+            public string Details { get; set; } = "";
+        }
+
+        public void Show(List<Bill> bills)
+        {
+            SelectedBills = bills;
+            selectedCancelReason = "1";
+            cancellationRemarks = "";
+            cancelResponseJson = "";
+            ClearErrors();
+            ClearWarnings();
+            successMessages.Clear();
+            Visible = true;
+            StateHasChanged();
+        }
+
+        public void Hide()
+        {
+            Visible = false;
+            SelectedBills.Clear();
+            selectedCancelReason = "1";
+            cancellationRemarks = "";
+            cancelResponseJson = "";
+            ClearErrors();
+            ClearWarnings();
+            successMessages.Clear();
+            isLoading = false;
+        }
+
+        private void ClearErrors() => errorMessages.Clear();
+        private void ClearWarnings() => warningMessages.Clear();
+
+        private void AddError(string billInfo, string message, string details = "")
+        {
+            errorMessages.Add(new ErrorDetail
+                {
+                    BillInfo = billInfo,
+                    Message = message,
+                    Details = details
+                });
+        }
+
+        private string FormatJson(string input)
+        {
+            try
+            {
+                var parsed = JsonSerializer.Deserialize<JsonElement>(input);
+                return JsonSerializer.Serialize(parsed, new JsonSerializerOptions { WriteIndented = true });
+            }
+            catch
+            {
+                return input;
+            }
+        }
+
+        private string? SafeGet(JsonElement parent, string property)
+        {
+            if (parent.TryGetProperty(property, out var node))
+                return node.GetString();
+            return null;
+        }
+
+        private async Task<EinvConfig> GetValidAuthTokenAsync()
+        {
+            var configs = await EinvConfigService.GetAllAsync();
+            var config = configs.FirstOrDefault();
+
+            if (config == null)
+            {
+                AddError("Configuration Error", "E-Invoice configuration not found");
+                ToastService.Error("Config not found!");
+                return null;
+            }
+
+            if (string.IsNullOrWhiteSpace(config.AuthToken) || config.EInvoiceTokenExp == null)
+            {
+                warningMessages.Add("Auth Token not found. Generating new token...");
+                var newTokenResponse = await GstinAuthTokenService.GenerateAuthTokenAsync(config);
+
+                if (newTokenResponse == null)
+                {
+                    AddError("Authentication Error", "Failed to generate Auth Token");
+                    ToastService.Error("Auth Token generation failed!");
+                    return null;
+                }
+
+                ToastService.Success("New Auth Token generated!");
+                var updatedList = await EinvConfigService.GetAllAsync();
+                return updatedList.FirstOrDefault(c => c.Gstin == config.Gstin);
+            }
+
+            if (DateTime.TryParse(config.EInvoiceTokenExp, out var expiry))
+            {
+                var remaining = expiry - DateTime.Now;
+                if (remaining.TotalMinutes < 2)
+                {
+                    var refreshed = await GstinAuthTokenService.GenerateAuthTokenAsync(config);
+                    if (refreshed == null)
+                    {
+                        AddError("Authentication Error", "Failed to refresh expired Auth Token");
+                        return null;
+                    }
+                    var updatedList = await EinvConfigService.GetAllAsync();
+                    return updatedList.FirstOrDefault(c => c.Gstin == config.Gstin);
+                }
+            }
+
+            return config;
+        }
+
+        private async Task CancelIRN()
+        {
+            if (!SelectedBills.Any())
+            {
+                ToastService.Error("No bills selected.");
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(selectedCancelReason) || string.IsNullOrWhiteSpace(cancellationRemarks))
+            {
+                ToastService.Error("Please provide cancellation reason and remarks.");
+                return;
+            }
+
+            // Validate bills have IRN
+            var billsWithoutIrn = SelectedBills.Where(b => string.IsNullOrWhiteSpace(b.BillIrnNo)).ToList();
+            if (billsWithoutIrn.Any())
+            {
+                foreach (var bill in billsWithoutIrn)
+                {
+                    warningMessages.Add($"Bill #{bill.BillNo} does not have an IRN and will be skipped.");
+                }
+            }
+
+            var billsToCancel = SelectedBills.Where(b => !string.IsNullOrWhiteSpace(b.BillIrnNo)).ToList();
+            if (!billsToCancel.Any())
+            {
+                ToastService.Error("No bills with valid IRN found.");
+                return;
+            }
+
+            isLoading = true;
+            loadingMessage = $"Cancelling IRN for {billsToCancel.Count} bill(s)...";
+            ClearErrors();
+            successMessages.Clear();
+            cancelResponseJson = "";
+            StateHasChanged();
+
+            try
+            {
+                var config = await GetValidAuthTokenAsync();
+                if (config == null)
+                    return;
+
+                var allResponses = new List<string>();
+                var successCount = 0;
+                var failCount = 0;
+
+                foreach (var bill in billsToCancel)
+                {
+                    try
+                    {
+                        // Prepare cancellation request
+                        var cancelRequest = new
+                        {
+                            Irn = bill.BillIrnNo,
+                            CnlRsn = selectedCancelReason,
+                            CnlRem = cancellationRemarks
+                        };
+
+                        var requestJson = JsonSerializer.Serialize(cancelRequest);
+
+                        // API URL for cancellation
+                        string url = $"{config.BaseUrl.TrimEnd('/')}/eicore/dec/v1.03/Invoice/Cancel";
+
+                        var req = new HttpRequestMessage(HttpMethod.Post, url);
+                        req.Headers.Add("aspid", config.AspUserId);
+                        req.Headers.Add("password", config.Password);
+                        req.Headers.Add("Gstin", config.Gstin);
+                        req.Headers.Add("user_name", config.Username);
+                        req.Headers.Add("AuthToken", config.AuthToken);
+                        req.Content = new StringContent(requestJson, Encoding.UTF8, "application/json");
+
+                        var response = await HttpClient.SendAsync(req);
+                        var content = await response.Content.ReadAsStringAsync();
+
+                        allResponses.Add($"// Bill #{bill.BillNo}\n{FormatJson(content)}");
+
+                        JsonElement parsed;
+                        try
+                        {
+                            parsed = JsonSerializer.Deserialize<JsonElement>(content);
+                        }
+                        catch
+                        {
+                            AddError($"Bill #{bill.BillNo}", "Invalid API response received");
+                            failCount++;
+                            continue;
+                        }
+
+                        var status = SafeGet(parsed, "Status");
+                        if (status != "1")
+                        {
+                            var error = ExtractError(parsed);
+                            AddError($"Bill #{bill.BillNo}", "IRN cancellation failed", error);
+                            failCount++;
+                            continue;
+                        }
+
+                        // Update bill to mark IRN as cancelled
+                        bool saved = await BillService.CancelEInvoiceAsync(bill.BillId);
+
+                        if (saved)
+                        {
+                            successMessages.Add($"Bill #{bill.BillNo}: IRN successfully cancelled");
+                            successCount++;
+                        }
+                        else
+                        {
+                            AddError($"Bill #{bill.BillNo}", "IRN cancelled but database update failed");
+                            failCount++;
+                        }
+                    }
+                    catch (HttpRequestException httpEx)
+                    {
+                        AddError($"Bill #{bill.BillNo}", "Network error occurred", httpEx.Message);
+                        failCount++;
+                    }
+                    catch (Exception ex)
+                    {
+                        AddError($"Bill #{bill.BillNo}", "Unexpected error", ex.Message);
+                        failCount++;
+                    }
+                }
+
+                if (allResponses.Any())
+                {
+                    cancelResponseJson = string.Join("\n\n// ========================================\n\n", allResponses);
+                }
+
+                // Show toast notification with summary
+                if (successCount > 0 && failCount == 0)
+                {
+                    ToastService.Success($"✅ All {successCount} IRN(s) cancelled successfully!");
+                }
+                else if (successCount > 0 && failCount > 0)
+                {
+                    ToastService.Warning($"⚠️ Partial Success: {successCount} cancelled, {failCount} failed");
+                }
+                else if (failCount > 0)
+                {
+                    ToastService.Error($"❌ All {failCount} IRN cancellation(s) failed");
+                }
+
+                if (successCount > 0)
+                {
+                    if (OnCancelIRN.HasDelegate)
+                        await OnCancelIRN.InvokeAsync(SelectedBills);
+                }
+            }
+            catch (Exception ex)
+            {
+                AddError("Critical Error", "IRN cancellation process failed", ex.Message);
+                ToastService.Error("Cancellation failed!");
+            }
+            finally
+            {
+                isLoading = false;
+                StateHasChanged();
+            }
+        }
+
+        private string ExtractError(JsonElement parsed)
+        {
+            try
+            {
+                if (parsed.TryGetProperty("ErrorDetails", out var err) &&
+                    err.ValueKind == JsonValueKind.Array &&
+                    err.GetArrayLength() > 0)
+                {
+                    var errorMsg = SafeGet(err[0], "ErrorMessage") ?? "Unknown error";
+                    var errorCode = SafeGet(err[0], "ErrorCode");
+
+                    if (!string.IsNullOrWhiteSpace(errorCode))
+                        return $"[{errorCode}] {errorMsg}";
+
+                    return errorMsg;
+                }
+            }
+            catch { }
+
+            return "Unknown error occurred";
+        }
+    }
