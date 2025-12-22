@@ -9,19 +9,16 @@
 @inject ConfirmationDialogService ConfirmDialogService
 @inject GridLayoutService GridLayoutService
 <style>
-    .layout-toolbar {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 8px;
-        background-color: #f8f9fa;
-        border-bottom: 1px solid #dee2e6;
+    .grid-size {
+        max-height: 600px;
     }
 
-        .layout-toolbar label {
-            font-weight: 600;
-            margin-right: 4px;
-        }
+
+    /* ComboBox Styling */
+    .layout-combobox {
+        border-radius: 6px;
+        width: 185px;
+    }
 </style>
 <DxGrid TItem="GstSlabModel"
         Data="@gstSlabList"
@@ -36,7 +33,9 @@
         SelectionMode="GridSelectionMode.Multiple"
         SelectedDataItems="@SelectedGstSlabs"
         SelectedDataItemsChanged="OnSelectedGstSlabsChanged"
-        ColumnResizeMode="GridColumnResizeMode.NextColumn">
+        ColumnResizeMode="GridColumnResizeMode.NextColumn"
+        CssClass="grid-size"
+        AllowSelectRowByClick="true">
 
     <ToolbarTemplate Context="toolbarContext">
         <DxToolbar>
@@ -53,10 +52,8 @@
                 <DxToolbarItem Text="Delete" IconCssClass="bi bi-trash" Click="OnDelete" />
                 <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="@(async (_) => await LoadGstSlabsAsync())" />
 
-                <DxToolbarItem BeginGroup="true">
-
-                    <div class="d-flex align-items-center gap-2">
-                        <label class="mb-0">Layout:</label>
+                <DxToolbarItem BeginGroup="true" IconCssClass="bi bi-gear-wide-connected" Alignment="ToolbarItemAlignment.Right">
+                    <Template>
 
                         <DxComboBox Data="@availableLayouts"
                                     Value="@selectedLayoutId"
@@ -64,31 +61,32 @@
                                     ValueChanged="@((int? value) => OnLayoutSelectedAsync(value))"
                                     ValueFieldName="GridLayoutId"
                                     TextFieldName="GridLayoutName"
-                                    NullText="-- Default --"
-                                    Width="180px"
-                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
-                    </div>
+                                    NullText="Default View"
+                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                    CssClass="layout-combobox" />
+
+                    </Template>
 
                 </DxToolbarItem>
-
-                <DxToolbarItem BeginGroup="true"
+                <DxToolbarItem BeginGroup="true" Context="cfdr"
+                               Alignment="ToolbarItemAlignment.Right"
                                RenderStyleMode="ToolbarItemRenderStyleMode.Contained"
+                               RenderStyle="ButtonRenderStyle.Secondary"
                                IconCssClass="bi bi-gear-wide-connected">
                     <Items>
-
-                        <DxToolbarItem Text="Save Layout"
+                        <DxToolbarItem Text="Save Current Layout"
                                        RenderStyle="ButtonRenderStyle.Primary"
                                        IconCssClass="bi bi-floppy"
                                        Click="ShowSaveLayoutDialog" />
 
-                        <DxToolbarItem Text="Create Layout"
+                        <DxToolbarItem Text="Create New Layout"
                                        RenderStyle="ButtonRenderStyle.Success"
                                        IconCssClass="bi bi-plus-square"
                                        Click="ShowNewLayoutDialog" />
 
                         @if (selectedLayoutId.HasValue)
                         {
-                            <DxToolbarItem Text="Delete Layout"
+                            <DxToolbarItem Text="Delete Current Layout"
                                            RenderStyle="ButtonRenderStyle.Danger"
                                            IconCssClass="bi bi-trash"
                                            Click="DeleteCurrentLayout" />
@@ -96,12 +94,17 @@
 
                     </Items>
                 </DxToolbarItem>
-                </Items>
+
+
+
+
+
+            </Items>
         </DxToolbar>
     </ToolbarTemplate>
 
     <Columns>
-        <DxGridSelectionColumn Width="30" />
+        <DxGridSelectionColumn Width="30" FixedPosition="GridColumnFixedPosition.Left" />
 
         <DxGridDataColumn FieldName="GstSlabId" Caption="ID"
                           Visible="@GetColumnVisibility("GstSlabId")"
@@ -127,14 +130,12 @@
                           Visible="@GetColumnVisibility("GstSlabIgstPer")"
                           Width="@GetColumnWidth("GstSlabIgstPer")" />
 
-        <DxGridDataColumn FieldName="GstSlabStatus" Caption="Active"
-                          Visible="@GetColumnVisibility("GstSlabStatus")"
-                          Width="@GetColumnWidth("GstSlabStatus")" />
-
         <DxGridDataColumn FieldName="GstSlabCreated" Caption="Created"
-                          DisplayFormat="g"
+                          DisplayFormat="dd/MM/yyyy"
                           Visible="@GetColumnVisibility("GstSlabCreated")"
                           Width="@GetColumnWidth("GstSlabCreated")" />
+
+        <DxGridDataColumn FieldName="GstSlabStatus" Caption="Active" />
     </Columns>
 </DxGrid>
 
@@ -267,13 +268,14 @@
 
     </div>
 }
-
 <ConfirmationDialog />
 
 @code {
     DxGrid MyGrid;
     private List<GstSlab> gstSlabList = new();
-    private List<GstSlab> SelectedGstSlabs = new();
+    // private List<GstSlab> SelectedGstSlabs = new();
+    private IReadOnlyList<object> SelectedGstSlabs { get; set; } = new List<object>();
+
     private GstSlabAddEditPage popup;   
     // Grid Layout Management Variables
     private List<GridLayoutDto> availableLayouts = [];
@@ -306,8 +308,8 @@
         new() { FieldName = "GstSlabSgstPer", Caption = "SGST %", Visible = true, Width = 100, DisplayIndex = 3 },
         new() { FieldName = "GstSlabCgstPer", Caption = "CGST %", Visible = true, Width = 100, DisplayIndex = 4 },
         new() { FieldName = "GstSlabIgstPer", Caption = "IGST %", Visible = true, Width = 100, DisplayIndex = 5 },
-        new() { FieldName = "GstSlabStatus", Caption = "Active", Visible = true, Width = 120, DisplayIndex = 6 },
-        new() { FieldName = "GstSlabCreated", Caption = "Created", Visible = true, Width = 180, DisplayIndex = 7 }
+        // new() { FieldName = "GstSlabStatus", Caption = "Active", Visible = true, Width = 120, DisplayIndex = 6 },
+        new() { FieldName = "GstSlabCreated", Caption = "Created", Visible = true, Width = 180, DisplayIndex = 6 }
      };
         currentLayout = allColumns.Select(c => new GridColumnLayout
         {
@@ -616,9 +618,10 @@
         }
     }
 
-    private void OnSelectedGstSlabsChanged(IEnumerable<object> slabs)
+    private async Task OnSelectedGstSlabsChanged(IReadOnlyList<object> slabs)
     {
-        SelectedGstSlabs = slabs.Cast<GstSlab>().ToList();
+        SelectedGstSlabs = slabs ?? new List<object>();
+        await InvokeAsync(StateHasChanged);
     }
 
     private void OnCreateNew(ToolbarItemClickEventArgs e)
@@ -629,14 +632,38 @@
             GstSlabType = "GST"
         });
     }
+    // ✅ FIXED: Reliable clear selection method
+    private async Task ClearSelectionManual()
+    {
+        try
+        {
+            if (MyGrid != null)
+            {
+                MyGrid.ClearSelection(); // ✅ Synchronous method
+            }
+            SelectedGstSlabs = new List<GstSlab>();
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Clear selection error: {ex.Message}");
+        }
+    }
 
-    private void OnEdit(ToolbarItemClickEventArgs e)
+    // ✅ FIXED: Auto-clear after operations
+    private async Task ClearSelection()
+    {
+        await Task.Delay(100); // Small delay for UI update
+        await ClearSelectionManual();
+    }
+    private async Task OnEdit(ToolbarItemClickEventArgs e)
     {
         var slab = MyGrid.GetFocusedDataItem() as GstSlab;
         if (slab != null)
             popup.Show(slab);
         else
             ToastService.Warning("Please select a GST Slab to edit.");
+        await ClearSelection();
     }
 
     private async Task OnDelete(ToolbarItemClickEventArgs e)
@@ -646,15 +673,19 @@
             ToastService.Warning("Please select at least one GST Slab to delete.");
             return;
         }
-
+        var selectedList = SelectedGstSlabs.Cast<GstSlab>().ToList();
         var confirm = await ConfirmDialogService.ShowAsync(
             $"Are you sure you want to delete {SelectedGstSlabs.Count} selected GST slab(s)?");
-        if (!confirm) return;
-
-        int successCount = 0;
-        int failCount = 0;
-
-        foreach (var slab in SelectedGstSlabs)
+        if (!confirm)
+        {
+            await ClearSelection(); // ✅ Clear on cancel
+            return;
+        }
+        try
+        {
+            LoadingService.Show("Deleting...");
+            int successCount = 0, failCount = 0;
+        foreach (var slab in selectedList)
         {
             var result = await GstSlabService.DeleteAsync(slab.GstSlabId);
             if (result) successCount++;
@@ -667,5 +698,11 @@
             ToastService.Error($"{failCount} GST Slab(s) failed to delete.");
 
         await LoadGstSlabsAsync();
-    }
+        }
+        finally
+        {
+            LoadingService.Hide();
+            await ClearSelection(); // ✅ Clear after delete (success or fail)
+        }
+}
 }

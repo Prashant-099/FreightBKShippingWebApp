@@ -8,20 +8,17 @@
 @inject LoadingService LoadingService
 @inject ConfirmationDialogService ConfirmDialogService
 @inject GridLayoutService GridLayoutService
-<style>
-    .layout-toolbar {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 8px;
-        background-color: #f8f9fa;
-        border-bottom: 1px solid #dee2e6;
+    <style >
+    .grid-size {
+        max-height: 600px;
     }
 
-        .layout-toolbar label {
-            font-weight: 600;
-            margin-right: 4px;
-        }
+
+    /* ComboBox Styling */
+    .layout-combobox {
+        border-radius: 6px;
+        width: 185px;
+    }
 </style>
 <DxGrid TItem="HsnSacModel" Data="@hsnList" @ref="MyGrid" 
         KeyFieldName="HsnId" 
@@ -34,7 +31,9 @@
         SelectionMode="GridSelectionMode.Multiple"
         SelectedDataItems="@SelectedHsn"
         SelectedDataItemsChanged="OnSelectedHsnChanged"
-        ColumnResizeMode="GridColumnResizeMode.NextColumn">
+        ColumnResizeMode="GridColumnResizeMode.NextColumn"
+        CssClass="grid-size"
+        AllowSelectRowByClick="true">
     <ToolbarTemplate Context="toolbarContext">
         <DxToolbar>
             <TitleTemplate Context="tl">
@@ -50,10 +49,8 @@
                 <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="@(async (_) => await LoadHsnAsync())" />
 
 
-                <DxToolbarItem BeginGroup="true">
-
-                    <div class="d-flex align-items-center gap-2">
-                        <label class="mb-0">Layout:</label>
+                <DxToolbarItem BeginGroup="true" IconCssClass="bi bi-gear-wide-connected" Alignment="ToolbarItemAlignment.Right">
+                    <Template>
 
                         <DxComboBox Data="@availableLayouts"
                                     Value="@selectedLayoutId"
@@ -61,31 +58,32 @@
                                     ValueChanged="@((int? value) => OnLayoutSelectedAsync(value))"
                                     ValueFieldName="GridLayoutId"
                                     TextFieldName="GridLayoutName"
-                                    NullText="-- Default --"
-                                    Width="180px"
-                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
-                    </div>
+                                    NullText="Default View"
+                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                    CssClass="layout-combobox" />
+
+                    </Template>
 
                 </DxToolbarItem>
-
-                <DxToolbarItem BeginGroup="true"
+                <DxToolbarItem BeginGroup="true" Context="cfdr"
+                               Alignment="ToolbarItemAlignment.Right"
                                RenderStyleMode="ToolbarItemRenderStyleMode.Contained"
+                               RenderStyle="ButtonRenderStyle.Secondary"
                                IconCssClass="bi bi-gear-wide-connected">
                     <Items>
-
-                        <DxToolbarItem Text="Save Layout"
+                        <DxToolbarItem Text="Save Current Layout"
                                        RenderStyle="ButtonRenderStyle.Primary"
                                        IconCssClass="bi bi-floppy"
                                        Click="ShowSaveLayoutDialog" />
 
-                        <DxToolbarItem Text="Create Layout"
+                        <DxToolbarItem Text="Create New Layout"
                                        RenderStyle="ButtonRenderStyle.Success"
                                        IconCssClass="bi bi-plus-square"
                                        Click="ShowNewLayoutDialog" />
 
                         @if (selectedLayoutId.HasValue)
                         {
-                            <DxToolbarItem Text="Delete Layout"
+                            <DxToolbarItem Text="Delete Current Layout"
                                            RenderStyle="ButtonRenderStyle.Danger"
                                            IconCssClass="bi bi-trash"
                                            Click="DeleteCurrentLayout" />
@@ -93,19 +91,47 @@
 
                     </Items>
                 </DxToolbarItem>
-                </Items>
+
+
+
+
+
+            </Items>
         </DxToolbar>
     </ToolbarTemplate>
 
     <Columns>
-        <DxGridDataColumn FieldName="HsnId" Caption="ID" Visible="false" />
-        <DxGridSelectionColumn Width="30" />
-        <DxGridDataColumn FieldName="HsnName" Caption="HSN/SAC Name" />
-        <DxGridDataColumn FieldName="HsnGstPer" Caption="GST %" DisplayFormat="n2" />
-        <DxGridDataColumn FieldName="HsnCessType" Caption="Cess Type" />
-        <DxGridDataColumn FieldName="HsnCess" Caption="Cess %" DisplayFormat="n2" />
-        <DxGridDataColumn FieldName="HsnAddCess" Caption="Addl Cess %" DisplayFormat="n2" />
+        <DxGridSelectionColumn Width="30" FixedPosition="GridColumnFixedPosition.Left" />
+
+        <DxGridDataColumn FieldName="HsnId" Caption="ID"
+                          Visible="@GetColumnVisibility("HsnId")"
+                          Width="@GetColumnWidth("HsnId")" />
+
+        <DxGridDataColumn FieldName="HsnName" Caption="HSN/SAC Name"
+                          Visible="@GetColumnVisibility("HsnName")"
+                          Width="@GetColumnWidth("HsnName")" />
+
+        <DxGridDataColumn FieldName="HsnGstPer" Caption="GST %"
+                          Visible="@GetColumnVisibility("HsnGstPer")"
+                          Width="@GetColumnWidth("HsnGstPer")"
+                          DisplayFormat="n2" />
+
+        <DxGridDataColumn FieldName="HsnCessType" Caption="Cess Type"
+                          Visible="@GetColumnVisibility("HsnCessType")"
+                          Width="@GetColumnWidth("HsnCessType")" />
+
+        <DxGridDataColumn FieldName="HsnCess" Caption="Cess %"
+                          Visible="@GetColumnVisibility("HsnCess")"
+                          Width="@GetColumnWidth("HsnCess")"
+                          DisplayFormat="n2" />
+
+        <DxGridDataColumn FieldName="HsnAddCess" Caption="Addl Cess %"
+                          Visible="@GetColumnVisibility("HsnAddCess")"
+                          Width="@GetColumnWidth("HsnAddCess")"
+                          DisplayFormat="n2" />
+
         <DxGridDataColumn FieldName="HsnStatus" Caption="Active" />
+
     </Columns>
 </DxGrid>
 
@@ -244,7 +270,9 @@
 @code {
     DxGrid MyGrid;
     private List<HsnSac> hsnList = [];
-    private List<HsnSac> SelectedHsn = new();
+    // private List<HsnSac> SelectedHsn = new();
+    private IReadOnlyList<object> SelectedHsn { get; set; } = new List<object>();
+
     private HsnSacAddEditPage popup;
     // Grid Layout Management Variables
     private List<GridLayoutDto> availableLayouts = [];
@@ -270,15 +298,20 @@
     private void InitializeColumns()
     {
         allColumns = new List<GridColumnLayout>
-        {
-            new() { FieldName = "AccountId", Caption = "ID", Visible = false, Width = 10, DisplayIndex = 0 },
-            new() { FieldName = "AccountName", Caption = "Name", Visible = true, Width = 300, DisplayIndex = 1 },
-            new() { FieldName = "AccountContactPerson", Caption = "Contact Person", Visible = true, Width = 180, DisplayIndex = 2 },
-            new() { FieldName = "AccountMobile", Caption = "Mobile", Visible = true, Width = 120, DisplayIndex = 3 },
-            new() { FieldName = "AccountEmail", Caption = "Email", Visible = true, Width = 200, DisplayIndex = 4 },
-            new() { FieldName = "AccountCity", Caption = "City", Visible = true, Width = 120, DisplayIndex = 5 },
-            new() { FieldName = "AccountCountry", Caption = "Country", Visible = true, Width = 120, DisplayIndex = 6 },
-            new() { FieldName = "AccountStatus", Caption = "Active", Visible = true, Width = 500, DisplayIndex = 7 }
+        { 
+            new() { FieldName = "HsnId", Caption = "ID", Visible = false, Width = 60, DisplayIndex = 0 },
+
+               new() { FieldName = "HsnName", Caption = "HSN/SAC Name",Visible = true, Width = 300, DisplayIndex = 1 },
+
+    new() { FieldName = "HsnGstPer", Caption = "GST %",Visible = true, Width = 120, DisplayIndex = 2 },
+
+    new() { FieldName = "HsnCessType", Caption = "Cess Type",Visible = true, Width = 150, DisplayIndex = 3 },
+
+    new() { FieldName = "HsnCess", Caption = "Cess %",Visible = true, Width = 120, DisplayIndex = 4 },
+
+    new() { FieldName = "HsnAddCess", Caption = "Addl Cess %",Visible = true, Width = 150, DisplayIndex = 5 }
+
+    // new() { FieldName = "HsnStatus", Caption = "Active",Visible = true, Width = 120, DisplayIndex = 6 }
         };
         currentLayout = allColumns.Select(c => new GridColumnLayout
         {
@@ -587,9 +620,34 @@
         }
     }
 
-    private void OnSelectedHsnChanged(IEnumerable<object> items)
+    private async Task OnSelectedHsnChanged(IReadOnlyList<object> items)
     {
-        SelectedHsn = items.Cast<HsnSac>().ToList();
+        SelectedHsn = items ?? new List<object>();
+        await InvokeAsync(StateHasChanged);
+    }
+    // ✅ FIXED: Reliable clear selection method
+    private async Task ClearSelectionManual()
+    {
+        try
+        {
+            if (MyGrid != null)
+            {
+                MyGrid.ClearSelection(); // ✅ Synchronous method
+            }
+            SelectedHsn = new List<HsnSac>();
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Clear selection error: {ex.Message}");
+        }
+    }
+
+    // ✅ FIXED: Auto-clear after operations
+    private async Task ClearSelection()
+    {
+        await Task.Delay(100); // Small delay for UI update
+        await ClearSelectionManual();
     }
 
     private void OnCreateNew(ToolbarItemClickEventArgs e)
@@ -597,13 +655,14 @@
         popup.Show(new HsnSac() { HsnStatus = true });
     }
 
-    private void OnEdit(ToolbarItemClickEventArgs e)
+    private async Task OnEdit(ToolbarItemClickEventArgs e)
     {
         var hsn = MyGrid.GetFocusedDataItem() as HsnSac;
         if (hsn != null)
             popup.Show(hsn);
         else
             ToastService.Warning("Please select a record to edit.");
+        await ClearSelection();
     }
 
     private async Task OnDelete(ToolbarItemClickEventArgs e)
@@ -613,16 +672,21 @@
             ToastService.Warning("Please select at least one record to delete.");
             return;
         }
+        var selectedList = SelectedHsn.Cast<HsnSac>().ToList();
 
         var confirm = await ConfirmDialogService.ShowAsync(
             $"Are you sure you want to delete {SelectedHsn.Count} selected record(s)?");
 
-        if (!confirm) return;
-
-        int successCount = 0;
-        int failCount = 0;
-
-        foreach (var item in SelectedHsn)
+        if (!confirm)
+        {
+            await ClearSelection(); // ✅ Clear on cancel
+            return;
+        }
+        try
+        {
+            LoadingService.Show("Deleting...");
+            int successCount = 0, failCount = 0;
+            foreach (var item in selectedList)
         {
             var result = await HsnSacService.DeleteAsync(item.HsnId);
             if (result)
@@ -637,5 +701,11 @@
             ToastService.Error($"{failCount} record(s) failed to delete.");
 
         await LoadHsnAsync();
+        }
+        finally
+        {
+            LoadingService.Hide();
+            await ClearSelection(); // ✅ Clear after delete (success or fail)
+        }
     }
 }

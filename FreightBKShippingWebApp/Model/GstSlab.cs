@@ -31,15 +31,15 @@ namespace FreightBKShippingWebApp.Model
         public string GstSlabName { get; set; } = string.Empty;
 
         [Column("gstslab_type")]
-       
+        [Required]
         public string GstSlabType { get; set; } = "GST"; // GST | EXEMPT | NILL RATED
 
         [Column("gstslab_purchase_account_id")]
-     
+        [Required]
         public int? GstSlabPurchaseAccountId { get; set; }
 
         [Column("gstslab_sales_account_id")]
-      
+        [Required]
         public int? GstSlabSalesAccountId { get; set; }
 
         [Column("gstslab_sgstper")]
@@ -49,6 +49,7 @@ namespace FreightBKShippingWebApp.Model
         public double GstSlabCgstPer { get; set; }
 
         [Column("gstslab_igstper")]
+        [Required]
         public double GstSlabIgstPer { get; set; }
 
         [Column("gstslab_igst_account_id")]

@@ -51,8 +51,9 @@ namespace FreightBKShippingWebApp.Model
         
         public string? LocationCode { get; set; }
 
-        [Required]
+        
         [Column("location_country_id")]
+        [Required]
         public int? LocationCountryId { get; set; }
 
         [Required]

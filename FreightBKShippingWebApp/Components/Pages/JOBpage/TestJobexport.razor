@@ -10,7 +10,19 @@
 @inject YearStatechangeService YearStatechangeService
 @inject ExportPdfExtractorService ExportExtractorService
 @inject ExportJobBuilderService ExportJobBuilder
+@inject GridLayoutService GridLayoutService
+<style>
+    .grid-size {
+        max-height: 600px;
+    }
 
+
+    /* ComboBox Styling */
+    .layout-combobox {
+        border-radius: 6px;
+        width: 185px;
+    }
+</style>
 <DxGrid TItem="Job"
         Data="@jobList"
         @ref="MyGrid"
@@ -23,13 +35,16 @@
         FocusedRowEnabled="true"
         SelectionMode="GridSelectionMode.Multiple"
         SelectedDataItems="@SelectedJobs"
-        SelectedDataItemsChanged="OnSelectedJobsChanged">
+        SelectedDataItemsChanged="OnSelectedJobsChanged"
+        ColumnResizeMode="GridColumnResizeMode.NextColumn"
+        CssClass="grid-size"
+        AllowSelectRowByClick="true">
 
     <ToolbarTemplate>
         <DxToolbar>
             <TitleTemplate Context="ctxjob">
                 <div class="d-flex align-items-center">
-                    <i class="bi bi-briefcase-fill"></i>
+                    <i class="bi bi-briefcase-fill me-2"></i>
                     <span class="fs-5"> Export Job</span>
                 </div>
             </TitleTemplate>
@@ -39,29 +54,260 @@
                 <DxToolbarItem Text="Delete" IconCssClass="bi bi-trash" Click="OnDelete" />
                 <DxToolbarItem Text="Import PDF" IconCssClass="bi bi-file-pdf-fill" Click="OnImportPDF" />
                 <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="LoadJobsAsync" />
+           <DxToolbarItem BeginGroup="true"  IconCssClass="bi bi-gear-wide-connected" Alignment="ToolbarItemAlignment.Right">
+                    <Template Context="ctx">
+                        
+                                <DxComboBox Data="@availableLayouts"
+                                            Value="@selectedLayoutId"
+                                            ValueExpression="@(() => selectedLayoutId)"
+                                            ValueChanged="@((int? value) => OnLayoutSelectedAsync(value))"
+                                            ValueFieldName="GridLayoutId"
+                                            TextFieldName="GridLayoutName"
+                                            NullText="Default View"
+                                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                            CssClass="layout-combobox" />
+                           
+                    </Template>
+                    
+                </DxToolbarItem>
+                <DxToolbarItem BeginGroup="true" Context="cfdr"
+                               Alignment="ToolbarItemAlignment.Right"
+                               RenderStyleMode="ToolbarItemRenderStyleMode.Contained"
+                               RenderStyle="ButtonRenderStyle.Secondary"
+                               IconCssClass="bi bi-gear-wide-connected">
+                    <Items>
+                        <DxToolbarItem Text="Save Current Layout"
+                                       RenderStyle="ButtonRenderStyle.Primary"
+                                       IconCssClass="bi bi-floppy"
+                                       Click="ShowSaveLayoutDialog" />
+
+                        <DxToolbarItem Text="Create New Layout"
+                                       RenderStyle="ButtonRenderStyle.Success"
+                                       IconCssClass="bi bi-plus-square"
+                                       Click="ShowNewLayoutDialog" />
+
+                        @if (selectedLayoutId.HasValue)
+                        {
+                            <DxToolbarItem Text="Delete Current Layout"
+                                           RenderStyle="ButtonRenderStyle.Danger"
+                                           IconCssClass="bi bi-trash"
+                                           Click="DeleteCurrentLayout" />
+                        }
+
+                    </Items>
+                </DxToolbarItem>
             </Items>
         </DxToolbar>
     </ToolbarTemplate>
 
     <Columns>
-        <DxGridSelectionColumn Width="30" />
-        <DxGridDataColumn FieldName="JobNo" Caption="Job No" MinWidth="120" />
-        <DxGridDataColumn FieldName="JobDate" Caption="Job Date" DisplayFormat="d" MinWidth="130" />
-        <DxGridDataColumn FieldName="JobType" Caption="Job Type" MinWidth="130" />
-        <DxGridDataColumn FieldName="JobBlNo" Caption="B/L No" MinWidth="150" />
-        <DxGridDataColumn FieldName="JobBlDate" Caption="B/L Date" DisplayFormat="d" MinWidth="130" />
-        <DxGridDataColumn FieldName="JobVesselId" Caption="Vessel" MinWidth="150" />
-        <DxGridDataColumn FieldName="JobPolId" Caption="POL" MinWidth="120" />
-        <DxGridDataColumn FieldName="JobPodId" Caption="POD" MinWidth="120" />
-        <DxGridDataColumn FieldName="JobFreightBy" Caption="Freight By" MinWidth="150" />
-        <DxGridDataColumn FieldName="JobGrossWt" Caption="Gross Weight" MinWidth="140" />
-        <DxGridDataColumn FieldName="JobVolume" Caption="Volume / CBM" MinWidth="160" />
-        <DxGridDataColumn FieldName="JobQty" Caption="Quantity" MinWidth="120" />
-        <DxGridDataColumn FieldName="JobChaId" Caption="Customs Agent" MinWidth="160" />
-        <DxGridDataColumn FieldName="JobRemarks" Caption="Remarks" MinWidth="200" />
-    </Columns>
-</DxGrid>
+        <DxGridSelectionColumn Width="30"
+                               FixedPosition="GridColumnFixedPosition.Left" />
 
+        <DxGridDataColumn FieldName="JobNo"
+                          Caption="Job No"
+                          Visible="@GetColumnVisibility("JobNo")"
+                          Width="@GetColumnWidth("JobNo")" />
+
+        <DxGridDataColumn FieldName="JobDate"
+                          Caption="Job Date"
+                          DisplayFormat="dd/MM/yyyy"
+                          Visible="@GetColumnVisibility("JobDate")"
+                          Width="@GetColumnWidth("JobDate")" />
+
+        <DxGridDataColumn FieldName="JobType"
+                          Caption="Job Type"
+                          Visible="@GetColumnVisibility("JobType")"
+                          Width="@GetColumnWidth("JobType")" />
+
+        <DxGridDataColumn FieldName="JobBlNo"
+                          Caption="B/L No"
+                          Visible="@GetColumnVisibility("JobBlNo")"
+                          Width="@GetColumnWidth("JobBlNo")" />
+
+        <DxGridDataColumn FieldName="JobBlDate"
+                          Caption="B/L Date"
+                          DisplayFormat="dd/MM/yyyy"
+                          Visible="@GetColumnVisibility("JobBlDate")"
+                          Width="@GetColumnWidth("JobBlDate")" />
+
+        <DxGridDataColumn FieldName="VesselName"
+                          Caption="Vessel"
+                          Visible="@GetColumnVisibility("JobVesselId")"
+                          Width="@GetColumnWidth("JobVesselId")" />
+
+        <DxGridDataColumn FieldName="PolName"
+                          Caption="POL"
+                          Visible="@GetColumnVisibility("JobPolId")"
+                          Width="@GetColumnWidth("JobPolId")" />
+
+        <DxGridDataColumn FieldName="PodName"
+                          Caption="POD"
+                          Visible="@GetColumnVisibility("JobPodId")"
+                          Width="@GetColumnWidth("JobPodId")" />
+
+        <DxGridDataColumn FieldName="JobFreightBy"
+                          Caption="Freight By"
+                          Visible="@GetColumnVisibility("JobFreightBy")"
+                          Width="@GetColumnWidth("JobFreightBy")" />
+
+        <DxGridDataColumn FieldName="JobGrossWt"
+                          Caption="Gross Weight"
+                          Visible="@GetColumnVisibility("JobGrossWt")"
+                          Width="@GetColumnWidth("JobGrossWt")" />
+
+        <DxGridDataColumn FieldName="JobVolume"
+                          Caption="Volume / CBM"
+                          Visible="@GetColumnVisibility("JobVolume")"
+                          Width="@GetColumnWidth("JobVolume")" />
+
+        <DxGridDataColumn FieldName="JobQty"
+                          Caption="Quantity"
+                          Visible="@GetColumnVisibility("JobQty")"
+                          Width="@GetColumnWidth("JobQty")" />
+
+        <DxGridDataColumn FieldName="JobChaId"
+                          Caption="Customs Agent"
+                          Visible="@GetColumnVisibility("JobChaId")"
+                          Width="@GetColumnWidth("JobChaId")" />
+
+        <DxGridDataColumn FieldName="JobRemarks"
+                          Caption="Remarks"
+                          Visible="@GetColumnVisibility("JobRemarks")"
+                          Width="@GetColumnWidth("JobRemarks")" />
+
+        <DxGridDataColumn FieldName="JobState" Caption="Status" />
+    </Columns>
+
+</DxGrid>
+@if (showLayoutDialog)
+{
+    <div class="modal fade show d-block"
+         style="background-color: rgba(0, 0, 0, 0.5); z-index: 1050;"
+         @onclick="@(() => { })">
+
+        <div class="modal-dialog modal-lg" @onclick:stopPropagation="true">
+            <div class="modal-content">
+
+                <!-- Header -->
+                <div class="modal-header">
+                    <h5 class="modal-title">@dialogTitle</h5>
+                    <button type="button"
+                            class="btn-close"
+                            @onclick="CloseLayoutDialog"
+                            aria-label="Close">
+                    </button>
+                </div>
+
+                <!-- Body -->
+                <div class="modal-body">
+
+                    <!-- Layout Name -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Layout Name:</label>
+                        <input type="text"
+                               class="form-control"
+                               @bind="newLayoutName"
+                               @bind:event="oninput"
+                               placeholder="Enter layout name..."
+                               maxlength="100" />
+                    </div>
+
+                    <!-- Default Layout Checkbox -->
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input"
+                                   type="checkbox"
+                                   @bind="isDefaultLayout"
+                                   id="defaultLayoutCheck" />
+
+                            <label class="form-check-label" for="defaultLayoutCheck">
+                                Set as Default Layout
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Column Configuration -->
+                    <div class="mt-3">
+                        <label class="form-label fw-bold mb-2">Column Configuration:</label>
+
+                        <div class="table-responsive"
+                             style="max-height: 400px; overflow-y: auto;">
+
+                            <table class="table table-sm table-bordered">
+                                <thead class="table-light sticky-top">
+                                    <tr>
+                                        <th style="width: 50px;">Visible</th>
+                                        <th style="width: 200px;">Column Name</th>
+                                        <th style="width: 150px;">Width (px)</th>
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+                                    @foreach (var col in allColumns)
+                                    {
+                                        <tr>
+                                            <td class="text-center">
+                                                <input class="form-check-input"
+                                                       type="checkbox"
+                                                       @bind="col.Visible"
+                                                       id="col_@col.FieldName" />
+                                            </td>
+
+                                            <td>
+                                                <label class="mb-0" for="col_@col.FieldName">
+                                                    @col.Caption
+                                                </label>
+                                            </td>
+
+                                            <td>
+                                                <input type="number"
+                                                       class="form-control form-control-sm"
+                                                       @bind="col.Width"
+                                                       @bind:event="oninput"
+                                                       min="50"
+                                                       max="500"
+                                                       step="10"
+                                                       placeholder="Width" />
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+
+                        </div>
+                    </div>
+
+                    <!-- Info Note -->
+                    <div class="alert alert-info mt-3">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>Note:</strong>
+                        Adjust column widths here manually. The widths will be saved and applied when you load this layout.
+                    </div>
+
+                </div>
+
+                <!-- Footer -->
+                <div class="modal-footer">
+                    <button type="button"
+                            class="btn btn-secondary"
+                            @onclick="CloseLayoutDialog">
+                        Cancel
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-primary"
+                            @onclick="SaveCurrentLayout">
+                        <i class="bi bi-floppy me-1"></i>
+                        @(isEditMode ? "Update" : "Create") Layout
+                    </button>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+}
 <JobAddEditPage @ref="popup" OnSaved="LoadJobsAsync" JobType="@JobType" />
 <ConfirmationDialog />
 
@@ -79,12 +325,28 @@
 @code {
     DxGrid MyGrid;
     private List<Job> jobList = new();
-    private List<Job> SelectedJobs = new();
+    // private List<Job> SelectedJobs = new();
+    private IReadOnlyList<object> SelectedJobs { get; set; } = new List<object>();
+
     private JobAddEditPage popup;
     private string JobType = "EXPORT";
     private int? CurrentYearId { get; set; }
 
     private bool showPdfImportDialog = false;
+
+    // Grid Layout Management Variables
+    private List<GridLayoutDto> availableLayouts = [];
+    private int? selectedLayoutId;
+    private bool showLayoutDialog = false;
+    private string newLayoutName = "";
+    private string dialogTitle = "";
+    private bool isEditMode = false;
+    private bool isDefaultLayout = false;
+    private const string VOUCHER_TYPE = "ExportJob";
+
+    // All possible columns
+    private List<GridColumnLayout> allColumns = [];
+    private List<GridColumnLayout> currentLayout = [];
 
     protected override async Task OnInitializedAsync()
     {
@@ -92,13 +354,341 @@
         {
             CurrentYearId = YearStatechangeService.SelectedYearId;
             await LoadJobsAsync();
+            InitializeColumns();
+            await LoadAvailableLayouts();
+            await LoadDefaultLayout();
         }
         catch (Exception ex)
         {
             ToastService.Error("Failed to load export jobs");
         }
     }
+    private void InitializeColumns()
+    {
+        allColumns = new List<GridColumnLayout>
+        {
 
+        new(){ FieldName = "JobNo", Caption = "Job No", Visible = true, Width = 120, DisplayIndex = 0 },
+
+        new(){ FieldName = "JobDate", Caption = "Job Date", Visible = true, Width = 130, DisplayIndex = 1 },
+
+        new(){ FieldName = "JobType", Caption = "Job Type", Visible = true, Width = 130, DisplayIndex = 2 },
+
+        new(){ FieldName = "JobBlNo", Caption = "B/L No", Visible = true, Width = 150, DisplayIndex = 3 },
+
+        new(){ FieldName = "JobBlDate", Caption = "B/L Date", Visible = true, Width = 130, DisplayIndex = 4 },
+
+        new(){ FieldName = "JobVesselId", Caption = "Vessel", Visible = true, Width = 150, DisplayIndex = 5 },
+
+        new(){ FieldName = "JobPolId", Caption = "POL", Visible = true, Width = 120, DisplayIndex = 6 },
+
+        new(){ FieldName = "JobPodId", Caption = "POD", Visible = true, Width = 120, DisplayIndex = 7 },
+
+        new(){ FieldName = "JobFreightBy", Caption = "Freight By", Visible = true, Width = 150, DisplayIndex = 8 },
+
+        new(){ FieldName = "JobGrossWt", Caption = "Gross Weight", Visible = true, Width = 140, DisplayIndex = 9 },
+
+        new(){ FieldName = "JobVolume", Caption = "Volume / CBM", Visible = true, Width = 160, DisplayIndex = 10 },
+
+        new(){ FieldName = "JobQty", Caption = "Quantity", Visible = true, Width = 120, DisplayIndex = 11 },
+
+        new(){ FieldName = "JobChaId", Caption = "Customs Agent", Visible = true, Width = 160, DisplayIndex = 12 },
+
+        new(){ FieldName = "JobRemarks", Caption = "Remarks", Visible = true, Width = 220, DisplayIndex = 13 }
+    };
+        currentLayout = allColumns.Select(c => new GridColumnLayout
+        {
+            FieldName = c.FieldName,
+            Caption = c.Caption,
+            Visible = c.Visible,
+            Width = c.Width,
+            DisplayIndex = c.DisplayIndex
+        }).ToList();
+    }
+
+    private int ParseWidth(string width)
+    {
+        if (string.IsNullOrEmpty(width))
+            return 100;
+
+        width = width.Replace("px", "").Trim();
+
+        if (int.TryParse(width, out int result))
+            return result;
+
+        return 100;
+    }
+
+    private string GetColumnWidth(string fieldName)
+    {
+        if (currentLayout == null || !currentLayout.Any())
+        {
+            var defaultCol = allColumns.FirstOrDefault(x => x.FieldName == fieldName);
+            return $"{defaultCol?.Width ?? 100}px";
+        }
+
+        var col = currentLayout.FirstOrDefault(x => x.FieldName == fieldName);
+        return $"{col?.Width ?? 100}px";
+    }
+
+    private bool GetColumnVisibility(string fieldName)
+    {
+        if (currentLayout == null || !currentLayout.Any())
+        {
+            return true;
+        }
+
+        var col = currentLayout.FirstOrDefault(x => x.FieldName == fieldName);
+        return col?.Visible ?? true;
+    }
+
+    // private void Grid_ColumnResizing(GridColumnResizeMode e)
+    // {
+    //     var col = currentLayout.FirstOrDefault(x => x.FieldName == e.Column.FieldName);
+    //     if (col != null)
+    //     {
+    //         col.Width = ParseWidth(e.Width);
+    //     }
+    // }
+
+    private async Task LoadAvailableLayouts()
+    {
+        availableLayouts = await GridLayoutService.GetLayoutsByVoucherTypeAsync(VOUCHER_TYPE);
+    }
+
+    private async Task LoadDefaultLayout()
+    {
+        var defaultLayout = await GridLayoutService.GetDefaultLayoutAsync(VOUCHER_TYPE);
+        if (defaultLayout != null)
+        {
+            selectedLayoutId = defaultLayout.GridLayoutId;
+            await ApplyLayout(defaultLayout);
+        }
+    }
+
+    private async Task OnLayoutSelectedAsync(int? layoutId)
+    {
+        selectedLayoutId = layoutId;
+
+        if (layoutId.HasValue)
+        {
+            var layout = await GridLayoutService.GetByIdAsync(layoutId.Value);
+            if (layout != null)
+            {
+                await ApplyLayout(layout);
+            }
+        }
+        else
+        {
+            InitializeColumns();
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task ApplyLayout(GridLayoutDto layout)
+    {
+        if (!string.IsNullOrEmpty(layout.GridLayoutData))
+        {
+            var savedLayout = GridLayoutService.DeserializeColumnLayout(layout.GridLayoutData);
+            if (savedLayout != null && savedLayout.Any())
+            {
+                currentLayout = savedLayout.Select(s => new GridColumnLayout
+                {
+                    FieldName = s.FieldName,
+                    Caption = s.Caption,
+                    Visible = s.Visible,
+                    Width = s.Width,
+                    DisplayIndex = s.DisplayIndex
+                }).ToList();
+
+                foreach (var saved in savedLayout)
+                {
+                    var existing = allColumns.FirstOrDefault(x => x.FieldName == saved.FieldName);
+                    if (existing != null)
+                    {
+                        existing.Visible = saved.Visible;
+                        existing.Width = saved.Width;
+                        existing.DisplayIndex = saved.DisplayIndex;
+                    }
+                }
+
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+    }
+
+    private void ShowSaveLayoutDialog()
+    {
+        if (selectedLayoutId.HasValue)
+        {
+            var layout = availableLayouts.FirstOrDefault(x => x.GridLayoutId == selectedLayoutId.Value);
+            if (layout != null)
+            {
+                newLayoutName = layout.GridLayoutName ?? "";
+                isDefaultLayout = layout.GridLayoutDefault;
+                isEditMode = true;
+                dialogTitle = "Update Grid Layout";
+                showLayoutDialog = true;
+                return;
+            }
+        }
+
+        ShowNewLayoutDialog();
+    }
+
+    private void ShowNewLayoutDialog()
+    {
+        newLayoutName = "";
+        isDefaultLayout = false;
+        isEditMode = false;
+        dialogTitle = "Create New Grid Layout";
+        showLayoutDialog = true;
+    }
+
+    private async Task SaveCurrentLayout()
+    {
+        if (string.IsNullOrWhiteSpace(newLayoutName))
+        {
+            ToastService.Warning("Please enter a layout name.");
+            return;
+        }
+
+        LoadingService.Show("Saving layout...");
+        try
+        {
+            foreach (var col in allColumns)
+            {
+                var current = currentLayout.FirstOrDefault(c => c.FieldName == col.FieldName);
+                if (current != null)
+                {
+                    current.Visible = col.Visible;
+                    current.Width = col.Width;
+                    current.DisplayIndex = col.DisplayIndex;
+                }
+                else
+                {
+                    currentLayout.Add(new GridColumnLayout
+                    {
+                        FieldName = col.FieldName,
+                        Caption = col.Caption,
+                        Visible = col.Visible,
+                        Width = col.Width,
+                        DisplayIndex = col.DisplayIndex
+                    });
+                }
+            }
+
+            var configJson = GridLayoutService.SerializeColumnLayout(currentLayout);
+            bool success = false;
+
+            if (isEditMode && selectedLayoutId.HasValue)
+            {
+                var updateRequest = new SaveGridLayoutRequest
+                {
+                    GridLayoutName = newLayoutName,
+                    GridLayoutVoucherType = VOUCHER_TYPE,
+                    GridLayoutData = configJson,
+                    GridLayoutDefault = isDefaultLayout
+                };
+                success = await GridLayoutService.UpdateAsync(selectedLayoutId.Value, updateRequest);
+            }
+            else
+            {
+                var newLayoutRequest = new SaveGridLayoutRequest
+                {
+                    GridLayoutName = newLayoutName,
+                    GridLayoutVoucherType = VOUCHER_TYPE,
+                    GridLayoutData = configJson,
+                    GridLayoutDefault = isDefaultLayout
+                };
+                var result = await GridLayoutService.CreateAsync(newLayoutRequest);
+                success = result;
+
+                if (success)
+                {
+                    await LoadAvailableLayouts();
+                    var createdLayout = availableLayouts.FirstOrDefault(l => l.GridLayoutName == newLayoutName);
+                    if (createdLayout != null)
+                        selectedLayoutId = createdLayout.GridLayoutId;
+                }
+            }
+
+            if (success)
+            {
+                ToastService.Success($"Grid layout {(isEditMode ? "updated" : "created")} successfully!");
+                await LoadAvailableLayouts();
+
+                if (isDefaultLayout)
+                {
+                    await LoadDefaultLayout();
+                }
+
+                CloseLayoutDialog();
+                await InvokeAsync(StateHasChanged);
+            }
+            else
+            {
+                ToastService.Error($"Failed to {(isEditMode ? "update" : "create")} grid layout.");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Error saving layout: {ex.Message}");
+            Console.WriteLine($"Layout save error: {ex}");
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+
+    private async Task DeleteCurrentLayout()
+    {
+        if (!selectedLayoutId.HasValue) return;
+
+        var confirm = await ConfirmDialogService.ShowAsync(
+            "Are you sure you want to delete this grid layout?");
+
+        if (!confirm) return;
+
+        LoadingService.Show("Deleting layout...");
+        try
+        {
+            var success = await GridLayoutService.DeleteAsync(selectedLayoutId.Value);
+
+            if (success)
+            {
+                ToastService.Success("Grid layout deleted successfully!");
+
+                selectedLayoutId = null;
+                InitializeColumns();
+                currentLayout = allColumns.ToList();
+
+                await LoadAvailableLayouts();
+                await InvokeAsync(StateHasChanged);
+            }
+            else
+            {
+                ToastService.Error("Failed to delete grid layout.");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Error deleting layout: {ex.Message}");
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+
+    private void CloseLayoutDialog()
+    {
+        showLayoutDialog = false;
+        newLayoutName = "";
+        isDefaultLayout = false;
+        isEditMode = false;
+    }
     private async Task LoadJobsAsync()
     {
         LoadingService.Show();
@@ -195,9 +785,34 @@
 
     // ==================== GRID HANDLERS ====================
 
-    private void OnSelectedJobsChanged(IEnumerable<object> jobs)
+    private async Task OnSelectedJobsChanged(IReadOnlyList<object> jobs)
     {
-        SelectedJobs = jobs.Cast<Job>().ToList();
+        SelectedJobs = jobs ?? new List<object>();
+        await InvokeAsync(StateHasChanged);
+    }
+    // ✅ FIXED: Reliable clear selection method
+    private async Task ClearSelectionManual()
+    {
+        try
+        {
+            if (MyGrid != null)
+            {
+                MyGrid.ClearSelection(); // ✅ Synchronous method
+            }
+            SelectedJobs = new List<Job>();
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Clear selection error: {ex.Message}");
+        }
+    }
+
+    // ✅ FIXED: Auto-clear after operations
+    private async Task ClearSelection()
+    {
+        await Task.Delay(100); // Small delay for UI update
+        await ClearSelectionManual();
     }
 
     private void OnCreateNew(ToolbarItemClickEventArgs e)
@@ -205,13 +820,14 @@
         popup.Show(new Job());
     }
 
-    private void OnEdit(ToolbarItemClickEventArgs e)
+    private async Task OnEdit(ToolbarItemClickEventArgs e)
     {
         var job = MyGrid.GetFocusedDataItem() as Job;
         if (job != null)
             popup.Show(job);
         else
             ToastService.Warning("Please select a job to edit.");
+        await ClearSelection();
     }
 
     private async Task OnDelete(ToolbarItemClickEventArgs e)
@@ -221,27 +837,34 @@
             ToastService.Warning("Please select at least one job to delete.");
             return;
         }
+        var selectedList = SelectedJobs.Cast<Job>().ToList();
 
         var confirm = await ConfirmDialogService.ShowAsync(
             $"Are you sure you want to delete {SelectedJobs.Count} selected job(s)?");
 
-        if (confirm)
+        if (!confirm)
         {
-            LoadingService.Show();
-            try
-            {
-                foreach (var job in SelectedJobs)
-                {
-                    await JobService.DeleteAsync(job.JobId);
-                }
+            await ClearSelection(); // ✅ Clear on cancel
+            return;
+        }
+        try
+        {
+            LoadingService.Show("Deleting...");
+            int successCount = 0, failCount = 0;
 
-                ToastService.Success($"{SelectedJobs.Count} job(s) deleted successfully.");
+                foreach (var job in selectedList)
+                {
+                var result = await JobService.DeleteAsync(job.JobId);
+                if (result) successCount++; else failCount++;
+                }
+            if (successCount > 0) ToastService.Success($"{successCount} job(s) Deleted Successfully.");
+            if (failCount > 0) ToastService.Error($"{failCount} job(s) Failed To Delete.");
                 await LoadJobsAsync();
             }
             finally
             {
                 LoadingService.Hide();
+            await ClearSelection();
             }
         }
     }
-}

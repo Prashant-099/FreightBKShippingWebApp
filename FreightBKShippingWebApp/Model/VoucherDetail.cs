@@ -52,7 +52,7 @@ namespace FreightBKShippingWebApp.Model
         public string? VoucherDetailLutno { get; set; }
 
         [Column("voucher_detail_date")]
-        public DateTime? VoucherDetailDate { get; set; }
+        public DateTime? VoucherDetailDate { get; set; } = DateTime.Now;
 
         [Column("voucher_detail_lastno")]
         public int VoucherDetailLastNo { get; set; }

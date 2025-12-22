@@ -9,19 +9,16 @@
 @inject ConfirmationDialogService ConfirmDialogService
 @inject GridLayoutService GridLayoutService
 <style>
-    .layout-toolbar {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 8px;
-        background-color: #f8f9fa;
-        border-bottom: 1px solid #dee2e6;
+    .grid-size {
+        max-height: 600px;
     }
 
-        .layout-toolbar label {
-            font-weight: 600;
-            margin-right: 4px;
-        }
+
+    /* ComboBox Styling */
+    .layout-combobox {
+        border-radius: 6px;
+        width: 185px;
+    }
 </style>
 <DxGrid TItem="Cargo"
         Data="@cargoList"
@@ -36,13 +33,15 @@
         SelectionMode="GridSelectionMode.Multiple"
         SelectedDataItems="@SelectedCargos"
         SelectedDataItemsChanged="OnSelectedCargosChanged"
-        ColumnResizeMode="GridColumnResizeMode.NextColumn">
+        ColumnResizeMode="GridColumnResizeMode.NextColumn"
+        CssClass="grid-size"
+        AllowSelectRowByClick="true">
 
     <ToolbarTemplate Context="toolbarContext">
         <DxToolbar>
             <TitleTemplate Context="tl">
                 <div class="d-flex align-items-center">
-                    <i class="bi bi-box-seam"></i>
+                    <i class="bi bi-box-seam me-2"></i>
                     <span class="fs-5">Cargo List</span>
                 </div>
             </TitleTemplate>
@@ -52,11 +51,8 @@
                 <DxToolbarItem Text="Delete" IconCssClass="bi bi-trash" Click="OnDelete" />
                 <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="@(async (_) => await LoadCargosAsync())" />
 
-
-                <DxToolbarItem BeginGroup="true">
-
-                    <div class="d-flex align-items-center gap-2">
-                        <label class="mb-0">Layout:</label>
+                <DxToolbarItem BeginGroup="true" IconCssClass="bi bi-gear-wide-connected" Alignment="ToolbarItemAlignment.Right">
+                    <Template>
 
                         <DxComboBox Data="@availableLayouts"
                                     Value="@selectedLayoutId"
@@ -64,31 +60,32 @@
                                     ValueChanged="@((int? value) => OnLayoutSelectedAsync(value))"
                                     ValueFieldName="GridLayoutId"
                                     TextFieldName="GridLayoutName"
-                                    NullText="-- Default --"
-                                    Width="180px"
-                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
-                    </div>
+                                    NullText="Default View"
+                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                    CssClass="layout-combobox" />
+
+                    </Template>
 
                 </DxToolbarItem>
-
-                <DxToolbarItem BeginGroup="true"
+                <DxToolbarItem BeginGroup="true" Context="cfdr"
+                               Alignment="ToolbarItemAlignment.Right"
                                RenderStyleMode="ToolbarItemRenderStyleMode.Contained"
+                               RenderStyle="ButtonRenderStyle.Secondary"
                                IconCssClass="bi bi-gear-wide-connected">
                     <Items>
-
-                        <DxToolbarItem Text="Save Layout"
+                        <DxToolbarItem Text="Save Current Layout"
                                        RenderStyle="ButtonRenderStyle.Primary"
                                        IconCssClass="bi bi-floppy"
                                        Click="ShowSaveLayoutDialog" />
 
-                        <DxToolbarItem Text="Create Layout"
+                        <DxToolbarItem Text="Create New Layout"
                                        RenderStyle="ButtonRenderStyle.Success"
                                        IconCssClass="bi bi-plus-square"
                                        Click="ShowNewLayoutDialog" />
 
                         @if (selectedLayoutId.HasValue)
                         {
-                            <DxToolbarItem Text="Delete Layout"
+                            <DxToolbarItem Text="Delete Current Layout"
                                            RenderStyle="ButtonRenderStyle.Danger"
                                            IconCssClass="bi bi-trash"
                                            Click="DeleteCurrentLayout" />
@@ -96,12 +93,17 @@
 
                     </Items>
                 </DxToolbarItem>
-                </Items>
+
+
+
+
+
+            </Items>
         </DxToolbar>
     </ToolbarTemplate>
 
     <Columns>
-        <DxGridSelectionColumn Width="30" />
+        <DxGridSelectionColumn Width="30" FixedPosition="GridColumnFixedPosition.Left" />
 
         <DxGridDataColumn FieldName="CargoId" Caption="ID"
                           Visible="@GetColumnVisibility("CargoId")"
@@ -133,19 +135,17 @@
                           Visible="@GetColumnVisibility("CargoRemarks")"
                           Width="@GetColumnWidth("CargoRemarks")" />
 
-        <DxGridDataColumn FieldName="CargoStatus" Caption="Active"
-                          Visible="@GetColumnVisibility("CargoStatus")"
-                          Width="@GetColumnWidth("CargoStatus")" />
-
         <DxGridDataColumn FieldName="CargoCreated" Caption="Created"
-                          DisplayFormat="g"
+                          DisplayFormat="dd/MM/yyyy"
                           Visible="@GetColumnVisibility("CargoCreated")"
                           Width="@GetColumnWidth("CargoCreated")" />
 
         <DxGridDataColumn FieldName="CargoUpdated" Caption="Updated"
-                          DisplayFormat="g"
+                          DisplayFormat="dd/MM/yyyy"
                           Visible="@GetColumnVisibility("CargoUpdated")"
                           Width="@GetColumnWidth("CargoUpdated")" />
+
+        <DxGridDataColumn FieldName="CargoStatus" Caption="Active" />
     </Columns>
 
 </DxGrid>
@@ -285,7 +285,8 @@
 @code {
     DxGrid MyGrid;
     private List<Cargo> cargoList = [];
-    private List<Cargo> SelectedCargos = new();
+    // private List<Cargo> SelectedCargos = new();
+    private IReadOnlyList<object> SelectedCargos { get; set; } = new List<object>();
     private CargoAddEditPage popup;
     // Grid Layout Management Variables
     private List<GridLayoutDto> availableLayouts = [];
@@ -319,9 +320,9 @@
         new() { FieldName = "CargoGstPer", Caption = "GST (%)", Visible = true, Width = 100, DisplayIndex = 4 },
         new() { FieldName = "CargoCess", Caption = "Cess (%)", Visible = true, Width = 100, DisplayIndex = 5 },
         new() { FieldName = "CargoRemarks", Caption = "Remarks", Visible = true, Width = 220, DisplayIndex = 6 },
-        new() { FieldName = "CargoStatus", Caption = "Active", Visible = true, Width = 100, DisplayIndex = 7 },
-        new() { FieldName = "CargoCreated", Caption = "Created", Visible = true, Width = 150, DisplayIndex = 8 },
-        new() { FieldName = "CargoUpdated", Caption = "Updated", Visible = true, Width = 150, DisplayIndex = 9 }
+        // new() { FieldName = "CargoStatus", Caption = "Active", Visible = true, Width = 100, DisplayIndex = 7 },
+        new() { FieldName = "CargoCreated", Caption = "Created", Visible = true, Width = 150, DisplayIndex = 7 },
+        new() { FieldName = "CargoUpdated", Caption = "Updated", Visible = true, Width = 150, DisplayIndex = 8 }
     };
         currentLayout = allColumns.Select(c => new GridColumnLayout
         {
@@ -630,9 +631,34 @@
         }
     }
 
-    private void OnSelectedCargosChanged(IEnumerable<object> cargos)
+    private async Task OnSelectedCargosChanged(IReadOnlyList<object> cargos)
     {
-        SelectedCargos = cargos.Cast<Cargo>().ToList();
+        SelectedCargos = cargos ?? new List<object>();
+        await InvokeAsync(StateHasChanged);
+    }
+    // ✅ FIXED: Reliable clear selection method
+    private async Task ClearSelectionManual()
+    {
+        try
+        {
+            if (MyGrid != null)
+            {
+                MyGrid.ClearSelection(); // ✅ Synchronous method
+            }
+            SelectedCargos = new List<Cargo>();
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Clear selection error: {ex.Message}");
+        }
+    }
+
+    // ✅ FIXED: Auto-clear after operations
+    private async Task ClearSelection()
+    {
+        await Task.Delay(100); // Small delay for UI update
+        await ClearSelectionManual();
     }
 
     private void OnCreateNew(ToolbarItemClickEventArgs e)
@@ -646,13 +672,14 @@
         });
     }
 
-    private void OnEdit(ToolbarItemClickEventArgs e)
+    private async Task OnEdit(ToolbarItemClickEventArgs e)
     {
         var cargo = MyGrid.GetFocusedDataItem() as Cargo;
         if (cargo != null)
             popup.Show(cargo);
         else
             ToastService.Warning("Please select a cargo to edit.");
+        await ClearSelection();
     }
 
     private async Task OnDelete(ToolbarItemClickEventArgs e)
@@ -662,17 +689,22 @@
             ToastService.Warning("Please select at least one cargo to delete.");
             return;
         }
+        var selectedList = SelectedCargos.Cast<Cargo>().ToList();
 
         var confirm = await ConfirmDialogService.ShowAsync(
             $"Are you sure you want to delete {SelectedCargos.Count} selected cargo item(s)?");
 
         if (!confirm)
+        {
+            await ClearSelection(); // ✅ Clear on cancel
             return;
+        }
+        try
+        {
+            LoadingService.Show("Deleting...");
+            int successCount = 0, failCount = 0;
 
-        int successCount = 0;
-        int failCount = 0;
-
-        foreach (var cargo in SelectedCargos)
+        foreach (var cargo in selectedList)
         {
             var result = await CargoService.DeleteAsync(cargo.CargoId);
 
@@ -689,5 +721,11 @@
             ToastService.Error($"{failCount} Cargo(s) Failed To Delete.");
 
         await LoadCargosAsync();
+        }
+        finally
+        {
+            LoadingService.Hide();
+            await ClearSelection(); // ✅ Clear after delete (success or fail)
+        }
     }
 }

@@ -7,6 +7,21 @@
 @inject LoadingService LoadingService
 @inject ConfirmationDialogService ConfirmDialogService
 @inject GridLayoutService GridLayoutService
+<style>
+.grid-size {
+        max-height: 600px;
+    }
+   
+
+    /* ComboBox Styling */
+    .layout-combobox {
+        border-radius: 6px;
+        width: 185px;
+    }
+   
+
+    
+</style>
 <DxGrid TItem="Branch"
         Data="@branchList"
         @ref="MyGrid"
@@ -20,13 +35,15 @@
         SelectionMode="GridSelectionMode.Multiple"
         SelectedDataItems="@SelectedBranches"
         SelectedDataItemsChanged="OnSelectedBranchesChanged"
-        ColumnResizeMode="GridColumnResizeMode.NextColumn">
+        ColumnResizeMode="GridColumnResizeMode.NextColumn"
+        CssClass="grid-size"
+        AllowSelectRowByClick="true">
 
     <ToolbarTemplate Context="toolbarContext">
         <DxToolbar>
             <TitleTemplate Context="tl">
                 <div class="d-flex align-items-center">
-                    <i class="bi bi-diagram-3"></i>
+                    <i class="bi bi-diagram-3 me-2"></i>
                     <span class="fs-5">Branch</span>
                 </div>
             </TitleTemplate>
@@ -39,35 +56,34 @@
     IconCssClass="bi bi-arrow-clockwise" 
     Click="@LoadBranchesAsync" />
 
-                <DxToolbarItem BeginGroup="true">
-
-                    <div class="d-flex align-items-center gap-2">
-                        <label class="mb-0">Layout:</label>
-
-                        <DxComboBox Data="@availableLayouts"
-                                    Value="@selectedLayoutId"
-                                    ValueExpression="@(() => selectedLayoutId)"
-                                    ValueChanged="@((int? value) => OnLayoutSelectedAsync(value))"
-                                    ValueFieldName="GridLayoutId"
-                                    TextFieldName="GridLayoutName"
-                                    NullText="-- Default --"
-                                    Width="180px"
-                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
-                    </div>
-
+                <DxToolbarItem BeginGroup="true"  IconCssClass="bi bi-gear-wide-connected" Alignment="ToolbarItemAlignment.Right">
+                    <Template>
+                        
+                                <DxComboBox Data="@availableLayouts"
+                                            Value="@selectedLayoutId"
+                                            ValueExpression="@(() => selectedLayoutId)"
+                                            ValueChanged="@((int? value) => OnLayoutSelectedAsync(value))"
+                                            ValueFieldName="GridLayoutId"
+                                            TextFieldName="GridLayoutName"
+                                            NullText="Default View"
+                                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                            CssClass="layout-combobox" />
+                           
+                    </Template>
+                    
                 </DxToolbarItem>
-
-                <DxToolbarItem BeginGroup="true"
+                <DxToolbarItem BeginGroup="true" Context="cfdr"
+                               Alignment="ToolbarItemAlignment.Right"
                                RenderStyleMode="ToolbarItemRenderStyleMode.Contained"
+                               RenderStyle="ButtonRenderStyle.Secondary"
                                IconCssClass="bi bi-gear-wide-connected">
                     <Items>
-
-                        <DxToolbarItem Text="Save Layout"
+                        <DxToolbarItem Text="Save Current Layout"
                                        RenderStyle="ButtonRenderStyle.Primary"
                                        IconCssClass="bi bi-floppy"
                                        Click="ShowSaveLayoutDialog" />
 
-                        <DxToolbarItem Text="Create Layout"
+                        <DxToolbarItem Text="Create New Layout"
                                        RenderStyle="ButtonRenderStyle.Success"
                                        IconCssClass="bi bi-plus-square"
                                        Click="ShowNewLayoutDialog" />
@@ -82,6 +98,9 @@
 
                     </Items>
                 </DxToolbarItem>
+               
+                   
+               
 
 
             </Items>
@@ -89,7 +108,7 @@
     </ToolbarTemplate>
 
     <Columns>
-        <DxGridSelectionColumn Width="30" />
+        <DxGridSelectionColumn Width="30" FixedPosition="GridColumnFixedPosition.Left" />
 
         <DxGridDataColumn FieldName="BranchId" Caption="ID"
                           Visible="@GetColumnVisibility("BranchId")"
@@ -107,9 +126,7 @@
                           Visible="@GetColumnVisibility("BranchAddress1")"
                           Width="@GetColumnWidth("BranchAddress1")" />
 
-        <DxGridDataColumn FieldName="BranchStatus" Caption="Active"
-                          Visible="@GetColumnVisibility("BranchStatus")"
-                          Width="@GetColumnWidth("BranchStatus")" />
+        <DxGridDataColumn FieldName="BranchStatus" Caption="Active"/>
     </Columns>
 
 </DxGrid>
@@ -248,7 +265,8 @@
 @code {
     DxGrid MyGrid;
     private List<Branch> branchList = [];
-    private List<Branch> SelectedBranches = new();
+    // private List<Branch> SelectedBranches = new();
+    private IReadOnlyList<object> SelectedBranches { get; set; } = new List<object>();
     private BranchAddEditPage popup;
     // Grid Layout Management Variables
     private List<GridLayoutDto> availableLayouts = [];
@@ -277,10 +295,10 @@
         allColumns = new List<GridColumnLayout>
         {
         new() { FieldName = "BranchId", Caption = "ID", Visible = false, Width = 80, DisplayIndex = 0 },
-        new() { FieldName = "BranchName", Caption = "Name", Visible = true, Width = 200, DisplayIndex = 1 },
-        new() { FieldName = "BranchCountry", Caption = "Country", Visible = true, Width = 120, DisplayIndex = 2 },
-        new() { FieldName = "BranchAddress1", Caption = "Address", Visible = true, Width = 300, DisplayIndex = 3 },
-        new() { FieldName = "BranchStatus", Caption = "Active", Visible = true, Width = 120, DisplayIndex = 4 }
+        new() { FieldName = "BranchName", Caption = "Name", Visible = true, Width = 350, DisplayIndex = 1 },
+        new() { FieldName = "BranchCountry", Caption = "Country", Visible = true, Width = 150, DisplayIndex = 2 },
+        new() { FieldName = "BranchAddress1", Caption = "Address", Visible = true,Width = 1019, DisplayIndex = 3 },
+        // new() { FieldName = "BranchStatus", Caption = "Active", Visible = true, Width = 120, DisplayIndex = 4 }
    };
         currentLayout = allColumns.Select(c => new GridColumnLayout
         {
@@ -588,10 +606,34 @@
             LoadingService.Hide();
         }
     }
-
-    private void OnSelectedBranchesChanged(IEnumerable<object> branches)
+    private async Task OnSelectedBranchesChanged(IReadOnlyList<object> branches)
     {
-        SelectedBranches = branches.Cast<Branch>().ToList();
+        SelectedBranches = branches ?? new List<object>();
+        await InvokeAsync(StateHasChanged);
+    }
+    // ✅ FIXED: Reliable clear selection method
+    private async Task ClearSelectionManual()
+    {
+        try
+        {
+            if (MyGrid != null)
+            {
+                MyGrid.ClearSelection(); // ✅ Synchronous method
+            }
+            SelectedBranches = new List<Branch>();
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Clear selection error: {ex.Message}");
+        }
+    }
+
+    // ✅ FIXED: Auto-clear after operations
+    private async Task ClearSelection()
+    {
+        await Task.Delay(100); // Small delay for UI update
+        await ClearSelectionManual();
     }
 
     private void OnCreateNew(ToolbarItemClickEventArgs e)
@@ -599,13 +641,16 @@
         popup.Show(new Branch());
     }
 
-    private void OnEdit(ToolbarItemClickEventArgs e)
+    private async Task OnEdit(ToolbarItemClickEventArgs e)
     {
         var branch = MyGrid.GetFocusedDataItem() as Branch;
-        if (branch != null)
+        if (branch == null)
+        {
+            ToastService.Warning("Please select a bill to edit.");
+            return;
+        }
             popup.Show(branch);
-        else
-            ToastService.Warning("Please select a branch to edit.");
+        await ClearSelection();
     }
 
     private async Task OnDelete(ToolbarItemClickEventArgs e)
@@ -615,19 +660,36 @@
             ToastService.Warning("Please select at least one branch to delete.");
             return;
         }
-
+        var selectedList = SelectedBranches.Cast<Branch>().ToList();
+        
         var confirm = await ConfirmDialogService.ShowAsync(
             $"Are you sure you want to delete {SelectedBranches.Count} selected branch(es)?");
-
-        if (confirm)
+        if (!confirm)
         {
-            foreach (var branch in SelectedBranches)
+            await ClearSelection(); // ✅ Clear on cancel
+            return;
+        }
+        try
+        {
+            LoadingService.Show("Deleting...");
+            int successCount = 0, failCount = 0;
+
+            foreach (var branch in selectedList)
             {
-                await BranchService.DeleteAsync(branch.BranchId);
+                var result = await BranchService.DeleteAsync(branch.BranchId);
+                if (result) successCount++; else failCount++;
             }
 
-            ToastService.Success($"{SelectedBranches.Count} branch(es) deleted successfully.");
+            if (successCount > 0) ToastService.Success($"{successCount} Branch(s) Deleted Successfully.");
+            if (failCount > 0) ToastService.Error($"{failCount} Branch(s) Failed To Delete.");
+
             await LoadBranchesAsync();
         }
+        finally
+        {
+            LoadingService.Hide();
+            await ClearSelection(); // ✅ Clear after delete (success or fail)
+        }
+
     }
 }

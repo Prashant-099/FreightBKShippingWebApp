@@ -62,7 +62,8 @@ namespace FreightBKShippingWebApp.Model
 
         public string? BranchPincode { get; set; }
 
-        [Required]
+        [Required(ErrorMessage = "State is required.")]
+        [Range(1, int.MaxValue, ErrorMessage = "Please select a valid State.")]
         [Column("branch_state_id")]
         public int BranchStateId { get; set; }
 

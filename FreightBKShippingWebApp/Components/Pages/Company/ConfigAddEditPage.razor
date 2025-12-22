@@ -1,4 +1,5 @@
-﻿@using FreightBKShippingWebApp.Models
+﻿@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Models
 @using FreightBKShippingWebApp.Services
 @using System.Text.Json
 @inject EinvConfigService EinvConfigService
@@ -6,43 +7,44 @@
 @inject LoadingService LoadingService
 @inject EinvConfigService ConfigService
 @inject GstinAuthTokenService GstinAuthTokenService
-
+@inject BranchService BranchService
 <DxPopup @bind-Visible="isVisible"
          HeaderText="@popupTitle"
          Width="700px"
          ShowCloseButton="true"
          CloseOnEscape="true"
-         CloseOnOutsideClick="false" BodyCssClass="my-popup-body" AllowResize="true" AllowDragByHeaderOnly="true">
+         CloseOnOutsideClick="false" horizontalAlignment="HorizontalAlignment.Center"
+         verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body" AllowResize="true" AllowDragByHeaderOnly="true">
 
     <Content>
-        <EditForm Model="@EditModel" OnValidSubmit="SaveAsync" Context="cxtconfig">
+        <EditForm EditContext="@editContext" OnValidSubmit="SaveAsync" Context="cxtconfig">
             <DxFormLayout>
                 <DxFormLayoutItem Caption="Username">
-                    <DxTextBox @bind-Text="EditModel.Username" />
+                    <DxTextBox @bind-Text="EditModel.Username" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"/>
                 </DxFormLayoutItem>
 
                 <DxFormLayoutItem Caption="Password">
-                    <DxTextBox @bind-Text="EditModel.eInvPwd" />
+                    <DxTextBox @bind-Text="EditModel.eInvPwd" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"/>
                 </DxFormLayoutItem>
 
                 <DxFormLayoutItem Caption="GSTIN">
-                    <DxTextBox @bind-Text="EditModel.Gstin" />
+                    <DxTextBox @bind-Text="EditModel.Gstin" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
                 </DxFormLayoutItem>
 
                 <DxFormLayoutItem Caption="GSP Name">
-                    <DxTextBox @bind-Text="EditModel.GspName" />
+                    <DxTextBox @bind-Text="EditModel.GspName" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
                 </DxFormLayoutItem>
 
                 <DxFormLayoutItem Caption="ASP User ID">
-                    <DxTextBox @bind-Text="EditModel.AspUserId" />
+                    <DxTextBox @bind-Text="EditModel.AspUserId" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
                 </DxFormLayoutItem>
 
                 <DxFormLayoutItem Caption="ASP Password">
-                    <DxTextBox @bind-Text="EditModel.Password" />
+                    <DxTextBox @bind-Text="EditModel.Password" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
                 </DxFormLayoutItem>
 
                 <DxFormLayoutItem Caption="Auth URL" ColSpanMd="9">
-                    <DxTextBox @bind-Text="EditModel.AuthUrl" />
+                    <DxTextBox @bind-Text="EditModel.AuthUrl" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
                 </DxFormLayoutItem>
 
                 <!-- TOKEN GENERATION SECTION -->
@@ -83,23 +85,34 @@
                 </DxFormLayoutItem>
 
                 <DxFormLayoutItem Caption="EWB by IRN URL" ColSpanMd="12">
-                    <DxTextBox @bind-Text="EditModel.EwbByIrn" />
+                    <DxTextBox @bind-Text="EditModel.EwbByIrn" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
                 </DxFormLayoutItem>
 
                 <DxFormLayoutItem Caption="EWB URL" ColSpanMd="12">
-                    <DxTextBox @bind-Text="EditModel.EwbUrl" />
+                    <DxTextBox @bind-Text="EditModel.EwbUrl" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
                 </DxFormLayoutItem>
 
                 <DxFormLayoutItem Caption="Cancel EWB URL" ColSpanMd="12">
-                    <DxTextBox @bind-Text="EditModel.CancelEwbUrl" />
+                    <DxTextBox @bind-Text="EditModel.CancelEwbUrl" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
                 </DxFormLayoutItem>
 
                 <DxFormLayoutItem Caption="Base URL" ColSpanMd="12">
-                    <DxTextBox @bind-Text="EditModel.BaseUrl" />
+                    <DxTextBox @bind-Text="EditModel.BaseUrl" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
                 </DxFormLayoutItem>
 
-                <DxFormLayoutItem Caption="Branch ID">
-                    <DxSpinEdit @bind-Value="EditModel.BranchId" />
+                <DxFormLayoutItem Caption="Branch">
+                    
+                    <DxComboBox TData="Branch"
+                                TValue="int?"
+                                Data="@branchList"
+                                TextFieldName="BranchName"
+                                ValueFieldName="BranchId"
+                                ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                AllowUserInput="false"
+                                NullText="-- Select Branch --"
+                                @bind-Value="EditModel.BranchId"
+                                SearchMode="ListSearchMode.AutoSearch"
+                                SearchFilterCondition="ListSearchFilterCondition.Contains" />
                 </DxFormLayoutItem>
 
                 <DxFormLayoutItem ColSpanMd="12">
@@ -143,34 +156,50 @@
     private bool isVisible;
     private string popupTitle = "Add / Edit E-Invoice Config";
     private EinvConfig EditModel = new();
-
+    private List<Branch> branchList = new();
     [Parameter] public EventCallback OnSaved { get; set; }
-
+    private EditContext? editContext;
     public void Show(EinvConfig? model = null)
     {
-        popupTitle = model == null ? "Add E-Invoice Config" : "Edit E-Invoice Config";
-        EditModel = model != null ? new EinvConfig
-            {
-                Username = model.Username,
-                eInvPwd = model.eInvPwd,
-                Gstin = model.Gstin,
-                AppKey = model.AppKey,
-                AuthToken = model.AuthToken,
-                Sek = model.Sek,
-                EInvoiceTokenExp = model.EInvoiceTokenExp,
-                BranchId = model.BranchId,
-                GspName = model.GspName,
-                AspUserId = model.AspUserId,
-                Password = model.Password,
-                AuthUrl = model.AuthUrl,
-                EwbByIrn = model.EwbByIrn,
-                EwbUrl = model.EwbUrl,
-                CancelEwbUrl = model.CancelEwbUrl,
-                BaseUrl = model.BaseUrl
-            } : new EinvConfig();
+        // popupTitle = model == null ? "Add E-Invoice Config" : "Edit E-Invoice Config";
+        // EditModel = model != null ? new EinvConfig
+        //     {
+        //         Username = model.Username,
+        //         eInvPwd = model.eInvPwd,
+        //         Gstin = model.Gstin,
+        //         AppKey = model.AppKey,
+        //         AuthToken = model.AuthToken,
+        //         Sek = model.Sek,
+        //         EInvoiceTokenExp = model.EInvoiceTokenExp,
+        //         BranchId = model.BranchId,
+        //         GspName = model.GspName,
+        //         AspUserId = model.AspUserId,
+        //         Password = model.Password,
+        //         AuthUrl = model.AuthUrl,
+        //         EwbByIrn = model.EwbByIrn,
+        //         EwbUrl = model.EwbUrl,
+        //         CancelEwbUrl = model.CancelEwbUrl,
+        //         BaseUrl = model.BaseUrl
+        //     } : new EinvConfig();
+
+        if (model !=null)
+        {
+            // Edit mode – bind directly to the selected object
+            EditModel = model;
+            popupTitle = "Edit E-Invoice Config";
+        }
+        else
+        {
+            // Add mode – create new object
+            EditModel = new EinvConfig();
+            popupTitle = "Add E-Invoice Config";
+        }
         isVisible = true;
     }
-
+    protected override async Task OnInitializedAsync()
+    {
+        branchList = await BranchService.GetAllAsync();
+    }
     private void Hide() => isVisible = false;
     private async Task GenerateAuthTokenAsync()
     {

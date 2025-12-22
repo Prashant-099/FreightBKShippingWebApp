@@ -27,7 +27,7 @@ namespace FreightBKShippingWebApp.Model
         public string? HsnUpdatedByUserId { get; set; }
 
         [Column("hsn_name")]
-       
+        [Required]
         public string HsnName { get; set; } = string.Empty;
 
         [Column("hsn_gstper")]
@@ -44,7 +44,8 @@ namespace FreightBKShippingWebApp.Model
         public float? HsnAddCess { get; set; }
 
         [Column("hsn_gstslab_id")]
-        
+        [Required]
+        [Range(1, int.MaxValue, ErrorMessage = "Please select a valid.")]
         public int HsnGstSlabId { get; set; }
 
         [Column("hsn_created")]

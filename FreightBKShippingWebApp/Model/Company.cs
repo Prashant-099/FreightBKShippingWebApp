@@ -151,5 +151,7 @@ namespace FreightBKShippingWebApp.Model
         //added by dhruv
         [Column("company_haswpmsg")]
         public bool? HasWhatsapp { get; set; }
+        [NotMapped]  // ✅ Since this doesn't exist in the database table
+        public string? StateName { get; set; }
     }
 }

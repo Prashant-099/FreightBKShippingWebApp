@@ -21,6 +21,7 @@ namespace FreightBKShippingWebApp.Model
         public string? CountryUpdatedbyUserId { get; set; }
 
         [Required]
+        [StringLength(500)]
         [Column("country_name")]
 
         public string CountryName { get; set; } = string.Empty;

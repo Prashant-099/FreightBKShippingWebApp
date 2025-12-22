@@ -4,21 +4,23 @@
 @inject ToasteService ToastService
 @inject LoadingService LoadingService
 
-<DxPopup @bind-Visible="Visible" ShowCloseButton="true" HeaderText="@Title" Width="450px">
-    <EditForm Model="@EditModel" OnValidSubmit="HandleValidSubmit">
+<DxPopup @bind-Visible="Visible" ShowCloseButton="true" HeaderText="@Title" MaxWidth="450" CloseOnOutsideClick="false" horizontalAlignment="HorizontalAlignment.Center"
+         verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body" ShowFooter="true" scrollable="true">
+    <BodyContentTemplate Context="bdybrnch">
+        <EditForm EditContext="@editContext" OnValidSubmit="HandleValidSubmit" id="currForm">
         <DataAnnotationsValidator />
-        <ValidationSummary />
+        @* <ValidationSummary /> *@
 
         <DxFormLayout>
-            <DxFormLayoutItem Caption="Name" ColSpanMd="10">
+            <DxFormLayoutItem Caption="Name" ColSpanMd="12">
                 <ChildContent Context="itemContext">
-                    <DxTextBox @bind-Text="EditModel.CurrencyName" />
+                        <DxTextBox @bind-Text="EditModel.CurrencyName" ShowValidationIcon="true" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
                 </ChildContent>
             </DxFormLayoutItem>
 
-            <DxFormLayoutItem Caption="Symbol" ColSpanMd="10">
+            <DxFormLayoutItem Caption="Symbol" ColSpanMd="12">
                 <ChildContent Context="itemContext">
-                    <DxTextBox @bind-Text="EditModel.CurrencySymbol" />
+                        <DxTextBox @bind-Text="EditModel.CurrencySymbol" ShowValidationIcon="true" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
                 </ChildContent>
             </DxFormLayoutItem>
 
@@ -29,31 +31,40 @@
             </DxFormLayoutItem> *@
         </DxFormLayout>
 
+    </EditForm>
+     </BodyContentTemplate>
+    <FooterContentTemplate Context="ftrbrnch">
         <div class="mt-3 text-end">
-            <DxButton Text="Save" RenderStyle="ButtonRenderStyle.Primary" SubmitFormOnClick="true" />
+            <DxButton Text="Save" RenderStyle="ButtonRenderStyle.Primary" SubmitFormOnClick="true" Form="currForm" />
             <DxButton Text="Cancel" RenderStyle="ButtonRenderStyle.Secondary" Click="Hide" />
         </div>
-    </EditForm>
+    </FooterContentTemplate>
 </DxPopup>
 
 @code {
     [Parameter] public EventCallback OnSaved { get; set; }
-
+    private EditContext? editContext;
     private bool Visible { get; set; }
     private string Title { get; set; } = "Add/Edit Currency";
     private Currency EditModel { get; set; } = new();
 
     public void Show(Currency currency)
     {
-        EditModel = currency != null ? new Currency
+       
+        if (currency.CurrencyId > 0)
         {
-            CurrencyId = currency.CurrencyId,
-            CurrencyName = currency.CurrencyName,
-            CurrencySymbol = currency.CurrencySymbol,
-            CurrencyStatus = currency.CurrencyStatus
-        } : new Currency();
-
-        Title = currency?.CurrencyId > 0 ? "Edit Currency" : "Add Currency";
+            // Edit mode – bind directly to the selected object
+            EditModel = currency;
+            Title = "Edit Currency";
+        }
+        else
+        {
+            // Add mode – create new object
+            EditModel = new Currency { CurrencyStatus = true };
+            Title = "Add Currency";
+        }
+        // Create EditContext when showing the form
+        editContext = new EditContext(EditModel);
         Visible = true;
     }
 
@@ -98,7 +109,7 @@
         {
             ToastService.Error($"Error saving currency: {ex.Message}");
         }
-       
+       finally
         {
             LoadingService.Hide();
         }

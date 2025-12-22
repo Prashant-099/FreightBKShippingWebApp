@@ -7,59 +7,42 @@
 @using FreightBKShippingWebApp.Components.Pages
 
 @inject CompanyService CompanyService
-@inject ToasteService ToasteService
+@inject ToasteService ToastService
 @inject LoadingService LoadingService
 @inject StateService StateService
 @inject CountryService CountryService
 @inject EinvConfigService EinvConfigService
-@inject ToasteService ToastService
-@inject IJSRuntime JS
 @inject ConfirmationDialogService ConfirmDialogService
 @inject GridLayoutService GridLayoutService
 
-@* <div class="text-center mb-4">
-    <h3 class="text-xl font-semibold">
-        <i class="bi bi-building me-2"></i>Company
-    </h3>
-</div> *@
-
-@* <ConfigAuthorize Check="ConfigChecks.CanViewCompany"> *@
 <style>
-    .layout-toolbar {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 8px;
-        background-color: #f8f9fa;
-        border-bottom: 1px solid #dee2e6;
+    .grid-size {
+        max-height: 600px;
     }
 
-        .layout-toolbar label {
-            font-weight: 600;
-            margin-right: 4px;
-        }
+    .layout-combobox {
+        border-radius: 6px;
+        width: 185px;
+    }
 </style>
-<div class="">
+
 <DxGrid TItem="Company"
         Data="@companyList"
         @ref="CompanyGrid"
         KeyFieldName="CompanyId"
-        EditMode="GridEditMode.PopupEditForm"
-        PopupEditFormHeaderText="Edit Company"
-        ShowGroupPanel="true"
         ShowSearchBox="true"
         PageSize="10"
         PageSizeSelectorVisible="true"
+        ShowGroupPanel="true"
         FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always"
         FocusedRowEnabled="true"
-        ColumnResizeMode="GridColumnResizeMode.NextColumn"
-        SearchBoxInputDelay="2000"
+        SelectionMode="GridSelectionMode.Multiple"
         SelectedDataItems="@SelectedCompanies"
-        SelectedDataItemsChanged="@OnSelectedDataItemsChanged"
-        EditModelSaving="OnEditModelSaving"
-        DataItemDeleting="OnDataItemDeleting">
+        SelectedDataItemsChanged="OnSelectedCompaniesChanged"
+        ColumnResizeMode="GridColumnResizeMode.NextColumn"
+        CssClass="grid-size" AllowSelectRowByClick="true">
 
-    <ToolbarTemplate Context="grid">
+    <ToolbarTemplate Context="toolbarContext">
         <DxToolbar>
             <TitleTemplate Context="tl">
                 <div class="d-flex align-items-center">
@@ -68,228 +51,119 @@
                 </div>
             </TitleTemplate>
             <Items>
-                @* <DxToolbarItem Text="Add" IconCssClass="bi bi-plus-circle" Click="OnAddNew" /> *@
+               @* <DxToolbarItem Text="Add" IconCssClass="bi bi-plus-circle" Click="OnCreateNew" /> *@
                 <DxToolbarItem Text="Edit" IconCssClass="bi bi-pencil-square" Click="OnEdit" />
-                @* <DxToolbarItem Text="Delete" IconCssClass="bi bi-trash" Click="OnDelete" /> *@
-              @*<DxToolbarItem Type="Spacer" />*@
-                <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="@((_) => LoadCompaniesAsync())" />
-                <DxToolbarItem Text="Column Chooser" IconCssClass="bi bi-list-columns"
-                               Click="OnColumnChooserClick"></DxToolbarItem>
-                    <DxToolbarItem Text="Config" IconCssClass="bi bi-plus-circle" Click="config" />
+                <DxToolbarItem Text="Delete" IconCssClass="bi bi-trash" Click="OnDelete" />
+                <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="@LoadCompaniesAsync" />
+                <DxToolbarItem Text="Config" IconCssClass="bi bi-gear" Click="OnConfig" />
 
-                    <DxToolbarItem BeginGroup="true">
+                <DxToolbarItem BeginGroup="true" IconCssClass="bi bi-gear-wide-connected" Alignment="ToolbarItemAlignment.Right">
+                    <Template>
+                        <DxComboBox Data="@availableLayouts"
+                                    Value="@selectedLayoutId"
+                                    ValueExpression="@(() => selectedLayoutId)"
+                                    ValueChanged="@((int? value) => OnLayoutSelectedAsync(value))"
+                                    ValueFieldName="GridLayoutId"
+                                    TextFieldName="GridLayoutName"
+                                    NullText="Default View"
+                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                    CssClass="layout-combobox" />
+                    </Template>
+                </DxToolbarItem>
 
-                        <div class="d-flex align-items-center gap-2">
-                            <label class="mb-0">Layout:</label>
+                <DxToolbarItem BeginGroup="true" Context="cfdr"
+                               Alignment="ToolbarItemAlignment.Right"
+                               RenderStyleMode="ToolbarItemRenderStyleMode.Contained"
+                               RenderStyle="ButtonRenderStyle.Secondary"
+                               IconCssClass="bi bi-gear-wide-connected">
+                    <Items>
+                        <DxToolbarItem Text="Save Current Layout"
+                                       RenderStyle="ButtonRenderStyle.Primary"
+                                       IconCssClass="bi bi-floppy"
+                                       Click="ShowSaveLayoutDialog" />
 
-                            <DxComboBox Data="@availableLayouts"
-                                        Value="@selectedLayoutId"
-                                        ValueExpression="@(() => selectedLayoutId)"
-                                        ValueChanged="@((int? value) => OnLayoutSelectedAsync(value))"
-                                        ValueFieldName="GridLayoutId"
-                                        TextFieldName="GridLayoutName"
-                                        NullText="-- Default --"
-                                        Width="180px"
-                                        ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
-                        </div>
+                        <DxToolbarItem Text="Create New Layout"
+                                       RenderStyle="ButtonRenderStyle.Success"
+                                       IconCssClass="bi bi-plus-square"
+                                       Click="ShowNewLayoutDialog" />
 
-                    </DxToolbarItem>
-
-                    <DxToolbarItem BeginGroup="true"
-                                   RenderStyleMode="ToolbarItemRenderStyleMode.Contained"
-                                   IconCssClass="bi bi-gear-wide-connected">
-                        <Items>
-
-                            <DxToolbarItem Text="Save Layout"
-                                           RenderStyle="ButtonRenderStyle.Primary"
-                                           IconCssClass="bi bi-floppy"
-                                           Click="ShowSaveLayoutDialog" />
-
-                            <DxToolbarItem Text="Create Layout"
-                                           RenderStyle="ButtonRenderStyle.Success"
-                                           IconCssClass="bi bi-plus-square"
-                                           Click="ShowNewLayoutDialog" />
-
-                            @if (selectedLayoutId.HasValue)
-                            {
-                                <DxToolbarItem Text="Delete Layout"
-                                               RenderStyle="ButtonRenderStyle.Danger"
-                                               IconCssClass="bi bi-trash"
-                                               Click="DeleteCurrentLayout" />
-                            }
-
-                        </Items>
-                    </DxToolbarItem>
-                </Items>
+                        @if (selectedLayoutId.HasValue)
+                        {
+                            <DxToolbarItem Text="Delete Current Layout"
+                                           RenderStyle="ButtonRenderStyle.Danger"
+                                           IconCssClass="bi bi-trash"
+                                           Click="DeleteCurrentLayout" />
+                        }
+                    </Items>
+                </DxToolbarItem>
+            </Items>
         </DxToolbar>
     </ToolbarTemplate>
 
-        <Columns>
-            <DxGridDataColumn FieldName="CompanyId" Caption="ID"
-                              Visible="@GetColumnVisibility("CompanyId")"
-                              Width="@GetColumnWidth("CompanyId")"
-                              SortIndex="0"
-                              SortOrder="GridColumnSortOrder.Descending" />
+    <Columns>
+        <DxGridSelectionColumn Width="30" FixedPosition="GridColumnFixedPosition.Left" />
 
-            <DxGridSelectionColumn AllowSelectAll="true"
-                                   Width="30"
-                                   MinWidth="50" />
+        <DxGridDataColumn FieldName="CompanyId" Caption="ID"
+                          Visible="@GetColumnVisibility("CompanyId")"
+                          Width="@GetColumnWidth("CompanyId")" />
 
-            <DxGridDataColumn FieldName="@nameof(Company.Name)" Caption="Name"
-                              Visible="@GetColumnVisibility("Name")"
-                              Width="@GetColumnWidth("Name")"
-                              MinWidth="300" />
+        <DxGridDataColumn FieldName="Name" Caption="Name"
+                          Visible="@GetColumnVisibility("Name")"
+                          Width="@GetColumnWidth("Name")" />
 
-            <DxGridDataColumn FieldName="@nameof(Company.Code)" Caption="Code"
-                              Visible="@GetColumnVisibility("Code")"
-                              Width="@GetColumnWidth("Code")"
-                              MinWidth="100" />
+        <DxGridDataColumn FieldName="Code" Caption="Code"
+                          Visible="@GetColumnVisibility("Code")"
+                          Width="@GetColumnWidth("Code")" />
 
-            <DxGridDataColumn FieldName="@nameof(Company.PrintName)" Caption="Print Name"
-                              Visible="@GetColumnVisibility("PrintName")"
-                              Width="@GetColumnWidth("PrintName")"
-                              MinWidth="100" />
+        <DxGridDataColumn FieldName="PrintName" Caption="Print Name"
+                          Visible="@GetColumnVisibility("PrintName")"
+                          Width="@GetColumnWidth("PrintName")" />
 
-            <DxGridDataColumn FieldName="@nameof(Company.Address1)" Caption="Address"
-                              Visible="@GetColumnVisibility("Address1")"
-                              Width="@GetColumnWidth("Address1")"
-                              MinWidth="100" />
+        <DxGridDataColumn FieldName="Address1" Caption="Address"
+                          Visible="@GetColumnVisibility("Address1")"
+                          Width="@GetColumnWidth("Address1")" />
 
-            <DxGridDataColumn FieldName="@nameof(Company.City)" Caption="City"
-                              Visible="@GetColumnVisibility("City")"
-                              Width="@GetColumnWidth("City")"
-                              MinWidth="100" />
+        <DxGridDataColumn FieldName="City" Caption="City"
+                          Visible="@GetColumnVisibility("City")"
+                          Width="@GetColumnWidth("City")" />
 
-            <DxGridDataColumn FieldName="@nameof(Company.StateId)" Caption="State ID"
-                              Visible="@GetColumnVisibility("StateId")"
-                              Width="@GetColumnWidth("StateId")"
-                              MinWidth="100" />
+        <DxGridDataColumn FieldName="StateName" Caption="State"
+                          Visible="@GetColumnVisibility("StateName")"
+                          Width="@GetColumnWidth("StateName")" />
+                          
 
-            <DxGridDataColumn FieldName="@nameof(Company.Country)" Caption="Country"
-                              Visible="@GetColumnVisibility("Country")"
-                              Width="@GetColumnWidth("Country")"
-                              MinWidth="100" />
+        <DxGridDataColumn FieldName="Country" Caption="Country"
+                          Visible="@GetColumnVisibility("Country")"
+                          Width="@GetColumnWidth("Country")" />
 
-            <DxGridDataColumn FieldName="@nameof(Company.Email)" Caption="Email"
-                              Visible="@GetColumnVisibility("Email")"
-                              Width="@GetColumnWidth("Email")"
-                              MinWidth="100" />
+        <DxGridDataColumn FieldName="Email" Caption="Email"
+                          Visible="@GetColumnVisibility("Email")"
+                          Width="@GetColumnWidth("Email")" />
 
-            <DxGridDataColumn FieldName="@nameof(Company.Mobile)" Caption="Mobile"
-                              Visible="@GetColumnVisibility("Mobile")"
-                              Width="@GetColumnWidth("Mobile")"
-                              MinWidth="100" />
+        <DxGridDataColumn FieldName="Mobile" Caption="Mobile"
+                          Visible="@GetColumnVisibility("Mobile")"
+                          Width="@GetColumnWidth("Mobile")" />
 
-            <DxGridDataColumn FieldName="@nameof(Company.Website)" Caption="Website"
-                              Visible="@GetColumnVisibility("Website")"
-                              Width="@GetColumnWidth("Website")"
-                              MinWidth="100" />
+        <DxGridDataColumn FieldName="Website" Caption="Website"
+                          Visible="@GetColumnVisibility("Website")"
+                          Width="@GetColumnWidth("Website")" />
 
-            <DxGridDataColumn FieldName="@nameof(Company.Gstin)" Caption="GSTIN"
-                              Visible="@GetColumnVisibility("Gstin")"
-                              Width="@GetColumnWidth("Gstin")"
-                              MinWidth="100" />
+        <DxGridDataColumn FieldName="Gstin" Caption="GSTIN"
+                          Visible="@GetColumnVisibility("Gstin")"
+                          Width="@GetColumnWidth("Gstin")" />
 
-            <DxGridDataColumn FieldName="@nameof(Company.Panno)" Caption="PAN No."
-                              Visible="@GetColumnVisibility("Panno")"
-                              Width="@GetColumnWidth("Panno")"
-                              MinWidth="100" />
+        <DxGridDataColumn FieldName="Panno" Caption="PAN No."
+                          Visible="@GetColumnVisibility("Panno")"
+                          Width="@GetColumnWidth("Panno")" />
 
-            <DxGridDataColumn FieldName="@nameof(Company.IsGstApplicable)" Caption="GST Applicable"
-                              Visible="@GetColumnVisibility("IsGstApplicable")"
-                              Width="@GetColumnWidth("IsGstApplicable")"
-                              MinWidth="100" />
+        <DxGridDataColumn FieldName="IsGstApplicable" Caption="GST Applicable"
+                          Visible="@GetColumnVisibility("IsGstApplicable")"
+                          Width="@GetColumnWidth("IsGstApplicable")" />
 
-            <DxGridDataColumn FieldName="@nameof(Company.Status)" Caption="Status"
-                              Visible="@GetColumnVisibility("Status")"
-                              Width="@GetColumnWidth("Status")"
-                              MinWidth="100" />
-        </Columns>
-
-
-    <EditFormTemplate Context="editFormContext">
-        <ValidationSummary />
-        <DxFormLayout>
-            <DxFormLayoutItem Caption="Name" ColSpanSm="12" ColSpanMd="12">
-                @editFormContext.GetEditor(nameof(Company.Name))
-            </DxFormLayoutItem>
-           @*  <DxFormLayoutItem Caption="Code" ColSpanSm="12" ColSpanMd="12">
-                @editFormContext.GetEditor(nameof(Company.Code))
-            </DxFormLayoutItem> *@
-
-            <DxFormLayoutItem Caption="Print Name" ColSpanSm="12" ColSpanMd="12">
-                    @editFormContext.GetEditor(nameof(Company.PrintName))
-                </DxFormLayoutItem>
-            <DxFormLayoutItem Caption="Address " ColSpanSm="12" ColSpanMd="12">
-                <DxMemo @bind-Text="((Company)editFormContext.EditContext.Model).Address1" />
-                </DxFormLayoutItem>
-            <DxFormLayoutItem Caption="City" ColSpanSm="12" ColSpanMd="12">
-                    @editFormContext.GetEditor(nameof(Company.City))
-                </DxFormLayoutItem>
-
-            <DxFormLayoutItem Caption="State"  ColSpanSm="12" ColSpanMd="12">
-                    <DxComboBox TData="State" TValue="int"
-                Data="@stateList"
-                TextFieldName="StateName"
-                                ValueFieldName="StateId"
-                 ClearButtonVisible="true"
-                AllowUserInput="false"
-                NullText="-- Select State --"
-                @bind-Value="((Company)editFormContext.EditContext.Model).StateId"
-                SearchMode="ListSearchMode.AutoSearch"
-                SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
-                </DxFormLayoutItem>
-           @*  <DxFormLayoutItem caption="State" ColSpanSm="12" ColSpanMd="12">
-
-                <DxComboBox Data="@stateList"
-                            TextFieldName="StateName"
-                            ValueFieldName="StateId"
-                            @bind-Value="((Company)editFormContext.EditContext.Model).StateId" />
-
-            </DxFormLayoutItem> *@
-                <DxFormLayoutItem Caption="Country" ColSpanSm="12" ColSpanMd="12">
-                    <DxComboBox TData="Country" TValue="String"
-                                Data="@CountryList"
-                                TextFieldName="CountryName"
-                                ValueFieldName="CountryName"
-                                ClearButtonVisible="true"
-                                AllowUserInput="false"
-                                NullText="-- Select Country --"
-                                @bind-Value="((Company)editFormContext.EditContext.Model).Country"
-                                SearchMode="ListSearchMode.AutoSearch"
-                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
-                </DxFormLayoutItem>
-            <DxFormLayoutItem Caption="Email" ColSpanSm="12" ColSpanMd="12">
-                    @editFormContext.GetEditor(nameof(Company.Email))
-                </DxFormLayoutItem>
-            <DxFormLayoutItem Caption="Mobile" ColSpanSm="12" ColSpanMd="12">
-                    @editFormContext.GetEditor(nameof(Company.Mobile))
-                </DxFormLayoutItem>
-
-            @* <DxFormLayoutItem Caption="Website" ColSpanSm="12" ColSpanMd="12">
-                    @editFormContext.GetEditor(nameof(Company.Website))
-                </DxFormLayoutItem> *@
-            <DxFormLayoutItem Caption="GSTIN" ColSpanSm="12" ColSpanMd="12">
-                    <DxTextBox @bind-Text="((Company)editFormContext.EditModel).Gstin "></DxTextBox>
-                    
-                </DxFormLayoutItem>
-                <DxFormLayoutItem Caption="PAN No" ColSpanSm="12" ColSpanMd="12">
-                    <DxTextBox @bind-Text="((Company)editFormContext.EditModel).Panno "></DxTextBox>
-                </DxFormLayoutItem>
-      @*       <DxFormLayoutItem Caption="PAN No." ColSpanSm="12" ColSpanMd="12">
-                    @editFormContext.GetEditor(nameof(Company.Panno))
-                </DxFormLayoutItem> *@
-
-            <DxFormLayoutItem Caption="GST Applicable" ColSpanSm="12" ColSpanMd="12">
-                    @editFormContext.GetEditor(nameof(Company.IsGstApplicable))
-                </DxFormLayoutItem>
-            <DxFormLayoutItem Caption="Status" ColSpanSm="12" ColSpanMd="12">
-                    @editFormContext.GetEditor(nameof(Company.Status))
-                </DxFormLayoutItem>
-        </DxFormLayout>
-    </EditFormTemplate>
+        <DxGridDataColumn FieldName="Status" Caption="Status"/>
+    </Columns>
 </DxGrid>
-</div>
+
 @if (showLayoutDialog)
 {
     <div class="modal fade show d-block"
@@ -298,8 +172,6 @@
 
         <div class="modal-dialog modal-lg" @onclick:stopPropagation="true">
             <div class="modal-content">
-
-                <!-- Header -->
                 <div class="modal-header">
                     <h5 class="modal-title">@dialogTitle</h5>
                     <button type="button"
@@ -309,10 +181,7 @@
                     </button>
                 </div>
 
-                <!-- Body -->
                 <div class="modal-body">
-
-                    <!-- Layout Name -->
                     <div class="mb-3">
                         <label class="form-label fw-bold">Layout Name:</label>
                         <input type="text"
@@ -323,27 +192,21 @@
                                maxlength="100" />
                     </div>
 
-                    <!-- Default Layout Checkbox -->
                     <div class="mb-3">
                         <div class="form-check">
                             <input class="form-check-input"
                                    type="checkbox"
                                    @bind="isDefaultLayout"
                                    id="defaultLayoutCheck" />
-
                             <label class="form-check-label" for="defaultLayoutCheck">
                                 Set as Default Layout
                             </label>
                         </div>
                     </div>
 
-                    <!-- Column Configuration -->
                     <div class="mt-3">
                         <label class="form-label fw-bold mb-2">Column Configuration:</label>
-
-                        <div class="table-responsive"
-                             style="max-height: 400px; overflow-y: auto;">
-
+                        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
                             <table class="table table-sm table-bordered">
                                 <thead class="table-light sticky-top">
                                     <tr>
@@ -352,7 +215,6 @@
                                         <th style="width: 150px;">Width (px)</th>
                                     </tr>
                                 </thead>
-
                                 <tbody>
                                     @foreach (var col in allColumns)
                                     {
@@ -363,13 +225,11 @@
                                                        @bind="col.Visible"
                                                        id="col_@col.FieldName" />
                                             </td>
-
                                             <td>
                                                 <label class="mb-0" for="col_@col.FieldName">
                                                     @col.Caption
                                                 </label>
                                             </td>
-
                                             <td>
                                                 <input type="number"
                                                        class="form-control form-control-sm"
@@ -384,27 +244,22 @@
                                     }
                                 </tbody>
                             </table>
-
                         </div>
                     </div>
 
-                    <!-- Info Note -->
                     <div class="alert alert-info mt-3">
                         <i class="bi bi-info-circle me-2"></i>
                         <strong>Note:</strong>
                         Adjust column widths here manually. The widths will be saved and applied when you load this layout.
                     </div>
-
                 </div>
 
-                <!-- Footer -->
                 <div class="modal-footer">
                     <button type="button"
                             class="btn btn-secondary"
                             @onclick="CloseLayoutDialog">
                         Cancel
                     </button>
-
                     <button type="button"
                             class="btn btn-primary"
                             @onclick="SaveCurrentLayout">
@@ -412,36 +267,24 @@
                         @(isEditMode ? "Update" : "Create") Layout
                     </button>
                 </div>
-
             </div>
         </div>
-
     </div>
 }
 
-<ConfigAddEditPage @ref="popup" OnSaved="LoadCompaniesAsync" />
+<CompanyAddEditPage @ref="companyPopup" OnSaved="LoadCompaniesAsync" />
+<ConfigAddEditPage @ref="configPopup" OnSaved="LoadCompaniesAsync" />
 <ConfirmationDialog />
-@* </ConfigAuthorize> *@
-@code {
-    private ConfigAddEditPage popup;
-    EinvConfig ConfigModel = new();
-  
-    private void config(ToolbarItemClickEventArgs e) 
-{
-        popup.Show(ConfigModel);
-}
 
-    void OnColumnChooserClick()
-    {
-        CompanyGrid.ShowColumnChooser(".column-chooser-button");
-    }
-    //===================================================
+@code {
     DxGrid CompanyGrid;
-    List<Company> companyList = [];
-    List<Company> SelectedCompanies = new();
-    private List<State> stateList = new();
-    private List<Country> CountryList = new();
-    bool isSaving = false;
+    private List<Company> companyList = [];
+    // private List<Company> SelectedCompanies = new();
+    private IReadOnlyList<object> SelectedCompanies { get; set; } = new List<object>();
+    private CompanyAddEditPage companyPopup;
+    private ConfigAddEditPage configPopup;
+    private EinvConfig ConfigModel = new();
+
     // Grid Layout Management Variables
     private List<GridLayoutDto> availableLayouts = [];
     private int? selectedLayoutId;
@@ -452,10 +295,10 @@
     private bool isDefaultLayout = false;
     private const string VOUCHER_TYPE = "Company";
 
-    // All possible columns
     private List<GridColumnLayout> allColumns = [];
     private List<GridColumnLayout> currentLayout = [];
-    protected override async Task OnInitializedAsync() 
+
+    protected override async Task OnInitializedAsync()
     {
         await LoadCompaniesAsync();
         InitializeColumns();
@@ -467,28 +310,23 @@
     {
         allColumns = new List<GridColumnLayout>
         {
-           new() { FieldName = "CompanyId", Caption = "ID", Visible = false, Width = 80, DisplayIndex = 0 },
+            new() { FieldName = "CompanyId", Caption = "ID", Visible = false, Width = 80, DisplayIndex = 0 },
+            new() { FieldName = "Name", Caption = "Name", Visible = true, Width = 300, DisplayIndex = 1 },
+            new() { FieldName = "Code", Caption = "Code", Visible = false, Width = 120, DisplayIndex = 2 },
+            new() { FieldName = "PrintName", Caption = "Print Name", Visible = false, Width = 200, DisplayIndex = 3 },
+            new() { FieldName = "Address1", Caption = "Address", Visible = true, Width = 250, DisplayIndex = 4 },
+            new() { FieldName = "City", Caption = "City", Visible = true, Width = 150, DisplayIndex = 5 },
+            new() { FieldName = "StateName", Caption = "State", Visible = false, Width = 120, DisplayIndex = 6 },
+            new() { FieldName = "Country", Caption = "Country", Visible = false, Width = 120, DisplayIndex = 7 },
+            new() { FieldName = "Email", Caption = "Email", Visible = true, Width = 200, DisplayIndex = 8 },
+            new() { FieldName = "Mobile", Caption = "Mobile", Visible = false, Width = 150, DisplayIndex = 9 },
+            new() { FieldName = "Website", Caption = "Website", Visible = false, Width = 150, DisplayIndex = 10 },
+            new() { FieldName = "Gstin", Caption = "GSTIN", Visible = true, Width = 180, DisplayIndex = 11 },
+            new() { FieldName = "Panno", Caption = "PAN No.", Visible = false, Width = 150, DisplayIndex = 12 },
+            new() { FieldName = "IsGstApplicable", Caption = "GST Applicable", Visible = false, Width = 150, DisplayIndex = 13 },
+            // new() { FieldName = "Status", Caption = "Status", Visible = false, Width = 120, DisplayIndex = 14 }
+        };
 
-new() { FieldName = "Name", Caption = "Name", Visible = true, Width = 300, DisplayIndex = 1 },
-new() { FieldName = "Code", Caption = "Code", Visible = false, Width = 120, DisplayIndex = 2 },
-new() { FieldName = "PrintName", Caption = "Print Name", Visible = false, Width = 150, DisplayIndex = 3 },
-
-new() { FieldName = "Address1", Caption = "Address", Visible = true, Width = 250, DisplayIndex = 4 },
-new() { FieldName = "City", Caption = "City", Visible = true, Width = 150, DisplayIndex = 5 },
-
-new() { FieldName = "StateId", Caption = "State ID", Visible = false, Width = 120, DisplayIndex = 6 },
-new() { FieldName = "Country", Caption = "Country", Visible = false, Width = 120, DisplayIndex = 7 },
-
-new() { FieldName = "Email", Caption = "Email", Visible = true, Width = 200, DisplayIndex = 8 },
-new() { FieldName = "Mobile", Caption = "Mobile", Visible = false, Width = 150, DisplayIndex = 9 },
-new() { FieldName = "Website", Caption = "Website", Visible = false, Width = 150, DisplayIndex = 10 },
-
-new() { FieldName = "Gstin", Caption = "GSTIN", Visible = true, Width = 180, DisplayIndex = 11 },
-new() { FieldName = "Panno", Caption = "PAN No.", Visible = false, Width = 150, DisplayIndex = 12 },
-
-new() { FieldName = "IsGstApplicable", Caption = "GST Applicable", Visible = false, Width = 150, DisplayIndex = 13 },
-new() { FieldName = "Status", Caption = "Status", Visible = false, Width = 120, DisplayIndex = 14 }
-  };
         currentLayout = allColumns.Select(c => new GridColumnLayout
         {
             FieldName = c.FieldName,
@@ -534,15 +372,6 @@ new() { FieldName = "Status", Caption = "Status", Visible = false, Width = 120, 
         var col = currentLayout.FirstOrDefault(x => x.FieldName == fieldName);
         return col?.Visible ?? true;
     }
-
-    // private void Grid_ColumnResizing(GridColumnResizeMode e)
-    // {
-    //     var col = currentLayout.FirstOrDefault(x => x.FieldName == e.Column.FieldName);
-    //     if (col != null)
-    //     {
-    //         col.Width = ParseWidth(e.Width);
-    //     }
-    // }
 
     private async Task LoadAvailableLayouts()
     {
@@ -782,153 +611,104 @@ new() { FieldName = "Status", Caption = "Status", Visible = false, Width = 120, 
         isDefaultLayout = false;
         isEditMode = false;
     }
+    // ✅ FIXED: Reliable clear selection method
+    private async Task ClearSelectionManual()
+    {
+        try
+        {
+            if (CompanyGrid != null)
+            {
+                CompanyGrid.ClearSelection(); // ✅ Synchronous method
+            }
+            SelectedCompanies = new List<Company>();
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Clear selection error: {ex.Message}");
+        }
+    }
+
+    // ✅ FIXED: Auto-clear after operations
+    private async Task ClearSelection()
+    {
+        await Task.Delay(100); // Small delay for UI update
+        await ClearSelectionManual();
+    }
     private async Task LoadCompaniesAsync()
     {
         LoadingService.Show();
         try
         {
-            stateList = await StateService.GetStatesAsync();
-            CountryList = await CountryService.GetAllAsync();
-
             companyList = await CompanyService.GetAllAsync();
             var configs = await EinvConfigService.GetAllAsync();
             ConfigModel = configs.FirstOrDefault() ?? new EinvConfig();
         }
-        catch (Exception ex)
-        {
-            ToasteService.Error($"❌ Failed to load companies: {ex.Message}", "Error");
-        }
-       
+        finally
         {
             LoadingService.Hide();
         }
     }
 
-    async Task OnAddNew(ToolbarItemClickEventArgs e)
+    private async Task OnSelectedCompaniesChanged(IReadOnlyList<object> companies)
     {
-        await CompanyGrid.StartEditNewRowAsync();
-        ToasteService.Info("Creating new company...", "Info");
+        SelectedCompanies = companies ?? new List<object>();
+        await InvokeAsync(StateHasChanged);
     }
 
-    async Task OnEdit(ToolbarItemClickEventArgs e)
+    private void OnCreateNew(ToolbarItemClickEventArgs e)
+    {
+        companyPopup.Show(new Company());
+    }
+
+    private async Task OnEdit(ToolbarItemClickEventArgs e)
     {
         var company = CompanyGrid.GetFocusedDataItem() as Company;
         if (company != null)
-            await CompanyGrid.StartEditDataItemAsync(company);
+            companyPopup.Show(company);
         else
-            ToasteService.Warning("Please select a company to edit", "No Selection");
+            ToastService.Warning("Please select a company to edit.");
+        await ClearSelection();
     }
 
-    async Task OnDelete(ToolbarItemClickEventArgs e)
+    private async Task OnDelete(ToolbarItemClickEventArgs e)
     {
-        if (SelectedCompanies.Any())
+        if (SelectedCompanies == null || SelectedCompanies.Count == 0)
         {
-            var confirm = await ConfirmDialogService.ShowAsync($"Are you sure you want to delete {SelectedCompanies.Count} selected company(s)?");
-            if (confirm)
-            {
-                LoadingService.Show();
-
-                try
-                {
-                    foreach (var company in SelectedCompanies.ToList())
-                    {
-                        var result = await CompanyService.DeleteAsync(company.CompanyId);
-                        if (result)
-                        {
-                            companyList.Remove(company);
-
-                        }
-                    }
-                    ToasteService.Success($"{SelectedCompanies.Count} company(s) deleted", "Deleted");
-                    SelectedCompanies.Clear();
-                }
-                catch (Exception ex)
-                {
-                    ToasteService.Error($"Delete failed: {ex.Message}", "Error");
-                }
-               
-                {
-                    LoadingService.Hide();
-                    await LoadCompaniesAsync();
-                }
-            }
-        }
-        else
-        {
-            var company = CompanyGrid.GetFocusedDataItem();
-            if (company != null)
-                CompanyGrid.ShowDataItemDeleteConfirmation(company);
-            else
-                ToasteService.Warning("Please select a company to delete", "No Selection");
-        }
-    }
-
-    async Task OnEditModelSaving(GridEditModelSavingEventArgs e)
-    {
-        LoadingService.Show();
-        var model = e.EditModel as Company;
-        if (model == null)
-        {
-            e.Cancel = true;
-            ToasteService.Error("Invalid company data", "Error");
+            ToastService.Warning("Please select at least one company to delete.");
             return;
         }
+        var selectedList = SelectedCompanies.Cast<Company>().ToList();
+        var confirm = await ConfirmDialogService.ShowAsync(
+            $"Are you sure you want to delete {SelectedCompanies.Count} selected company(s)?");
 
-        try
+        if (confirm)
         {
-            if (e.IsNew)
+            LoadingService.Show();
+            try
             {
-                await CompanyService.CreateAsync(model);
-                ToasteService.Success("Company created", "Success");
+                foreach (var company in selectedList)
+                {
+                    await CompanyService.DeleteAsync(company.CompanyId);
+                }
+
+                ToastService.Success($"{SelectedCompanies.Count} company(s) deleted successfully.");
+                await LoadCompaniesAsync();
             }
-            else
+            catch (Exception ex)
             {
-                e.CopyChangesToDataItem();
-                await CompanyService.UpdateAsync(model);
-                ToasteService.Success("Company updated", "Success");
+                ToastService.Error($"Error deleting companies: {ex.Message}");
             }
-            await LoadCompaniesAsync();
-        }
-        catch (Exception ex)
-        {
-            ToasteService.Error($"Save failed: {ex.Message}", "Error");
-            e.Cancel = true;
-        }
-       
-        {
-            LoadingService.Hide();
+            finally
+            {
+                LoadingService.Hide();
+                await ClearSelection();
+            }
         }
     }
 
-    async Task OnDataItemDeleting(GridDataItemDeletingEventArgs e)
+    private void OnConfig(ToolbarItemClickEventArgs e)
     {
-        LoadingService.Show();
-        var company = e.DataItem as Company;
-
-        try
-        {
-            await CompanyService.DeleteAsync(company.CompanyId);
-            ToasteService.Success("Company deleted", "Deleted");
-            await LoadCompaniesAsync();
-        }
-        catch (Exception ex)
-        {
-            ToasteService.Error($"Delete failed: {ex.Message}", "Error");
-        }
-       
-        {
-            LoadingService.Hide();
-        }
+        configPopup.Show(ConfigModel);
     }
-
-    void OnSelectedDataItemsChanged(IReadOnlyList<object> selectedItems)
-    {
-        SelectedCompanies = selectedItems.Cast<Company>().ToList();
-    }
-    // void OnSelectedDataItemsChanged(object selectedItems)
-    // {
-    //     SelectedCompanies = ((IEnumerable<Company>)selectedItems).ToList();
-    // }
-
-
 }

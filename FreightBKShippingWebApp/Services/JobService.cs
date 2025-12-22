@@ -14,12 +14,11 @@ namespace FreightBKShippingWebApp.Services
         }
 
         // Get all jobs
-        public async Task<List<Job>> GetAllAsync(int page = 1, int pageSize = 1000)
+        public async Task<List<Job>> GetAllAsync()
         {
             try
             {
-                var response = await _api.GetFromJsonAsync<List<Job>>(
-                    $"api/Job?page={page}&pageSize={pageSize}");
+                var response = await _api.GetFromJsonAsync<List<Job>>("api/Job");
                 return response ?? new List<Job>();
             }
             catch (Exception ex)

@@ -9,19 +9,16 @@
 @inject ServiceService ServiceService
 @inject GridLayoutService GridLayoutService
 <style>
-    .layout-toolbar {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 8px;
-        background-color: #f8f9fa;
-        border-bottom: 1px solid #dee2e6;
+    .grid-size {
+        max-height: 600px;
     }
 
-        .layout-toolbar label {
-            font-weight: 600;
-            margin-right: 4px;
-        }
+
+    /* ComboBox Styling */
+    .layout-combobox {
+        border-radius: 6px;
+        width: 185px;
+    }
 </style>
 <DxGrid TItem="RateMaster"
         Data="@rateMasterList"
@@ -36,7 +33,9 @@
         SelectionMode="GridSelectionMode.Multiple"
         SelectedDataItems="@SelectedRates"
         SelectedDataItemsChanged="OnSelectedRatesChanged"
-        ColumnResizeMode="GridColumnResizeMode.NextColumn">
+        ColumnResizeMode="GridColumnResizeMode.NextColumn"
+        CssClass="grid-size"
+        AllowSelectRowByClick="true">
 
     <ToolbarTemplate Context="toolbarContext">
         <DxToolbar>
@@ -52,10 +51,8 @@
                 <DxToolbarItem Text="Delete" IconCssClass="bi bi-trash" Click="OnDelete" />
                 <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="LoadRatesAsync" />
 
-                <DxToolbarItem BeginGroup="true">
-
-                    <div class="d-flex align-items-center gap-2">
-                        <label class="mb-0">Layout:</label>
+                <DxToolbarItem BeginGroup="true" IconCssClass="bi bi-gear-wide-connected" Alignment="ToolbarItemAlignment.Right">
+                    <Template>
 
                         <DxComboBox Data="@availableLayouts"
                                     Value="@selectedLayoutId"
@@ -63,31 +60,32 @@
                                     ValueChanged="@((int? value) => OnLayoutSelectedAsync(value))"
                                     ValueFieldName="GridLayoutId"
                                     TextFieldName="GridLayoutName"
-                                    NullText="-- Default --"
-                                    Width="180px"
-                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
-                    </div>
+                                    NullText="Default View"
+                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                    CssClass="layout-combobox" />
+
+                    </Template>
 
                 </DxToolbarItem>
-
-                <DxToolbarItem BeginGroup="true"
+                <DxToolbarItem BeginGroup="true" Context="cfdr"
+                               Alignment="ToolbarItemAlignment.Right"
                                RenderStyleMode="ToolbarItemRenderStyleMode.Contained"
+                               RenderStyle="ButtonRenderStyle.Secondary"
                                IconCssClass="bi bi-gear-wide-connected">
                     <Items>
-
-                        <DxToolbarItem Text="Save Layout"
+                        <DxToolbarItem Text="Save Current Layout"
                                        RenderStyle="ButtonRenderStyle.Primary"
                                        IconCssClass="bi bi-floppy"
                                        Click="ShowSaveLayoutDialog" />
 
-                        <DxToolbarItem Text="Create Layout"
+                        <DxToolbarItem Text="Create New Layout"
                                        RenderStyle="ButtonRenderStyle.Success"
                                        IconCssClass="bi bi-plus-square"
                                        Click="ShowNewLayoutDialog" />
 
                         @if (selectedLayoutId.HasValue)
                         {
-                            <DxToolbarItem Text="Delete Layout"
+                            <DxToolbarItem Text="Delete Current Layout"
                                            RenderStyle="ButtonRenderStyle.Danger"
                                            IconCssClass="bi bi-trash"
                                            Click="DeleteCurrentLayout" />
@@ -95,18 +93,54 @@
 
                     </Items>
                 </DxToolbarItem>
+
+
+
+
+
             </Items>
         </DxToolbar>
     </ToolbarTemplate>
 
     <Columns>
-        <DxGridDataColumn FieldName="RateMasterId" Caption="ID" Visible="false" />
-        <DxGridSelectionColumn Width="30" />
-        <DxGridDataColumn FieldName="RateMasterApplicableDt" Caption="Applicable Date" DisplayFormat="d" MinWidth="120" />
-     <DxGridDataColumn FieldName="PartyName" Caption="Party Name" MinWidth="150" />
-<DxGridDataColumn FieldName="ServiceName" Caption="Service Name" MinWidth="150" />
-        <DxGridDataColumn FieldName="RateMasterSaleRate" Caption="Sale Rate" MinWidth="100" />
-        <DxGridDataColumn FieldName="RateMasterPurchaseRate" Caption="Purchase Rate" MinWidth="100" />
+        <DxGridSelectionColumn Width="30"
+                               FixedPosition="GridColumnFixedPosition.Left" />
+
+        <DxGridDataColumn FieldName="RateMasterId" Caption="ID"
+                          Visible="@GetColumnVisibility("RateMasterId")"
+                          Width="@GetColumnWidth("RateMasterId")" />
+
+        <DxGridDataColumn FieldName="RateMasterApplicableDt"
+                          Caption="Applicable Date"
+                          DisplayFormat="d"
+                          Visible="@GetColumnVisibility("RateMasterApplicableDt")"
+                          Width="@GetColumnWidth("RateMasterApplicableDt")" />
+
+        <DxGridDataColumn FieldName="PartyName"
+                          Caption="Party Name"
+                          Visible="@GetColumnVisibility("PartyName")"
+                          Width="@GetColumnWidth("PartyName")" />
+
+        <DxGridDataColumn FieldName="ServiceName"
+                          Caption="Service Name"
+                          Visible="@GetColumnVisibility("ServiceName")"
+                          Width="@GetColumnWidth("ServiceName")" />
+
+        <DxGridDataColumn FieldName="RateMasterSaleRate"
+                          Caption="Sale Rate"
+                          Visible="@GetColumnVisibility("RateMasterSaleRate")"
+                          Width="@GetColumnWidth("RateMasterSaleRate")" />
+
+        <DxGridDataColumn FieldName="RateMasterPurchaseRate"
+                          Caption="Purchase Rate"
+                          Visible="@GetColumnVisibility("RateMasterPurchaseRate")"
+                          Width="@GetColumnWidth("RateMasterPurchaseRate")" />
+        <DxGridDataColumn FieldName="RateMasterCreated"
+                          Caption="Created at"
+                          Visible="@GetColumnVisibility("RateMasterCreated")"
+                          Width="@GetColumnWidth("RateMasterCreated")" />
+
+        <DxGridDataColumn FieldName="RateMasterUpdated"Caption="Updated at" />
     </Columns>
 </DxGrid>
 
@@ -239,13 +273,14 @@
 
     </div>
 }
-
 <ConfirmationDialog />
 
 @code {
     DxGrid MyGrid;
     private List<RateMaster> rateMasterList = new();
-    private List<RateMaster> SelectedRates = new();
+    // private List<RateMaster> SelectedRates = new();
+    private IReadOnlyList<object> SelectedRates { get; set; } = new List<object>();
+
     private RateMasterAddEditPage popup;
     // Grid Layout Management Variables
     private List<GridLayoutDto> availableLayouts = [];
@@ -271,15 +306,22 @@
     {
         allColumns = new List<GridColumnLayout>
         {
-            new() { FieldName = "AccountId", Caption = "ID", Visible = false, Width = 10, DisplayIndex = 0 },
-            new() { FieldName = "AccountName", Caption = "Name", Visible = true, Width = 300, DisplayIndex = 1 },
-            new() { FieldName = "AccountContactPerson", Caption = "Contact Person", Visible = true, Width = 180, DisplayIndex = 2 },
-            new() { FieldName = "AccountMobile", Caption = "Mobile", Visible = true, Width = 120, DisplayIndex = 3 },
-            new() { FieldName = "AccountEmail", Caption = "Email", Visible = true, Width = 200, DisplayIndex = 4 },
-            new() { FieldName = "AccountCity", Caption = "City", Visible = true, Width = 120, DisplayIndex = 5 },
-            new() { FieldName = "AccountCountry", Caption = "Country", Visible = true, Width = 120, DisplayIndex = 6 },
-            new() { FieldName = "AccountStatus", Caption = "Active", Visible = true, Width = 500, DisplayIndex = 7 }
-        };
+       new(){ FieldName = "RateMasterId", Caption = "ID", Visible = false, Width = 80, DisplayIndex = 0 },
+
+    new(){ FieldName = "RateMasterApplicableDt", Caption = "Applicable Date", Visible = true, Width = 150, DisplayIndex = 1 },
+
+    new(){ FieldName = "PartyName", Caption = "Party Name", Visible = true, Width = 250, DisplayIndex = 2 },
+
+    new(){ FieldName = "ServiceName", Caption = "Service Name", Visible = true, Width = 250, DisplayIndex = 3 },
+
+    new(){ FieldName = "RateMasterSaleRate", Caption = "Sale Rate", Visible = true, Width = 120, DisplayIndex = 4 },
+
+    new(){ FieldName = "RateMasterPurchaseRate", Caption = "Purchase Rate", Visible = true, Width = 140, DisplayIndex = 5 },
+
+    new(){ FieldName = "RateMasterCreated", Caption = "Created At", Visible = false, Width = 160, DisplayIndex = 6 }
+
+    // new(){ FieldName = "RateMasterUpdated", Caption = "Updated At", Visible = false, Width = 160, DisplayIndex = 7 }
+};
         currentLayout = allColumns.Select(c => new GridColumnLayout
         {
             FieldName = c.FieldName,
@@ -587,9 +629,34 @@
         }
     }
 
-    private void OnSelectedRatesChanged(IEnumerable<object> rates)
+    private async Task OnSelectedRatesChanged(IReadOnlyList<object> rates)
     {
-        SelectedRates = rates.Cast<RateMaster>().ToList();
+        SelectedRates = rates ?? new List<object>();
+        await InvokeAsync(StateHasChanged);
+    }
+    // ✅ FIXED: Reliable clear selection method
+    private async Task ClearSelectionManual()
+    {
+        try
+        {
+            if (MyGrid != null)
+            {
+                MyGrid.ClearSelection(); // ✅ Synchronous method
+            }
+            SelectedRates = new List<RateMaster>();
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Clear selection error: {ex.Message}");
+        }
+    }
+
+    // ✅ FIXED: Auto-clear after operations
+    private async Task ClearSelection()
+    {
+        await Task.Delay(100); // Small delay for UI update
+        await ClearSelectionManual();
     }
 
     private void OnCreateNew(ToolbarItemClickEventArgs e)
@@ -597,13 +664,14 @@
         popup.Show(new RateMaster());
     }
 
-    private void OnEdit(ToolbarItemClickEventArgs e)
+    private async Task OnEdit(ToolbarItemClickEventArgs e)
     {
         var rate = MyGrid.GetFocusedDataItem() as RateMaster;
         if (rate != null)
             popup.Show(rate);
         else
             ToastService.Warning("Please select a rate to edit.");
+        await ClearSelection();
     }
 
     private async Task OnDelete(ToolbarItemClickEventArgs e)
@@ -613,19 +681,34 @@
             ToastService.Warning("Please select at least one rate to delete.");
             return;
         }
-
+        var selectedList = SelectedRates.Cast<RateMaster>().ToList();
         var confirm = await ConfirmDialogService.ShowAsync(
             $"Are you sure you want to delete {SelectedRates.Count} selected rate(s)?");
-
-        if (confirm)
+        if (!confirm)
         {
-            foreach (var rate in SelectedRates)
+            await ClearSelection(); // ✅ Clear on cancel
+            return;
+        }
+        try
+        {
+            LoadingService.Show("Deleting...");
+            int successCount = 0, failCount = 0;
+
+            foreach (var rate in selectedList)
             {
-                await RateMasterService.DeleteAsync(rate.RateMasterId);
+                var result = await RateMasterService.DeleteAsync(rate.RateMasterId);
+                if (result) successCount++; else failCount++;
             }
 
-            ToastService.Success($"{SelectedRates.Count} rate(s) deleted successfully.");
+            if (successCount > 0) ToastService.Success($"{successCount} rate(s) Deleted Successfully.");
+            if (failCount > 0) ToastService.Error($"{failCount} rate(s) Failed To Delete.");
             await LoadRatesAsync();
         }
+        finally
+        {
+            LoadingService.Hide();
+            await ClearSelection(); // ✅ Clear after delete (success or fail)
+        }
+        }
     }
-}
+

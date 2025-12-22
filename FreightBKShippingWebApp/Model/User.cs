@@ -26,10 +26,11 @@ namespace FreightBKShippingWebApp.Model
         public string? UserLastName { get; set; }
 
         [Required]
+        [EmailAddress(ErrorMessage = "Invalid email format.")]
         [Column("user_email")]
         public string UserEmail { get; set; }
 
-
+        [Required]
         [Column("user_password")]
         public string UserPassword { get; set; }
 
@@ -99,7 +100,7 @@ namespace FreightBKShippingWebApp.Model
         public int? UserApiKey { get; set; }
 
         [Column("user_status")]
-        public byte? UserStatus { get; set; }
+        public bool? UserStatus { get; set; }
 
         [Column("user_created")]
         public DateTime? UserCreated { get; set; } = DateTime.UtcNow;
@@ -116,6 +117,7 @@ namespace FreightBKShippingWebApp.Model
         [Column("user_company_id")]
         public int UserCompanyId { get; set; }
 
+        [Required]
         [Column("user_name")]
         public string? UserName { get; set; }
 

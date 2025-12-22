@@ -97,6 +97,7 @@ namespace FreightBKShippingWebApp.Model
         [Column("voucher_report_id2")]
         public int? VoucherReportId2 { get; set; }
 
+        [Required]
         [Column("voucher_code")]
 
         public string VoucherCode { get; set; } = string.Empty;
