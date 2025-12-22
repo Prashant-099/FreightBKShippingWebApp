@@ -11,13 +11,13 @@ namespace FreightBKShippingWebApp.Model
         public int ServiceGroupsId { get; set; }
 
         [Column("service_groups_name")]
+        [Required]
         public string ServiceGroupsName { get; set; } = string.Empty;
 
         [Column("service_groups_status")]
         public bool ServiceGroupsStatus { get; set; } = true;
 
         [Column("service_groups_remarks")]
-        
         public string? ServiceGroupsRemarks { get; set; }
 
         [Column("service_groups_companyid")]
@@ -33,7 +33,7 @@ namespace FreightBKShippingWebApp.Model
         public string? ServiceGroupsUpdatedByUserId { get; set; }
 
         [Column("service_groups_added")]
-        public DateTime ServiceGroupsAdded { get; set; } = DateTime.UtcNow;
+        public DateTime ServiceGroupsAdded { get; set; } 
 
         [Column("service_groups_updated")]
         public DateTime? ServiceGroupsUpdated { get; set; }

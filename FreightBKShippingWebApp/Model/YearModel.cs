@@ -27,11 +27,11 @@ namespace FreightBKShippingWebApp.Model
 
         [Required]
         [Column("year_datefrom")]
-        public DateTime? YearDateFrom { get; set; }
+        public DateTime? YearDateFrom { get; set; } = DateTime.Now;
 
         [Required]
         [Column("year_dateto")]
-        public DateTime? YearDateTo { get; set; }
+        public DateTime? YearDateTo { get; set; } = DateTime.Now;
 
         [Column("year_status")]
         public bool YearStatus { get; set; }

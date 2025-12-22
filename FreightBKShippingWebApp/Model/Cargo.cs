@@ -23,7 +23,7 @@ namespace FreightBKShippingWebApp.Model
         public string? CargoUpdatedbyUserId { get; set; }
 
         [Column("cargo_name")]
-
+        [Required]
         public string CargoName { get; set; } = string.Empty;
 
         [Column("cargo_type")]
@@ -41,7 +41,7 @@ namespace FreightBKShippingWebApp.Model
         public bool CargoStatus { get; set; } = true;
 
         [Column("cargo_created")]
-        public DateTime CargoCreated { get; set; } = DateTime.UtcNow;
+        public DateTime CargoCreated { get; set; } 
 
         [Column("cargo_updated")]
         public DateTime? CargoUpdated { get; set; }

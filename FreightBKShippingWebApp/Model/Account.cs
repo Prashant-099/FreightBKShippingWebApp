@@ -11,7 +11,7 @@ namespace FreightBKShippingWebApp.Model
         [Column("account_id")]
         public int AccountId { get; set; }
 
-        [Required]
+        
         [Column("account_company_id")]
         public int AccountCompanyId { get; set; }
 
@@ -44,7 +44,7 @@ namespace FreightBKShippingWebApp.Model
         public string? AccountContactPerson { get; set; }
 
         [Column("account_address1")]
-        public string? AccountAddress1 { get; set; }
+        public string? AccountAddress1 { get; set; } = "";
 
         [Column("account_address2")]
         public string? AccountAddress2 { get; set; }
@@ -55,6 +55,7 @@ namespace FreightBKShippingWebApp.Model
         [Column("account_city")]
         public string? AccountCity { get; set; }
 
+        [Required]
         [Column("account_state_id")]
         public int? AccountStateId { get; set; }
 
@@ -121,7 +122,7 @@ namespace FreightBKShippingWebApp.Model
 
  
         [Column("account_method")]
-        public string AccountMethod { get; set; } 
+        public string AccountMethod { get; set; } = "On Account";
 
         [Column("account_creditlimit")]
         public double? AccountCreditLimit { get; set; }
@@ -147,7 +148,7 @@ namespace FreightBKShippingWebApp.Model
 
 
         [Column("account_register_type")]
-        public string AccountRegisterType { get; set; } 
+        public string AccountRegisterType { get; set; } = "UNREGISTERED";
 
         [Column("account_tally_name")]
         public string? AccountTallyName { get; set; }
@@ -159,7 +160,7 @@ namespace FreightBKShippingWebApp.Model
         [Column("account_group")]
         public string? AccountGroup { get; set; }
 
-        [Required]
+        
         [Column("account_created")]
         public DateTime AccountCreated { get; set; } = DateTime.UtcNow;
 
@@ -224,12 +225,12 @@ namespace FreightBKShippingWebApp.Model
                         new[] { nameof(AccountPrintName) });
                 }
 
-                if (string.IsNullOrWhiteSpace(AccountAddress1))
-                {
-                    yield return new ValidationResult(
-                        "Address is required when Group is selected",
-                        new[] { nameof(AccountAddress1) });
-                }
+                //if (string.IsNullOrWhiteSpace(AccountAddress1))
+                //{
+                //    yield return new ValidationResult(
+                //        "Address is required when Group is selected",
+                //        new[] { nameof(AccountAddress1) });
+                //}
             }
             else
             {

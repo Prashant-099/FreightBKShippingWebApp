@@ -18,9 +18,11 @@ namespace FreightBKShippingWebApp.Model{
 
         [Required]
         [Column("ratemaster_party_id")]
+        [Range(1, int.MaxValue)]
         public int RateMasterPartyId { get; set; }
         [Required]
         [Column("ratemaster_service_id")]
+        [Range(1, int.MaxValue)]
         public int RateMasterServiceId { get; set; }
 
         [Column("ratemaster_sale_rate")]
@@ -36,7 +38,7 @@ namespace FreightBKShippingWebApp.Model{
         public string? RateMasterUpdateByUserId { get; set; }
 
         [Column("ratemaster_created")]
-        public DateTime RateMasterCreated { get; set; } = DateTime.UtcNow;
+        public DateTime RateMasterCreated { get; set; } 
 
         [Column("ratemaster_updated")]
         public DateTime? RateMasterUpdated { get; set; }

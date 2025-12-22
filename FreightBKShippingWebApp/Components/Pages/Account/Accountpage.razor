@@ -9,19 +9,16 @@
 @inject ConfirmationDialogService ConfirmDialogService
 @inject GridLayoutService GridLayoutService
 <style>
-    .layout-toolbar {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 8px;
-        background-color: #f8f9fa;
-        border-bottom: 1px solid #dee2e6;
+    .grid-size {
+        max-height: 600px;
     }
 
-        .layout-toolbar label {
-            font-weight: 600;
-            margin-right: 4px;
-        }
+
+    /* ComboBox Styling */
+    .layout-combobox {
+        border-radius: 6px;
+        width: 185px;
+    }
 </style>
 <DxGrid TItem="Account"
         Data="@accountList"
@@ -36,7 +33,9 @@
         SelectionMode="GridSelectionMode.Multiple"
         SelectedDataItems="@SelectedAccounts"
         SelectedDataItemsChanged="OnSelectedAccountsChanged"
-         ColumnResizeMode="GridColumnResizeMode.NextColumn">
+         ColumnResizeMode="GridColumnResizeMode.NextColumn"
+        CssClass="grid-size"
+        AllowSelectRowByClick="true">
 
     <ToolbarTemplate Context="toolbarContext">
         <DxToolbar>
@@ -53,57 +52,56 @@
                 <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="LoadAccountsAsync" />
 
                 @* Layout Management - Simple Approach *@
-             
 
-<DxToolbarItem BeginGroup="true">
-   
-        <div class="d-flex align-items-center gap-2">
-            <label class="mb-0">Layout:</label>
+                <DxToolbarItem BeginGroup="true" IconCssClass="bi bi-gear-wide-connected" Alignment="ToolbarItemAlignment.Right">
+                    <Template>
 
-            <DxComboBox Data="@availableLayouts"
-                        Value="@selectedLayoutId"
-                        ValueExpression="@(() => selectedLayoutId)"
-                        ValueChanged="@((int? value) => OnLayoutSelectedAsync(value))"
-                        ValueFieldName="GridLayoutId"
-                        TextFieldName="GridLayoutName"
-                        NullText="-- Default --"
-                        Width="180px"
-                        ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
-        </div>
-    
-</DxToolbarItem>
+                        <DxComboBox Data="@availableLayouts"
+                                    Value="@selectedLayoutId"
+                                    ValueExpression="@(() => selectedLayoutId)"
+                                    ValueChanged="@((int? value) => OnLayoutSelectedAsync(value))"
+                                    ValueFieldName="GridLayoutId"
+                                    TextFieldName="GridLayoutName"
+                                    NullText="Default View"
+                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                    CssClass="layout-combobox" />
 
-<DxToolbarItem BeginGroup="true"
-               RenderStyleMode="ToolbarItemRenderStyleMode.Contained"
-               IconCssClass="bi bi-gear-wide-connected">
-    <Items>
+                    </Template>
 
-        <DxToolbarItem Text="Save Layout"
-                       RenderStyle="ButtonRenderStyle.Primary"
-                       IconCssClass="bi bi-floppy"
-                       Click="ShowSaveLayoutDialog" />
+                </DxToolbarItem>
+                <DxToolbarItem BeginGroup="true" Context="cfdr"
+                               Alignment="ToolbarItemAlignment.Right"
+                               RenderStyleMode="ToolbarItemRenderStyleMode.Contained"
+                               RenderStyle="ButtonRenderStyle.Secondary"
+                               IconCssClass="bi bi-gear-wide-connected">
+                    <Items>
+                        <DxToolbarItem Text="Save Current Layout"
+                                       RenderStyle="ButtonRenderStyle.Primary"
+                                       IconCssClass="bi bi-floppy"
+                                       Click="ShowSaveLayoutDialog" />
 
-        <DxToolbarItem Text="Create Layout"
-                       RenderStyle="ButtonRenderStyle.Success"
-                       IconCssClass="bi bi-plus-square"
-                       Click="ShowNewLayoutDialog" />
+                        <DxToolbarItem Text="Create New Layout"
+                                       RenderStyle="ButtonRenderStyle.Success"
+                                       IconCssClass="bi bi-plus-square"
+                                       Click="ShowNewLayoutDialog" />
 
-        @if (selectedLayoutId.HasValue)
-        {
-            <DxToolbarItem Text="Delete Layout"
-                           RenderStyle="ButtonRenderStyle.Danger"
-                           IconCssClass="bi bi-trash"
-                           Click="DeleteCurrentLayout" />
-        }
+                        @if (selectedLayoutId.HasValue)
+                        {
+                            <DxToolbarItem Text="Delete Current Layout"
+                                           RenderStyle="ButtonRenderStyle.Danger"
+                                           IconCssClass="bi bi-trash"
+                                           Click="DeleteCurrentLayout" />
+                        }
 
-    </Items>
-</DxToolbarItem>
+                    </Items>
+                </DxToolbarItem>
+
             </Items>
         </DxToolbar>
     </ToolbarTemplate>
 
     <Columns>
-       <DxGridSelectionColumn Width="30" />
+        <DxGridSelectionColumn Width="30" FixedPosition="GridColumnFixedPosition.Left" />
         <DxGridDataColumn FieldName="AccountId" Caption="ID" 
                           Visible="@GetColumnVisibility("AccountId")" 
                           Width="@GetColumnWidth("AccountId")" />
@@ -125,9 +123,7 @@
         <DxGridDataColumn FieldName="AccountCountry" Caption="Country" 
                           Visible="@GetColumnVisibility("AccountCountry")" 
                           Width="@GetColumnWidth("AccountCountry")" />
-        <DxGridDataColumn FieldName="AccountStatus" Caption="Active" 
-                          Visible="@GetColumnVisibility("AccountStatus")" 
-                          Width="@GetColumnWidth("AccountStatus")" />
+        <DxGridDataColumn FieldName="AccountStatus" Caption="Active"  />
     </Columns>
 </DxGrid>
 
@@ -261,13 +257,13 @@
     </div>
 }
 
-
 <ConfirmationDialog />
 
 @code {
     DxGrid MyGrid = null!;
     private List<Account> accountList = [];
-    private List<Account> SelectedAccounts = [];
+    // private List<Account> SelectedAccounts = [];
+    private IReadOnlyList<object> SelectedAccounts { get; set; } = new List<object>();
     private AccountAddEditPage popup = null!;
     // Grid Layout Management Variables
     private List<GridLayoutDto> availableLayouts = [];
@@ -302,8 +298,8 @@
             new() { FieldName = "AccountMobile", Caption = "Mobile", Visible = true, Width = 120, DisplayIndex = 3 },
             new() { FieldName = "AccountEmail", Caption = "Email", Visible = true, Width = 200, DisplayIndex = 4 },
             new() { FieldName = "AccountCity", Caption = "City", Visible = true, Width = 120, DisplayIndex = 5 },
-            new() { FieldName = "AccountCountry", Caption = "Country", Visible = true, Width = 120, DisplayIndex = 6 },
-            new() { FieldName = "AccountStatus", Caption = "Active", Visible = true, Width = 500, DisplayIndex = 7 }
+            new() { FieldName = "AccountCountry", Caption = "Country", Visible = true, Width = 120, DisplayIndex = 6 }
+            // new() { FieldName = "AccountStatus", Caption = "Active", Visible = true, Width = 500, DisplayIndex = 7 }
         };
         currentLayout = allColumns.Select(c => new GridColumnLayout
         {
@@ -613,23 +609,48 @@
     }
 
     // Rest of the existing methods...
-    private void OnSelectedAccountsChanged(IEnumerable<object> accounts)
+    private async Task OnSelectedAccountsChanged(IReadOnlyList<object> accounts)
     {
-        SelectedAccounts = accounts.Cast<Account>().ToList();
+        SelectedAccounts = accounts ?? new List<object>();
+        await InvokeAsync(StateHasChanged);
+    }
+    // ✅ FIXED: Reliable clear selection method
+    private async Task ClearSelectionManual()
+    {
+        try
+        {
+            if (MyGrid != null)
+            {
+                MyGrid.ClearSelection(); // ✅ Synchronous method
+            }
+            SelectedAccounts = new List<Account>();
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Clear selection error: {ex.Message}");
+        }
     }
 
+    // ✅ FIXED: Auto-clear after operations
+    private async Task ClearSelection()
+    {
+        await Task.Delay(100); // Small delay for UI update
+        await ClearSelectionManual();
+    }
     private void OnCreateNew(ToolbarItemClickEventArgs e)
     {
         popup.Show(new Account());
     }
 
-    private void OnEdit(ToolbarItemClickEventArgs e)
+    private async Task OnEdit(ToolbarItemClickEventArgs e)
     {
         var account = MyGrid.GetFocusedDataItem() as Account;
         if (account != null)
             popup.Show(account);
         else
             ToastService.Warning("Please select an account to edit.");
+        await ClearSelection();
     }
 
     private async Task OnDelete(ToolbarItemClickEventArgs e)
@@ -639,19 +660,34 @@
             ToastService.Warning("Please select at least one account to delete.");
             return;
         }
+        var selectedList = SelectedAccounts.Cast<Account>().ToList();
 
         var confirm = await ConfirmDialogService.ShowAsync(
             $"Are you sure you want to delete {SelectedAccounts.Count} selected account(s)?");
 
-        if (confirm)
+        if (!confirm)
         {
-            foreach (var account in SelectedAccounts)
+            await ClearSelection(); // ✅ Clear on cancel
+            return;
+        }
+        try
+        {
+            LoadingService.Show("Deleting...");
+            int successCount = 0, failCount = 0;
+            foreach (var account in selectedList)
             {
-                await AccountService.DeleteAsync(account.AccountId);
+              
+                var result = await AccountService.DeleteAsync(account.AccountId);
+                if (result) successCount++; else failCount++;
             }
-
-            ToastService.Success($"{SelectedAccounts.Count} account(s) deleted successfully.");
+            if (successCount > 0) ToastService.Success($"{successCount} Account(s) Deleted Successfully.");
+            if (failCount > 0) ToastService.Error($"{failCount} Account(s) Failed To Delete.");
             await LoadAccountsAsync();
+        }
+        finally
+        {
+            LoadingService.Hide();
+            await ClearSelection(); // ✅ Clear after delete (success or fail)
         }
     }
 }

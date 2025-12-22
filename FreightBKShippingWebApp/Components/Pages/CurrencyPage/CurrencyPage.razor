@@ -8,19 +8,16 @@
 @inject ConfirmationDialogService ConfirmDialogService
 @inject GridLayoutService GridLayoutService
 <style>
-    .layout-toolbar {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 8px;
-        background-color: #f8f9fa;
-        border-bottom: 1px solid #dee2e6;
+    .grid-size {
+        max-height: 600px;
     }
 
-        .layout-toolbar label {
-            font-weight: 600;
-            margin-right: 4px;
-        }
+
+    /* ComboBox Styling */
+    .layout-combobox {
+        border-radius: 6px;
+        width: 185px;
+    }
 </style>
 <DxGrid TItem="Currency"
         Data="@currencyList"
@@ -35,6 +32,8 @@
         SelectionMode="GridSelectionMode.Multiple"
         SelectedDataItems="@SelectedCurrencies"
         SelectedDataItemsChanged="OnSelectedCurrenciesChanged"
+        CssClass="grid-size"
+        AllowSelectRowByClick="true"
         ColumnResizeMode="GridColumnResizeMode.NextColumn">
 
     <ToolbarTemplate Context="toolbarContext">
@@ -52,11 +51,8 @@
                 <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="@(async (_) => await LoadCurrenciesAsync())" />
 
 
-
-                <DxToolbarItem BeginGroup="true">
-
-                    <div class="d-flex align-items-center gap-2">
-                        <label class="mb-0">Layout:</label>
+                <DxToolbarItem BeginGroup="true" IconCssClass="bi bi-gear-wide-connected" Alignment="ToolbarItemAlignment.Right">
+                    <Template>
 
                         <DxComboBox Data="@availableLayouts"
                                     Value="@selectedLayoutId"
@@ -64,31 +60,32 @@
                                     ValueChanged="@((int? value) => OnLayoutSelectedAsync(value))"
                                     ValueFieldName="GridLayoutId"
                                     TextFieldName="GridLayoutName"
-                                    NullText="-- Default --"
-                                    Width="180px"
-                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
-                    </div>
+                                    NullText="Default View"
+                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                    CssClass="layout-combobox" />
+
+                    </Template>
 
                 </DxToolbarItem>
-
-                <DxToolbarItem BeginGroup="true"
+                <DxToolbarItem BeginGroup="true" Context="cfdr"
+                               Alignment="ToolbarItemAlignment.Right"
                                RenderStyleMode="ToolbarItemRenderStyleMode.Contained"
+                               RenderStyle="ButtonRenderStyle.Secondary"
                                IconCssClass="bi bi-gear-wide-connected">
                     <Items>
-
-                        <DxToolbarItem Text="Save Layout"
+                        <DxToolbarItem Text="Save Current Layout"
                                        RenderStyle="ButtonRenderStyle.Primary"
                                        IconCssClass="bi bi-floppy"
                                        Click="ShowSaveLayoutDialog" />
 
-                        <DxToolbarItem Text="Create Layout"
+                        <DxToolbarItem Text="Create New Layout"
                                        RenderStyle="ButtonRenderStyle.Success"
                                        IconCssClass="bi bi-plus-square"
                                        Click="ShowNewLayoutDialog" />
 
                         @if (selectedLayoutId.HasValue)
                         {
-                            <DxToolbarItem Text="Delete Layout"
+                            <DxToolbarItem Text="Delete Current Layout"
                                            RenderStyle="ButtonRenderStyle.Danger"
                                            IconCssClass="bi bi-trash"
                                            Click="DeleteCurrentLayout" />
@@ -96,8 +93,12 @@
 
                     </Items>
                 </DxToolbarItem>
-                
-                </Items>
+
+
+
+
+
+            </Items>
         </DxToolbar>
     </ToolbarTemplate>
 
@@ -116,10 +117,6 @@
                           Visible="@GetColumnVisibility("CurrencySymbol")"
                           Width="@GetColumnWidth("CurrencySymbol")" />
 
-        <DxGridDataColumn FieldName="CurrencyStatus" Caption="Active"
-                          Visible="@GetColumnVisibility("CurrencyStatus")"
-                          Width="@GetColumnWidth("CurrencyStatus")" />
-
         <DxGridDataColumn FieldName="CurrencyCreated" Caption="Created At"
                           Visible="@GetColumnVisibility("CurrencyCreated")"
                           Width="@GetColumnWidth("CurrencyCreated")" />
@@ -127,6 +124,8 @@
         <DxGridDataColumn FieldName="CurrencyUpdated" Caption="Updated At"
                           Visible="@GetColumnVisibility("CurrencyUpdated")"
                           Width="@GetColumnWidth("CurrencyUpdated")" />
+
+        <DxGridDataColumn FieldName="CurrencyStatus" Caption="Active" />
     </Columns>
 </DxGrid>
 
@@ -264,7 +263,9 @@
 @code {
     DxGrid MyGrid;
     private List<Currency> currencyList = [];
-    private List<Currency> SelectedCurrencies = new();
+    // private List<Currency> SelectedCurrencies = new();
+    private IReadOnlyList<object> SelectedCurrencies { get; set; } = new List<object>();
+
     private CurrencyAddEditPage popup;
     // Grid Layout Management Variables
     private List<GridLayoutDto> availableLayouts = [];
@@ -294,9 +295,9 @@
              new() { FieldName = "CurrencyId", Caption = "ID", Visible = false, Width = 60, DisplayIndex = 0 },
         new() { FieldName = "CurrencyName", Caption = "Name", Visible = true, Width = 200, DisplayIndex = 1 },
         new() { FieldName = "CurrencySymbol", Caption = "Symbol", Visible = true, Width = 120, DisplayIndex = 2 },
-        new() { FieldName = "CurrencyStatus", Caption = "Active", Visible = true, Width = 100, DisplayIndex = 3 },
-        new() { FieldName = "CurrencyCreated", Caption = "Created At", Visible = true, Width = 150, DisplayIndex = 4 },
-        new() { FieldName = "CurrencyUpdated", Caption = "Updated At", Visible = true, Width = 150, DisplayIndex = 5 }
+        // new() { FieldName = "CurrencyStatus", Caption = "Active", Visible = true, Width = 100, DisplayIndex = 3 },
+        new() { FieldName = "CurrencyCreated", Caption = "Created At", Visible = true, Width = 150, DisplayIndex = 3 },
+        new() { FieldName = "CurrencyUpdated", Caption = "Updated At", Visible = true, Width = 150, DisplayIndex = 4 }
         };
         currentLayout = allColumns.Select(c => new GridColumnLayout
         {
@@ -605,9 +606,34 @@
         }
     }
 
-    private void OnSelectedCurrenciesChanged(IEnumerable<object> currencies)
+    private async Task OnSelectedCurrenciesChanged(IReadOnlyList<object> currencies)
     {
-        SelectedCurrencies = currencies.Cast<Currency>().ToList();
+        SelectedCurrencies = currencies ?? new List<object>();
+        await InvokeAsync(StateHasChanged);
+    }
+    // ✅ FIXED: Reliable clear selection method
+    private async Task ClearSelectionManual()
+    {
+        try
+        {
+            if (MyGrid != null)
+            {
+                MyGrid.ClearSelection(); // ✅ Synchronous method
+            }
+            SelectedCurrencies = new List<Currency>();
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Clear selection error: {ex.Message}");
+        }
+    }
+
+    // ✅ FIXED: Auto-clear after operations
+    private async Task ClearSelection()
+    {
+        await Task.Delay(100); // Small delay for UI update
+        await ClearSelectionManual();
     }
 
     private void OnCreateNew(ToolbarItemClickEventArgs e)
@@ -615,13 +641,14 @@
         popup.Show(new Currency());
     }
 
-    private void OnEdit(ToolbarItemClickEventArgs e)
+    private async Task OnEdit(ToolbarItemClickEventArgs e)
     {
         var currency = MyGrid.GetFocusedDataItem() as Currency;
         if (currency != null)
             popup.Show(currency);
         else
             ToastService.Warning("Please select a currency to edit.");
+        await ClearSelection();
     }
 
     private async Task OnDelete(ToolbarItemClickEventArgs e)
@@ -631,19 +658,37 @@
             ToastService.Warning("Please select at least one currency to delete.");
             return;
         }
+        var selectedList = SelectedCurrencies.Cast<Currency>().ToList();
 
         var confirm = await ConfirmDialogService.ShowAsync(
             $"Are you sure you want to delete {SelectedCurrencies.Count} selected currency(ies)?");
 
-        if (confirm)
+        if (!confirm)
         {
-            foreach (var currency in SelectedCurrencies)
-            {
-                await CurrencyService.DeleteAsync(currency.CurrencyId);
-            }
+            await ClearSelection(); // ✅ Clear on cancel
+            return;
+        }
+        try
+        {
+            LoadingService.Show("Deleting...");
+            int successCount = 0, failCount = 0;
 
-            ToastService.Success($"{SelectedCurrencies.Count} currency(ies) deleted successfully.");
+            foreach (var currency in selectedList)
+            {
+
+                var result = await CurrencyService.DeleteAsync(currency.CurrencyId);
+                if (result) successCount++; else failCount++;
+
+            }
+            if (successCount > 0) ToastService.Success($"{successCount} currency(s) Deleted Successfully.");
+            if (failCount > 0) ToastService.Error($"{failCount} currency(s) Failed To Delete.");
             await LoadCurrenciesAsync();
         }
+        finally
+        {
+            LoadingService.Hide();
+            await ClearSelection(); // ✅ Clear after delete (success or fail)
+        }
+        }
     }
-}
+

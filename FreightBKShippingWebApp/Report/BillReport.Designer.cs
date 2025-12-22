@@ -3442,7 +3442,7 @@
             // 
             this.tableCell68.Borders = DevExpress.XtraPrinting.BorderSide.None;
             this.tableCell68.ExpressionBindings.AddRange(new DevExpress.XtraReports.UI.ExpressionBinding[] {
-            new DevExpress.XtraReports.UI.ExpressionBinding("BeforePrint", "Text", "[billDetails].[bill_detail_sgst]")});
+            new DevExpress.XtraReports.UI.ExpressionBinding("BeforePrint", "Text", "[bill].[bill_sgst]")});
             this.tableCell68.Font = new DevExpress.Drawing.DXFont("Tahoma", 8F);
             this.tableCell68.Name = "tableCell68";
             this.tableCell68.StylePriority.UseBorders = false;
@@ -3501,7 +3501,7 @@
             // 
             this.tableCell53.Borders = DevExpress.XtraPrinting.BorderSide.None;
             this.tableCell53.ExpressionBindings.AddRange(new DevExpress.XtraReports.UI.ExpressionBinding[] {
-            new DevExpress.XtraReports.UI.ExpressionBinding("BeforePrint", "Text", "[billDetails].[bill_detail_cgst]")});
+            new DevExpress.XtraReports.UI.ExpressionBinding("BeforePrint", "Text", "[bill].[bill_cgst]")});
             this.tableCell53.Font = new DevExpress.Drawing.DXFont("Tahoma", 8F);
             this.tableCell53.Name = "tableCell53";
             this.tableCell53.StylePriority.UseBorders = false;
@@ -3560,7 +3560,7 @@
             // 
             this.tableCell44.Borders = DevExpress.XtraPrinting.BorderSide.None;
             this.tableCell44.ExpressionBindings.AddRange(new DevExpress.XtraReports.UI.ExpressionBinding[] {
-            new DevExpress.XtraReports.UI.ExpressionBinding("BeforePrint", "Text", "[billDetails].[bill_detail_igst]")});
+            new DevExpress.XtraReports.UI.ExpressionBinding("BeforePrint", "Text", "[bill].[bill_igst]")});
             this.tableCell44.Font = new DevExpress.Drawing.DXFont("Tahoma", 8F);
             this.tableCell44.Multiline = true;
             this.tableCell44.Name = "tableCell44";

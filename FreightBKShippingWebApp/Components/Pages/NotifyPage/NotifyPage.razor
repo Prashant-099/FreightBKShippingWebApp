@@ -8,19 +8,16 @@
 @inject ConfirmationDialogService ConfirmDialogService
 @inject GridLayoutService GridLayoutService
 <style>
-    .layout-toolbar {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 8px;
-        background-color: #f8f9fa;
-        border-bottom: 1px solid #dee2e6;
+    .grid-size {
+        max-height: 600px;
     }
 
-        .layout-toolbar label {
-            font-weight: 600;
-            margin-right: 4px;
-        }
+
+    /* ComboBox Styling */
+    .layout-combobox {
+        border-radius: 6px;
+        width: 185px;
+    }
 </style>
 <DxGrid TItem="NotifyModel"
         Data="@notifyList"
@@ -35,7 +32,9 @@
         SelectionMode="GridSelectionMode.Multiple"
         SelectedDataItems="@SelectedNotifies"
         SelectedDataItemsChanged="OnSelectedNotifiesChanged"
-        ColumnResizeMode="GridColumnResizeMode.NextColumn">
+        ColumnResizeMode="GridColumnResizeMode.NextColumn"
+        CssClass="grid-size"
+        AllowSelectRowByClick="true">
 
     <ToolbarTemplate Context="toolbarContext">
         <DxToolbar>
@@ -51,10 +50,8 @@
                 <DxToolbarItem Text="Delete" IconCssClass="bi bi-trash" Click="OnDelete" />
                 <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="@(async (_) => await LoadNotifiesAsync())" />
 
-                <DxToolbarItem BeginGroup="true">
-
-                    <div class="d-flex align-items-center gap-2">
-                        <label class="mb-0">Layout:</label>
+                <DxToolbarItem BeginGroup="true" IconCssClass="bi bi-gear-wide-connected" Alignment="ToolbarItemAlignment.Right">
+                    <Template>
 
                         <DxComboBox Data="@availableLayouts"
                                     Value="@selectedLayoutId"
@@ -62,31 +59,32 @@
                                     ValueChanged="@((int? value) => OnLayoutSelectedAsync(value))"
                                     ValueFieldName="GridLayoutId"
                                     TextFieldName="GridLayoutName"
-                                    NullText="-- Default --"
-                                    Width="180px"
-                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
-                    </div>
+                                    NullText="Default View"
+                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                    CssClass="layout-combobox" />
+
+                    </Template>
 
                 </DxToolbarItem>
-
-                <DxToolbarItem BeginGroup="true"
+                <DxToolbarItem BeginGroup="true" Context="cfdr"
+                               Alignment="ToolbarItemAlignment.Right"
                                RenderStyleMode="ToolbarItemRenderStyleMode.Contained"
+                               RenderStyle="ButtonRenderStyle.Secondary"
                                IconCssClass="bi bi-gear-wide-connected">
                     <Items>
-
-                        <DxToolbarItem Text="Save Layout"
+                        <DxToolbarItem Text="Save Current Layout"
                                        RenderStyle="ButtonRenderStyle.Primary"
                                        IconCssClass="bi bi-floppy"
                                        Click="ShowSaveLayoutDialog" />
 
-                        <DxToolbarItem Text="Create Layout"
+                        <DxToolbarItem Text="Create New Layout"
                                        RenderStyle="ButtonRenderStyle.Success"
                                        IconCssClass="bi bi-plus-square"
                                        Click="ShowNewLayoutDialog" />
 
                         @if (selectedLayoutId.HasValue)
                         {
-                            <DxToolbarItem Text="Delete Layout"
+                            <DxToolbarItem Text="Delete Current Layout"
                                            RenderStyle="ButtonRenderStyle.Danger"
                                            IconCssClass="bi bi-trash"
                                            Click="DeleteCurrentLayout" />
@@ -94,12 +92,17 @@
 
                     </Items>
                 </DxToolbarItem>
-                </Items>
+
+
+
+
+
+            </Items>
         </DxToolbar>
     </ToolbarTemplate>
 
     <Columns>
-        <DxGridSelectionColumn Width="30" />
+        <DxGridSelectionColumn Width="30" FixedPosition="GridColumnFixedPosition.Left" />
 
         <DxGridDataColumn FieldName="NotifyId" Caption="ID"
                           Visible="@GetColumnVisibility("NotifyId")"
@@ -117,7 +120,7 @@
                           Visible="@GetColumnVisibility("NotifyCity")"
                           Width="@GetColumnWidth("NotifyCity")" />
 
-        <DxGridDataColumn FieldName="NotifyCountry" Caption="PAN"
+        <DxGridDataColumn FieldName="NotifyCountry" Caption="Country"
                           Visible="@GetColumnVisibility("NotifyCountry")"
                           Width="@GetColumnWidth("NotifyCountry")" />
 
@@ -125,9 +128,7 @@
                           Visible="@GetColumnVisibility("NotifyEmail")"
                           Width="@GetColumnWidth("NotifyEmail")" />
 
-        <DxGridDataColumn FieldName="NotifyStatus" Caption="Active"
-                          Visible="@GetColumnVisibility("NotifyStatus")"
-                          Width="@GetColumnWidth("NotifyStatus")" />
+        <DxGridDataColumn FieldName="NotifyStatus" Caption="Active" />
     </Columns>
 </DxGrid>
 
@@ -267,7 +268,9 @@
 @code {
     DxGrid MyGrid;
     private List<Notify> notifyList = new();
-    private List<Notify> SelectedNotifies = new();
+    // private List<Notify> SelectedNotifies = new();
+    private IReadOnlyList<object> SelectedNotifies { get; set; } = new List<object>();
+
     private NotifyAddEditPage popup;
     // Grid Layout Management Variables
     private List<GridLayoutDto> availableLayouts = [];
@@ -297,8 +300,8 @@
     new() { FieldName = "NotifyType", Caption = "Type", Visible = true, Width = 150, DisplayIndex = 2 },
     new() { FieldName = "NotifyCity", Caption = "GSTIN", Visible = true, Width = 150, DisplayIndex = 3 },
     new() { FieldName = "NotifyCountry", Caption = "PAN", Visible = true, Width = 150, DisplayIndex = 4 },
-    new() { FieldName = "NotifyEmail", Caption = "Address", Visible = true, Width = 250, DisplayIndex = 5 },
-    new() { FieldName = "NotifyStatus", Caption = "Active", Visible = true, Width = 120, DisplayIndex = 6 }
+    new() { FieldName = "NotifyEmail", Caption = "Address", Visible = true, Width = 250, DisplayIndex = 5 }
+    // new() { FieldName = "NotifyStatus", Caption = "Active", Visible = true, Width = 120, DisplayIndex = 6 }
     };
         currentLayout = allColumns.Select(c => new GridColumnLayout
         {
@@ -607,9 +610,34 @@
         }
     }
 
-    private void OnSelectedNotifiesChanged(IEnumerable<object> notifies)
+    private async Task OnSelectedNotifiesChanged(IReadOnlyList<object> notifies)
     {
-        SelectedNotifies = notifies.Cast<Notify>().ToList();
+        SelectedNotifies = notifies ?? new List<object>();
+        await InvokeAsync(StateHasChanged);
+    }
+    // ✅ FIXED: Reliable clear selection method
+    private async Task ClearSelectionManual()
+    {
+        try
+        {
+            if (MyGrid != null)
+            {
+                MyGrid.ClearSelection(); // ✅ Synchronous method
+            }
+            SelectedNotifies = new List<Notify>();
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Clear selection error: {ex.Message}");
+        }
+    }
+
+    // ✅ FIXED: Auto-clear after operations
+    private async Task ClearSelection()
+    {
+        await Task.Delay(100); // Small delay for UI update
+        await ClearSelectionManual();
     }
 
     private void OnCreateNew(ToolbarItemClickEventArgs e)
@@ -622,13 +650,14 @@
         });
     }
 
-    private void OnEdit(ToolbarItemClickEventArgs e)
+    private async Task OnEdit(ToolbarItemClickEventArgs e)
     {
         var notify = MyGrid.GetFocusedDataItem() as Notify;
         if (notify != null)
             popup.Show(notify);
         else
             ToastService.Warning("Please select a record to edit.");
+        await ClearSelection();
     }
 
     private async Task OnDelete(ToolbarItemClickEventArgs e)
@@ -638,16 +667,22 @@
             ToastService.Warning("Please select at least one record to delete.");
             return;
         }
+        var selectedList = SelectedNotifies.Cast<Notify>().ToList();
 
         var confirm = await ConfirmDialogService.ShowAsync(
             $"Are you sure you want to delete {SelectedNotifies.Count} selected record(s)?");
 
         if (!confirm)
+        {
+            await ClearSelection(); // ✅ Clear on cancel
             return;
+        }
+        try
+        {
+            LoadingService.Show("Deleting...");
+            int successCount = 0, failCount = 0;
 
-        int successCount = 0, failCount = 0;
-
-        foreach (var notify in SelectedNotifies)
+        foreach (var notify in selectedList)
         {
             var result = await NotifyService.DeleteAsync(notify.NotifyId);
             if (result)
@@ -662,5 +697,11 @@
             ToastService.Error($"{failCount} record(s) failed to delete.");
 
         await LoadNotifiesAsync();
+        }
+        finally
+        {
+            LoadingService.Hide();
+            await ClearSelection(); // ✅ Clear after delete (success or fail)
+        }
     }
 }

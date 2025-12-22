@@ -28,8 +28,8 @@ namespace FreightBKShippingWebApp.Model
         [Column("currency_name")]
         public string CurrencyName { get; set; } = string.Empty;
 
+        [Required]
         [Column("currency_symbol")]
-
         public string? CurrencySymbol { get; set; }
 
         [Column("currency_status")]

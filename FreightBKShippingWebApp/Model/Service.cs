@@ -14,9 +14,11 @@ namespace FreightBKShippingWebApp.Model
         public int ServiceCompanyId { get; set; }
 
         [Column("service_group_id")]
+        [Required]
         public int? ServiceGroupId { get; set; }
 
         [Column("service_unit_id")]
+        [Required]
         public int? ServiceUnitId { get; set; }
 
         [Column("service_addedby_user_id")]
@@ -27,15 +29,14 @@ namespace FreightBKShippingWebApp.Model
 
         [Column("service_name")]
         [Required]
-        [MaxLength(250)]
-        public string ServiceName { get; set; } = string.Empty;
+          public string ServiceName { get; set; } = string.Empty;
 
         [Column("service_code")]
         [MaxLength(100)]
         public string? ServiceCode { get; set; }
 
         [Column("service_type")]
-        [MaxLength(45)]
+        [Required]
         public string? ServiceType { get; set; }
 
         [Column("service_srate")]
@@ -45,10 +46,11 @@ namespace FreightBKShippingWebApp.Model
         public float? ServicePRate { get; set; }
 
         [Column("service_chargetype")]
-        [MaxLength(50)]
+        [Required]
         public string? ServiceChargeType { get; set; }
 
         [Column("service_hsn_id")]
+        [Required]
         public int? ServiceHsnId { get; set; }
 
         [Column("service_exempt")]

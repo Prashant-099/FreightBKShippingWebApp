@@ -32,7 +32,7 @@ namespace FreightBKShippingWebApp.Models
         public string? UnitFormalName { get; set; }
 
         [Column("unit_gstunit")]
-     
+        [Required]
         public string? UnitGstUnit { get; set; }
 
         [Column("unit_status")]

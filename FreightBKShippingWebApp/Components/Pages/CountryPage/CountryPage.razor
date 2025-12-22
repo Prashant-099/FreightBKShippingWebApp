@@ -8,19 +8,16 @@
 @inject ConfirmationDialogService ConfirmDialogService
 @inject GridLayoutService GridLayoutService
 <style>
-    .layout-toolbar {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 8px;
-        background-color: #f8f9fa;
-        border-bottom: 1px solid #dee2e6;
+    .grid-size {
+        max-height: 600px;
     }
 
-        .layout-toolbar label {
-            font-weight: 600;
-            margin-right: 4px;
-        }
+
+    /* ComboBox Styling */
+    .layout-combobox {
+        border-radius: 6px;
+        width: 185px;
+    }
 </style>
 <DxGrid TItem="Country"
         Data="@countryList"
@@ -35,7 +32,9 @@
         SelectionMode="GridSelectionMode.Multiple"
         SelectedDataItems="@SelectedCountries"
         SelectedDataItemsChanged="OnSelectedCountriesChanged"
-        ColumnResizeMode="GridColumnResizeMode.NextColumn">
+        ColumnResizeMode="GridColumnResizeMode.NextColumn"
+        CssClass="grid-size"
+        AllowSelectRowByClick="true">
 
     <ToolbarTemplate Context="toolbarContext">
         <DxToolbar>
@@ -52,10 +51,8 @@
                 <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="@(async (_) => await LoadCountriesAsync())" />
 
 
-                <DxToolbarItem BeginGroup="true">
-
-                    <div class="d-flex align-items-center gap-2">
-                        <label class="mb-0">Layout:</label>
+                <DxToolbarItem BeginGroup="true" IconCssClass="bi bi-gear-wide-connected" Alignment="ToolbarItemAlignment.Right">
+                    <Template>
 
                         <DxComboBox Data="@availableLayouts"
                                     Value="@selectedLayoutId"
@@ -63,31 +60,32 @@
                                     ValueChanged="@((int? value) => OnLayoutSelectedAsync(value))"
                                     ValueFieldName="GridLayoutId"
                                     TextFieldName="GridLayoutName"
-                                    NullText="-- Default --"
-                                    Width="180px"
-                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
-                    </div>
+                                    NullText="Default View"
+                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                    CssClass="layout-combobox" />
+
+                    </Template>
 
                 </DxToolbarItem>
-
-                <DxToolbarItem BeginGroup="true"
+                <DxToolbarItem BeginGroup="true" Context="cfdr"
+                               Alignment="ToolbarItemAlignment.Right"
                                RenderStyleMode="ToolbarItemRenderStyleMode.Contained"
+                               RenderStyle="ButtonRenderStyle.Secondary"
                                IconCssClass="bi bi-gear-wide-connected">
                     <Items>
-
-                        <DxToolbarItem Text="Save Layout"
+                        <DxToolbarItem Text="Save Current Layout"
                                        RenderStyle="ButtonRenderStyle.Primary"
                                        IconCssClass="bi bi-floppy"
                                        Click="ShowSaveLayoutDialog" />
 
-                        <DxToolbarItem Text="Create Layout"
+                        <DxToolbarItem Text="Create New Layout"
                                        RenderStyle="ButtonRenderStyle.Success"
                                        IconCssClass="bi bi-plus-square"
                                        Click="ShowNewLayoutDialog" />
 
                         @if (selectedLayoutId.HasValue)
                         {
-                            <DxToolbarItem Text="Delete Layout"
+                            <DxToolbarItem Text="Delete Current Layout"
                                            RenderStyle="ButtonRenderStyle.Danger"
                                            IconCssClass="bi bi-trash"
                                            Click="DeleteCurrentLayout" />
@@ -95,8 +93,12 @@
 
                     </Items>
                 </DxToolbarItem>
-                
-                </Items>
+
+
+
+
+
+            </Items>
         </DxToolbar>
     </ToolbarTemplate>
 
@@ -123,10 +125,6 @@
                           Visible="@GetColumnVisibility("CountryRemarks")"
                           Width="@GetColumnWidth("CountryRemarks")" />
 
-        <DxGridDataColumn FieldName="CountryStatus" Caption="Active"
-                          Visible="@GetColumnVisibility("CountryStatus")"
-                          Width="@GetColumnWidth("CountryStatus")" />
-
         <DxGridDataColumn FieldName="CountryCreated" Caption="Created At"
                           Visible="@GetColumnVisibility("CountryCreated")"
                           Width="@GetColumnWidth("CountryCreated")" />
@@ -134,6 +132,8 @@
         <DxGridDataColumn FieldName="CountryUpdated" Caption="Update At"
                           Visible="@GetColumnVisibility("CountryUpdated")"
                           Width="@GetColumnWidth("CountryUpdated")" />
+
+        <DxGridDataColumn FieldName="CountryStatus" Caption="Active" />
 
     </Columns>
 </DxGrid>
@@ -273,7 +273,9 @@
 @code {
     DxGrid MyGrid;
     private List<Country> countryList = [];
-    private List<Country> SelectedCountries = new();
+    // private List<Country> SelectedCountries = new();
+    private IReadOnlyList<object> SelectedCountries { get; set; } = new List<object>();
+
     private CountryAddEditPage popup;
     // Grid Layout Management Variables
     private List<GridLayoutDto> availableLayouts = [];
@@ -305,9 +307,9 @@
         new() { FieldName = "CountryCode", Caption = "Code", Visible = false, Width = 120, DisplayIndex = 2 },
         new() { FieldName = "CountryCurrency", Caption = "Currency", Visible = true, Width = 150, DisplayIndex = 3 },
         new() { FieldName = "CountryRemarks", Caption = "Remarks", Visible = false, Width = 250, DisplayIndex = 4 },
-        new() { FieldName = "CountryStatus", Caption = "Active", Visible = true, Width = 120, DisplayIndex = 5 },
-        new() { FieldName = "CountryCreated", Caption = "Created At", Visible = true, Width = 180, DisplayIndex = 6 },
-        new() { FieldName = "CountryUpdated", Caption = "Updated At", Visible = true, Width = 180, DisplayIndex = 7 }
+        // new() { FieldName = "CountryStatus", Caption = "Active", Visible = true, Width = 120, DisplayIndex = 5 },
+        new() { FieldName = "CountryCreated", Caption = "Created At", Visible = true, Width = 180, DisplayIndex = 5 },
+        new() { FieldName = "CountryUpdated", Caption = "Updated At", Visible = true, Width = 180, DisplayIndex = 6 }
    };
         currentLayout = allColumns.Select(c => new GridColumnLayout
         {
@@ -614,22 +616,49 @@
             LoadingService.Hide();
         }
     }
-    private void OnSelectedCountriesChanged(IEnumerable<object> countries)
+    private async Task OnSelectedCountriesChanged(IReadOnlyList<object> countries)
     {
-        SelectedCountries = countries.Cast<Country>().ToList();
+        SelectedCountries = countries ?? new List<object>();
+        await InvokeAsync(StateHasChanged);
     }
+    // ✅ FIXED: Reliable clear selection method
+    private async Task ClearSelectionManual()
+    {
+        try
+        {
+            if (MyGrid != null)
+            {
+                MyGrid.ClearSelection(); // ✅ Synchronous method
+            }
+            SelectedCountries = new List<Country>();
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Clear selection error: {ex.Message}");
+        }
+    }
+
+    // ✅ FIXED: Auto-clear after operations
+    private async Task ClearSelection()
+    {
+        await Task.Delay(100); // Small delay for UI update
+        await ClearSelectionManual();
+    }
+
     private void OnCreateNew(ToolbarItemClickEventArgs e)
     {
         popup.Show(new Country());
     }
 
-    private void OnEdit(ToolbarItemClickEventArgs e)
+    private async Task OnEdit(ToolbarItemClickEventArgs e)
     {
         var country = MyGrid.GetFocusedDataItem() as Country;
         if (country != null)
             popup.Show(country);
         else
             ToastService.Warning("Please select a country to edit.");
+        await ClearSelection();
     }
 
     private async Task OnDelete(ToolbarItemClickEventArgs e)
@@ -639,19 +668,36 @@
             ToastService.Warning("Please select at least one country to delete.");
             return;
         }
+        var selectedList = SelectedCountries.Cast<Country>().ToList();
 
         var confirm = await ConfirmDialogService.ShowAsync(
             $"Are you sure you want to delete {SelectedCountries.Count} selected country(ies)?");
 
-        if (confirm)
+        if (!confirm)
         {
-            foreach (var country in SelectedCountries)
-            {
-                await CountryService.DeleteAsync(country.CountryId);
-            }
+            await ClearSelection(); // ✅ Clear on cancel
+            return;
+        }
+        try
+        {
+            LoadingService.Show("Deleting...");
+            int successCount = 0, failCount = 0;
 
-            ToastService.Success($"{SelectedCountries.Count} country(ies) deleted successfully.");
+            foreach (var country in selectedList)
+            {
+                var result = await CountryService.DeleteAsync(country.CountryId);
+                if (result) successCount++; else failCount++;
+
+            }
+            if (successCount > 0) ToastService.Success($"{successCount} country(ies) Deleted Successfully.");
+            if (failCount > 0) ToastService.Error($"{failCount} country(ies) Failed To Delete.");
+
             await LoadCountriesAsync();
+        }
+        finally
+        {
+            LoadingService.Hide();
+            await ClearSelection(); // ✅ Clear after delete (success or fail)
         }
     }
 }

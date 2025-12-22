@@ -6,46 +6,56 @@
 @inject AccountService AccountService
 @inject ServiceService ServiceService
 
-<DxPopup @bind-Visible="Visible" ShowCloseButton="true" HeaderText="@Title" CloseOnOutsideClick="false" MaxWidth="600px" Width="80%">
+<DxPopup @bind-Visible="Visible" ShowCloseButton="true" HeaderText="@Title"  MaxWidth="600" CloseOnOutsideClick="false" horizontalAlignment="HorizontalAlignment.Center"
+         verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body" ShowFooter="true" scrollable="true">
     <BodyContentTemplate Context="ctxratemasteeradd">
-        <EditForm Model="@EditModel" OnValidSubmit="HandleValidSubmit" Context="ctxratemasteraddedit">
+        <EditForm Model="@EditModel" OnValidSubmit="HandleValidSubmit" Context="ctxratemasteraddedit" id="rateForm">
             <DataAnnotationsValidator />
-            <ValidationSummary />
+         @*    <ValidationSummary /> *@
 
             <DxFormLayout>
                 <DxFormLayoutItem Caption="Applicable Date" ColSpanMd="12" >
-                    <DxDateEdit @bind-Date="EditModel.RateMasterApplicableDt" Format="dd-MM-yyyy" />
+                    <DxDateEdit @bind-Date="EditModel.RateMasterApplicableDt" DisplayFormat="dd/MM/yyyy"
+                                ShowValidationIcon="true" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
                 </DxFormLayoutItem>
 
                 <DxFormLayoutItem Caption="Party" ColSpanMd="12">
                     <DxComboBox Data="@partyList" TextFieldName="AccountName" ValueFieldName="AccountId"
                                 @bind-Value="EditModel.RateMasterPartyId"
                                 NullText="Select Party..." AllowUserInput="true"
-                                SearchMode="ListSearchMode.AutoSearch" />
+                                ShowValidationIcon="true" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                SearchMode="ListSearchMode.AutoSearch"
+                                SearchFilterCondition="ListSearchFilterCondition.Contains" />
                 </DxFormLayoutItem>
 
                 <DxFormLayoutItem Caption="Service" ColSpanMd="12">
                     <DxComboBox Data="@serviceList" TextFieldName="ServiceName" ValueFieldName="ServiceId"
                                 @bind-Value="EditModel.RateMasterServiceId"
                                 NullText="Select Service..." AllowUserInput="true"
-                                SearchMode="ListSearchMode.AutoSearch" />
+                                ShowValidationIcon="true" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                SearchMode="ListSearchMode.AutoSearch"
+                                SearchFilterCondition="ListSearchFilterCondition.Contains" />
                 </DxFormLayoutItem>
 
                 <DxFormLayoutItem Caption="Sale Rate" ColSpanMd="6">
-                    <DxSpinEdit @bind-Value="EditModel.RateMasterSaleRate" ShowSpinButtons="false" />
+                    <DxSpinEdit @bind-Value="EditModel.RateMasterSaleRate" ShowSpinButtons="false" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
                 </DxFormLayoutItem>
 
                 <DxFormLayoutItem Caption="Purchase Rate" ColSpanMd="6">
-                    <DxSpinEdit @bind-Value="EditModel.RateMasterPurchaseRate" ShowSpinButtons="false" />
+                    <DxSpinEdit @bind-Value="EditModel.RateMasterPurchaseRate" ShowSpinButtons="false" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
                 </DxFormLayoutItem>
             </DxFormLayout>
 
-            <div class="mt-2 text-end">
-                <DxButton Text="Save" RenderStyle="ButtonRenderStyle.Primary" SubmitFormOnClick="true" />
-                <DxButton Text="Cancel" RenderStyle="ButtonRenderStyle.Secondary" Click="Hide" />
-            </div>
+    
         </EditForm>
     </BodyContentTemplate>
+    <FooterContentTemplate Context="ftr">
+        <div class="mt-2 text-end">
+            <DxButton Text="Save" RenderStyle="ButtonRenderStyle.Primary" SubmitFormOnClick="true" Form="rateForm" />
+            <DxButton Text="Cancel" RenderStyle="ButtonRenderStyle.Secondary" Click="Hide" />
+        </div>
+    </FooterContentTemplate>
+  
 </DxPopup>
 
 @code {
@@ -58,7 +68,7 @@
 
     public void Show(RateMaster? rate = null)
     {
-        if (rate == null)
+        if (rate.RateMasterId<0)
         {
             EditModel = new RateMaster { RateMasterApplicableDt = DateTime.Today };
             Title = "Add Rate";

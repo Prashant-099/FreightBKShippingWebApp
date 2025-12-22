@@ -12,27 +12,26 @@ namespace FreightBKShippingWebApp.Model
         public int JobId { get; set; }
 
         [Column("job_company_id")]
-
         public string? JobCompanyId { get; set; }
 
         [Column("job_addedby_user_id")]
-
         public string? JobAddedByUserId { get; set; }
 
         [Column("job_updatedby_user_id")]
         public string? JobUpdatedByUserId { get; set; }
 
         [Column("job_partyid")]
+        [Required]
         public int? JobPartyId { get; set; }
 
         [Column("job_year_id")]
-
         public string? JobYearId { get; set; }
 
         [Column("job_date")]
-        public DateTime JobDate { get; set; } = DateTime.Now;
+        public DateTime JobDate { get; set; } = DateTime.UtcNow;
 
         [Column("job_no")]
+        [Required]
         public string? JobNo { get; set; }
 
         [Column("job_type")]
@@ -60,7 +59,7 @@ namespace FreightBKShippingWebApp.Model
         public int? JobShipperId { get; set; }
 
         [Column("job_salesman_id")]
-        public int? JobSalesmanId { get; set; } = 0;
+        public int? JobSalesmanId { get; set; }
 
         [Column("job_sbno")]
         public string? JobSbNo { get; set; }
@@ -81,16 +80,16 @@ namespace FreightBKShippingWebApp.Model
         public DateTime? JobShipperInvDate { get; set; }
 
         [Column("job_grosswt")]
-        public double? JobGrossWt { get; set; } = 0;
+        public double? JobGrossWt { get; set; }
 
         [Column("job_netwt")]
-        public double? JobNetWt { get; set; } = 0;
+        public double? JobNetWt { get; set; }
 
         [Column("job_qty")]
-        public double? JobQty { get; set; } = 0;
+        public double? JobQty { get; set; }
 
         [Column("job_exchrate")]
-        public double? JobExchRate { get; set; } = 0;
+        public double? JobExchRate { get; set; }
 
         [Column("job_20ft")]
         public string? Job20Ft { get; set; }
@@ -111,7 +110,7 @@ namespace FreightBKShippingWebApp.Model
         public string? JobRemarks { get; set; }
 
         [Column("job_status")]
-        public byte? JobStatus { get; set; } = 1;
+        public byte? JobStatus { get; set; }
 
         [Column("job_created")]
         public DateTime JobCreated { get; set; }
@@ -180,7 +179,7 @@ namespace FreightBKShippingWebApp.Model
         public DateTime? JobDoDate { get; set; }
 
         [Column("job_dono")]
-        public string JobDoNo { get; set; }
+        public string? JobDoNo { get; set; }
 
         [Column("job_outofcharg_date")]
         public DateTime? JobOutOfChargeDate { get; set; }
@@ -418,6 +417,11 @@ namespace FreightBKShippingWebApp.Model
         [Column("job_highseas1_address")]
         [StringLength(200)]
         public string? JobHighseas1Address { get; set; }
+
+        //unMapped field in db
+        public string? VesselName { get; set; }
+        public string? PolName { get; set; }
+        public string? PodName { get; set; }
 
     }
 }

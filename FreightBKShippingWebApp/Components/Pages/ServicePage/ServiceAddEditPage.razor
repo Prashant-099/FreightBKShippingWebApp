@@ -34,20 +34,22 @@
 
     
 </style>
-<DxPopup @bind-Visible="Visible" ShowCloseButton="true" HeaderText="@Title" CloseOnOutsideClick="false" MaxWidth="650px" Width="90%"
-         horizontalAlignment="HorizontalAlignment.Center"
-         verticalAlignment="VerticalAlignment.Center">
-    <EditForm Model="@EditModel" OnValidSubmit="HandleValidSubmit" Context="CXservice">
+<DxPopup @bind-Visible="Visible" ShowCloseButton="true" HeaderText="@Title" CloseOnOutsideClick="false" MaxWidth="650" 
+         horizontalAlignment="HorizontalAlignment.Center" 
+         verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body" ShowFooter="true" scrollable="true">
+            <BodyContentTemplate Context="bdybrnch">
+        <EditForm EditContext="@editContext" OnValidSubmit="HandleValidSubmit" Context="CXservice" id="serviceForm">
         <DataAnnotationsValidator />
-        <ValidationSummary />
+       @*  <ValidationSummary /> *@
         <DxFormLayout>
 
             <DxFormLayoutItem Caption="Service Name" ColSpanMd="12">
-                <DxTextBox @bind-Text="EditModel.ServiceName" />
+                    <DxTextBox @bind-Text="EditModel.ServiceName" @oninput="AutoFillPrintName"
+                ShowValidationIcon="true" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
             </DxFormLayoutItem>
 
             <DxFormLayoutItem Caption="Print Name" ColSpanMd="12">
-                <DxTextBox @bind-Text="EditModel.ServicePrintName" />
+                <DxTextBox @bind-Text="EditModel.ServicePrintName" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
             </DxFormLayoutItem>
 
             <DxFormLayoutItem Caption="Type" ColSpanMd="12">
@@ -55,12 +57,13 @@
                             Data="@GroupList"
                             TextFieldName="ServiceGroupsName"
                             ValueFieldName="ServiceGroupsId"
-                            ClearButtonVisible="true"
+                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
                             AllowUserInput="false"
+                            ShowValidationIcon="true"
                             NullText="-- Select Group Type --"
                             @bind-Value="EditModel.ServiceGroupId"
                             SearchMode="ListSearchMode.AutoSearch"
-                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+                            SearchFilterCondition="ListSearchFilterCondition.Contains" />
             </DxFormLayoutItem>
             <DxFormLayoutItem Caption="HSN">
                 <div class="hsn-field-wrapper">
@@ -68,19 +71,19 @@
                             Data="@HsnSacList"
                             TextFieldName="HsnName"
                             ValueFieldName="HsnId"
-                            ClearButtonVisible="true"
                             AllowUserInput="false"
+                                ShowValidationIcon="true"
                             NullText="-- Select HSN/SAC --"
                             @bind-Value="EditModel.ServiceHsnId"
                             SearchMode="ListSearchMode.AutoSearch"
-                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                            SearchFilterCondition="ListSearchFilterCondition.Contains" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
                     <DxButton Click="@ShowHsnPopup"
                               Text="+"
                               CssClass="custom-plus-button" />
                 </div>
                         </DxFormLayoutItem>
             <DxFormLayoutItem Caption="Purchase Rate">
-                <DxSpinEdit @bind-Value="EditModel.ServicePRate" ShowSpinButtons=false />
+                <DxSpinEdit @bind-Value="EditModel.ServicePRate" ShowSpinButtons=false ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
             </DxFormLayoutItem>
 
             <DxFormLayoutItem Caption="Unit">
@@ -89,12 +92,12 @@
                             Data="@UnitList"
                             TextFieldName="UnitName"
                             ValueFieldName="UnitId"
-                            ClearButtonVisible="true"
+                                ShowValidationIcon="true"
                             AllowUserInput="false"
                             NullText="-- Select Unit --"
                             @bind-Value="EditModel.ServiceUnitId"
                             SearchMode="ListSearchMode.AutoSearch"
-                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                            SearchFilterCondition="ListSearchFilterCondition.Contains" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
                 <DxButton Click="@ShowUnitPopup"
                           Text="+"
                           CssClass="custom-plus-button" />
@@ -102,7 +105,7 @@
                         </DxFormLayoutItem>
 
             <DxFormLayoutItem Caption="Sale Rate">
-                <DxSpinEdit @bind-Value="EditModel.ServiceSRate" ShowSpinButtons="false" />
+                <DxSpinEdit @bind-Value="EditModel.ServiceSRate" ShowSpinButtons="false" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
             </DxFormLayoutItem>
 
             <DxFormLayoutItem Caption="Charges Type">
@@ -110,21 +113,23 @@
                             @bind-Value="EditModel.ServiceChargeType"
                             TextFieldName="Text"
                             ValueFieldName="Value"
+                            ShowValidationIcon="true"
                             ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
                             AllowUserInput="true"
-                            SearchMode="ListSearchMode.AutoSearch" SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+                            SearchMode="ListSearchMode.AutoSearch" SearchFilterCondition="ListSearchFilterCondition.Contains" />
             </DxFormLayoutItem>
             <DxFormLayoutItem Caption="Add. Charge">
-                <DxSpinEdit @bind-Value="EditModel.ServiceExtraCharge" ShowSpinButtons="false" />
+                <DxSpinEdit @bind-Value="EditModel.ServiceExtraCharge" ShowSpinButtons="false" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
             </DxFormLayoutItem>
             <DxFormLayoutItem Caption="Add/Deduct">
                 <DxComboBox Data="@AddDeductList"
                             @bind-Value="EditModel.ServiceType"
+                            ShowValidationIcon="true"
                             TextFieldName="Text"
                             ValueFieldName="Value"
                             ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
                             AllowUserInput="true"
-                            SearchMode="ListSearchMode.AutoSearch" SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+                            SearchMode="ListSearchMode.AutoSearch" SearchFilterCondition="ListSearchFilterCondition.Contains" />
             </DxFormLayoutItem>
 
            
@@ -133,12 +138,11 @@
                             Data="@VoucherList"
                             TextFieldName="VoucherName"
                             ValueFieldName="VoucherId"
-                            ClearButtonVisible="true"
                             AllowUserInput="false"
                             NullText="-- Select Voucher --"
                             @bind-Value="EditModel.ServiceVoucherId"
                             SearchMode="ListSearchMode.AutoSearch"
-                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                            SearchFilterCondition="ListSearchFilterCondition.Contains" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
             </DxFormLayoutItem>
             <DxFormLayoutItem Caption="Account Name" ColSpanMd="10">
                    <div class="hsn-field-wrapper">
@@ -152,29 +156,36 @@
                             NullText="-- Select Account --"
                             @bind-Value="EditModel.ServiceAccountId"
                             SearchMode="ListSearchMode.AutoSearch"
-                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                            SearchFilterCondition="ListSearchFilterCondition.Contains" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
                              <DxButton Click="@ShowAccountPopup"
                           Text="+"
                           CssClass="custom-plus-button" />
                           </div>
             </DxFormLayoutItem>
-
+            <DxFormLayoutItem Caption="Tally Name">
+                <DxTextBox @bind-Text="EditModel.ServiceTallyName" />
+            </DxFormLayoutItem>
             <DxFormLayoutItem Caption="Is Goods">
                 <DxCheckBox @bind-Checked="EditModel.ServiceIsGoods" />
             </DxFormLayoutItem>
             <DxFormLayoutItem Caption="Description" ColSpanMd="12">
-                <DxMemo @bind-Text="EditModel.ServiceRemarks" />
+                <DxMemo @bind-Text="EditModel.ServiceRemarks" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
             </DxFormLayoutItem>
         </DxFormLayout>
-
+     
+    </EditForm>
+     </BodyContentTemplate>
+    <FooterContentTemplate Context="ftr">
         <div class="mt-3 text-end">
-            <DxButton Text="Save" RenderStyle="ButtonRenderStyle.Primary" SubmitFormOnClick="true" />
+            <DxButton Text="Save" RenderStyle="ButtonRenderStyle.Primary" SubmitFormOnClick="true" Form="serviceForm" />
             <DxButton Text="Cancel" RenderStyle="ButtonRenderStyle.Secondary" Click="Hide" />
         </div>
-    </EditForm>
+
+    </FooterContentTemplate>
 </DxPopup>
-<UnitAddEditPage @ref="Unitpopup" OnSaved="RefreshList" />
 <HsnSacAddEditPage @ref="popup" OnSaved="RefreshList" />
+<UnitAddEditPage @ref="Unitpopup" OnSaved="RefreshList" />
+
 <AccountAddEditPage @ref="Accountpopup" OnSaved="RefreshList" />
 @code {
     [Parameter] public EventCallback OnSaved { get; set; }
@@ -187,6 +198,16 @@
     private List<Unit> UnitList = new();
     private List<Account> AccountList = new();
      private List<Voucher> VoucherList = new();
+    private void AutoFillPrintName(ChangeEventArgs e)
+    {
+        EditModel.ServiceName = e.Value?.ToString() ?? "";
+        EditModel.ServicePrintName = EditModel.ServiceName;
+        if (editContext != null)
+        {
+            editContext.NotifyFieldChanged(editContext.Field(nameof(EditModel.ServiceName)));
+        }
+    }
+    private EditContext? editContext;
     protected override async Task OnInitializedAsync()
     {
         GroupList = await ServiceGroupService.GetAllAsync();
@@ -253,7 +274,7 @@
 
     public void Show(Service model)
     {
-        if (model != null && model.ServiceId > 0)
+        if (model.ServiceId > 0)
         {
             // Edit mode – bind directly to the selected object
             EditModel = model;
@@ -265,7 +286,8 @@
             EditModel = new Service { ServiceStatus = true };
             Title = "Add Service";
         }
-
+        // Create EditContext when showing the form
+        editContext = new EditContext(EditModel);
         Visible = true;
     }
 
@@ -298,7 +320,7 @@
         {
             ToastService.Error($"Error saving service: {ex.Message}");
         }
-       
+        finally
         {
             LoadingService.Hide();
         }
