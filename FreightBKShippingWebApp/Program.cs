@@ -6,8 +6,10 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.ResponseCompression;
 using FreightBKShippingWebApp.Services.PdfReaderAndHelperService;
 
-var builder = WebApplication.CreateBuilder(args);
+using DevExpress.Drawing.Internal;
 
+var builder = WebApplication.CreateBuilder(args);
+DXDrawingEngine.ForceSkia();
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();

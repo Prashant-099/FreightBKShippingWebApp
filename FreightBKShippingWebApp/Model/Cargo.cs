@@ -51,5 +51,7 @@ namespace FreightBKShippingWebApp.Model
 
         [Column("cargo_cess")]
         public float CargoCess { get; set; }
+        //not mapped field
+        public string? cargohsnname { get; set; }
     }
 }

@@ -104,6 +104,11 @@
         <DxGridSelectionColumn Width="30"
                                FixedPosition="GridColumnFixedPosition.Left" />
 
+        <DxGridDataColumn FieldName="BranchName"
+                          Caption="Branch"
+                          Visible="@GetColumnVisibility("BranchName")"
+                          Width="@GetColumnWidth("BranchName")" />
+
         <DxGridDataColumn FieldName="JobNo"
                           Caption="Job No"
                           Visible="@GetColumnVisibility("JobNo")"
@@ -367,34 +372,34 @@
     {
         allColumns = new List<GridColumnLayout>
         {
+             new(){ FieldName = "BranchName", Caption = "Branch", Visible = true, Width = 120, DisplayIndex = 0 },
+        new(){ FieldName = "JobNo", Caption = "Job No", Visible = true, Width = 120, DisplayIndex = 1 },
 
-        new(){ FieldName = "JobNo", Caption = "Job No", Visible = true, Width = 120, DisplayIndex = 0 },
+        new(){ FieldName = "JobDate", Caption = "Job Date", Visible = true, Width = 130, DisplayIndex = 2 },
 
-        new(){ FieldName = "JobDate", Caption = "Job Date", Visible = true, Width = 130, DisplayIndex = 1 },
+        new(){ FieldName = "JobType", Caption = "Job Type", Visible = true, Width = 130, DisplayIndex = 3 },
 
-        new(){ FieldName = "JobType", Caption = "Job Type", Visible = true, Width = 130, DisplayIndex = 2 },
+        new(){ FieldName = "JobBlNo", Caption = "B/L No", Visible = true, Width = 150, DisplayIndex = 4 },
 
-        new(){ FieldName = "JobBlNo", Caption = "B/L No", Visible = true, Width = 150, DisplayIndex = 3 },
+        new(){ FieldName = "JobBlDate", Caption = "B/L Date", Visible = true, Width = 130, DisplayIndex = 5 },
 
-        new(){ FieldName = "JobBlDate", Caption = "B/L Date", Visible = true, Width = 130, DisplayIndex = 4 },
+        new(){ FieldName = "JobVesselId", Caption = "Vessel", Visible = true, Width = 150, DisplayIndex = 6 },
 
-        new(){ FieldName = "JobVesselId", Caption = "Vessel", Visible = true, Width = 150, DisplayIndex = 5 },
+        new(){ FieldName = "JobPolId", Caption = "POL", Visible = true, Width = 120, DisplayIndex = 7 },
 
-        new(){ FieldName = "JobPolId", Caption = "POL", Visible = true, Width = 120, DisplayIndex = 6 },
+        new(){ FieldName = "JobPodId", Caption = "POD", Visible = true, Width = 120, DisplayIndex = 8 },
 
-        new(){ FieldName = "JobPodId", Caption = "POD", Visible = true, Width = 120, DisplayIndex = 7 },
+        new(){ FieldName = "JobFreightBy", Caption = "Freight By", Visible = true, Width = 150, DisplayIndex = 9 },
 
-        new(){ FieldName = "JobFreightBy", Caption = "Freight By", Visible = true, Width = 150, DisplayIndex = 8 },
+        new(){ FieldName = "JobGrossWt", Caption = "Gross Weight", Visible = true, Width = 140, DisplayIndex =10 },
 
-        new(){ FieldName = "JobGrossWt", Caption = "Gross Weight", Visible = true, Width = 140, DisplayIndex = 9 },
+        new(){ FieldName = "JobVolume", Caption = "Volume / CBM", Visible = true, Width = 160, DisplayIndex = 11 },
 
-        new(){ FieldName = "JobVolume", Caption = "Volume / CBM", Visible = true, Width = 160, DisplayIndex = 10 },
+        new(){ FieldName = "JobQty", Caption = "Quantity", Visible = true, Width = 120, DisplayIndex = 12 },
 
-        new(){ FieldName = "JobQty", Caption = "Quantity", Visible = true, Width = 120, DisplayIndex = 11 },
+        new(){ FieldName = "JobChaId", Caption = "Customs Agent", Visible = true, Width = 160, DisplayIndex = 13 },
 
-        new(){ FieldName = "JobChaId", Caption = "Customs Agent", Visible = true, Width = 160, DisplayIndex = 12 },
-
-        new(){ FieldName = "JobRemarks", Caption = "Remarks", Visible = true, Width = 220, DisplayIndex = 13 }
+        new(){ FieldName = "JobRemarks", Caption = "Remarks", Visible = true, Width = 220, DisplayIndex = 14 }
     };
         currentLayout = allColumns.Select(c => new GridColumnLayout
         {
@@ -696,7 +701,8 @@
         {
             var allJobs = await JobService.GetAllAsync();
             jobList = allJobs
-                .Where(j => j.JobType != null && j.JobType.Equals(JobType, StringComparison.OrdinalIgnoreCase))
+                .Where(j => j.JobType != null && j.JobType.Equals(JobType, StringComparison.OrdinalIgnoreCase) &&
+        j.JobYearId == YearStatechangeService.SelectedYearId.ToString())
                 .ToList();
         }
         catch (Exception ex)

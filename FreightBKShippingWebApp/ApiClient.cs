@@ -313,7 +313,7 @@ namespace FreightBKShippingWebApp
             if (!res.IsSuccessStatusCode)
             {
                 Console.WriteLine($"❌ API Error: {res.StatusCode}");
-                return default;
+                throw new Exception(content);
             }
 
             if (string.IsNullOrWhiteSpace(content))
@@ -573,6 +573,24 @@ namespace FreightBKShippingWebApp
                 return null;
             }
         }
+
+
+
+        //private static string ExtractCleanError(string raw)
+        //{
+        //    if (string.IsNullOrWhiteSpace(raw))
+        //        return "Operation failed.";
+
+        //    // Trim stack trace
+        //    var atIndex = raw.IndexOf(" line ");
+        //    if (atIndex > 0)
+        //        raw = raw.Substring(0, atIndex);
+
+        //    // First line only
+        //    raw = raw.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)[0];
+
+        //    return raw.Length > 200 ? raw.Substring(0, 200) + "..." : raw;
+        //}
 
     }
 }

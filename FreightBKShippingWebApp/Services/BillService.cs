@@ -15,7 +15,7 @@ namespace FreightBKShippingWebApp.Services
         {
             _api = api;
         }
-
+        public string? LastError { get; private set; }
         // ✅ Get all bills (with optional paging)
         public async Task<List<Bill>> GetAllAsync(int page = 1, int pageSize = 100)
         {
@@ -50,20 +50,39 @@ namespace FreightBKShippingWebApp.Services
         }
 
         // ✅ Create new bill
-        public async Task<bool> CreateAsync(Bill bill)
+        public async Task<int> CreateAsync(Bill bill)
         {
            
-            try
-            {
+            
                 var result = await _api.PostAsync<bool, Bill>("api/Bills", bill);
-                return result;
-            }
-            catch (Exception ex)
+            if (result)
             {
-                Console.WriteLine($"❌ Error creating bill: {ex.Message}");
-                return false;
+                // Fetch the newly created bill
+                var allBills = await GetAllAsync(1, 50);
+                var createdBill = allBills
+               .Where(b => b.BillNo == bill.BillNo)
+            .OrderByDescending(b => b.BillId)
+            .FirstOrDefault();
+
+                if (createdBill != null)
+                {
+                    bill.BillId = createdBill.BillId; // Update original object
+                    return createdBill.BillId;
+                }
             }
-       
+
+            return 0;
+            //var innermost = ex;
+            //while (innermost.InnerException != null)
+            //    innermost = innermost.InnerException;
+
+            //// Extract first line of the innermost error
+            //var firstLine = innermost.Message.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)[0].Trim();
+
+
+            //LastError = firstLine.Length > 150? firstLine.Substring(0, 150) + "...": firstLine;
+
+
         }
 
         // ✅ Update existing bill

@@ -39,7 +39,7 @@ namespace FreightBKShippingWebApp.Model
         public double BillDetailBillQty { get; set; }
 
         [Column("bill_detail_rate")]
-        public double BillDetailRate { get; set; }
+        public double? BillDetailRate { get; set; }
 
         [Column("bill_detail_actualrate")]
         public double BillDetailActualRate { get; set; }

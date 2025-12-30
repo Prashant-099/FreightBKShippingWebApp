@@ -6,12 +6,14 @@
 @inject AccountService AccountService
 @inject YearService YearService
 @inject ReportDataService ReportDataService
+@inject BranchService BranchService
+@inject YearStatechangeService YearStatechangeService
 <DxPopup @bind-Visible="Visible" ShowCloseButton="true" HeaderText="@Title" CloseOnOutsideClick="false" MaxWidth="1050"
 horizontalAlignment="HorizontalAlignment.Center"
          verticalAlignment="VerticalAlignment.Center"
          scrollable="true" ShowFooter="true">
          <BodyContentTemplate Context="bdy">
-        <EditForm EditContext="@editContext" OnValidSubmit="HandleValidSubmit" Context="ctnaddeditvocher" id="voucherForm">
+        <EditForm Model="@EditModel" OnValidSubmit="HandleValidSubmit" Context="ctnaddeditvocher" id="voucherForm">
         <DataAnnotationsValidator />
        @*  <ValidationSummary /> *@
 
@@ -32,7 +34,7 @@ horizontalAlignment="HorizontalAlignment.Center"
                     </DxFormLayoutItem>
 
                     <DxFormLayoutItem Caption="Voucher Code">
-                        <DxTextBox @bind-Text="EditModel.VoucherCode" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" ShowValidationIcon="true" />
+                        <DxTextBox @bind-Text="EditModel.VoucherCode" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
                     </DxFormLayoutItem>
 
                     <DxFormLayoutItem Caption="Voucher Name">
@@ -71,7 +73,13 @@ horizontalAlignment="HorizontalAlignment.Center"
                     <DxFormLayoutItem Caption="Is Tax Invoice">
                         <DxCheckBox @bind-Checked="EditModel.VoucherIsTaxInvoice" />
                     </DxFormLayoutItem>
-
+                        <DxFormLayoutItem Caption="Branch" >
+                            <DxComboBox Data="@branchList"
+                                        TextFieldName="BranchName"
+                                        ValueFieldName="BranchId"
+                                        ShowValidationIcon="true"
+                                        @bind-Value="EditModel.VoucherBranchId" />
+                        </DxFormLayoutItem>
                     <DxFormLayoutItem Caption="Bank">
                         <DxComboBox Data="@BankAccountList"
                         @bind-Value="EditModel.VoucherBank1"
@@ -173,6 +181,7 @@ horizontalAlignment="HorizontalAlignment.Center"
     private List<Account> BankAccountList = new();
     private List<YearModel> FinYearList = new();
     private List<ReportData> ReportDataList = new();
+    private List<Branch> branchList = new();
     private DxGrid voucherGrid;
 
     private bool Visible { get; set; }
@@ -203,7 +212,8 @@ horizontalAlignment="HorizontalAlignment.Center"
         new() { Text = "RECEIPT", Value = "RECEIPT" },
         new() { Text = "PAYMENT", Value = "PAYMENT" },
         new() { Text = "JOURNAL", Value = "JOURNAL" },
-        new() { Text = "JOB", Value = "JOB" },
+        new() { Text = "IMPORT", Value = "IMPORT" },
+          new() { Text = "EXPORT", Value = "EXPORT" },
         new() { Text = "PURCHASE", Value = "PURCHASE" },
         new() { Text = "CONTRA", Value = "CONTRA" },
         new() { Text = "LR", Value = "LR" },
@@ -227,11 +237,12 @@ horizontalAlignment="HorizontalAlignment.Center"
 
         FinYearList = await YearService.GetAllAsync();
         ReportDataList = await ReportDataService.GetAllAsync();
+        branchList = await BranchService.GetAllAsync();
     }
 
     public void Show(Voucher voucher)
     {
-        if (voucher != null)
+        if (voucher.VoucherId >0)
         {
             EditModel = voucher;
             _ = LoadVoucherDetails(voucher.VoucherId);
@@ -239,16 +250,17 @@ horizontalAlignment="HorizontalAlignment.Center"
         }
         else
         {
-            EditModel = new Voucher();
+            EditModel = new Voucher { VoucherStatus = true };
             VoucherDetailList.Clear();
             VoucherDetailList.Add(new VoucherDetail
                 {
-                    VoucherDetailYearId = DateTime.UtcNow.Year,
+                VoucherDetailYearId = YearStatechangeService.SelectedYearId,
                     VoucherDetailDate = DateTime.UtcNow,
                     VoucherDetailPrefix = "",
                     VoucherDetailSufix = "",
-                    VoucherDetailLastNo = 1,
+                    VoucherDetailLastNo = 0,
                     VoucherDetailZeroFill = 0,
+                VoucherDetailStatus = true,
                     VoucherDetailLutno = ""
                 });
 
@@ -256,7 +268,7 @@ horizontalAlignment="HorizontalAlignment.Center"
             Title = "Add Voucher";
         }
         // Create EditContext when showing the form
-        editContext = new EditContext(EditModel);
+        // editContext = new EditContext(EditModel);
         Visible = true;
     }
 

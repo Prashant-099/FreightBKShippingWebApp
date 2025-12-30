@@ -29,6 +29,8 @@ namespace FreightBKShippingWebApp.Model
         public int BillPartyId { get; set; }
 
         [Column("bill_voucher_id")]
+        [Range(1, int.MaxValue, ErrorMessage = "Please select a valid .")]
+        [Required]
         public int BillVoucherId { get; set; }
 
         [Column("bill_year_id")]
@@ -39,14 +41,14 @@ namespace FreightBKShippingWebApp.Model
         public string? BillSalesmanId { get; set; } = string.Empty;
 
         [Column("bill_no")]
-       
-        public string? BillNo { get; set; }
+             public string? BillNo { get; set; }
 
         [Column("bill_vch_no")]
         public int BillVchNo { get; set; }
 
-        [Required]
+        
         [Column("bill_date")]
+        [Required]
         [CustomValidation(typeof(YearStatechangeService), nameof(YearStatechangeService.ValidateDateWithinYear))]
         public DateTime BillDate { get; set; }
 
@@ -109,14 +111,13 @@ namespace FreightBKShippingWebApp.Model
         [Column("bill_total")]
         public double BillTotal { get; set; }
 
-        [Required]
+       
         [Column("bill_placeofsupply")]
         public int BillPlaceOfSupply { get; set; }
 
-        [Required]
+        
         [Column("bill_supply_type")]
-
-        public string? BillSupplyType { get; set; }
+          public string? BillSupplyType { get; set; } = "B2B";
 
         [Column("bill_ship_party")]
         
@@ -183,11 +184,10 @@ namespace FreightBKShippingWebApp.Model
         public string? BillAmountInWord { get; set; }
 
         [Column("bill_jobno")]
-       
+        [Required]
         public string? BillJobNo { get; set; }
 
         [Column("bill_job_type")]
-        
         public string? BillJobType { get; set; }
 
         [Column("bill_pod_id")]
@@ -435,5 +435,6 @@ namespace FreightBKShippingWebApp.Model
         public string? posname { get; set; }
         public string? Vouchname { get; set; }
         public string? BillLockedByUsername { get; set; }
+        public string? branchname { get; set; }
     }
 }

@@ -97,16 +97,20 @@ namespace FreightBKShippingWebApp.Model
         [Column("voucher_report_id2")]
         public int? VoucherReportId2 { get; set; }
 
-        [Required]
+
         [Column("voucher_code")]
 
-        public string VoucherCode { get; set; } = string.Empty;
-
+        public string VoucherCode { get; set; } = "INV";
         [Column("voucher_isprintdialog")]
         public bool VoucherIsPrintDialog { get; set; }
 
         [Column("voucher_branch_id")]
+        [Required]
         public int? VoucherBranchId { get; set; }
+
+        //NOT MAPPED 
+        public string VoucherBranchName { get; set; }
+
 
         // 🔗 Navigation
         public ICollection<VoucherDetail> VoucherDetails { get; set; } = new List<VoucherDetail>();

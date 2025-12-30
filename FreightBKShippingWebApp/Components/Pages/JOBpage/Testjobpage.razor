@@ -102,6 +102,11 @@
     <Columns>
         <DxGridSelectionColumn Width="30" FixedPosition="GridColumnFixedPosition.Left" />
 
+        <DxGridDataColumn FieldName="BranchName"
+                          Caption="Branch"
+                          Visible="@GetColumnVisibility("BranchName")"
+                          Width="@GetColumnWidth("BranchName")" />
+
         <DxGridDataColumn FieldName="JobNo"
                           Caption="Job No"
                           Visible="@GetColumnVisibility("JobNo")"
@@ -335,14 +340,15 @@
     {
         allColumns = new List<GridColumnLayout>
         {
-    new() { FieldName = "JobNo", Caption = "Job No", Visible = true, Width = 120, DisplayIndex = 0 },
-        new() { FieldName = "JobDate", Caption = "Job Date", Visible = true, Width = 130, DisplayIndex = 1 },
-        new() { FieldName = "JobType", Caption = "Job Type", Visible = true, Width = 130, DisplayIndex = 2 },
-        new() { FieldName = "JobBlNo", Caption = "B/L No", Visible = true, Width = 150, DisplayIndex = 3 },
-        new() { FieldName = "JobBlDate", Caption = "B/L Date", Visible = true, Width = 130, DisplayIndex = 4 },
-        new() { FieldName = "JobChaId", Caption = "Customs Agent", Visible = true, Width = 160, DisplayIndex = 5 },
-        new() { FieldName = "Job20Ft", Caption = "20ft Count", Visible = true, Width = 100, DisplayIndex = 6 },
-        new() { FieldName = "Job40Ft", Caption = "40ft Count", Visible = true, Width = 100, DisplayIndex = 7 }
+             new(){ FieldName = "BranchName", Caption = "Branch", Visible = true, Width = 120, DisplayIndex = 0 },
+    new() { FieldName = "JobNo", Caption = "Job No", Visible = true, Width = 120, DisplayIndex = 1 },
+        new() { FieldName = "JobDate", Caption = "Job Date", Visible = true, Width = 130, DisplayIndex = 2 },
+        new() { FieldName = "JobType", Caption = "Job Type", Visible = true, Width = 130, DisplayIndex = 3 },
+        new() { FieldName = "JobBlNo", Caption = "B/L No", Visible = true, Width = 150, DisplayIndex = 4 },
+        new() { FieldName = "JobBlDate", Caption = "B/L Date", Visible = true, Width = 130, DisplayIndex = 5 },
+        new() { FieldName = "JobChaId", Caption = "Customs Agent", Visible = true, Width = 160, DisplayIndex = 6 },
+        new() { FieldName = "Job20Ft", Caption = "20ft Count", Visible = true, Width = 100, DisplayIndex = 7 },
+        new() { FieldName = "Job40Ft", Caption = "40ft Count", Visible = true, Width = 100, DisplayIndex = 8 }
     };
         currentLayout = allColumns.Select(c => new GridColumnLayout
         {
@@ -642,7 +648,8 @@
         try
         {
             var allJobs = await JobService.GetAllAsync();
-            jobList = allJobs.Where(j => j.JobType == JobType).ToList();
+            jobList = allJobs.Where(j => j.JobType == JobType &&
+        j.JobYearId == YearStatechangeService.SelectedYearId.ToString()).ToList();
         }
         catch (Exception ex)
         {

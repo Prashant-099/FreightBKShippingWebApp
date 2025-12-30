@@ -23,12 +23,13 @@
     @inject PdfDetailedExtractorService PdfExtractor
     @inject JobDataCreationService JobDataCreationService
     @inject LoadingService LoadingService
-
+@inject BranchService BranchService
+@inject VoucherService VoucherService
 <DxPopup @bind-Visible="Visible"
 ShowCloseButton="true"
 HeaderText="@PopupTitle"
 Scrollable="true"
-MaxWidth="1260" 
+MaxWidth="1360" 
  BodyCssClass="my-popup-body"
          CloseOnOutsideClick="false" horizontalAlignment="HorizontalAlignment.Center"
          verticalAlignment="VerticalAlignment.Center" ShowFooter="true" >
@@ -39,23 +40,35 @@ MaxWidth="1260"
        @*  <ValidationSummary /> *@
 
         <DxFormLayout>
-
+                <DxFormLayoutItem Caption="Branch" ColSpanMd="3">
+                <DxComboBox Data="@branchList" TData="Branch" TValue="int?"
+                                TextFieldName="BranchName"
+                                ValueFieldName="BranchId"
+                                 Value="@EditModel.JobBranchId"
+                                ValueChanged="@((int? voucherId) => OnBranchChanged(voucherId))"
+                    ValueExpression="@( () => EditModel.JobBranchId )"
+                                AllowUserInput="true"
+                                SearchMode="ListSearchMode.AutoSearch"
+                                SearchFilterCondition="ListSearchFilterCondition.StartsWith"
+                                ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" CssClass="editor-smooth" />
+                  
+                </DxFormLayoutItem>
             <!-- Basic Info -->
-            <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Job No" ColSpanMd="4">
+            <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Job No" ColSpanMd="3">
                 <div class="d-flex gap-1">
-                        <DxTextBox @bind-Text="EditModel.JobPrefix" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"></DxTextBox>
+                     @*    <DxTextBox @bind-Text="EditModel.JobPrefix" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"></DxTextBox> *@
                     <DxTextBox @bind-Text="EditModel.JobNo"   ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" ShowValidationIcon="true"/>
-                        <DxTextBox @bind-Text="EditModel.JobSufix" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                       @*  <DxTextBox @bind-Text="EditModel.JobSufix" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" /> *@
                 </div>
             </DxFormLayoutItem>
 
-            <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Job Date" ColSpanMd="4">
+            <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Job Date" ColSpanMd="3">
                     <DxDateEdit @bind-Date="EditModel.JobDate" Format="dd-MM-yyyy" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
             </DxFormLayoutItem>
 
             <DxFormLayoutItem CaptionCssClass="caption-bold"
             Caption="@($"Import {(JobType == "IMPORT" ? ".be file" : ".sb file")}")"
-            ColSpanMd="4">
+            ColSpanMd="3">
                 <Template>
                     <div class="d-flex align-items-center gap-2">
                         <i class="bi bi-cloud-upload"></i>
@@ -385,9 +398,9 @@ MaxWidth="1260"
                             <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Exchange Rate" ColSpanMd="6">
                                 <DxSpinEdit @bind-Value="EditModel.JobExchRate" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" ShowSpinButtons=false CssClass="editor-smooth" />
                             </DxFormLayoutItem>
-                            <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="CFS" ColSpanMd="6">
+                         @*<DxFormLayoutItem CaptionCssClass="caption-bold" Caption="CFS" ColSpanMd="6">
                                 <DxTextBox @bind-Text="EditModel.JobCfs"  ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" CssClass="editor-smooth" />
-                            </DxFormLayoutItem>    
+                            </DxFormLayoutItem>*@   
 
 
                             <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Status" ColSpanMd="6">
@@ -518,24 +531,49 @@ MaxWidth="1260"
 
                 </DxFormLayoutTabPage>
 
-                <DxFormLayoutTabPage Caption="Container">
-                    <DxFormLayoutGroup Decoration="FormLayoutGroupDecoration.None">
-                        <DxFormLayoutItem Caption="20FT Container">
-                            <DxMemo @bind-Text="EditModel.JobContainer20Ft" Rows="3"  ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" CssClass="editor-smooth" />
-                        </DxFormLayoutItem>
+                    <DxFormLayoutTabPage Caption="Container">
+                        <DxFormLayoutGroup Decoration="FormLayoutGroupDecoration.None">
+                            <DxFormLayoutItem Caption="20FT Container">
+                                <DxMemo @bind-Text="EditModel.JobContainer20Ft"
+                                        Rows="3"
+                                        ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                        CssClass="editor-smooth" />
+                            </DxFormLayoutItem>
 
-                        <DxFormLayoutItem Caption="40FT Container">
-                            <DxMemo @bind-Text="EditModel.JobContainer40Ft" Rows="3"  ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" CssClass="editor-smooth" />
-                        </DxFormLayoutItem>
-
-                        <DxFormLayoutItem Caption="Count(20 Ft)"> 
-                            <DxTextBox @bind-Text="EditModel.Job20Ft" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"  CssClass="editor-smooth"></DxTextBox>
-                        </DxFormLayoutItem>                     
-                        <DxFormLayoutItem Caption="Count(40 Ft)"> 
-                            <DxTextBox @bind-Text="EditModel.Job40Ft"  ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" CssClass="editor-smooth"></DxTextBox>
-                        </DxFormLayoutItem>
-                    </DxFormLayoutGroup>
-                </DxFormLayoutTabPage>
+                            <DxFormLayoutItem Caption="40FT Container">
+                                <DxMemo @bind-Text="EditModel.JobContainer40Ft"
+                                        Rows="3"
+                                        ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                        CssClass="editor-smooth" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Count(20 Ft)">
+                                @{
+                                    var count20Ft = EditModel.JobContainer20Ft?
+                                    .Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
+                                    .Select(s => s.Trim())
+                                    .Count() ?? 0;
+                                    EditModel.Job20Ft = count20Ft.ToString();
+                                }
+                                <DxTextBox @bind-Text="EditModel.Job20Ft"
+                                           ReadOnly="true"
+                                           ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                           CssClass="editor-smooth" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Count(40 Ft)">
+                                @{
+                                    var count40Ft = EditModel.JobContainer40Ft?
+                                    .Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
+                                    .Select(s => s.Trim())
+                                    .Count() ?? 0;
+                                    EditModel.Job40Ft = count40Ft.ToString();
+                                }
+                                <DxTextBox @bind-Text="EditModel.Job40Ft"
+                                           ReadOnly="true"
+                                           ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                           CssClass="editor-smooth" />
+                            </DxFormLayoutItem>
+                        </DxFormLayoutGroup>
+                    </DxFormLayoutTabPage>
                 <DxFormLayoutTabPage Caption="Upload Docs">
                     @* <DxFormLayoutItem Caption="Upload Files" ColSpanMd="4"> *@
                     @*     <div class="upload-wrapper"> *@
@@ -597,13 +635,13 @@ MaxWidth="1260"
             LoadingService.Hide();
         }
     }
-    
+
     // + butoon for chaList
     private CountryAddEditPage popupcountry;
     private async void newpopupcountry()
     {
         popupcountry.Show(new Country());
-      
+
     }
     private async Task LoadCountriesAsync()
     {   
@@ -724,7 +762,7 @@ MaxWidth="1260"
 
     //+ button of acount model
     private AccountAddEditPage popup = null!;
-  
+
     private Job newJob = new();
     private List<string> jobtype = new() { "IMPORT", "EXPORT" };
     private async Task LoadAccountsAsync()
@@ -1115,7 +1153,7 @@ MaxWidth="1260"
 
                 // ✅ GOODS DESCRIPTION
                 EditModel.JobGoodsDesc = GetField(itemFields, 8);         // Index 8: Description
-                                                                          // "QUARTZ POWDER S325 (BATCH NO.0515-QD)"
+                // "QUARTZ POWDER S325 (BATCH NO.0515-QD)"
 
                 // HSN Code
                 EditModel.JobHsnCode = GetField(itemFields, 9);           // Index 9: HSN/HS Code
@@ -1133,7 +1171,7 @@ MaxWidth="1260"
 
                 // ✅ SHIPPER INVOICE NUMBER
                 EditModel.JobShipperInvNo = GetField(invoiceFields, 4);    // Index 4: Invoice Number
-                                                                           // "WMA/009/OVW/06"
+                // "WMA/009/OVW/06"
 
                 // Invoice Date & Value
                 EditModel.JobShipperInvDate = ParseDate(GetField(invoiceFields, 5));    // Index 5: Invoice Date
@@ -1598,7 +1636,7 @@ MaxWidth="1260"
         {
             LoadingService.Hide();
         }
-        
+
 
     }
 
@@ -1653,15 +1691,96 @@ MaxWidth="1260"
     private List<Location> locationList = new(); 
     private List<Country> countryList = new();
     public List<Currency> Currencies { get; set; } = new List<Currency>();
-
+    private List<Voucher> VoucherList = new();
+    private List<Job> jobList = new();
+    private List<Branch> branchList = new();
     public void Show(Job model)
     {
         IsEdit = model.JobId > 0;
         EditModel = model;
+        if (model.JobId <= 0)
+        {
+            OnvoucherChanged();
+        }
         Visible = true;
         StateHasChanged();
     }
+    private async Task OnBranchChanged(int? branchId)
+    {
+        EditModel.JobBranchId = branchId;
+        if (branchId.HasValue)
+        {
+            await LoadVoucherAndGenerateJobNo(branchId.Value);
+        }
+    }
+    private async Task LoadVoucherAndGenerateJobNo(int branchId)
+{
 
+        VoucherList = (await VoucherService.GetAllAsync())
+.Where(v => v.VoucherName != null &&
+            v.VoucherName.Equals(JobType, StringComparison.OrdinalIgnoreCase)
+&& v.VoucherBranchId == branchId)
+.ToList();
+        // Check if VoucherList is empty
+        if (VoucherList == null || !VoucherList.Any())
+        {
+            ToastService.Warning($"Voucher not found for {JobType}. Please configure voucher in master settings.");
+            return;
+        }
+        var VoucherId = VoucherList.FirstOrDefault()?.VoucherId;
+        if (VoucherId == null || VoucherId == 0)
+        {
+            ToastService.Warning($"Voucher not configured for {JobType}. Please add voucher in master settings.");
+            return;
+        }
+
+        var finYearId = YearStatechangeService.SelectedYearId;
+        if (finYearId == 0)
+        {
+            ToastService.Error(" Financial year not selected. Please select a year.");
+            return;
+        }
+        try
+        {
+            var result = await YearStatechangeService.GeneratebillNoAsync(VoucherId, finYearId, EditModel.JobBranchId);
+            var fulljobno = result.prefix + result.number + result.suffix;
+            if (!string.IsNullOrEmpty(result.number))
+            {
+                var existingJob = jobList?.FirstOrDefault(j => j.JobNo == fulljobno && j.JobBranchId == branchId);
+
+                if (existingJob != null)
+                {
+                    ToastService.Warning($" Job number '{result.prefix}{result.number}{result.suffix}' already exists!");
+                }
+            }
+            EditModel.JobPrefix = result.prefix;
+            EditModel.JobNo = result.prefix + result.number + result.suffix;
+            EditModel.JobSufix = result.suffix;
+            EditModel.JobVchNo = int.Parse(result.number);
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error("Error: " + ex.Message);
+        }
+
+
+}
+    private async Task OnvoucherChanged()
+    {
+        var defaultBranch = branchList.FirstOrDefault(b => b.Branchisdefault);
+
+        if (defaultBranch == null)
+        {
+            ToastService.Warning("No default branch configured. Please set a default branch.");
+            return;
+        }
+
+        EditModel.JobBranchId = defaultBranch.BranchId;
+        await LoadVoucherAndGenerateJobNo(defaultBranch.BranchId);
+
+      
+    }
     protected override async Task OnInitializedAsync()
     {
         await Refresh();
@@ -1672,15 +1791,22 @@ MaxWidth="1260"
         var parties = await AccountService.GetAllAsync();
         party = parties.Where(a => a.AccountTypeId == 18).ToList();
 
+        branchList=await BranchService.GetAllAsync();
         cargos = await CargoService.GetAllAsync();
         vessels = await VesselService.GetAllAsync();
         countryList = await CountryService.GetAllAsync();
         Currencies = await CurrencyService.GetAllAsync();
-
         if (Currencies.Any())
         {
             EditModel.JobDefCurrId = Currencies.FirstOrDefault().CurrencyId;
         }
+        
+
+        var allJobs = await JobService.GetAllAsync();
+        jobList = allJobs
+            .Where(j => j.JobType != null &&
+                        j.JobType.Equals(JobType, StringComparison.OrdinalIgnoreCase))
+            .ToList();
 
         var locationlist = await LocationService.GetAllAsync();
         locationList = locationlist.Where(l => l.LocationType == "PORT").ToList();
@@ -1698,23 +1824,42 @@ MaxWidth="1260"
     }
 
 
-        private async Task HandleValidSubmit()
-         {
-        EditModel.JobType = JobType;
-        EditModel.JobYearId = YearStatechangeService.SelectedYearId.ToString();
+    private async Task HandleValidSubmit()
+    {
+        LoadingService.Show();
+        try
+        {
+            EditModel.JobType = JobType;
+            EditModel.JobYearId = YearStatechangeService.SelectedYearId.ToString();
             if (!IsEdit)
             {
-                await JobService.CreateAsync(EditModel);
-                ToastService.Success("Import Job created successfully.");
+                var result =  await JobService.CreateAsync(EditModel);
+                if (result)
+                {
+                    ToastService.Success("Import Job created successfully.");
+                }
+
+                else { ToastService.Error("Import Job Failed  To Created ."); }
             }
             else
             {
-                await JobService.UpdateAsync(EditModel);
+                var result = await JobService.UpdateAsync(EditModel);
+                if (result)
+                {
                 ToastService.Success("Import Job updated successfully.");
+                }
+
+                else {ToastService.Error("Import Job Failed  To Update .");}
+
             }
 
             Visible = false;
             await OnSaved.InvokeAsync();
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
         }
 
         private void Cancel()
@@ -1781,7 +1926,7 @@ MaxWidth="1260"
             {
                 // Auto-fill the cargo description if it exists
                 EditModel.JobGoodsDesc = selectedCargo.CargoRemarks ?? string.Empty;
-                EditModel.JobHsnCode = selectedCargo.CargoHsn.ToString() ?? string.Empty;
+                EditModel.JobHsnCode = selectedCargo.cargohsnname.ToString() ?? " ";
 
                 // Or use whatever property name contains the description
                 // EditModel.JobGoodsDesc = selectedCargo.Description ?? string.Empty;

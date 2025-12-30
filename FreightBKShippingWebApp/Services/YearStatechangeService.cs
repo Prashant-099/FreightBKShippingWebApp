@@ -87,7 +87,7 @@ namespace FreightBKShippingWebApp.Services
         //            config.VoucherConfig_Suffix ?? string.Empty);
         //}
 
-        public async Task<(string prefix, string number, string suffix)> GeneratebillNoAsync(int?voucherId, int finYearId)
+        public async Task<(string prefix, string number, string suffix)> GeneratebillNoAsync(int?voucherId, int finYearId,int? branchid)
         {
             if (!voucherId.HasValue)
                 throw new ArgumentNullException(nameof(voucherId));
@@ -96,7 +96,7 @@ namespace FreightBKShippingWebApp.Services
             VoucherConfigs = await _VoucherConfigService.GetAllAsync();
 
             // Find the requested voucher by id
-            var voucher = VoucherConfigs.FirstOrDefault(v => v.VoucherId == voucherId.Value);
+            var voucher = VoucherConfigs.FirstOrDefault(v => v.VoucherId == voucherId.Value && v.VoucherBranchId == branchid);
             if (voucher == null)
                 throw new Exception("Voucher configuration not found!");
 
