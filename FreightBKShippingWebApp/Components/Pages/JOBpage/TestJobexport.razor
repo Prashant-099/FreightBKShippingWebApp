@@ -1,4 +1,5 @@
 ﻿@page "/jobexport"
+@using FreightBKShippingWebApp.Components.Pages.BillPage
 @using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Services
 @using FreightBKShippingWebApp.Services.PdfReaderAndHelperService
@@ -104,6 +105,27 @@
         <DxGridSelectionColumn Width="30"
                                FixedPosition="GridColumnFixedPosition.Left" />
 
+        <DxGridCommandColumn CancelButtonVisible="false" Name="Action" 
+            DeleteButtonVisible="false" 
+            EditButtonVisible="false" 
+            SaveButtonVisible="false"
+                             NewButtonVisible="false" Width="90px">
+            <HeaderCaptionTemplate>Actions</HeaderCaptionTemplate>
+            <CellDisplayTemplate Context="cellContext">
+                  <div style="display: flex; align-items: center;">
+                <DxButton RenderStyle="ButtonRenderStyle.Link"
+                          IconCssClass="bi bi-file-earmark-diff-fill"
+                         SizeMode="SizeMode.Medium"
+                          Click="@(() => OpenPopup((Job)cellContext.DataItem))" />
+
+                <DxButton RenderStyle="ButtonRenderStyle.Link"
+                          IconCssClass="bi bi-receipt"
+                          SizeMode="SizeMode.Small"
+                              Click="@(() => OpenBilleditPopup((Job)cellContext.DataItem))" />
+                          </div>
+            </CellDisplayTemplate>
+        </DxGridCommandColumn>
+       
         <DxGridDataColumn FieldName="BranchName"
                           Caption="Branch"
                           Visible="@GetColumnVisibility("BranchName")"
@@ -314,6 +336,7 @@
     </div>
 }
 <JobAddEditPage @ref="popup" OnSaved="LoadJobsAsync" JobType="@JobType" />
+
 <ConfirmationDialog />
 
 <PdfImportModal ShowModal="@showPdfImportDialog"
@@ -327,7 +350,32 @@
                 SpinnerClass="text-success"
                 SuccessCardClass="border-success" />
 
+
+<AddContainerJob @ref="addContainerJob"></AddContainerJob>
+
+
+<FreightBKShippingWebApp.Components.Pages.BillPage.BillAddEditPage @ref="billAddEditPage"></FreightBKShippingWebApp.Components.Pages.BillPage.BillAddEditPage>
 @code {
+    BillAddEditPage billAddEditPage;
+    void OpenBilleditPopup(Job job)
+    {
+        var bill = new Bill
+        { BillJobId=job.JobId,
+           BillJobNo=job.JobNo,
+           BillJobType=job.JobType,
+           BillPartyId=job.JobPartyId ?? 0,
+           BillBranchId=job.JobBranchId ?? 0,
+           
+
+        };
+    }
+
+    AddContainerJob addContainerJob;
+    void OpenPopup(Job job)
+    {
+        addContainerJob?.Show(job);
+    }
+    // ./
     DxGrid MyGrid;
     private List<Job> jobList = new();
     // private List<Job> SelectedJobs = new();

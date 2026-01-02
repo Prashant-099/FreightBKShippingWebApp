@@ -102,6 +102,28 @@
     <Columns>
         <DxGridSelectionColumn Width="30" FixedPosition="GridColumnFixedPosition.Left" />
 
+        <DxGridCommandColumn CancelButtonVisible="false" Name="Action"
+                             DeleteButtonVisible="false"
+                             EditButtonVisible="false"
+                             SaveButtonVisible="false"
+                             NewButtonVisible="false" Width="90px">
+
+            <HeaderCaptionTemplate>Actions</HeaderCaptionTemplate>
+            <CellDisplayTemplate Context="cellContext">
+                  <div style="display: flex; align-items: center;">
+                <DxButton RenderStyle="ButtonRenderStyle.Link"
+                          IconCssClass="bi bi-file-earmark-diff-fill"
+                          SizeMode="SizeMode.Medium"
+                          Click="@(() => OpenPopup((Job)cellContext.DataItem))" />
+
+                <DxButton RenderStyle="ButtonRenderStyle.Link"
+                          IconCssClass="bi bi-receipt"
+                          SizeMode="SizeMode.Small"
+                       
+                          Click="@(() => OpenPopup((Job)cellContext.DataItem))" />
+                          </div>
+            </CellDisplayTemplate>
+        </DxGridCommandColumn>
         <DxGridDataColumn FieldName="BranchName"
                           Caption="Branch"
                           Visible="@GetColumnVisibility("BranchName")"
@@ -294,8 +316,15 @@
                 ButtonClass="btn-primary"
                 SpinnerClass="text-primary"
                 SuccessCardClass="border-success" />
+<AddContainerJob @ref="addContainerJob"></AddContainerJob>
 
 @code {
+    AddContainerJob addContainerJob;
+    void OpenPopup(Job job)
+    {
+        addContainerJob?.Show(job);
+    }
+    // ./
     private List<Job> jobList = new();
     // private List<Job> SelectedJobs = new();
     private IReadOnlyList<object> SelectedJobs { get; set; } = new List<object>();

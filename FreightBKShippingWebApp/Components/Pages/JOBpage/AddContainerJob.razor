@@ -1,0 +1,34 @@
+﻿@using FreightBKShippingWebApp.Model
+
+<DxPopup @bind-Visible="IsVisible"
+         Width="500px"
+         HeaderText="Job Details"
+         ShowCloseButton="true">
+
+        @if (JobData != null)
+        {
+            <p><b>Job ID:</b> @JobData.JobId</p>
+            <p><b>Branch:</b> @JobData.BranchName</p>
+            <p><b>Branch:</b> @JobData.JobNo</p>
+        }
+
+
+</DxPopup>
+
+@code {
+    bool IsVisible;
+
+    Job? JobData;
+
+    public void Show(Job job)
+    {
+        JobData = job;
+        IsVisible = true;
+        StateHasChanged();
+    }
+
+    public void Close()
+    {
+        IsVisible = false;
+    }
+}
