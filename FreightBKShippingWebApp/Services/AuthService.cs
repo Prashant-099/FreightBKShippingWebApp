@@ -96,9 +96,31 @@ namespace FreightBKShippingWebApp.Services
 
         public async Task LogoutAsync()
         {
+            //await _localStorage.DeleteAsync("sessionState");
+            //await ((CustomAuthStateProvider)_authStateProvider).MarkUserAsLoggedOut();
+            //_navigationManager.NavigateTo("/login");
+            try
+            {
+                // 🔐 Call backend logout API (JWT goes automatically via ApiClient)
+                await _api.PostAsync<object, object>("api/Auth/logout", null);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Logout API failed: {ex.Message}");
+                // continue logout anyway
+            }
+
+            // 🧹 Clear local storage
             await _localStorage.DeleteAsync("sessionState");
-            await ((CustomAuthStateProvider)_authStateProvider).MarkUserAsLoggedOut();
-            _navigationManager.NavigateTo("/login");
+            await _localStorage.DeleteAsync("loggedInUserId");
+            await _localStorage.DeleteAsync("loggedInCompanyId");
+
+            // 🔄 Update auth state
+            await ((CustomAuthStateProvider)_authStateProvider)
+                .MarkUserAsLoggedOut();
+
+            // 🚀 Redirect
+            _navigationManager.NavigateTo("/login", true);
         }
 
         public async Task<string?> GetTokenAsync()

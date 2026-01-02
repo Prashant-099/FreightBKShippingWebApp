@@ -4,6 +4,7 @@
 @using FreightBKShippingWebApp.Components.Pages.CurrencyPage
 @using FreightBKShippingWebApp.Components.Pages.NotifyPage
 @using FreightBKShippingWebApp.Components.Pages.StationPort
+@using FreightBKShippingWebApp.Components.Pages.Statuspage
 @using FreightBKShippingWebApp.Components.Pages.VesselPage
 @using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Models
@@ -24,6 +25,7 @@
     @inject JobDataCreationService JobDataCreationService
     @inject LoadingService LoadingService
 @inject BranchService BranchService
+@inject StatusService StatusService
 @inject VoucherService VoucherService
 <DxPopup @bind-Visible="Visible"
 ShowCloseButton="true"
@@ -49,7 +51,7 @@ MaxWidth="1360"
                     ValueExpression="@( () => EditModel.JobBranchId )"
                                 AllowUserInput="true"
                                 SearchMode="ListSearchMode.AutoSearch"
-                                SearchFilterCondition="ListSearchFilterCondition.StartsWith"
+                                SearchFilterCondition="ListSearchFilterCondition.Contains"
                                 ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" CssClass="editor-smooth" />
                   
                 </DxFormLayoutItem>
@@ -404,10 +406,20 @@ MaxWidth="1360"
 
 
                             <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Status" ColSpanMd="6">
-                                <DxComboBox Data="@stuslist"
-                                @bind-Value="EditModel.JobState" AllowUserInput="true"
-                                SearchMode="ListSearchMode.AutoSearch" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
-                                SearchFilterCondition="ListSearchFilterCondition.Contains" CssClass="editor-smooth"></DxComboBox>
+                                <div style="position: relative; display: inline-block; width: 100%;">
+                                    <DxButton Click="newpopupstastus"
+                                    Text="+"
+                                    CssClass="custom-plus-button" />
+
+                                <DxComboBox Data="@statuslist" TData="Status" TValue="String"
+                                @bind-Value="EditModel.JobState" 
+                                AllowUserInput="true"
+                                SearchMode="ListSearchMode.AutoSearch" 
+                                ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                SearchFilterCondition="ListSearchFilterCondition.Contains"
+                                                CssClass="editor-smooth" TextFieldName="StatusName"
+                                                ValueFieldName="StatusName"></DxComboBox>
+                                                </div>
                             </DxFormLayoutItem>
                             <DxFormLayoutItem CaptionCssClass="caption-bold"  Caption="Remarks" ColSpanMd="12">
                                 <DxMemo @bind-Text="EditModel.JobRemarks" Rows="3"  ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" CssClass="editor-smooth" />
@@ -610,6 +622,7 @@ MaxWidth="1360"
 <LocationAddEditPage @ref="popuplocation" OnSaved="LoadLocationsAsync" />
 <CountryAddEditPage @ref="popupcountry" OnSaved="LoadCountriesAsync" />
 <CurrencyAddEditPage @ref="popupcurrency" OnSaved="LoadCurrenciesAsync" />
+<StatusAddEditPage @ref="popupStatus" OnSaved="LoadStatusAsync" />
 
 
 @code {
@@ -635,7 +648,18 @@ MaxWidth="1360"
             LoadingService.Hide();
         }
     }
-
+    private async Task LoadStatusAsync()
+    {
+        LoadingService.Show();
+        try
+        {
+            statuslist = await StatusService.GetAllAsync();
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
     // + butoon for chaList
     private CountryAddEditPage popupcountry;
     private async void newpopupcountry()
@@ -683,6 +707,7 @@ MaxWidth="1360"
 
     // + butoon for lines
     private NotifyAddEditPage popuplines;
+    private StatusAddEditPage popupStatus;
     private string notifytype = "";
     private async Task LoadNotifiesAsync()
     {
@@ -708,7 +733,10 @@ MaxWidth="1360"
                 NotifyUpdated = DateTime.Now
             });
     }
-
+    private void newpopupstastus()
+    {
+        popupStatus.Show(new Status());
+    }
     // + butoon for Cargo
     private CargoAddEditPage popupCargo;
     private void newpopupcargo()
@@ -1676,7 +1704,7 @@ MaxWidth="1360"
 
     private string PopupTitle => IsEdit ? "Edit Job" : "Add Job";
     string[] weightUnits = new string[] { "NOS", "KGS", "MTS", "PKG", "BOX", "CTN" };
-    string[] stuslist = new string[] { "Complete", "Cancel", "Pending" };
+    // string[] stuslist = new string[] { "Complete", "Cancel", "Pending" };
 
     // private List<Account> parties = new();
     private List<Account> party = new();
@@ -1694,6 +1722,7 @@ MaxWidth="1360"
     private List<Voucher> VoucherList = new();
     private List<Job> jobList = new();
     private List<Branch> branchList = new();
+     private List<Status> statuslist = new();
     public void Show(Job model)
     {
         IsEdit = model.JobId > 0;
@@ -1790,7 +1819,7 @@ MaxWidth="1360"
     {
         var parties = await AccountService.GetAllAsync();
         party = parties.Where(a => a.AccountTypeId == 18).ToList();
-
+        statuslist = await StatusService.GetAllAsync();
         branchList=await BranchService.GetAllAsync();
         cargos = await CargoService.GetAllAsync();
         vessels = await VesselService.GetAllAsync();

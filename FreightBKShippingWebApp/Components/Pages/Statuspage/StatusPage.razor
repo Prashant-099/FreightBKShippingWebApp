@@ -1,0 +1,180 @@
+﻿@page "/status"
+@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Services
+@inject StatusService StatusService
+@inject ToasteService ToastService
+@inject LoadingService LoadingService
+@inject ConfirmationDialogService ConfirmDialogService
+
+<style>
+    .grid-size {
+        max-height: 600px;
+    }
+</style>
+
+<DxGrid TItem="Status"
+        Data="@statusList"
+        @ref="MyGrid"
+        KeyFieldName="StatusId"
+        ShowSearchBox="true"
+        PageSize="10"
+        PageSizeSelectorVisible="true"
+        FocusedRowEnabled="true"
+        SelectionMode="GridSelectionMode.Multiple"
+        SelectedDataItems="@SelectedStatuses"
+        SelectedDataItemsChanged="OnSelectedChanged"
+        CssClass="grid-size"
+        AllowSelectRowByClick="true">
+
+    <ToolbarTemplate>
+        <DxToolbar>
+            <TitleTemplate Context="ctx">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-flag me-2"></i>
+                    <span class="fs-5">Status</span>
+                </div>
+            </TitleTemplate>
+
+            <Items>
+                <DxToolbarItem Text="Add"
+                               IconCssClass="bi bi-plus-circle"
+                               Click="OnCreate" />
+
+                <DxToolbarItem Text="Edit"
+                               IconCssClass="bi bi-pencil-square"
+                               Click="OnEdit" />
+
+                <DxToolbarItem Text="Delete"
+                               IconCssClass="bi bi-trash"
+                               Click="OnDelete" />
+
+                <DxToolbarItem Text="Refresh"
+                               IconCssClass="bi bi-arrow-clockwise"
+                               Click="LoadStatusAsync" />
+            </Items>
+        </DxToolbar>
+    </ToolbarTemplate>
+
+    <Columns>
+        <DxGridSelectionColumn Width="40" />
+
+        <DxGridDataColumn FieldName="StatusId"
+                          Caption="ID" Visible="false"/>
+
+        <DxGridDataColumn FieldName="StatusName"
+                          Caption="Status Name"/>
+
+        <DxGridDataColumn FieldName="StatusCreated"
+                          Caption="Created"
+                          DisplayFormat="dd-MM-yyyy"/>
+
+        <DxGridDataColumn FieldName="StatusUpdated"
+                          Caption="Updated"
+                          DisplayFormat="dd-MM-yyyy"/>
+    </Columns>
+
+</DxGrid>
+
+<StatusAddEditPage @ref="popup" OnSaved="LoadStatusAsync" />
+<ConfirmationDialog />
+
+@code {
+
+    DxGrid MyGrid;
+    private List<Status> statusList = new();
+    private IReadOnlyList<object> SelectedStatuses = new List<object>();
+    private StatusAddEditPage popup;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadStatusAsync();
+    }
+
+    private async Task LoadStatusAsync()
+    {
+        LoadingService.Show();
+        try
+        {
+            statusList = await StatusService.GetAllAsync();
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+
+    private async Task OnSelectedChanged(IReadOnlyList<object> items)
+    {
+        SelectedStatuses = items ?? new List<object>();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void OnCreate(ToolbarItemClickEventArgs e)
+    {
+        popup.Show(new Status());
+    }
+
+    private async Task OnEdit(ToolbarItemClickEventArgs e)
+    {
+        var status = MyGrid.GetFocusedDataItem() as Status;
+        if (status == null)
+        {
+            ToastService.Warning("Please select a status to edit.");
+            return;
+        }
+
+        popup.Show(status);
+        await ClearSelection();
+    }
+
+    private async Task OnDelete(ToolbarItemClickEventArgs e)
+    {
+        if (SelectedStatuses == null || SelectedStatuses.Count == 0)
+        {
+            ToastService.Warning("Please select at least one status.");
+            return;
+        }
+
+        var confirm = await ConfirmDialogService.ShowAsync(
+            $"Are you sure you want to delete {SelectedStatuses.Count} status(es)?");
+
+        if (!confirm)
+        {
+            await ClearSelection();
+            return;
+        }
+
+        try
+        {
+            LoadingService.Show("Deleting...");
+            int success = 0, fail = 0;
+
+            foreach (var item in SelectedStatuses.Cast<Status>())
+            {
+                var result = await StatusService.DeleteAsync(item.StatusId);
+                if (result) success++; else fail++;
+            }
+
+            if (success > 0)
+                ToastService.Success($"{success} Status deleted.");
+
+            if (fail > 0)
+                ToastService.Error($"{fail} Status failed to delete.");
+
+            await LoadStatusAsync();
+        }
+        finally
+        {
+            LoadingService.Hide();
+            await ClearSelection();
+        }
+    }
+
+    private async Task ClearSelection()
+    {
+        await Task.Delay(100);
+        MyGrid?.ClearSelection();
+        SelectedStatuses = new List<object>();
+        await InvokeAsync(StateHasChanged);
+    }
+}
