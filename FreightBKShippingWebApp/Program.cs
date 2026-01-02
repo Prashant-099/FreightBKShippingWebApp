@@ -80,6 +80,7 @@ builder.Services.AddScoped<BillService>();
 builder.Services.AddScoped<GridLayoutService>();
 builder.Services.AddScoped<EinvConfigService>();
 builder.Services.AddScoped<GstinService>();
+builder.Services.AddScoped<StatusService>();
 builder.Services.AddScoped<GstinAuthTokenService>();
 
 //pdfreder services

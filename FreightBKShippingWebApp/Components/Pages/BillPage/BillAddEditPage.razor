@@ -208,7 +208,7 @@ horizontalAlignment="HorizontalAlignment.Center"
                     ValueChanged="@((int voucherId) => OnvoucherChanged(EditModel, voucherId))"
                     ValueExpression="@( () => EditModel.BillVoucherId )"
                     SearchMode="ListSearchMode.AutoSearch"
-                    SearchFilterCondition="ListSearchFilterCondition.StartsWith"
+                    SearchFilterCondition="ListSearchFilterCondition.Contains"
                     ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" CssClass="editor-smooth" />
                 </ChildContent>
             </DxFormLayoutItem>
@@ -309,7 +309,11 @@ horizontalAlignment="HorizontalAlignment.Center"
                 <DxComboBox Data="@branchList"
                 TextFieldName="BranchName"
                 ValueFieldName="BranchId"
-                @bind-Value="EditModel.BillBranchId" />
+                @bind-Value="EditModel.BillBranchId"
+                                AllowUserInput="true"
+                                SearchMode="ListSearchMode.AutoSearch"
+                                SearchFilterCondition="ListSearchFilterCondition.Contains"
+                                ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
             </DxFormLayoutItem>
 
             <DxFormLayoutItem Caption="Is RCM Applicable" ColSpanMd="3">
