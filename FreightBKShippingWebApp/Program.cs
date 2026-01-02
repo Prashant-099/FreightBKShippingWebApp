@@ -93,7 +93,7 @@ builder.Services.AddScoped<FreightBKShippingWebApp.Services.PdfReaderAndHelperSe
 builder.Services.AddScoped<JobDataCreationService>();
 builder.Services.AddScoped<JobBuilderService>();
 
-//wpmail send dhruv
+//wpmail send dhruvadmina
 builder.Services.AddScoped<ChatwayService>();
 builder.Services.AddScoped<SendWpMailService>();
 builder.Services.AddScoped<WpMailConfigService>();

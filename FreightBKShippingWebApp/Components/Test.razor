@@ -1,0 +1,86 @@
+﻿@page "/Test"
+@using DevExpress.Blazor
+@using System.Linq
+
+<h3>Instant Salary Update in EditCell Mode</h3>
+
+<DxGrid Data="@employees"
+        KeyFieldName="Id"
+        EditMode="GridEditMode.EditCell"
+        EditModelSaving="OnEditModelSaving">
+
+    <Columns>
+        <DxGridDataColumn FieldName="Role" Caption="Role">
+            <CellEditTemplate Context="editContext">
+                @{
+                    var emp = (Employee)editContext.EditModel;
+                }
+                <DxComboBox Data="@roleList"
+                            TValue="string"
+                            TData="RoleInfo"
+                            Value="@emp.Role"
+                            ValueExpression="@(() => emp.Role)"
+                            TextFieldName="Role"
+                            ValueFieldName="Role"
+                            SearchMode="ListSearchMode.AutoSearch"
+                            ValueChanged="@((string newRole) => OnRoleChanged(emp, newRole))" />
+            </CellEditTemplate>
+        </DxGridDataColumn>
+
+        <DxGridDataColumn FieldName="Salary" Caption="Salary" />
+
+        <DxGridDataColumn FieldName="Col3" Caption="Col3" />
+        <DxGridDataColumn FieldName="Col4" Caption="Col4" />
+        <DxGridDataColumn FieldName="Col5" Caption="Col5" />
+    </Columns>
+</DxGrid>
+
+@code {
+    List<Employee> employees = new() {
+        new() { Id=1, Role="Junior", Salary=30000 },
+        new() { Id=2, Role="Mid", Salary=50000 },
+        new() { Id=3, Role="Senior", Salary=80000 },
+        new() { Id=4, Role="Lead", Salary=100000 },
+        new() { Id=5, Role="Manager", Salary=120000 },
+    };
+
+    List<RoleInfo> roleList = new() {
+        new() { Role="Junior", Salary=30000 },
+        new() { Role="Mid", Salary=50000 },
+        new() { Role="Senior", Salary=80000 },
+        new() { Role="Lead", Salary=100000 },
+        new() { Role="Manager", Salary=120000 },
+    };
+
+    private void OnRoleChanged(Employee emp, string newRole)
+    {
+        emp.Role = newRole;
+        var found = roleList.FirstOrDefault(r => r.Role == newRole);
+        if (found != null)
+        {
+            emp.Salary = found.Salary;
+        }
+        StateHasChanged();
+    }
+
+    void OnEditModelSaving(GridEditModelSavingEventArgs e)
+    {
+        e.CopyChangesToDataItem();
+    }
+
+    public class Employee
+    {
+        public int Id { get; set; }
+        public string Role { get; set; } = "";
+        public int Salary { get; set; }
+        public string Col3 { get; set; } = "";
+        public string Col4 { get; set; } = "";
+        public string Col5 { get; set; } = "";
+    }
+
+    public class RoleInfo
+    {
+        public string Role { get; set; } = "";
+        public int Salary { get; set; }
+    }
+}
