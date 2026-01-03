@@ -1,0 +1,3439 @@
+﻿@using FreightBKShippingWebApp.Components.Pages.Account
+@using FreightBKShippingWebApp.Components.Pages.ServicePage
+@using FreightBKShippingWebApp.Components.Pages.JOBpage
+@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Models
+@using FreightBKShippingWebApp.Services
+@using DevExpress.Blazor
+
+@inject BillService BillService
+@inject ToasteService ToastService
+@inject LoadingService LoadingService
+@inject VoucherService VoucherService
+@inject AccountService AccountService
+@inject LocationService LocationService
+@inject NotifyService NotifyService
+@inject CargoService CargoService
+@inject CurrencyService CurrencyService
+@inject VesselService VesselService
+@inject ServiceService ServiceService
+@inject UnitService UnitService
+@inject HsnSacService HsnSacService
+@inject GstSlabService GstSlabService
+@inject StateService StateService
+@inject CompanyService CompanyService
+@inject RateMasterService RateMasterService
+@inject YearStatechangeService YearStatechangeService
+@inject BranchService BranchService
+@inject JobService JobService
+@inject ReportDataService ReportDataService
+@inject ReportService ReportService
+@inject ConfirmationDialogService ConfirmDialogService
+@inject NavigationManager Navigation
+@inject GridLayoutService GridLayoutService
+
+<style>
+    /* ========== MOBILE GRID FIX ========== */
+
+    /* Grid wrapper - FORCE horizontal scroll */
+    .bill-grid-wrapper {
+        width: 100%;
+        overflow-x: auto !important;
+        overflow-y: visible;
+        -webkit-overflow-scrolling: touch; /* iOS smooth scroll */
+        position: relative;
+    }
+
+        /* Force grid minimum width */
+        .bill-grid-wrapper .dxbl-grid {
+            min-width: 1800px !important; /* Total column width */
+            width: max-content !important;
+        }
+
+        /* Prevent column shrinking */
+        .bill-grid-wrapper .dxbl-grid-table {
+            table-layout: auto !important;
+            width: 100% !important;
+        }
+
+    /* Fixed height with internal scroll */
+    .fixed-height-grid {
+        height: 300px;
+        overflow-y: auto !important;
+    }
+
+    /* ========== MOBILE RESPONSIVE ========== */
+    @@media (max-width: 768px) {
+        /* Reduce grid height on mobile */
+        .fixed-height-grid
+
+    {
+        height: 220px !important;
+    }
+
+    /* Popup adjustments */
+    .dx-popup-content {
+        overflow-x: auto !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch;
+        padding: 10px !important;
+    }
+
+    /* CRITICAL: Remove any max-width constraints */
+    .dxbl-grid-container,
+    .dxbl-grid-content,
+    .dxbl-grid-data-area {
+        max-width: none !important;
+        overflow-x: visible !important;
+    }
+
+    /* Ensure grid wrapper takes full scrollable width */
+    .bill-grid-wrapper {
+        margin: 0 -10px; /* Compensate popup padding */
+        padding: 0 10px;
+    }
+    /* ============================ */
+       
+
+    /* ================ */
+    /* Toolbar mobile wrap */
+    .dx-toolbar {
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+        /* Make toolbar buttons smaller on mobile */
+        .dx-toolbar .dx-button {
+            min-width: 40px;
+            padding: 6px;
+        }
+
+    }
+
+    /* ========== EXISTING STYLES (keep these) ========== */
+
+    .layout-combobox {
+        border-radius: 6px;
+        width: 185px;
+    }
+
+    .modal-xl {
+        max-width: 900px;
+    }
+
+    .service-plus-button {
+        font-size: 0.9rem;
+        width: 28px;
+        height: 28px;
+        padding: 0;
+        border-radius: 50%;
+        line-height: 26px;
+        text-align: center;
+        font-weight: bold;
+        background-color: #7976ff;
+        color: white;
+        box-shadow: 0 0 3px rgba(0,0,0,0.2);
+        border: none;
+        cursor: pointer;
+        flex-shrink: 0;
+    }
+
+        .service-plus-button:hover {
+            background-color: #5f5ce6;
+        }
+
+    .table-responsive {
+        border: 1px solid #dee2e6;
+        border-radius: 0.25rem;
+    }
+
+    .layout-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px;
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #dee2e6;
+    }
+
+        .layout-toolbar label {
+            font-weight: 600;
+            margin-right: 4px;
+        }
+
+    .grid-container {
+        background: #fff;
+        border-radius: 6px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        padding: 10px;
+    }
+
+    .action-buttons {
+        display: flex;
+        justify-content: flex-end;
+        gap: 6px;
+        margin-bottom: 8px;
+        margin-top: 8px;
+    }
+
+    .bill-footer {
+        background-color: #f5f8fb;
+        min-height: 48px;
+    }
+
+    .net-amount-box {
+        background-color: #e3fcef;
+        border-radius: 8px;
+        padding: 6px 10px;
+        font-weight: bold;
+    }
+
+    .net-amount-field {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #0a4b0a;
+        background-color: #d8f8e1 !important;
+        border: 2px solid #7dd87d;
+        border-radius: 6px;
+        text-align: right;
+    }
+
+    .jobdetails {
+        margin-top: 6px;
+    }
+
+    .jobdetailslabel {
+        padding-top: 6px;
+    }
+
+    /* Footer CSS */
+    /* Footer base - desktop same */
+    .my-footer {
+        position: sticky;
+        bottom: 0;
+        background: #f8f9fa;
+        padding: 12px;
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        z-index: 20;
+    }
+
+    /* Flex groups */
+    .footer-left,
+    .footer-right {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+
+    /* ================= MOBILE RESPONSIVE ================= */
+    @@media (max-width: 768px) {
+        .my-footer
+
+    {
+        flex-direction: column;
+        gap: 14px;
+        padding: 10px;
+    }
+
+    /* ComboBoxes full width */
+    .footer-left {
+        flex-direction: column;
+        width: 100%;
+    }
+
+        .footer-left .dxbl-combobox {
+            width: 100%;
+        }
+
+    /* Buttons wrap nicely */
+    .footer-right {
+        width: 100%;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+
+        .footer-right .dxbl-btn {
+            flex: 1 1 48%;
+            min-width: 140px;
+        }
+
+    }
+</style>
+
+<DxPopup @bind-Visible="Visible" 
+         ShowCloseButton="true" 
+         HeaderText="@Title" 
+         CloseOnOutsideClick="false" 
+         MaxWidth="1400"
+         Width="95vw"  
+         MaxHeight="90vh" 
+         horizontalAlignment="HorizontalAlignment.Center"
+         verticalAlignment="VerticalAlignment.Center" 
+         BodyCssClass="my-popup-body" 
+         ShowFooter="true" 
+         Scrollable="true"  
+         FooterCssClass="my-footer"
+     > 
+
+    <BodyContentTemplate Context="bdy">
+                    <EditForm Model="@EditModel" OnValidSubmit="OnSubmit" Context="cxbill" id="billForm">
+
+                    <DataAnnotationsValidator />
+                  @* <ValidationSummary /> *@
+
+                        <DxFormLayout>
+
+                                <DxFormLayoutItem Caption="Bill Type" ColSpanMd="3">
+                                    <ChildContent Context="ctx">
+                                        <DxComboBox TData="Voucher" TValue="int"
+                                        Data="@VoucherList"
+                                        TextFieldName="VoucherName"
+                                        ValueFieldName="VoucherId"
+                                        AllowUserInput="true"
+                                        ShowValidationIcon="true"
+                                        NullText="-- Select Account --"
+                                        Value="@EditModel.BillVoucherId"
+                                        ValueChanged="@((int voucherId) => OnvoucherChanged(EditModel, voucherId))"
+                                        ValueExpression="@( () => EditModel.BillVoucherId )"
+                                        SearchMode="ListSearchMode.AutoSearch"
+                                        SearchFilterCondition="ListSearchFilterCondition.StartsWith"
+                                        ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" CssClass="editor-smooth" />
+                                    </ChildContent>
+                                </DxFormLayoutItem>
+
+                                <DxFormLayoutItem Caption="Bill No" ColSpanMd="3">
+                                    <ChildContent Context="ctx">
+                                        <DxTextBox @bind-Text="EditModel.BillNo"  />
+                                    </ChildContent>
+                                </DxFormLayoutItem>
+                                <DxFormLayoutItem Caption="Bill Date" ColSpanMd="3">
+                                    <ChildContent Context="ctx">
+                                            <DxDateEdit @bind-Date="EditModel.BillDate" ShowValidationIcon="true" Format="dd-MM-yyyy" />
+                                    </ChildContent>
+                                </DxFormLayoutItem>
+                                <DxFormLayoutItem Caption="Bill Due Date" ColSpanMd="3">
+                                    <ChildContent Context="ctx">
+                                        <DxDateEdit @bind-Date="EditModel.BillDueDate" Format="dd-MM-yyyy" />
+                                    </ChildContent>
+                                </DxFormLayoutItem>
+                                <DxFormLayoutItem Caption="Job Type" ColSpanMd="3">
+                                    @* <div class="hsn-field-wrapper"> *@
+                                    <div style="position: relative; display: inline-block; width: 100%;">
+                                        <DxButton Click="@ShowJobPopup"
+                                        Text="+"
+                                        CssClass="custom-plus-button" />
+                                        <DxComboBox Data="@JobTypeList"
+                                        TextFieldName="Text"
+                                        ValueFieldName="Value"
+                                        ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                        AllowUserInput="true"
+                                        SearchMode="ListSearchMode.AutoSearch" SearchFilterCondition="ListSearchFilterCondition.StartsWith"
+                                        Value="@EditModel.BillJobType"
+                                        ValueChanged="@((string jobtype) => OnJobTypeChanged(jobtype))"
+                                        ValueExpression="@(() => EditModel.BillJobType)" />
+
+                                    </div>
+                                </DxFormLayoutItem>
+                                <DxFormLayoutItem Caption="Job No" ColSpanMd="3">
+                                    <DxComboBox Data="@FilteredJobList"
+                                    TextFieldName="JobNo"
+                                    ValueFieldName="JobNo"
+                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                    AllowUserInput="true"
+                                     ShowValidationIcon="true"
+                                    SearchMode="ListSearchMode.AutoSearch" SearchFilterCondition="ListSearchFilterCondition.StartsWith"
+                                    Value="@EditModel.BillJobNo"
+                                    ValueChanged="@((string jobno) => OnJobDetailsChanged(jobno))"
+                                    ValueExpression="@(() => EditModel.BillJobNo)"/>
+                                </DxFormLayoutItem>
+
+                                <DxFormLayoutItem Caption="Supply Type" ColSpanMd="3">
+                                    <DxComboBox Data="@SupplyTypeList"
+                                    @bind-Value="EditModel.BillSupplyType"
+                                    TextFieldName="Text"
+                                    ValueFieldName="Value"
+                                                    ShowValidationIcon="true"
+                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                    AllowUserInput="true"
+                                    SearchMode="ListSearchMode.AutoSearch" SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+                                </DxFormLayoutItem>
+                                <DxFormLayoutItem Caption="Place of Supply" ColSpanMd="3">
+
+                                    <DxComboBox TData="State" TValue="int"
+                                    Data="@stateList"
+                                    TextFieldName="StateName"
+                                    ValueFieldName="StateId"
+                                    ClearButtonVisible="true"
+                                    AllowUserInput="true"
+
+                                    NullText="-- Select POS --"
+                                    @bind-Value="EditModel.BillPlaceOfSupply"
+                                    SearchMode="ListSearchMode.AutoSearch"
+                                    SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+                                </DxFormLayoutItem>
+                                <DxFormLayoutItem Caption="Party Name" ColSpanMd="6">
+
+                                    @* <ChildContent Context="ctx" > *@
+                                    @* <div class="hsn-field-wrapper"> *@
+                                    <div style="position: relative; display: inline-block; width: 100%;">
+                                        <DxButton Click="@ShowAccountPopup"
+                                        Text="+"
+                                        CssClass="custom-plus-button" />
+                                        <DxComboBox TData="Account" TValue="int"
+                                        Data="@AccountList"
+                                        TextFieldName="AccountName"
+                                        ValueFieldName="AccountId"
+                    
+                                        AllowUserInput="false"
+                                        NullText="-- Select Account --"
+                                        @bind-Value="EditModel.BillPartyId"
+                                        SearchMode="ListSearchMode.AutoSearch"
+                                        SearchFilterCondition="ListSearchFilterCondition.StartsWith" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+
+                                    </div>
+                                    @* </ChildContent> *@
+                                </DxFormLayoutItem>
+                                <DxFormLayoutItem Caption="Branch" ColSpanMd="3">
+                                    <DxComboBox Data="@branchList"
+                                    TextFieldName="BranchName"
+                                    ValueFieldName="BranchId"
+                                    @bind-Value="EditModel.BillBranchId" />
+                                </DxFormLayoutItem>
+
+                                <DxFormLayoutItem Caption="Is RCM Applicable" ColSpanMd="3">
+                                    <DxCheckBox Checked="@EditModel.BillIsRcm"
+                                    CheckedChanged="@((bool isChecked) => ApplyRcmLogic(isChecked))" CheckedExpression="() => EditModel.BillIsRcm" />
+                                </DxFormLayoutItem>
+
+                        </DxFormLayout>
+
+                        <DxFormLayout>                         
+                            <DxFormLayoutTabPages>
+                             
+                                <DxFormLayoutTabPage Caption="Service Details">
+
+                                        @* 
+                                    <div class="grid-container">
+                                        <!-- Action Buttons Row -->
+                                        <div class="action-buttons">
+                                            <button type="button"
+                                                    class="btn btn-primary btn-sm"
+                                                    @onclick="AddNewDetailRow">
+                                                <i class="bi bi-plus"></i> Add Row
+                                            </button>
+                                            <button type="button"
+                                                    class="btn btn-secondary btn-sm"
+                                                    @onclick="ClearAllRows">
+                                                <i class="bi bi-trash"></i> Clear All
+                                            </button>
+                                        </div>
+
+
+                                                    <DxGrid Data="@BillDetails"
+                                                        TItem="BillDetails"
+                                                @ref="DetailGrid"
+                                                KeyFieldName="SNo"
+                                                EditMode="GridEditMode.EditCell"
+                                                ShowAddNewButton="false"
+                                                EditNewRowPosition="GridEditNewRowPosition.Top"
+                                                EditOnKeyPress="true"
+                                                PageSize="20">
+
+                                            <Columns>
+                                                <!-- Serial Number -->
+                                                <DxGridDataColumn FieldName="SNo"
+                                                                  Caption="SNo"
+                                                                  Width="60px" />
+
+                                                <!-- Action Buttons Column -->
+                                                <DxGridCommandColumn Width="120px">
+                                                    <HeaderCaptionTemplate>Actions</HeaderCaptionTemplate>
+                                                    <CellDisplayTemplate>
+                                                        @{
+                                                                        var rowIndex = BillDetails.FindIndex(x => x.SNo == ((BillDetail)context.DataItem).SNo);
+                                                        }
+                                                        <div class="btn-group btn-group-sm">
+                                                            <button type="button"
+                                                                    class="btn btn-success btn-sm btn-action"
+                                                                    @onclick="() => AddRowAfter(rowIndex)"
+                                                                    title="Add Row">
+                                                                <i class="bi bi-plus"></i>
+                                                            </button>
+                                                            <button type="button"
+                                                                    class="btn btn-danger btn-sm btn-action"
+                                                                    @onclick="() => RemoveRow(rowIndex)"
+                                                                    title="Remove Row">
+                                                                <i class="bi bi-x"></i>
+                                                            </button>
+                                                            <button type="button"
+                                                                    class="btn btn-info btn-sm btn-action"
+                                                                    @onclick="() => SearchProduct(rowIndex)"
+                                                                    title="Search Product">
+                                                                <i class="bi bi-search"></i>
+                                                            </button>
+                                                        </div>
+                                                    </CellDisplayTemplate>
+                                                </DxGridCommandColumn>
+
+                                                <!-- Select Item -->
+                                                        <DxGridDataColumn FieldName="BillDetailProductId" Caption="Select Item" Width="200px">
+                                                    <EditSettings>
+                                                                <DxComboBoxSettings Data="@ServiceList"
+                                                                                    ValueFieldName="ServiceId"
+                                                                                    TextFieldName="ServiceName" />
+                                                    </EditSettings>
+                                                </DxGridDataColumn>
+
+
+
+
+                                            </Columns>
+
+                                            <!-- Summary Row -->
+                                            <TotalSummary>
+                                                @* <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum"
+                                                                   FieldName="Quantity"
+                                                                   DisplayText="Total Qty: {0:N2}" />
+                                                <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum"
+                                                                   FieldName="Amount"
+                                                                   DisplayText="Total: ₹{0:N2}" />
+                                                <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum"
+                                                                   FieldName="FinalAmount"
+                                                                   DisplayText="Net Total: ₹{0:N2}" />
+                                            </TotalSummary>
+
+                                        </DxGrid>
+                                        </div> *@
+
+                        <div class="bill-grid-wrapper">
+                            <DxGrid Data="@BillDetails.OrderBy(x => x.BillDetailSno)"
+                                    TItem="BillDetail"
+                                    @ref="DetailGrid"
+                                    KeyFieldName="BillDetailSno"
+                                    EditMode="GridEditMode.EditCell"
+                                    EditOnKeyPress="true"
+                                    ShowAddNewButton="false"
+                                    EditModelSaving="Grid_EditModelSaving"
+                                    CustomizeElement="Grid_CustomizeElement"
+                                    CustomizeEditModel="Grid_CustomizeEditModel"
+                                    ShowFilterRow="false"
+                                    ShowGroupPanel="false"
+                                    ColumnResizeMode="GridColumnResizeMode.Disabled"
+                                    TextWrapEnabled="false"
+                                    ColumnResizing="Grid_ColumnResizing"
+                                    PageSize="10"
+                                    CssClass="fixed-height-grid mobile-grid" >
+
+                                            <ToolbarTemplate Context="gridToolbarContext">
+                                                <DxToolbar>
+
+                                                    <Items>
+                                                        <DxToolbarItem BeginGroup="true">
+                                                            <Template Context="groupActions">
+                                                                <div class="d-flex align-items-center gap-2">
+                                                                    <DxButton RenderStyle="ButtonRenderStyle.Success"
+                                                                    @onclick="New_Click">
+                                                                        <i class="bi bi-plus"></i>
+                                                                    </DxButton>
+                                                                    <DxButton RenderStyle="ButtonRenderStyle.Danger"
+                                                                    @onclick="Revert_Click">
+                                                                        <i class="bi bi-trash"></i>
+                                                                    </DxButton>
+                                                                    <DxButton RenderStyle="ButtonRenderStyle.Primary"
+                                                                    @onclick="ColumnChooserButton_Click">
+                                                                        <i class="bi bi-list-columns"></i>
+                                                                    </DxButton>
+                                                                    <DxButton RenderStyle="ButtonRenderStyle.Success"
+                                                                    @onclick="ShowServicePopup" CssClass="service-plus-button">
+                                                                        <i class="bi bi-plus"></i>
+                                                                    </DxButton>
+                                                                </div>
+                                                            </Template>
+                                                        </DxToolbarItem>
+                                                        @*  <DxToolbarItem Text="" IconCssClass="bi bi-plus" RenderStyle="ButtonRenderStyle.Success" Click="New_Click" />
+                                                        <DxToolbarItem Type="Spacer" />
+                                                        <DxToolbarItem Text="" IconCssClass="bi bi-trash" RenderStyle="ButtonRenderStyle.Danger" Click="Revert_Click" />
+                                                        <DxToolbarItem Type="Spacer" />
+                                                        <DxToolbarItem Text="" RenderStyle="ButtonRenderStyle.Primary" IconCssClass="bi bi-list-columns" Click="ColumnChooserButton_Click" />
+                                                        <DxToolbarItem Type="Spacer" />
+                                                        <DxToolbarItem Text="" IconCssClass="bi bi-plus" CssClass="service-plus-button" Click="@ShowServicePopup" /> *@
+                                                            <DxToolbarItem BeginGroup="true" IconCssClass="bi bi-gear-wide-connected" Alignment="ToolbarItemAlignment.Right">
+                                                                <Template Context="Cyx">
+
+                                                                    <DxComboBox Data="@availableGridLayouts"
+                                                                                Value="@selectedGridLayoutId"
+                                                                                ValueExpression="@(() => selectedGridLayoutId)"
+                                                                                ValueChanged="@((int? value) => OnGridLayoutSelectedAsync(value))"
+                                                                                ValueFieldName="GridLayoutId"
+                                                                                TextFieldName="GridLayoutName"
+                                                                                NullText="Default View"
+                                                                                ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                                                                CssClass="layout-combobox" />
+
+                                                                </Template>
+
+                                                            </DxToolbarItem>
+                                                            <DxToolbarItem BeginGroup="true" Context="cfdr"
+                                                                           Alignment="ToolbarItemAlignment.Right"
+                                                                           RenderStyleMode="ToolbarItemRenderStyleMode.Contained"
+                                                                           RenderStyle="ButtonRenderStyle.Secondary"
+                                                                           IconCssClass="bi bi-gear-wide-connected">
+                                                                <Items>
+                                                                    <DxToolbarItem Text="Save Current Layout"
+                                                                                   RenderStyle="ButtonRenderStyle.Primary"
+                                                                                   IconCssClass="bi bi-floppy"
+                                                                                   Click="ShowSaveGridLayoutDialog" />
+
+                                                                    <DxToolbarItem Text="Create New Layout"
+                                                                                   RenderStyle="ButtonRenderStyle.Success"
+                                                                                   IconCssClass="bi bi-plus-square"
+                                                                                   Click="ShowNewGridLayoutDialog" />
+
+                                                                    @if (selectedGridLayoutId.HasValue)
+                                                                    {
+                                                                        <DxToolbarItem Text="Delete Current Layout"
+                                                                                       RenderStyle="ButtonRenderStyle.Danger"
+                                                                                       IconCssClass="bi bi-trash"
+                                                                                       Click="DeleteCurrentGridLayout" />
+                                                                    }
+
+                                                                </Items>
+                                                            </DxToolbarItem>
+
+
+
+
+
+                                                        </Items>
+                                                    </DxToolbar>
+                                            </ToolbarTemplate>
+
+                                            <Columns>
+
+                                                <!-- Action Buttons Column -->
+                                     <DxGridCommandColumn Width="70px" EditButtonVisible="false" FixedPosition="GridColumnFixedPosition.Left"
+                                                         CancelButtonVisible="false" 
+                                                 SaveButtonVisible="false" NewButtonVisible="false" Visible="@GetGridColumnVisibility("Actions")" >
+
+                                                    <HeaderCaptionTemplate>Actions</HeaderCaptionTemplate>
+
+                                                    <CellEditTemplate>
+                                                         @{
+                                                            var rowIndex = BillDetails.FindIndex(x => x.BillDetailSno == ((BillDetail)context.DataItem).BillDetailSno);
+                                                        }
+                                                        <div class="btn-group btn-group-sm">
+                                                            <button type="button"
+                                                            class="btn btn-danger btn-sm btn-action"
+                                                            @onclick="@(() => DeleteDataItem(context.DataItem))"
+                                                            title="Remove Row">
+                                                                <i class="bi bi-x"></i>
+                                                            </button>
+                                                        </div>
+                                                    </CellEditTemplate>
+
+                                                    <CellDisplayTemplate>
+                                                        @{
+                                                            var rowIndex = BillDetails.FindIndex(x => x.BillDetailSno == ((BillDetail)context.DataItem).BillDetailSno);
+                                                        }
+                                                        <div class="btn-group btn-group-sm">
+                                                            @* <button type="button"
+                                                                        class="btn btn-success btn-sm btn-action"
+                                                                        @onclick="() => AddRowAfter(rowIndex)"
+                                                                        title="Add Row">
+                                                                    <i class="bi bi-plus"></i>
+                                                                </button> *@
+                                                            <button type="button"
+                                                            class="btn btn-danger btn-sm btn-action"
+                                                            @onclick="@(() => DeleteDataItem(context.DataItem))"
+                                                            title="Remove Row">
+                                                                <i class="bi bi-x"></i>
+                                                            </button>
+                                                            @* <button type="button"
+                                                                        class="btn btn-info btn-sm btn-action"
+                                                                        @onclick="() => SearchProduct(rowIndex)"
+                                                                        title="Search Product">
+                                                                    <i class="bi bi-search"></i>
+                                                                </button> *@
+                                                        </div>
+                                                    </CellDisplayTemplate>
+                                                    <!-- Is RCM Applicable -->
+
+
+                                                </DxGridCommandColumn>
+
+                                                <DxGridDataColumn FieldName="BillDetailSno" Caption="SNo" Width="@GetGridColumnWidth("BillDetailSno")" ReadOnly="true" Visible="@GetGridColumnVisibility("BillDetailSno")" SortOrder="GridColumnSortOrder.Descending">
+                                                    <EditSettings>
+                                                        <DxSpinEditSettings ShowSpinButtons="false" />
+                                                    </EditSettings>
+                                                </DxGridDataColumn>
+
+                                                
+                                                <DxGridDataColumn TextAlignment="GridTextAlignment.Left" FieldName="BillDetailProductId" Caption="Service Name" Width="@GetGridColumnWidth("BillDetailProductId")" Visible="@GetGridColumnVisibility("BillDetailProductId")" >
+                                        <!-- ✅ CellDisplayTemplate - NO CASTING -->
+                                        <CellDisplayTemplate>
+                                            @{
+                                                var serviceId = (int)context.Value;
+                                                var selectedService = ServiceList.FirstOrDefault(s => s.ServiceId == serviceId);
+                                            }
+                                            <span>@(selectedService?.ServiceName ?? "")</span>
+                                        </CellDisplayTemplate>
+
+                                        <!-- ✅ CellEditTemplate -->
+                                        <CellEditTemplate Context="editcontext">
+                                            @{
+                                                var service = (BillDetail)editcontext.EditModel;
+                                            }
+                                            <DxComboBox Data="@ServiceList"
+                                                        TValue="int"
+                                                        TData="Service"
+                                                        Value="@service.BillDetailProductId"
+                                                        ValueExpression="@(() => service.BillDetailProductId)"
+                                                        TextFieldName="ServiceName"
+                                                        ValueFieldName="ServiceId"
+                                                        NullText="Select a Service"
+                                                        AllowUserInput="true"
+                                                        SearchFilterCondition="ListSearchFilterCondition.Contains" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                                        ValueChanged="@(newServiceId => OnServiceSelected(newServiceId, service))" />
+                                        </CellEditTemplate>
+                                                    @* <EditSettings>
+                                                        <DxComboBoxSettings Data="@ServiceList" NullText="Select a Service" 
+                                                                            TextFieldName="ServiceName"
+                                                                            ValueFieldName="ServiceId"
+                                                                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                                                            
+                                                        SearchMode="ListSearchMode.AutoSearch"
+                                                        SearchFilterCondition="ListSearchFilterCondition.Contains" />
+                                                    </EditSettings> *@
+                                        @* <EditSettings> added by dhruv new
+                                            <DxComboBox Data="@ServiceList" NullText="Select a Service" TData="Service" TValue="int"
+                                                        TextFieldName="ServiceName"
+                                                        ValueFieldName="ServiceId"
+                                                        ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                                        SearchMode="ListSearchMode.AutoSearch"
+                                                        SearchFilterCondition="ListSearchFilterCondition.Contains" />
+                                        </EditSettings> *@
+                                                    @*   <EditSettings>
+                                                        <DxComboBoxSettings />
+                                                    </EditSettings> *@
+
+
+                                                  @*     <CellEditTemplate Context="cell">
+                                                        @{
+                                                            var item = (BillDetail)cell.DataItem;
+                                                        }
+                                                        <DxComboBox TData="Service" TValue="int"
+                                                                    Data="@ServiceList"
+                                                                    TextFieldName="ServiceName"
+                                                                    ValueFieldName="ServiceId"
+                                                                    Width="100%"
+                                                                    SearchMode="ListSearchMode.AutoSearch"
+                                                                    SearchFilterCondition="ListSearchFilterCondition.StartsWith"
+                                                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                                                    Value="@item.BillDetailProductId"
+                                                                    ValueExpression="@( () =>item.BillDetailProductId )"
+                                                                    ValueChanged="@((int newVal) => OnServiceSelected(newVal, item ))" />
+                                                    </CellEditTemplate>
+                     *@
+                                                    <!-- Toolbar / Layout selector combo: make ValueChanged use discard assignment -->
+                                                    @* 
+                                                    Data="@VoucherList"
+                                                    TextFieldName="VoucherName"
+                                                    ValueFieldName="VoucherId"
+                                                    AllowUserInput="true"
+                                                    NullText="-- Select Account --"
+                                                    Value="@EditModel.BillVoucherId"
+                                                    ValueChanged="@((int voucherId) => OnvoucherChanged(EditModel, voucherId))"
+                                                    ValueExpression="@( () => EditModel.BillVoucherId )"
+                                                    SearchMode="ListSearchMode.AutoSearch"
+                                                    SearchFilterCondition="ListSearchFilterCondition.StartsWith"
+                                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />*@
+
+
+                                                </DxGridDataColumn>
+                                                <DxGridDataColumn FieldName="BillDetailRemarks" Caption="Desc." Width="@GetGridColumnWidth("BillDetailRemarks")" Visible="@GetGridColumnVisibility("BillDetailRemarks")" />
+                                                <DxGridDataColumn FieldName="BillDetailHsnCode" Caption="SAC" Width="@GetGridColumnWidth("BillDetailHsnCode")" ReadOnly="true" Visible="@GetGridColumnVisibility("BillDetailHsnCode")" />
+                                                <DxGridDataColumn FieldName="BillDetailUnit" Caption="Unit" Width="@GetGridColumnWidth("BillDetailUnit")" ReadOnly="true" Visible="@GetGridColumnVisibility("BillDetailUnit")" />
+                                                <DxGridDataColumn FieldName="BillDetailRate" Caption="Rate" Width="@GetGridColumnWidth("BillDetailRate")" Visible="@GetGridColumnVisibility("BillDetailRate")">
+                                                    <EditSettings>
+                                                        <DxSpinEditSettings ShowSpinButtons="false" />
+                                                    </EditSettings>
+                                                </DxGridDataColumn>
+                                                <DxGridDataColumn FieldName="BillDetailQty" Caption="Qty" Width="@GetGridColumnWidth("BillDetailQty")" Visible="@GetGridColumnVisibility("BillDetailQty")">
+                                                    <EditSettings>
+                                                        <DxSpinEditSettings ShowSpinButtons="false" />
+                                                    </EditSettings>
+                                                </DxGridDataColumn>
+                                                <DxGridDataColumn FieldName="BillDetailAmount" Caption="Amount" Width="@GetGridColumnWidth("BillDetailAmount")" ReadOnly="true" Visible="@GetGridColumnVisibility("BillDetailAmount")">
+                                                    <EditSettings>
+                                                        <DxSpinEditSettings ShowSpinButtons="false" />
+                                                    </EditSettings>
+                                                </DxGridDataColumn>
+                                                <DxGridDataColumn FieldName="BillDetailExchRate" Caption="Ex. Rate" Width="@GetGridColumnWidth("BillDetailExchRate")" Visible="@GetGridColumnVisibility("BillDetailExchRate")">
+                                                    <EditSettings>
+                                                        <DxSpinEditSettings ShowSpinButtons="false" />
+                                                    </EditSettings>
+                                                </DxGridDataColumn>
+
+                                                <DxGridDataColumn FieldName="BillDetailCurrencyId" Caption="Curr." Width="@GetGridColumnWidth("BillDetailCurrencyId")" Visible="@GetGridColumnVisibility("BillDetailCurrencyId")">
+                                                    <EditSettings>
+                                                        <DxComboBoxSettings Data="@CurrList"
+                                                        TextFieldName="CurrencySymbol"
+                                                        ValueFieldName="CurrencyId" />
+                                                    </EditSettings>
+                                                </DxGridDataColumn>
+                                                <DxGridDataColumn FieldName="BillDetailExtraChrg" Caption="Extra" Width="@GetGridColumnWidth("BillDetailExtraChrg")" Visible="@GetGridColumnVisibility("BillDetailExtraChrg")">
+                                                    <EditSettings>
+                                                        <DxSpinEditSettings ShowSpinButtons="false" />
+                                                    </EditSettings>
+                                                </DxGridDataColumn>
+                                                <DxGridDataColumn FieldName="BillDetailTaxableAmt" Caption="Taxable" Width="@GetGridColumnWidth("BillDetailTaxableAmt")" Visible="@GetGridColumnVisibility("BillDetailTaxableAmt")">
+                                                    <EditSettings>
+                                                        <DxSpinEditSettings ShowSpinButtons="false" />
+                                                    </EditSettings>
+                                                </DxGridDataColumn>
+                                                <DxGridDataColumn FieldName="BillDetailSlabId" Caption="Tax Code" Width="@GetGridColumnWidth("BillDetailSlabId")" Visible="@GetGridColumnVisibility("BillDetailSlabId")" />
+                                                <DxGridDataColumn FieldName="BillDetailIgstPer" Caption="IGST %" Width="@GetGridColumnWidth("BillDetailIgstPer")" Visible="@GetGridColumnVisibility("BillDetailIgstPer")">
+                                                    <EditSettings>
+                                                        <DxSpinEditSettings ShowSpinButtons="false" />
+                                                    </EditSettings>
+                                                </DxGridDataColumn>
+                                                <DxGridDataColumn FieldName="BillDetailIgst" Caption="IGST" Width="@GetGridColumnWidth("BillDetailIgst")" Visible="@GetGridColumnVisibility("BillDetailIgst")">
+                                                    <EditSettings>
+                                                        <DxSpinEditSettings ShowSpinButtons="false" />
+                                                    </EditSettings>
+                                                </DxGridDataColumn>
+                                                <DxGridDataColumn FieldName="BillDetailCgstPer" Caption="CGST %" Width="@GetGridColumnWidth("BillDetailCgstPer")" Visible="@GetGridColumnVisibility("BillDetailCgstPer")">
+                                                    <EditSettings>
+                                                        <DxSpinEditSettings ShowSpinButtons="false" />
+                                                    </EditSettings>
+                                                </DxGridDataColumn>
+                                                <DxGridDataColumn FieldName="BillDetailCgst" Caption="CGST" Width="@GetGridColumnWidth("BillDetailCgst")" Visible="@GetGridColumnVisibility("BillDetailCgst")">
+                                                    <EditSettings>
+                                                        <DxSpinEditSettings ShowSpinButtons="false" />
+                                                    </EditSettings>
+                                                </DxGridDataColumn>
+                                                <DxGridDataColumn FieldName="BillDetailSgstPer" Caption="SGST %" Width="@GetGridColumnWidth("BillDetailSgstPer")" Visible="@GetGridColumnVisibility("BillDetailSgstPer")">
+                                                    <EditSettings>
+                                                        <DxSpinEditSettings ShowSpinButtons="false" />
+                                                    </EditSettings>
+                                                </DxGridDataColumn>
+                                                <DxGridDataColumn FieldName="BillDetailSgst" Caption="SGST" Width="@GetGridColumnWidth("BillDetailSgst")" Visible="@GetGridColumnVisibility("BillDetailSgst")">
+                                                    <EditSettings>
+                                                        <DxSpinEditSettings ShowSpinButtons="false" />
+                                                    </EditSettings>
+                                                </DxGridDataColumn>
+                                                <DxGridDataColumn FieldName="BillDetailTotal" Caption="Total" ReadOnly="true">
+                                                    <EditSettings>
+                                                        <DxSpinEditSettings ShowSpinButtons="false" />
+                                                    </EditSettings>
+                                                </DxGridDataColumn>
+
+
+                                            </Columns>
+
+                                            <TotalSummary>
+                                                    <DxGridSummaryItem FieldName="BillDetailTaxableAmt" SummaryType="GridSummaryItemType.Sum" DisplayText="Total: {0:N2}" />
+                                                <DxGridSummaryItem FieldName="BillDetailAmount" SummaryType="GridSummaryItemType.Sum" DisplayText="Total: {0:N2}" />
+                                                <DxGridSummaryItem FieldName="BillDetailIgst" SummaryType="GridSummaryItemType.Sum" />
+                                                <DxGridSummaryItem FieldName="BillDetailCgst" SummaryType="GridSummaryItemType.Sum" />
+                                                <DxGridSummaryItem FieldName="BillDetailSgst" SummaryType="GridSummaryItemType.Sum" />
+                                                <DxGridSummaryItem FieldName="BillDetailTotal" SummaryType="GridSummaryItemType.Sum" DisplayText="Grand Total: {0:N2}" />
+
+                                            </TotalSummary>
+                                        
+                                        
+                                        </DxGrid>
+
+                                     </div>
+                                @* <div class="mt-2 d-flex justify-content-between align-items-center border-top pt-2">
+                                        <div class="w-75">xccccccccccc 
+                                            <label>Remarks</label>
+                                            <DxTextBox @bind-Text="EditModel.BillRemarks" Width="100%" />
+
+                                        </div>
+                                        <div class="text-end pe-3">
+                                        <label >Branch</label>
+                                        <DxComboBox Data="@branchList"
+                                                    TextFieldName="BranchName"
+                                                    ValueFieldName="BranchId"
+                                                    @bind-Value="EditModel.BillBranchId"></DxComboBox>
+
+                                        </div>
+                                    <div class="text-end pe-3">
+                                        <label>is RCM Applicable</label>
+                                        <DxCheckBox @bind-Checked="EditModel.BillIsRcm" Text="is RCM Applicable" />
+
+                                    </div>
+                                    <div class="text-end pe-3">
+                                        <label>is Round Off</label>
+                                        <DxCheckBox @bind-Checked="EditModel.BillIsRoundOff" Text="is Round Off" />
+
+                                    </div>
+                                    <div class="text-end pe-3">
+                                        <label class="fw-bold me-2">Total Amount:</label>
+                                        <DxSpinEdit @bind-Value="EditModel.BillNetAmount" ReadOnly="true" Format="N2" Width="150px" />
+                                    </div>
+                                    </div> *@
+                                    </DxFormLayoutTabPage>
+                            
+                               <DxFormLayoutTabPage Caption="Job Details">
+                                <DxFormLayout>
+
+
+                                    <DxFormLayoutItem Caption="POL" ColSpanMd="3" CssClass="jobdetailslabel">
+                                        <DxComboBox TData="Location" TValue="int"
+                                        Data="@locationList"
+                                        TextFieldName="LocationName"
+                                        ValueFieldName="LocationId"
+                                        AllowUserInput="true"
+                                        NullText="-- Select POL --"
+                                        @bind-Value="EditModel.BillPolId"
+                                        SearchMode="ListSearchMode.AutoSearch"
+                                        SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="jobdetails" />
+                                    </DxFormLayoutItem>
+
+                                    <DxFormLayoutItem Caption="Consignee" ColSpanMd="3" CssClass="jobdetailslabel">
+                                        <DxComboBox TData="Notify" TValue="int"
+                                        Data="@ConsigneeList"
+                                        TextFieldName="NotifyName"
+                                        ValueFieldName="NotifyId"
+                                        AllowUserInput="true"
+                                        NullText="-- Select Consignee --"
+                                        @bind-Value="EditModel.BillConsigneeId"
+                                        SearchMode="ListSearchMode.AutoSearch"
+                                        SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="jobdetails" />
+                                    </DxFormLayoutItem>
+                                    <DxFormLayoutItem Caption="SB/BE No" ColSpanMd="2" CssClass="jobdetailslabel">
+                                        <DxTextBox @bind-Text="EditModel.BillSbNo" CssClass="jobdetails" />
+                                    </DxFormLayoutItem>
+                                    <DxFormLayoutItem Caption="Date" ColSpanMd="2" CssClass="jobdetailslabel">
+                                        <DxDateEdit @bind-Date="EditModel.BillSbDate" CssClass="jobdetails" Format="dd-MM-yyyy" />
+                                    </DxFormLayoutItem>
+                                    <DxFormLayoutItem Caption="QTY" ColSpanMd="2" CssClass="jobdetailslabel">
+                                        <DxSpinEdit @bind-Value="EditModel.BillQty" ShowSpinButtons="false" CssClass="jobdetails" />
+                                    </DxFormLayoutItem>
+                                    <DxFormLayoutItem Caption="POD" ColSpanMd="3">
+                                        <DxComboBox TData="Location" TValue="int"
+                                        Data="@locationList"
+                                        TextFieldName="LocationName"
+                                        ValueFieldName="LocationId"
+                                        AllowUserInput="true"
+                                        NullText="-- Select POD --"
+                                        @bind-Value="EditModel.BillPodId"
+                                        SearchMode="ListSearchMode.AutoSearch"
+                                        SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+                                    </DxFormLayoutItem>
+                                    <DxFormLayoutItem Caption="Cargo" ColSpanMd="3">
+                                        <DxComboBox TData="Cargo" TValue="int"
+                                        Data="@CargoList"
+                                        TextFieldName="CargoName"
+                                        ValueFieldName="CargoId"
+                                        AllowUserInput="true"
+                                        NullText="-- Select Cargo --"
+                                        @bind-Value="EditModel.BillCargoId"
+                                        SearchMode="ListSearchMode.AutoSearch"
+                                        SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+                                    </DxFormLayoutItem>
+                                    <DxFormLayoutItem Caption="BL No" ColSpanMd="2">
+                                        <DxTextBox @bind-Text="EditModel.BillBlNo" />
+                                    </DxFormLayoutItem>
+                                    <DxFormLayoutItem Caption="Date" ColSpanMd="2">
+                                        <DxDateEdit @bind-Date="EditModel.BillBlDate" Format="dd-MM-yyyy" />
+                                    </DxFormLayoutItem>
+                                    <DxFormLayoutItem Caption="Gross WT" ColSpanMd="2">
+                                        <DxSpinEdit @bind-Value="EditModel.BillGrossWt" ShowSpinButtons="false" />
+                                    </DxFormLayoutItem>
+
+                                    <DxFormLayoutItem Caption="Vessel" ColSpanMd="3">
+                                        <DxComboBox TData="Vessel" TValue="int"
+                                        Data="@VesselList"
+                                        TextFieldName="VesselName"
+                                        ValueFieldName="VesselId"
+                                        AllowUserInput="true"
+                                        NullText="-- Select Vessel --"
+                                        @bind-Value="EditModel.BillVesselId"
+                                        SearchMode="ListSearchMode.AutoSearch"
+                                        SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+                                    </DxFormLayoutItem>
+                                    <DxFormLayoutItem Caption="Shipper" ColSpanMd="3">
+                                        <DxComboBox TData="Notify" TValue="int"
+                                        Data="@ShipperList"
+                                        TextFieldName="NotifyName"
+                                        ValueFieldName="NotifyId"
+                                        AllowUserInput="true"
+                                        NullText="-- Select Shipper --"
+                                        @bind-Value="EditModel.BillShipperId"
+                                        SearchMode="ListSearchMode.AutoSearch"
+                                        SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+                                    </DxFormLayoutItem>
+                                    <DxFormLayoutItem Caption="S.Inv." ColSpanMd="2">
+                                        <DxTextBox @bind-Text="EditModel.BillShipperInvNo" />
+                                    </DxFormLayoutItem>
+                                    <DxFormLayoutItem Caption="Date" ColSpanMd="2">
+                                        <DxDateEdit @bind-Date="EditModel.BillShipperInvDate" Format="dd-MM-yyyy" />
+                                    </DxFormLayoutItem>
+                                    <DxFormLayoutItem Caption="Net WT" ColSpanMd="2">
+                                        <DxSpinEdit @bind-Value="EditModel.BillNetWt" ShowSpinButtons="false" />
+                                    </DxFormLayoutItem>
+                                    <DxFormLayoutItem Caption="Line" ColSpanMd="3">
+                                        <DxComboBox TData="Notify" TValue="int"
+                                        Data="@LineList"
+                                        TextFieldName="NotifyName"
+                                        ValueFieldName="NotifyId"
+                                        AllowUserInput="true"
+                                        NullText="-- Select Line --"
+                                        @bind-Value="EditModel.BillLineId"
+                                        SearchMode="ListSearchMode.AutoSearch"
+                                        SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+                                    </DxFormLayoutItem>
+                                    <DxFormLayoutItem Caption="Cont 20 FT" ColSpanMd="2">
+                                        <DxTextBox @bind-Text="EditModel.Bill20Ft" />
+                                    </DxFormLayoutItem>
+                                    <DxFormLayoutItem Caption="Cont 40 FT" ColSpanMd="2">
+                                        <DxTextBox @bind-Text="EditModel.Bill40Ft" />
+                                    </DxFormLayoutItem>
+                                    <DxFormLayoutItem Caption="Ex. Rate" ColSpanMd="3">
+                                        <div class="d-flex gap-1">
+                                            <DxComboBox TData="Currency" TValue="int"
+                                            Data="@CurrList"
+                                            TextFieldName="CurrencyName"
+                                            ValueFieldName="CurrencyId"
+                                            AllowUserInput="true"
+                                            NullText="-- Select Currency --"
+                                            @bind-Value="EditModel.BillDefaultCurrencyId"
+                                            SearchMode="ListSearchMode.AutoSearch"
+                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+                                            <DxSpinEdit @bind-Value="EditModel.BillExchRate" ShowSpinButtons="false" />
+                                        </div>
+                                    </DxFormLayoutItem>
+
+                                    <DxFormLayoutItem Caption="HBL No" ColSpanMd="2">
+                                        <DxTextBox @bind-Text="EditModel.BillHblNo" />
+                                    </DxFormLayoutItem>
+                                    <DxFormLayoutItem Caption="CBM" ColSpanMd="2">
+                                        <DxSpinEdit @bind-Value="EditModel.BillCbmQty" ShowSpinButtons="false" />
+                                    </DxFormLayoutItem>
+
+                                </DxFormLayout>
+
+                            </DxFormLayoutTabPage>
+                            
+                            
+                                <DxFormLayoutTabPage Caption="Extra Details">
+                                <div class="popup-content-container">
+                                    <!-- Scrollable section -->
+                                    <div class="form-scroll-section">
+                                        <DxFormLayout>
+                                            <DxFormLayoutGroup Caption="Shipping Address" ColSpanMd="5">
+                                                <DxFormLayoutItem Caption="Party Name" ColSpanMd="12">
+                                                    <DxComboBox TData="Account" TValue="int"
+                                                    Data="@AccountList"
+                                                    TextFieldName="AccountName"
+                                                    ValueFieldName="AccountId"
+                                                    ClearButtonVisible="true"
+                                                    AllowUserInput="false"
+                                                    NullText="-- Select Account --"
+                                                    Value="@EditModel.BillShipPartyId"
+                                                    ValueChanged="@((int shippartyId) => shippartydetails(shippartyId))"
+                                                    ValueExpression="@( () => EditModel.BillShipPartyId )"
+                                                    SearchMode="ListSearchMode.AutoSearch"
+                                                    SearchFilterCondition="ListSearchFilterCondition.StartsWith" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                                                </DxFormLayoutItem>
+                                                <DxFormLayoutItem Caption="Address" ColSpanMd="12">
+                                                    <DxMemo @bind-Text="EditModel.BillAddress1" />
+                                                </DxFormLayoutItem>
+
+
+                                                <DxFormLayoutItem Caption="Mob No." ColSpanMd="6">
+                                                    <DxTextBox @bind-Text="EditModel.BillContactNo" />
+                                                </DxFormLayoutItem>
+                                                <DxFormLayoutItem Caption="GSTIN No." ColSpanMd="6">
+                                                    <DxTextBox @bind-Text="EditModel.BillGstNo" />
+                                                </DxFormLayoutItem>
+                                                <DxFormLayoutItem Caption="PIN" ColSpanMd="6">
+                                                    <DxTextBox @bind-Text="EditModel.BillPincode" />
+                                                </DxFormLayoutItem>
+                                                <DxFormLayoutItem Caption="City" ColSpanMd="6">
+                                                    <DxTextBox @bind-Text="EditModel.BillCity" />
+                                                </DxFormLayoutItem>
+                                                <DxFormLayoutItem Caption="State" ColSpanMd="12">
+                                                    <DxComboBox TData="State" TValue="int"
+                                                    Data="@stateList"
+                                                    TextFieldName="StateName"
+                                                    ValueFieldName="StateId"
+                                                    AllowUserInput="true"
+                                                    NullText="-- Select POS --"
+                                                    @bind-Value="EditModel.BillStateId"
+                                                    SearchMode="ListSearchMode.AutoSearch"
+                                                    SearchFilterCondition="ListSearchFilterCondition.StartsWith"
+                                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                                                </DxFormLayoutItem>
+
+                                            </DxFormLayoutGroup>
+                                            <DxFormLayoutGroup Caption="Custom  Field" ColSpanMd="3">
+                                                <DxFormLayoutItem Caption="ETD" ColSpanMd="12">
+                                                    <DxTextBox @bind-Text="EditModel.BillCust1" />
+                                                </DxFormLayoutItem>
+
+                                                <DxFormLayoutItem Caption="ETA" ColSpanMd="12">
+                                                    <DxTextBox @bind-Text="EditModel.BillCust2" />
+                                                </DxFormLayoutItem>
+
+                                                <DxFormLayoutItem Caption="Job no(Manual)" ColSpanMd="12">
+                                                    <DxTextBox @bind-Text="EditModel.BillCust3" />
+                                                </DxFormLayoutItem>
+
+                                            </DxFormLayoutGroup>
+
+
+                                            <DxFormLayoutGroup Caption="E-Invoice Info" ColSpanMd="4">
+                                                <DxFormLayoutItem Caption="IRN No" ColSpanMd="12">
+                                                    <DxTextBox @bind-Text="EditModel.BillIrnNo" />
+                                                </DxFormLayoutItem>
+                                                <DxFormLayoutItem Caption="ACK No" ColSpanMd="12">
+                                                    <DxTextBox @bind-Text="EditModel.BillAckNo" />
+                                                </DxFormLayoutItem>
+                                                <DxFormLayoutItem Caption="ACK Date " ColSpanMd="12">
+                                                    <DxTextBox @bind-Text="EditModel.BillAckDate" />
+                                                </DxFormLayoutItem>
+
+
+                                            </DxFormLayoutGroup>
+
+
+                                        </DxFormLayout>
+
+
+                                        <DxFormLayoutItem Caption="Goods Description" ColSpanMd="12">
+                                            <DxMemo @bind-Text="EditModel.BillRemarksDefault" />
+                                        </DxFormLayoutItem>
+                                        <DxFormLayoutItem Caption="Container No. " ColSpanMd="12">
+                                            <DxMemo @bind-Text="EditModel.BillContainerNo" />
+                                        </DxFormLayoutItem>
+
+                                    </div>
+                                </div>
+                            </DxFormLayoutTabPage>
+
+                            </DxFormLayoutTabPages>
+
+                        </DxFormLayout>
+
+                             <DxFormLayout>
+
+            
+                                                <DxFormLayoutItem Caption="Remarks" ColSpanMd="4">
+
+                                                    <DxMemo @bind-Text="EditModel.BillRemarks" />
+                                                </DxFormLayoutItem>
+
+
+
+
+
+                                                <DxFormLayoutItem Caption="Is Round Off" ColSpanMd="4">
+                                                    <div class="d-flex gap-1">
+                                                        <DxCheckBox Checked="@EditModel.BillIsRoundOff"
+                                                        CheckedChanged="@((bool isChecked) => ApplyRoundOff(isChecked))" CheckedExpression="() => EditModel.BillIsRoundOff"/>
+                                                        <DxSpinEdit @bind-Value="EditModel.BillRoundAmt"
+                                                        ReadOnly="true"
+                                                        CssClass="ms-1"
+                                                        NullText="0.00"
+                                                        DisplayFormat="N2"
+                                                        ShowSpinButtons="false" />
+                                                  </div>
+                                                </DxFormLayoutItem>
+               
+                                                <DxFormLayoutItem Caption="Total Amount" ColSpanMd="4" CssClass="net-amount-box">
+
+                                                    <DxSpinEdit @bind-Value="EditModel.BillNetAmount"
+                                                    DisplayFormat="N3"
+                                                    ReadOnly="true"
+                                                    CssClass="net-amount-field"
+                                                    ShowSpinButtons="false" />
+                                                </DxFormLayoutItem>
+
+            
+
+
+
+
+
+       
+
+                             </DxFormLayout>
+
+        
+             
+                    </EditForm>
+
+
+    
+         
+    </BodyContentTemplate>
+
+      <FooterContentTemplate Context="ftr">
+        <div class="my-footer">
+
+            <!-- LEFT SIDE -->
+            <div class="footer-left">
+                <DxComboBox TData="Account" TValue="int" 
+                            Data="@BankList"
+                            TextFieldName="AccountName"
+                            ValueFieldName="AccountId"
+                            AllowUserInput="true"
+                            NullText="-- Select Bank --"
+                            @bind-Value="EditModel.BillBankId"
+                            SearchMode="ListSearchMode.AutoSearch"
+                            SearchFilterCondition="ListSearchFilterCondition.StartsWith"
+                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+
+                <DxComboBox TData="ReportData" TValue="int"
+                            Data="@ReportDataList"
+                            TextFieldName="FormatName"
+                            ValueFieldName="ReportDataId"
+                            AllowUserInput="true"
+                            NullText="-- Select Report --"
+                            @bind-Value="EditModel.BillReportId"
+                            SearchMode="ListSearchMode.AutoSearch"
+                            SearchFilterCondition="ListSearchFilterCondition.StartsWith"
+                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+            </div>
+
+            <!-- RIGHT SIDE -->
+            <div class="footer-right">
+                <DxButton Text="Save & Print"
+                          RenderStyle="ButtonRenderStyle.Warning"
+                          Click="@(() => _isPrint = true)"
+                          SubmitFormOnClick="true"
+                          Form="billForm"
+                          IconCssClass="bi bi-save" />
+
+                <DxButton Text="Copy"
+                          RenderStyle="ButtonRenderStyle.Info"
+                          Click="CopyDetails"
+                          IconCssClass="bi bi-copy" />
+
+                <DxButton Text="Save"
+                          RenderStyle="ButtonRenderStyle.Primary"
+                          Click="@(() => _isPrint = false)"
+                          SubmitFormOnClick="true"
+                          Form="billForm"
+                          IconCssClass="bi bi-save" />
+
+                <DxButton Text="Cancel"
+                          RenderStyle="ButtonRenderStyle.Danger"
+                          Click="Hide"
+                          IconCssClass="bi bi-x-circle" />
+            </div>
+
+        </div>
+    </FooterContentTemplate>  
+
+
+
+
+  
+   
+
+
+</DxPopup>
+
+
+<ConfirmationDialog />
+@if (showGridLayoutDialog)
+{
+    <div class="modal fade show d-block"
+         style="background-color: rgba(0, 0, 0, 0.5); z-index: 10000;"
+         @onclick="@(() => { })">
+        <div class="modal-dialog modal-xl" @onclick:stopPropagation="true">
+            <div class="modal-content">
+
+                <!-- Header -->
+                <div class="modal-header">
+                    <h5 class="modal-title">@gridLayoutDialogTitle</h5>
+                    <button type="button"
+                            class="btn-close"
+                            @onclick="CloseGridLayoutDialog"
+                            aria-label="Close"></button>
+                </div>
+
+                <!-- Body -->
+                <div class="modal-body">
+
+                    <!-- Layout Name -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Layout Name:</label>
+                        <input type="text"
+                               class="form-control"
+                               @bind="newGridLayoutName"
+                               @bind:event="oninput"
+                               placeholder="Enter layout name..."
+                               maxlength="100" />
+                    </div>
+
+                    <!-- Default Layout Checkbox -->
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input"
+                                   type="checkbox"
+                                   @bind="isDefaultGridLayout"
+                                   id="defaultGridLayoutCheck" />
+                            <label class="form-check-label" for="defaultGridLayoutCheck">
+                                Set as Default Layout
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Column Configuration -->
+                    <div class="mt-3">
+                        <label class="form-label fw-bold mb-2">Column Configuration:</label>
+                        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                            <table class="table table-sm table-bordered">
+                                <thead class="table-light sticky-top">
+                                    <tr>
+                                        <th style="width: 50px;">Visible</th>
+                                        <th style="width: 200px;">Column Name</th>
+                                        <th style="width: 150px;">Width (px)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var col in allGridColumns)
+                                    {
+                                        <tr>
+                                            <td class="text-center">
+                                                <input class="form-check-input"
+                                                       type="checkbox"
+                                                       @bind="col.Visible"
+                                                       id="gridcol_@col.FieldName" />
+                                            </td>
+                                            <td>
+                                                <label class="mb-0" for="gridcol_@col.FieldName">
+                                                    @col.Caption
+                                                </label>
+                                            </td>
+                                            <td>
+                                                <input type="number"
+                                                       class="form-control form-control-sm"
+                                                       @bind="col.Width"
+                                                       @bind:event="oninput"
+                                                       min="50"
+                                                       max="500"
+                                                       step="10"
+                                                       placeholder="Width" />
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Info Note -->
+                    <div class="alert alert-info mt-3">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>Note:</strong>
+                        Adjust column widths here manually. The widths will be saved and applied when you load this layout.
+                    </div>
+
+                </div>
+
+                <!-- Footer -->
+                <div class="modal-footer">
+                    <button type="button"
+                            class="btn btn-secondary"
+                            @onclick="CloseGridLayoutDialog">
+                        Cancel
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-primary"
+                            @onclick="SaveCurrentGridLayout">
+                        <i class="bi bi-floppy me-1"></i>
+                        @(isEditGridLayoutMode ? "Update" : "Create") Layout
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+}
+
+
+<AccountAddEditPage @ref="Accountpopup" OnSaved="RefreshList" />
+
+
+<ServiceAddEditPage @ref="Servicepopup" OnSaved="RefreshList" />
+
+<JobAddEditPage @ref="Jobpopup" JobType="@JobType" OnSaved="RefreshList" />
+
+@code {
+    // Auto-fill rate when product changes
+    // private void OnCellValueChanged(GridCellValueChangedEventArgs e)
+    // {
+    //     var item = e.DataItem as BillDetail;
+    //     if (e.Grid.Data == "BillDetailProductId")
+    //     {
+    //         var selectedService = ServiceList.FirstOrDefault(s => s.ServiceId == item.BillDetailProductId);
+    //         if (selectedService != null)
+    //         {
+    //             item.BillDetailStatus = true;
+    //             item.BillDetailHsnCode = selectedService.HsnName;
+    //         }
+    //     }
+
+    // }
+    private string JobType;
+    private bool _isPrint;
+
+    private async Task OnSubmit()
+    {
+        await HandleValidSubmit(_isPrint);
+    }
+    private void ServiceChanged(BillDetail e)
+    {
+
+        if (e.BillDetailProductId >0)
+        {
+            var selectedService = ServiceList.FirstOrDefault(s => s.ServiceId == e.BillDetailProductId);
+            if (selectedService != null)
+            {
+                e.BillDetailStatus = true;
+                e.BillDetailHsnCode = selectedService.HsnName;
+            }
+        }
+        DetailGrid.Reload();
+    }
+    // Grid Layout Management Variables
+    private List<GridLayoutDto> availableGridLayouts = [];
+    private int? selectedGridLayoutId;
+    private bool showGridLayoutDialog = false;
+    private string newGridLayoutName = "";
+    private string gridLayoutDialogTitle = "";
+    private bool isEditGridLayoutMode = false;
+    private bool isDefaultGridLayout = false;
+    private const string GRID_VOUCHER_TYPE = "BillDetail";
+
+    private List<GridColumnLayout> allGridColumns = [];
+    private List<GridColumnLayout> currentGridLayout = [];
+
+    private string ConvertNumberToWords(decimal number)
+    {
+        if (EditModel == null)
+            return string.Empty;
+
+        if (number == 0)
+        {
+            EditModel.BillAmountInWord = "Zero Rupees Only";
+            return EditModel.BillAmountInWord;
+        }
+
+        string[] unitsMap = { "Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen" };
+        string[] tensMap = { "Zero", "Ten", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety" };
+
+        string ConvertIntPart(long n)
+        {
+            if (n == 0)
+                return "";
+            if (n < 20)
+                return unitsMap[n];
+            if (n < 100)
+                return tensMap[n / 10] + (n % 10 > 0 ? " " + unitsMap[n % 10] : "");
+            if (n < 1000)
+                return unitsMap[n / 100] + " Hundred" + (n % 100 > 0 ? " and " + ConvertIntPart(n % 100) : "");
+            if (n < 100000)
+                return ConvertIntPart(n / 1000) + " Thousand" + (n % 1000 > 0 ? " " + ConvertIntPart(n % 1000) : "");
+            if (n < 10000000)
+                return ConvertIntPart(n / 100000) + " Lakh" + (n % 100000 > 0 ? " " + ConvertIntPart(n % 100000) : "");
+            return ConvertIntPart(n / 10000000) + " Crore" + (n % 10000000 > 0 ? " " + ConvertIntPart(n % 10000000) : "");
+        }
+
+        long intPart = (long)Math.Floor(number);
+        int decimalPart = (int)((number - intPart) * 100);
+
+        string words = ConvertIntPart(intPart) + " Rupees";
+        if (decimalPart > 0)
+            words += " and " + ConvertIntPart(decimalPart) + " Paise";
+
+        EditModel.BillAmountInWord = words + " Only";
+        return EditModel.BillAmountInWord;
+    }
+
+    // Keep ParseWidth helper for loading saved widths
+    private int ParseWidth(string width)
+    {
+        if (string.IsNullOrEmpty(width))
+            return 100;
+
+        // Remove "px" suffix if present
+        width = width.Replace("px", "").Trim();
+
+        if (int.TryParse(width, out int result))
+            return result;
+
+        return 100; // default
+    }
+
+    // Enhanced InitializeGridColumns with proper width values
+    private void InitializeGridColumns()
+    {
+        allGridColumns = new List<GridColumnLayout>
+    {
+        new() { FieldName = "Actions", Caption = "Actions", Visible = true, Width = 120, DisplayIndex = 0 },
+        new() { FieldName = "BillDetailSno", Caption = "BillDetailSno", Visible = true, Width = 60, DisplayIndex = 1 },
+        new() { FieldName = "BillDetailProductId", Caption = "Service Name", Visible = true, Width = 200, DisplayIndex = 2 },
+         new() { FieldName = "BillDetailRemarks", Caption = "Desc.", Visible = true, Width = 100, DisplayIndex = 3 },
+        new() { FieldName = "BillDetailHsnCode", Caption = "SAC", Visible = true, Width = 100, DisplayIndex = 4 },
+        new() { FieldName = "BillDetailUnit", Caption = "Unit", Visible = true, Width = 80, DisplayIndex = 5 },
+        new() { FieldName = "BillDetailRate", Caption = "Rate", Visible = true, Width = 100, DisplayIndex = 6 },
+        new() { FieldName = "BillDetailQty", Caption = "Qty", Visible = true, Width = 100, DisplayIndex = 7 },
+        new() { FieldName = "BillDetailAmount", Caption = "Amount", Visible = true, Width = 120, DisplayIndex = 8 },
+        new() { FieldName = "BillDetailExchRate", Caption = "Ex. Rate", Visible = true, Width = 100, DisplayIndex = 9 },
+        new() { FieldName = "BillDetailCurrencyId", Caption = "Curr.", Visible = true, Width = 80, DisplayIndex = 10 },
+         new() { FieldName = "BillDetailExtraChrg", Caption = "ExtraCharge", Visible = true, Width = 80, DisplayIndex = 11 },
+        new() { FieldName = "BillDetailTaxableAmt", Caption = "Taxable", Visible = true, Width = 100, DisplayIndex = 12 },
+        new() { FieldName = "BillDetailSlabId", Caption = "BillDetailSlabId", Visible = true, Width = 100, DisplayIndex = 13 },
+        new() { FieldName = "BillDetailIgstPer", Caption = "IGST %", Visible = true, Width = 80, DisplayIndex = 14 },
+        new() { FieldName = "BillDetailIgst", Caption = "IGST", Visible = true, Width = 80, DisplayIndex = 15 },
+        new() { FieldName = "BillDetailCgstPer", Caption = "CGST %", Visible = true, Width = 80, DisplayIndex = 16 },
+        new() { FieldName = "BillDetailCgst", Caption = "CGST", Visible = true, Width = 80, DisplayIndex = 17 },
+        new() { FieldName = "BillDetailSgstPer", Caption = "SGST %", Visible = true, Width = 80, DisplayIndex = 18 },
+        new() { FieldName = "BillDetailSgst", Caption = "SGST", Visible = true, Width = 80, DisplayIndex = 19 }
+        // new() { FieldName = "BillDetailTotal", Caption = "Total", Visible = true, Width = 120, DisplayIndex = 20 }
+    };
+        currentGridLayout = allGridColumns.Select(c => new GridColumnLayout
+        {
+            FieldName = c.FieldName,
+            Caption = c.Caption,
+            Visible = c.Visible,
+            Width = c.Width,
+            DisplayIndex = c.DisplayIndex
+        }).ToList();
+    }
+
+    // ======================Enhanced GetGridColumnWidth method - returns string for DevExpress==========================
+
+    private string GetGridColumnWidth(string fieldName)
+    {
+        if (currentGridLayout == null || !currentGridLayout.Any())
+        {
+            var defaultCol = allGridColumns.FirstOrDefault(x => x.FieldName == fieldName);
+            return $"{defaultCol?.Width ?? 100}px";
+        }
+
+        var col = currentGridLayout.FirstOrDefault(x => x.FieldName == fieldName);
+        return $"{col?.Width ?? 100}px";
+    }
+
+    private bool GetGridColumnVisibility(string fieldName)
+    {
+        if (currentGridLayout == null || !currentGridLayout.Any())
+        {
+            return true;
+        }
+
+        var col = currentGridLayout.FirstOrDefault(x => x.FieldName == fieldName);
+        return col?.Visible ?? true;
+    }
+
+    private async Task LoadAvailableGridLayouts()
+    {
+        availableGridLayouts = await GridLayoutService.GetLayoutsByVoucherTypeAsync(GRID_VOUCHER_TYPE);
+    }
+
+    private async Task LoadDefaultGridLayout()
+    {
+        var defaultLayout = await GridLayoutService.GetDefaultLayoutAsync(GRID_VOUCHER_TYPE);
+        if (defaultLayout != null)
+        {
+            selectedGridLayoutId = defaultLayout.GridLayoutId;
+            await ApplyGridLayout(defaultLayout);
+        }
+    }
+
+    // Fixed OnGridLayoutSelectedAsync
+    private async Task OnGridLayoutSelectedAsync(int? layoutId)
+    {
+        selectedGridLayoutId = layoutId;
+
+        if (layoutId.HasValue)
+        {
+            var layout = await GridLayoutService.GetByIdAsync(layoutId.Value);
+            if (layout != null)
+            {
+                await ApplyGridLayout(layout);
+            }
+        }
+        else
+        {
+            // Reset to default when cleared
+            InitializeGridColumns();
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    // Enhanced ApplyGridLayout
+    private async Task ApplyGridLayout(GridLayoutDto layout)
+    {
+        if (!string.IsNullOrEmpty(layout.GridLayoutData))
+        {
+            var savedLayout = GridLayoutService.DeserializeColumnLayout(layout.GridLayoutData);
+            if (savedLayout != null && savedLayout.Any())
+            {
+                // Update current layout with saved configuration
+                currentGridLayout = savedLayout.Select(s => new GridColumnLayout
+                {
+                    FieldName = s.FieldName,
+                    Caption = s.Caption,
+                    Visible = s.Visible,
+                    Width = s.Width,
+                    DisplayIndex = s.DisplayIndex
+                }).ToList();
+
+                // Sync with allGridColumns for dialog
+                foreach (var saved in savedLayout)
+                {
+                    var existing = allGridColumns.FirstOrDefault(x => x.FieldName == saved.FieldName);
+                    if (existing != null)
+                    {
+                        existing.Visible = saved.Visible;
+                        existing.Width = saved.Width;
+                        existing.DisplayIndex = saved.DisplayIndex;
+                    }
+                }
+
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+    }
+
+    private void ShowSaveGridLayoutDialog()
+    {
+        if (selectedGridLayoutId.HasValue)
+        {
+            var layout = availableGridLayouts.FirstOrDefault(x => x.GridLayoutId == selectedGridLayoutId.Value);
+            if (layout != null)
+            {
+                newGridLayoutName = layout.GridLayoutName ?? "";
+                isDefaultGridLayout = layout.GridLayoutDefault;
+                isEditGridLayoutMode = true;
+                gridLayoutDialogTitle = "Update Grid Layout";
+                showGridLayoutDialog = true;
+                return;
+            }
+        }
+
+        ShowNewGridLayoutDialog();
+    }
+
+    private void ShowNewGridLayoutDialog()
+    {
+        newGridLayoutName = "";
+        isDefaultGridLayout = false;
+        isEditGridLayoutMode = false;
+        gridLayoutDialogTitle = "Create New Grid Layout";
+        showGridLayoutDialog = true;
+    }
+
+    // Enhanced SaveCurrentGridLayout
+    private async Task SaveCurrentGridLayout()
+    {
+        if (string.IsNullOrWhiteSpace(newGridLayoutName))
+        {
+            ToastService.Warning("Please enter a layout name.");
+            return;
+        }
+
+
+        try
+        {
+            // Sync currentGridLayout with allGridColumns before saving
+            // This ensures any width changes from the dialog are captured
+            foreach (var col in allGridColumns)
+            {
+                var current = currentGridLayout.FirstOrDefault(c => c.FieldName == col.FieldName);
+                if (current != null)
+                {
+                    current.Visible = col.Visible;
+                    current.Width = col.Width;
+                    current.DisplayIndex = col.DisplayIndex;
+                }
+                else
+                {
+                    currentGridLayout.Add(new GridColumnLayout
+                    {
+                        FieldName = col.FieldName,
+                        Caption = col.Caption,
+                        Visible = col.Visible,
+                        Width = col.Width,
+                        DisplayIndex = col.DisplayIndex
+                    });
+                }
+            }
+
+            var configJson = GridLayoutService.SerializeColumnLayout(currentGridLayout);
+
+            bool success = false;
+
+            if (isEditGridLayoutMode && selectedGridLayoutId.HasValue)
+            {
+                // Update existing layout
+                var updateRequest = new SaveGridLayoutRequest
+                {
+                    GridLayoutName = newGridLayoutName,
+                    GridLayoutVoucherType = GRID_VOUCHER_TYPE,
+                    GridLayoutData = configJson,
+                    GridLayoutDefault = isDefaultGridLayout
+                };
+                success = await GridLayoutService.UpdateAsync(selectedGridLayoutId.Value, updateRequest);
+            }
+            else
+            {
+                // Create new layout
+                var newLayoutRequest = new SaveGridLayoutRequest
+                {
+                    GridLayoutName = newGridLayoutName,
+                    GridLayoutVoucherType = GRID_VOUCHER_TYPE,
+                    GridLayoutData = configJson,
+                    GridLayoutDefault = isDefaultGridLayout
+                };
+                var result = await GridLayoutService.CreateAsync(newLayoutRequest);
+                success = result;
+
+                if (success)
+                {
+                    // Reload to get the new layout ID
+                    await LoadAvailableGridLayouts();
+                    var createdLayout = availableGridLayouts.FirstOrDefault(l => l.GridLayoutName == newGridLayoutName);
+                    if (createdLayout != null)
+                        selectedGridLayoutId = createdLayout.GridLayoutId;
+                }
+            }
+
+            if (success)
+            {
+                ToastService.Success($"Grid layout {(isEditGridLayoutMode ? "updated" : "created")} successfully!");
+
+                // Reload layouts list
+                await LoadAvailableGridLayouts();
+
+                // If set as default, reload it
+                if (isDefaultGridLayout)
+                {
+                    await LoadDefaultGridLayout();
+                }
+
+                CloseGridLayoutDialog();
+                await InvokeAsync(StateHasChanged);
+            }
+            else
+            {
+                ToastService.Error($"Failed to {(isEditGridLayoutMode ? "update" : "create")} grid layout.");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Error saving layout: {ex.Message}");
+            Console.WriteLine($"Layout save error: {ex}");
+        }
+
+        {
+            LoadingService.Hide();
+        }
+    }
+
+    private async Task DeleteCurrentGridLayout()
+    {
+        if (!selectedGridLayoutId.HasValue) return;
+
+        var griddeleteconfirm = await ConfirmDialogService.ShowAsync(
+            "Are you sure you want to delete this grid layout?");
+
+        if (!griddeleteconfirm) return;
+
+
+        try
+        {
+            var success = await GridLayoutService.DeleteAsync(selectedGridLayoutId.Value);
+
+            if (success)
+            {
+                ToastService.Success("Grid layout deleted successfully!");
+
+                selectedGridLayoutId = null;
+                InitializeGridColumns();
+                currentGridLayout = allGridColumns.ToList();
+
+                await LoadAvailableGridLayouts();
+                await InvokeAsync(StateHasChanged);
+            }
+            else
+            {
+                ToastService.Error("Failed to delete grid layout.");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Error deleting layout: {ex.Message}");
+        }
+
+        {
+            LoadingService.Hide();
+        }
+    }
+
+    private void CloseGridLayoutDialog()
+    {
+        showGridLayoutDialog = false;
+        newGridLayoutName = "";
+        isDefaultGridLayout = false;
+        isEditGridLayoutMode = false;
+    }
+
+    //===========================================
+
+
+    // // Handle cell value changes, especially when service/product is selected
+    // void Grid_CellValueChanged(GridCellValueChangedEventArgs e)
+    // {
+    //     if (e == null) return;
+
+    //     var fieldName = e.Column?.FieldName;
+
+    //     // When the product id in a row changes, immediately update that row's amounts
+    //     if (string.Equals(fieldName, "BillDetailProductId", StringComparison.OrdinalIgnoreCase))
+    //     {
+    //         if (e.DataItem is BillDetail detail)
+    //         {
+    //             UpdateRowAmounts(detail);
+    //             StateHasChanged();
+    //         }
+    //     }
+    //     // Also handle changes to Qty, Rate, ExchRate, ExtraChrg fields
+    //     else if (fieldName == "BillDetailQty" ||
+    //              fieldName == "BillDetailRate" ||
+    //              fieldName == "BillDetailExchRate" ||
+    //              fieldName == "BillDetailExtraChrg")
+    //     {
+    //         if (e.DataItem is BillDetail detail)
+    //         {
+    //             UpdateRowAmounts(detail);
+    //             StateHasChanged();
+    //         }
+    //     }
+    // }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    // ============================================
+    // 🚀 OPTIMIZED VERSION - PROGRESSIVE LOADING
+    // ============================================
+
+    private AccountAddEditPage Accountpopup;
+    private JobAddEditPage Jobpopup;
+    private ServiceAddEditPage Servicepopup;
+
+    // Dropdown lists (same as before)
+    private List<Bill> bill = [];
+    private List<Voucher> VoucherList = new();
+    private List<Account> AccountList = new();
+    private List<State> stateList = new();
+    private List<Location> locationList = new();
+    private List<Notify> ConsigneeList = new();
+    private List<Notify> ShipperList = new();
+    private List<Notify> LineList = new();
+    private List<Cargo> CargoList = new();
+    private List<Vessel> VesselList = new();
+    private List<Currency> CurrList = new();
+    private List<Service> ServiceList = new();
+    private List<Unit> UnitList = new();
+    private List<HsnSac> HsnList = new();
+    private List<GstSlab> GstslabList = new();
+    private List<Company> CompanyList = new();
+    private List<State> StateList = new();
+    private List<RateMaster> RateMasterList = new();
+    private List<Branch> branchList = new();
+    private List<ReportData> ReportDataList = new();
+    private List<Account> BankList = new();
+    private List<Job> JobList = new();
+    private List<Job> FilteredJobList = new();
+
+    // ✅ Track loading states for UI feedback
+    private bool isCriticalDataLoaded = false;
+    private bool isBackgroundDataLoaded = false;
+    private Dictionary<string, bool> lazyLoadedData = new();
+
+    // ============================================
+    // 🎯 STAGE 1: Load ONLY Critical Data First
+    // ============================================
+    protected override async Task OnInitializedAsync()
+    {
+        InitializeGridColumns();
+        await LoadAvailableGridLayouts();
+        await LoadDefaultGridLayout();
+
+        // ✅ Load only what's needed to show the form
+        await LoadCriticalDataAsync();
+
+        // ✅ Load other data in background (non-blocking)
+        _ = LoadBackgroundDataAsync();
+    }
+
+    /// <summary>
+    /// STAGE 1: Load ONLY data needed to display the form immediately
+    /// This runs FIRST and FAST (2-4 API calls max)
+    /// </summary>
+    private async Task LoadCriticalDataAsync()
+    {
+        try
+        {
+            // ✅ Only load what's ABSOLUTELY needed for initial render
+            var jobTask = JobService.GetAllAsync();
+            var accountTask = AccountService.GetAllAsync();
+            var stateTask = StateService.GetStatesAsync();
+            var companyTask = CompanyService.GetAllAsync();
+            var branchtask = BranchService.GetAllAsync();
+            await Task.WhenAll(jobTask, accountTask, companyTask, stateTask, branchtask);
+
+            // Set critical data
+            JobList = jobTask.Result;
+            FilteredJobList = JobList;
+            branchList = branchtask.Result;
+            CompanyList = companyTask.Result;
+            var allAccounts = accountTask.Result;
+            AccountList = allAccounts.Where(a => a.AccountTypeId == 14 || a.AccountTypeId == 18).ToList();
+            BankList = allAccounts.Where(a => a.AccountTypeId == 10).ToList();
+
+            stateList = stateTask.Result;
+            StateList = stateTask.Result;
+
+            isCriticalDataLoaded = true;
+            StateHasChanged(); // ✅ Form can now render!
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error("Error loading critical data: " + ex.Message);
+            Console.WriteLine($"❌ LoadCriticalDataAsync error: {ex}");
+        }
+    }
+
+    // ============================================
+    // 🎯 STAGE 2: Load Background Data (Non-Blocking)
+    // ============================================
+    /// <summary>
+    /// STAGE 2: Load remaining dropdown data in BACKGROUND
+    /// User can already interact with form while this loads
+    /// </summary>
+    private async Task LoadBackgroundDataAsync()
+    {
+        try
+        {
+            // ✅ Load common dropdowns that might be used soon
+            var serviceTask = ServiceService.GetAllAsync();
+            var voucherTask = VoucherService.GetAllAsync();
+            var currTask = CurrencyService.GetAllAsync();
+            var unitTask = UnitService.GetAllAsync();
+            var hsnTask = HsnSacService.GetAllAsync();
+            var gstTask = GstSlabService.GetAllAsync();
+            // var notifyTask = NotifyService.GetAllAsync();
+            var rateTask = RateMasterService.GetAllAsync();
+
+            var reportTask = ReportDataService.GetAllAsync();
+            await Task.WhenAll(
+                serviceTask, voucherTask, currTask, unitTask,rateTask,
+                hsnTask, gstTask,   reportTask
+            );
+
+            // Assign results
+            RateMasterList = rateTask.Result;
+            ReportDataList  = reportTask.Result;
+
+            ServiceList = serviceTask.Result;
+            VoucherList = voucherTask.Result.Where(v =>
+        !string.IsNullOrWhiteSpace(v.VoucherGroup) &&
+        (
+            v.VoucherGroup.Trim().Equals("SALES", StringComparison.OrdinalIgnoreCase) ||
+            v.VoucherGroup.Trim().Equals("CREDIT NOTE", StringComparison.OrdinalIgnoreCase) ||
+            v.VoucherGroup.Trim().Equals("DEBIT NOTE", StringComparison.OrdinalIgnoreCase) ||
+            v.VoucherGroup.Trim().Equals("PURCHASE", StringComparison.OrdinalIgnoreCase)
+        ))
+    .ToList();
+            CurrList = currTask.Result;
+            UnitList = unitTask.Result;
+            HsnList = hsnTask.Result;
+            GstslabList = gstTask.Result;
+
+            // var allNotify = notifyTask.Result;
+            // ConsigneeList = allNotify.Where(n => n.NotifyType == "CONSIGNEE").ToList();
+            // ShipperList = allNotify.Where(n => n.NotifyType == "SHIPPER").ToList();
+            // LineList = allNotify.Where(n => n.NotifyType == "LINE").ToList();
+
+            isBackgroundDataLoaded = true;
+            StateHasChanged(); // ✅ Dropdowns now populated
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error("Error loading background data: " + ex.Message);
+            Console.WriteLine($"❌ LoadBackgroundDataAsync error: {ex}");
+        }
+    }
+
+    // ============================================
+    // 🎯 STAGE 3: Lazy Load (On-Demand Only)
+    // ============================================
+    /// <summary>
+    /// STAGE 3: Load data ONLY when user needs it
+    /// Example: Load Cargo list only when user clicks Cargo dropdown
+    /// </summary>
+    private async Task<List<Cargo>> GetCargoListAsync()
+    {
+        if (!lazyLoadedData.ContainsKey("Cargo"))
+        {
+            try
+            {
+                CargoList = await CargoService.GetAllAsync();
+                lazyLoadedData["Cargo"] = true;
+            }
+            catch (Exception ex)
+            {
+                ToastService.Error("Error loading cargo data: " + ex.Message);
+                CargoList = new List<Cargo>();
+            }
+        }
+        return CargoList;
+    }
+
+    private async Task<List<Vessel>> GetVesselListAsync()
+    {
+        if (!lazyLoadedData.ContainsKey("Vessel"))
+        {
+            try
+            {
+                VesselList = await VesselService.GetAllAsync();
+                lazyLoadedData["Vessel"] = true;
+            }
+            catch (Exception ex)
+            {
+                ToastService.Error("Error loading vessel data: " + ex.Message);
+                VesselList = new List<Vessel>();
+            }
+        }
+        return VesselList;
+    }
+
+    private async Task<List<Location>> GetLocationListAsync()
+    {
+        if (!lazyLoadedData.ContainsKey("Location"))
+        {
+            try
+            {
+                locationList = await LocationService.GetAllAsync();
+                lazyLoadedData["Location"] = true;
+            }
+            catch (Exception ex)
+            {
+                ToastService.Error("Error loading location data: " + ex.Message);
+                locationList = new List<Location>();
+            }
+        }
+        return locationList;
+    }
+
+    // private async Task<List<Company>> GetCompanyListAsync()
+    // {
+    //     if (!lazyLoadedData.ContainsKey("Company"))
+    //     {
+    //         try
+    //         {
+    //             CompanyList = await CompanyService.GetAllAsync();
+    //             lazyLoadedData["Company"] = true;
+    //         }
+    //         catch (Exception ex)
+    //         {
+    //             ToastService.Error("Error loading company data: " + ex.Message);
+    //             CompanyList = new List<Company>();
+    //         }
+    //     }
+    //     return CompanyList;
+    // }
+
+    private async Task<List<Branch>> GetBranchListAsync()
+    {
+        if (!lazyLoadedData.ContainsKey("Branch"))
+        {
+            try
+            {
+                branchList = await BranchService.GetAllAsync();
+                lazyLoadedData["Branch"] = true;
+            }
+            catch (Exception ex)
+            {
+                ToastService.Error("Error loading branch data: " + ex.Message);
+                branchList = new List<Branch>();
+            }
+        }
+        return branchList;
+    }
+
+    private async Task<List<RateMaster>> GetRateMasterListAsync()
+    {
+        if (!lazyLoadedData.ContainsKey("RateMaster"))
+        {
+            try
+            {
+                RateMasterList = await RateMasterService.GetAllAsync();
+                lazyLoadedData["RateMaster"] = true;
+            }
+            catch (Exception ex)
+            {
+                ToastService.Error("Error loading rate master data: " + ex.Message);
+                RateMasterList = new List<RateMaster>();
+            }
+        }
+        return RateMasterList;
+    }
+
+    private async Task<List<ReportData>> GetReportDataListAsync()
+    {
+        if (!lazyLoadedData.ContainsKey("ReportData"))
+        {
+            try
+            {
+                ReportDataList = await ReportDataService.GetAllAsync();
+                lazyLoadedData["ReportData"] = true;
+            }
+            catch (Exception ex)
+            {
+                ToastService.Error("Error loading report data: " + ex.Message);
+                ReportDataList = new List<ReportData>();
+            }
+        }
+        return ReportDataList;
+    }
+
+    // ============================================
+    // 🔄 Optimized RefreshList (Only refresh what changed)
+    // ============================================
+    private async Task RefreshList()
+    {
+        var jobTask = JobService.GetAllAsync();
+        var accountTask = AccountService.GetAllAsync();
+        var serviceTask = ServiceService.GetAllAsync();
+
+        await Task.WhenAll(jobTask, accountTask, serviceTask);
+
+        ServiceList = serviceTask.Result;
+
+        var allAccounts = accountTask.Result;
+        AccountList = allAccounts.Where(a => a.AccountTypeId == 14 || a.AccountTypeId == 18).ToList();
+        BankList = allAccounts.Where(a => a.AccountTypeId == 10).ToList();
+
+        JobList = jobTask.Result;
+        FilteredJobList = JobList;
+
+        StateHasChanged();
+    }
+
+    // ============================================
+    // 📝 Show Method (Remains mostly the same)
+    // ============================================
+    public async void Show(Bill bill)
+    {
+        // ✅ Show loading only if critical data not loaded
+        if (!isCriticalDataLoaded)
+        {
+            LoadingService.Show("Loading form...");
+            await LoadCriticalDataAsync();
+            LoadingService.Hide();
+        }
+        // Create EditContext when showing the form
+        // editContext = new EditContext(EditModel);
+        if (bill?.BillId > 0)
+        {
+            EditModel = bill;
+            OnJobTypeChanged(EditModel.BillJobType);
+
+            BillDetails = bill.BillDetails?
+                .Select(d => CloneBillDetail(d))
+                .OrderBy(d => d.BillDetailId)
+                .ToList() ?? new List<BillDetail>();
+
+            nextSNo = BillDetails.Any() ? BillDetails.Max(d => d.BillDetailSno) + 1 : 1;
+
+            int existingRowCount = BillDetails.Count;
+            int rowsToAdd = Math.Max(0, 5 - existingRowCount);
+
+            for (int i = 0; i < rowsToAdd; i++)
+            {
+                BillDetails.Add(new BillDetail
+                    {
+                        BillDetailSno = nextSNo++,
+                        BillDetailId = 0,
+                        BillDetailExchRate = EditModel?.BillExchRate ?? 1,
+                        BillDetailCurrencyId = EditModel.BillDefaultCurrencyId,
+                        BillDetailQty = 1,
+                        BillDetailRate = 0,
+                        BillDetailAmount = 0,
+                        BillDetailTaxableAmt = 0,
+                        BillDetailGstPer = 0,
+                        BillDetailCgstPer = 0,
+                        BillDetailSgstPer = 0,
+                        BillDetailIgstPer = 0,
+                        BillDetailCgst = 0,
+                        BillDetailSgst = 0,
+                        BillDetailIgst = 0,
+                        BillDetailTotal = 0,
+                        BillDetailStatus = true
+                    });
+            }
+
+            Title = "Edit Bill";
+        }
+        else
+        {
+            var defaultBranch = branchList.FirstOrDefault(b => b.Branchisdefault);
+
+            var selectedCompany = CompanyList?.FirstOrDefault(c => c.Status == true);
+            EditModel = new Bill
+                {
+                    BillBranchId=defaultBranch.BranchId,
+                    BillDate = DateTime.Now,
+                    BillStatus = true,
+                    BillPlaceOfSupply =selectedCompany.StateId,
+                    BillDetails = new List<BillDetail>()
+                };
+            BillDetails = new List<BillDetail>();
+            nextSNo = 1;
+            Title = "Add Bill";
+            InitializeInvoiceDetails();
+        }
+
+        UnsavedChanges.Clear();
+
+        Visible = true;
+        StateHasChanged();
+        // _ =GetLocationListAsync();
+        // _ =GetCargoListAsync();
+        // _ =GetVesselListAsync();
+    }
+
+    // ============================================
+    // 🎨 UI Helper: Show Loading Indicator
+    // ============================================
+    /// <summary>
+    /// Use this in your Blazor component to show loading state
+    /// Example: @if (!isCriticalDataLoaded) { <p>Loading...</p> }
+    /// </summary>
+    private string GetLoadingMessage()
+    {
+        if (!isCriticalDataLoaded)
+            return "Loading form data...";
+        if (!isBackgroundDataLoaded)
+            return "Loading additional options...";
+        return string.Empty;
+    }
+
+    // ============================================
+    // Rest of your existing methods remain same
+    // ============================================
+
+    private void ShowAccountPopup(MouseEventArgs e)
+    {
+        Accountpopup.Show(new Account());
+    }
+
+    private void ShowJobPopup(MouseEventArgs e)
+    {
+        if (string.IsNullOrEmpty(EditModel.BillJobNo))
+        {
+            Jobpopup.Show(new Job());
+        }
+        else
+        {
+                var job = JobList
+                         .Where(c => c.JobNo == EditModel.BillJobNo)
+                         .FirstOrDefault();
+                if (job != null)
+                {
+                    Jobpopup.Show(job);
+                }
+        }
+    }
+
+    private void ShowServicePopup()
+    {
+        Servicepopup.Show(new Service());
+    }
+
+    [Parameter] public EventCallback OnSaved { get; set; }
+
+    void ColumnChooserButton_Click()
+    {
+        DetailGrid.ShowColumnChooser();
+    }
+
+    private bool Visible { get; set; }
+    private string Title { get; set; } = "Add/Edit Bill";
+    private Bill EditModel { get; set; } = new();
+    private IGrid DetailGrid { get; set; }
+
+    private List<BillDetail> BillDetails { get; set; } = new();
+    private Dictionary<BillDetail, DataChange> UnsavedChanges { get; } = new();
+    private bool BatchItemsEnabled => UnsavedChanges.Count > 0 || (DetailGrid?.IsEditing() ?? false);
+
+    private int? nextSNo = 1;
+
+    public class SelectItem
+    {
+        public string Text { get; set; }
+        public string Value { get; set; }
+    }
+
+    List<SelectItem> JobTypeList = new()
+{
+    new SelectItem { Text = "IMPORT", Value = "IMPORT" },
+    new SelectItem { Text = "EXPORT", Value = "EXPORT" }
+};
+
+    List<SelectItem> SupplyTypeList = new()
+{
+    new SelectItem { Text = "B2B", Value = "B2B" },
+    new SelectItem { Text = "B2CS", Value = "B2CS" },
+    new SelectItem { Text = "SEZWP", Value = "SEZWP" },
+    new SelectItem { Text = "SEZWOP", Value = "SEZWOP" },
+    new SelectItem { Text = "EXPWP", Value = "EXPWP" },
+    new SelectItem { Text = "EXPWOP", Value = "EXPWOP" },
+    new SelectItem { Text = "DEXP", Value = "DEXP" }
+};
+
+    private BillDetail CloneBillDetail(BillDetail source)
+    {
+        if (source == null) return null;
+
+        return new BillDetail
+            {
+                BillDetailSno = source.BillDetailSno,
+                BillDetailId = source.BillDetailId,
+                BillDetailBillId = source.BillDetailBillId,
+                BillDetailProductId = source.BillDetailProductId,
+                BillDetailHsnCode = source.BillDetailHsnCode,
+                BillDetailUnit = source.BillDetailUnit,
+                BillDetailUnitId = source.BillDetailUnitId,
+                BillDetailExchRate = source.BillDetailExchRate,
+                BillDetailRate = source.BillDetailRate,
+                BillDetailQty = source.BillDetailQty,
+                BillDetailAmount = source.BillDetailAmount,
+                BillDetailExtraChrg = source.BillDetailExtraChrg,
+                BillDetailCurrencyId = source.BillDetailCurrencyId,
+                BillDetailTaxableAmt = source.BillDetailTaxableAmt,
+                BillDetailAccountId = source.BillDetailAccountId,
+                BillDetailSgstAcId = source.BillDetailSgstAcId,
+                BillDetailCgstAcId = source.BillDetailCgstAcId,
+                BillDetailIgstAcId = source.BillDetailIgstAcId,
+                BillDetailGstPer = source.BillDetailGstPer,
+                BillDetailIgst = source.BillDetailIgst,
+                BillDetailCgst = source.BillDetailCgst,
+                BillDetailSgst = source.BillDetailSgst,
+                BillDetailTotal = source.BillDetailTotal,
+                BillDetailIgstPer = source.BillDetailIgstPer,
+                BillDetailCgstPer = source.BillDetailCgstPer,
+                BillDetailSlabId = source.BillDetailSlabId,
+                BillDetailRemarks = source.BillDetailRemarks,
+                BillDetailSgstPer = source.BillDetailSgstPer
+            };
+    }
+
+    // private EditContext? editContext;
+    private void OnJobDetailsChanged(string selectedjobno)
+    {
+        EditModel.BillJobNo = selectedjobno;
+        // if (editContext != null)
+        // {
+        //     editContext.NotifyFieldChanged(editContext.Field(nameof(EditModel.BillJobNo)));
+        // }
+        var selectedjobdetails = JobList.FirstOrDefault(j => j.JobNo == selectedjobno);
+        if (selectedjobno != null)
+        {
+            EditModel.BillJobId = selectedjobdetails.JobId;
+            EditModel.BillPartyId = selectedjobdetails.JobPartyId ?? 0;
+            EditModel.BillSupplyType = "B2B";
+            EditModel.BillCargoId = selectedjobdetails.JobCargoId ?? 0;
+            EditModel.BillShipPartyId = EditModel.BillPartyId;
+            EditModel.BillRemarksDefault = selectedjobdetails.JobGoodsDesc;
+            EditModel.BillVesselId = selectedjobdetails.JobVesselId ?? 0;
+            EditModel.BillLineId = selectedjobdetails.JobLineId ?? 0;
+            EditModel.BillDefaultCurrencyId = selectedjobdetails.JobDefCurrId ?? 0;
+            EditModel.BillHblNo = selectedjobdetails.JobHblNo;
+            EditModel.BillShipperInvNo = selectedjobdetails.JobShipperInvNo;
+            EditModel.BillShipperInvDate = selectedjobdetails.JobShipperInvDate;
+            EditModel.BillGrossWt = selectedjobdetails.JobGrossWt ?? 0;
+            EditModel.BillNetWt = selectedjobdetails.JobNetWt ?? 0;
+            EditModel.BillQty = selectedjobdetails.JobQty ?? 0;
+            EditModel.BillPolId = selectedjobdetails.JobPolId ?? 0;
+            EditModel.BillPodId = selectedjobdetails.JobPodId ?? 0;
+            EditModel.BillConsigneeId = selectedjobdetails.JobConsigneeId ?? 0;
+            EditModel.BillShipperId = selectedjobdetails.JobShipperId ?? 0;
+            EditModel.BillExchRate = selectedjobdetails.JobExchRate ?? 0;
+            EditModel.BillCbmQty = selectedjobdetails.JobCbm ?? 0;
+            EditModel.Bill20Ft = selectedjobdetails.Job20Ft;
+            EditModel.Bill40Ft = selectedjobdetails.Job40Ft;
+            EditModel.BillContainerNo = selectedjobdetails.JobContainer20Ft + " , " + selectedjobdetails.JobContainer40Ft;
+            EditModel.BillBlNo = selectedjobdetails.JobBlNo;
+            EditModel.BillBlDate = selectedjobdetails.JobBlDate;
+            EditModel.BillSbNo = selectedjobdetails.JobSbNo;
+            EditModel.BillSbDate = selectedjobdetails.JobSbDate;
+            EditModel.BillCust3 = selectedjobdetails.JobNo;
+
+            var selectedCompany = CompanyList?.FirstOrDefault(c => c.Status == true);
+            var selectedparty = AccountList.FirstOrDefault(s => s.AccountId == EditModel.BillShipPartyId);
+            EditModel.BillAddress1 = selectedparty.AccountAddress1 ?? " ";
+            EditModel.BillContactNo = selectedparty.AccountMobile;
+            EditModel.BillGstNo = selectedparty.AccountGstNo;
+            EditModel.BillPincode = selectedparty.AccountPincode;
+            EditModel.BillCity = selectedparty.AccountCity;
+            EditModel.BillPlaceOfSupply = selectedparty.AccountStateId ?? selectedCompany.StateId;
+            EditModel.BillStateId = selectedparty.AccountStateId ?? selectedCompany.StateId;
+
+            var Duedate = selectedparty.AccountCreditDays ?? 30;
+            EditModel.BillDueDate = DateTime.Now.AddDays(Duedate);
+        }
+        // _ =GetLocationListAsync();
+        // _ =GetCargoListAsync();
+        // _ =GetVesselListAsync();
+        StateHasChanged();
+    }
+
+    private void shippartydetails(int shippartydetails)
+    {
+        EditModel.BillShipPartyId = shippartydetails;
+        var selectedshipparty = AccountList.FirstOrDefault(s => s.AccountId == shippartydetails);
+        if (selectedshipparty != null)
+        {
+            EditModel.BillAddress1 = selectedshipparty.AccountAddress1;
+            EditModel.BillContactNo = selectedshipparty.AccountMobile;
+            EditModel.BillGstNo = selectedshipparty.AccountGstNo;
+            EditModel.BillPincode = selectedshipparty.AccountPincode;
+            EditModel.BillCity = selectedshipparty.AccountCity;
+            EditModel.BillStateId = selectedshipparty.AccountStateId ?? 0;
+        }
+    }
+
+    private void OnJobTypeChanged(string selectedType)
+    {
+        JobType = selectedType;
+        EditModel.BillJobType = selectedType;
+        FilteredJobList = JobList
+            .Where(j => j.JobType == selectedType)
+            .ToList();
+    }
+
+    private async Task OnvoucherChanged(Bill model, int? voucherId)
+    {
+        if (voucherId == null || voucherId == 0)
+            return;
+        model.BillVoucherId = voucherId.Value;
+        if (string.IsNullOrEmpty(model.BillNo) || model.BillId == 0)
+        {
+
+            
+
+            var finYearId = YearStatechangeService.SelectedYearId;
+            try
+            {
+                var result = await YearStatechangeService.GeneratebillNoAsync(voucherId, finYearId , model.BillBranchId);
+
+                model.BillPrefix = result.prefix;
+                model.BillNo = result.prefix + result.number + result.suffix;
+                model.BillPostfix = result.suffix;
+                model.BillVchNo = int.Parse(result.number);
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                ToastService.Error("Error: " + ex.Message);
+            }
+        }
+    }
+
+    private void Hide()
+    {
+        Visible = false;
+        BillDetails.Clear();
+        UnsavedChanges.Clear();
+    }
+
+    private async Task New_Click()
+    {
+        if (DetailGrid?.IsEditing() ?? false)
+        {
+            await DetailGrid.CancelEditAsync();
+        }
+
+        var activeDetails = BillDetails
+            .Where(d => !UnsavedChanges.ContainsKey(d) || UnsavedChanges[d].Type != DataChangeType.Delete)
+            .ToList();
+
+        int? nextAvailableSNo = activeDetails.Count > 0
+            ? activeDetails.Max(d => d.BillDetailSno) + 1
+            : 1;
+
+        var newItem = new BillDetail
+            {
+                BillDetailSno = nextAvailableSNo,
+                BillDetailQty = 1,
+                BillDetailRate = 0,
+                BillDetailAmount = 0,
+                BillDetailTaxableAmt = 0,
+                BillDetailGstPer = 0,
+                BillDetailCgstPer = 0,
+                BillDetailSgstPer = 0,
+                BillDetailIgstPer = 0,
+                BillDetailCgst = 0,
+                BillDetailSgst = 0,
+                BillDetailIgst = 0,
+                BillDetailTotal = 0,
+                BillDetailExchRate = EditModel?.BillExchRate ?? 1,
+                BillDetailCurrencyId = EditModel.BillDefaultCurrencyId,
+                BillDetailSlabId = string.Empty,
+                BillDetailStatus = true
+            };
+
+        BillDetails.Add(newItem);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    async Task Revert_Click()
+    {
+        await DetailGrid.CancelEditAsync();
+        await ClearUnsavedChangesAsync();
+        InitializeInvoiceDetails();
+    }
+
+    private void InitializeInvoiceDetails()
+    {
+        try
+        {
+            BillDetails.Clear();
+
+            for (int i = 1; i <= 5; i++)
+            {
+                BillDetails.Add(new BillDetail
+                    {
+                        BillDetailSno = i,
+                        BillDetailId = 0,
+                        BillDetailExchRate = EditModel?.BillExchRate ?? 1,
+                        BillDetailCurrencyId = EditModel.BillDefaultCurrencyId
+                    });
+            }
+
+            nextSNo = 6;
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Error initializing details: {ex.Message}", "Error");
+        }
+    }
+
+    async Task Submit_Click()
+    {
+        try
+        {
+            foreach (var unsavedChange in UnsavedChanges)
+            {
+                var changedItem = unsavedChange.Key;
+                var changeType = unsavedChange.Value.Type;
+
+                switch (changeType)
+                {
+                    case DataChangeType.Addition:
+                        break;
+                    case DataChangeType.Delete:
+                        break;
+                    case DataChangeType.Modification:
+                        UpdateRowAmounts(changedItem);
+                        break;
+                }
+            }
+
+            await ClearUnsavedChangesAsync();
+            ToastService.Success("Changes applied successfully!");
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Error applying changes: {ex.Message}");
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+
+    void Grid_CustomizeElement(GridCustomizeElementEventArgs ea)
+    {
+        if (ea.ElementType == GridElementType.DataCell)
+        {
+            var detail = (BillDetail)DetailGrid.GetDataItem(ea.VisibleIndex);
+            var column = (IGridDataColumn)ea.Column;
+            bool isNew = detail == null;
+
+            if (!isNew && UnsavedChanges.TryGetValue(detail, out var changes))
+            {
+                if (changes.Type == DataChangeType.Addition)
+                    ea.CssClass = "grid-new-row";
+                else if (changes.Type == DataChangeType.Delete)
+                    ea.CssClass = "grid-deleted-row";
+                else if (changes.ChangedFields.Contains(column.FieldName))
+                    ea.CssClass = "grid-modified-cell";
+            }
+        }
+    }
+
+    void Grid_CustomizeEditModel(GridCustomizeEditModelEventArgs e)
+    {
+        if (e.IsNew)
+        {
+            var newDetail = (BillDetail)e.EditModel;
+            newDetail.BillDetailSno = nextSNo++;
+            newDetail.BillDetailId = 0;
+            newDetail.BillDetailCurrencyId = EditModel.BillDefaultCurrencyId;
+        }
+    }
+
+    void Grid_EditModelSaving(GridEditModelSavingEventArgs e)
+    
+    {
+        var editableDetail = (BillDetail)e.EditModel;
+        var detail = (BillDetail)e.DataItem;
+
+        if (e.IsNew)
+        {
+            BillDetails.Add(editableDetail);
+            UnsavedChanges[editableDetail] = new(DataChangeType.Addition, new());
+            // Initialize defaults for new row
+            editableDetail.BillDetailExchRate = EditModel?.BillExchRate ?? 1;
+            editableDetail.BillDetailCurrencyId = EditModel.BillDefaultCurrencyId;
+        }
+        else
+        {
+            var changedFields = ApplyModifiedFields(editableDetail, detail);
+            if (changedFields.Count > 0)
+            {
+                if (UnsavedChanges.TryGetValue(detail, out var changes))
+                    changes.ChangedFields.UnionWith(changedFields);
+                else
+                    UnsavedChanges.Add(detail, new(DataChangeType.Modification, changedFields));
+
+                UpdateRowAmounts(detail);
+            }
+        }
+
+        // Update main bill total
+        //EditModel.BillNetAmount = (float)BillDetails.Sum(d => d.BillDetailTotal
+        //  EditModel.BillNetAmount = (float)BillDetails
+        // .Where(d => !UnsavedChanges.ContainsKey(d) || UnsavedChanges[d].Type != DataChangeType.Delete)
+        // .Sum(d => d.BillDetailTotal);
+
+        // ✅ Use centralized calculation
+        RecalculateNetAmount(EditModel.BillIsRoundOff);
+    }
+
+    async Task DeleteDataItem(object dataItem)
+    {
+        var detail = (BillDetail)dataItem;
+
+        if (UnsavedChanges.ContainsKey(detail) && UnsavedChanges[detail].Type == DataChangeType.Addition)
+        {
+            // Remove newly added item
+            UnsavedChanges.Remove(detail);
+            BillDetails.Remove(detail);
+        }
+        else
+        {
+            // Mark existing item for deletion
+            UnsavedChanges[detail] = new(DataChangeType.Delete, new());
+            BillDetails.Remove(detail);
+        }
+        // ✅ Reindex SNo after deletion
+        // int sn = 1;
+        // foreach (var d in BillDetails.Where(d => !UnsavedChanges.ContainsKey(d) || UnsavedChanges[d].Type != DataChangeType.Delete))
+        // {
+        //     d.SNo = sn++;
+
+        // }
+
+        // EditModel.BillNetAmount = (float)BillDetails.Where(d => !UnsavedChanges.ContainsKey(d) ||
+        //                                                     UnsavedChanges[d].Type != DataChangeType.Delete)
+        //                                              .Sum(d => d.BillDetailTotal);
+        // DetailGrid.Reload();
+
+        // Reindex SNo after deletion (only for non-deleted items)
+        var activeDetails = BillDetails
+            .Where(d => !UnsavedChanges.ContainsKey(d) || UnsavedChanges[d].Type != DataChangeType.Delete)
+            // .OrderBy(d => d.BillDetailSno)
+            .ToList();
+
+        // int sn = 1;
+        // foreach (var d in activeDetails)
+        // {
+        //     d.BillDetailSno = sn++;
+        // }
+
+        // Update totals
+        EditModel.BillNetAmount = (float)activeDetails.Sum(d => d.BillDetailTotal);
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    async Task ClearUnsavedChangesAsync()
+    {
+        UnsavedChanges.Clear();
+        BillDetails = BillDetails
+       .Where(d => d.BillDetailId > 0 || d.BillDetailProductId > 0)
+       .Select(d => CloneBillDetail(d))
+       .OrderBy(d => d.BillDetailSno)
+       .ToList();
+        // for (int i = 0; i < BillDetails.Count; i++)
+        // {
+        //     BillDetails[i].BillDetailSno = i + 1;
+        // }
+        // nextSNo = BillDetails.Count + 1;
+
+        // ✅ Don't reindex - preserve database SNo values
+        nextSNo = BillDetails.Any() ? BillDetails.Max(d => d.BillDetailSno) + 1 : 1;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void OnServiceSelected(int newServiceId, BillDetail detail)
+    {
+        if (detail == null)
+            return;
+
+        // Update the product ID
+        detail.BillDetailProductId = newServiceId;
+
+        // Track changes
+        if (!UnsavedChanges.ContainsKey(detail))
+        {
+            UnsavedChanges[detail] = new(
+                DataChangeType.Modification,
+                new HashSet<string>
+                {
+                    nameof(BillDetail.BillDetailProductId)
+                }
+            );
+        }
+        else if (UnsavedChanges[detail].Type != DataChangeType.Addition)
+        {
+            UnsavedChanges[detail].ChangedFields.Add(
+                nameof(BillDetail.BillDetailProductId)
+            );
+        }
+        // Update row calculations (HSN, Unit, Rate, GST, etc.)
+        UpdateRowAmounts(detail);
+
+        // Update main bill total
+        EditModel.BillNetAmount = (float)BillDetails
+            .Where(d => !UnsavedChanges.ContainsKey(d)
+                        || UnsavedChanges[d].Type != DataChangeType.Delete)
+            .Sum(d => d.BillDetailTotal);
+
+        // Force grid to refresh the row
+        if (DetailGrid != null)
+        {
+             DetailGrid.Reload();
+        }
+
+        // Trigger UI update
+         InvokeAsync(StateHasChanged);
+
+    }
+
+    
+    private void UpdateRowAmounts(BillDetail item)
+    {
+        if (item == null) return;
+        // Auto-populate HSN and Unit when service is selected
+        if (item.BillDetailProductId > 0)
+        {
+            var selectedService = ServiceList.FirstOrDefault(s => s.ServiceId == item.BillDetailProductId);
+            if (selectedService != null)
+            {
+                item.BillDetailStatus = true;
+                item.BillDetailHsnCode = selectedService.HsnName;
+                var unitName = UnitList.FirstOrDefault(u => u.UnitId == selectedService.ServiceUnitId);
+                item.BillDetailUnit = unitName.UnitName;
+                item.BillDetailUnitId = unitName.UnitId;
+                if (item.BillDetailRate == 0 || item.BillDetailRate==null|| item.BillDetailRate == default(double))
+                {
+                    var applicableRate = RateMasterList?
+                        .Where(r =>
+                            r.RateMasterPartyId == EditModel.BillPartyId &&
+                            r.RateMasterServiceId == item.BillDetailProductId &&
+                            r.RateMasterApplicableDt <= EditModel.BillDate)
+                        .OrderByDescending(r => r.RateMasterApplicableDt) // Get the most recent rate
+                        .FirstOrDefault();
+
+                    if (applicableRate != null)
+                    {
+                        item.BillDetailRate = (double)applicableRate.RateMasterSaleRate;
+                    }
+                    else{
+                        item.BillDetailRate = selectedService.ServiceSRate;
+                    }
+                }
+
+                // ✅ Handle BillDetailQty logic based on user input
+                double bill20Ft = 0;
+                double bill40Ft = 0;
+                double manualQty = 0;
+                // Try converting user input (if any) from string → number
+                if (!string.IsNullOrWhiteSpace(EditModel?.Bill20Ft))
+                    double.TryParse(EditModel.Bill20Ft, out bill20Ft);
+
+                if (!string.IsNullOrWhiteSpace(EditModel?.Bill40Ft))
+                    double.TryParse(EditModel.Bill40Ft, out bill40Ft);
+
+                if ((item?.BillDetailQty) != 0)
+                    manualQty = item.BillDetailQty;
+
+
+                if (manualQty > 0)
+                {
+                    item.BillDetailQty = manualQty;
+                }
+                else if (bill20Ft == 0 && bill40Ft == 0)
+                {
+                    item.BillDetailQty = 1;
+                }
+                else
+                {
+                    // Otherwise, sum both values
+                    item.BillDetailQty = bill20Ft + bill40Ft;
+                }
+
+                // ✅ Handle Exchange Rate logic
+                if (item.BillDetailExchRate == 0 || item.BillDetailExchRate == default)
+                {
+                    // Only auto-assign if user hasn't entered custom value
+                    item.BillDetailExchRate = (EditModel?.BillExchRate ?? 0) == 0
+                        ? 1
+                        : EditModel.BillExchRate;
+                }
+                var selectedCurr = CurrList.FirstOrDefault(h => h.CurrencyId == EditModel.BillDefaultCurrencyId);
+                item.BillDetailCurrencyId = selectedCurr?.CurrencyId??0;
+                item.BillDetailExchUnit = selectedCurr?.CurrencyName??"";
+                var selectedHsn = HsnList.FirstOrDefault(h => h.HsnName == selectedService.HsnName);
+                var selectedGstslab = GstslabList.FirstOrDefault(h => h.GstSlabIgstPer == selectedService.HsnGstPer);
+                var billdetailsabid = GstslabList.FirstOrDefault(h => h.GstSlabId == selectedHsn.HsnGstSlabId);
+
+                 item.BillDetailAmount = item.BillDetailQty * item.BillDetailRate??0;
+                    item.BillDetailTaxableAmt = item.BillDetailAmount * item.BillDetailExchRate;
+
+                var vouchergroup = VoucherList.FirstOrDefault(v => v.VoucherId == EditModel.BillVoucherId);
+                if (vouchergroup == null)
+                {
+                    return;
+                }
+                else
+                {
+                    if (vouchergroup.VoucherGroup == "SALES")
+                    {
+                        item.BillDetailAccountId = selectedGstslab.GstSlabSalesAccountId;
+                        item.BillDetailIgstAcId = selectedGstslab.GstSlabIgstAccountId;
+                        item.BillDetailCgstAcId = selectedGstslab.GstSlabCgstAccountId;
+                        item.BillDetailSgstAcId = selectedGstslab.GstSlabSgstAccountId;
+                    }
+                    else if (vouchergroup.VoucherGroup == "PURCHASE")
+                    {
+                        item.BillDetailAccountId = selectedGstslab.GstSlabPurchaseAccountId;
+                        item.BillDetailIgstAcId = selectedGstslab.GstSlabPigstAccountId;
+                        item.BillDetailCgstAcId = selectedGstslab.GstSlabPcgstAccountId;
+                        item.BillDetailSgstAcId = selectedGstslab.GstSlabPsgstAccountId;
+                    }
+                }
+                if (selectedHsn != null)
+                {
+                    item.BillDetailHsnId = selectedHsn.HsnId;
+                    item.BillDetailSlabId = billdetailsabid.GstSlabName;
+                    // Map GST % from slab — if your HSN table has GST percentage
+                    item.BillDetailGstPer = selectedHsn.HsnGstPer; // ✅ You said this ID corresponds to percentage
+                    // item.Taxcode = selectedGstslab.GstSlabName; // ✅ Not mapped to DB but used in grid
+                }
+                var selectedCompany = CompanyList?.FirstOrDefault(c => c.Status == true);
+                var selectedpos = StateList.FirstOrDefault(h => h.StateId == EditModel.BillPlaceOfSupply);
+                // ✅ Apply IGST or CGST+SGST based on Place of Supply vs Company State
+                if (selectedCompany != null && selectedpos != null)
+                {
+                   
+                    // Convert string StateId → int for safe comparison
+                    var companyState = StateList?
+      .FirstOrDefault(s =>
+          s.StateId != null &&
+          s.StateId.ToString() == selectedCompany.StateId.ToString());
+
+                    if (companyState != null)  // ✅ Added null check
+                    {
+                        int companyStateId = companyState.StateId;
+
+                        if (companyStateId == EditModel.BillPlaceOfSupply)
+                        {
+                            // Intra-state → CGST + SGST
+                            item.BillDetailIgst = 0;
+                            item.BillDetailIgstPer = 0;
+                            item.BillDetailCgstPer = item.BillDetailGstPer / 2;
+                            item.BillDetailSgstPer = item.BillDetailGstPer / 2;
+                            item.BillDetailCgst = item.BillDetailTaxableAmt * (item.BillDetailCgstPer / 100);
+                            item.BillDetailSgst = item.BillDetailTaxableAmt * (item.BillDetailSgstPer / 100);
+                        }
+                        else
+                        {
+                            // Inter-state → IGST only
+                            item.BillDetailCgstPer = 0;
+                            item.BillDetailSgstPer = 0;
+                            item.BillDetailCgst = 0;
+                            item.BillDetailSgst = 0;
+                            item.BillDetailIgstPer = item.BillDetailGstPer;
+                            item.BillDetailIgst = item.BillDetailTaxableAmt * (item.BillDetailIgstPer / 100);
+                        }
+
+                        if (EditModel.BillIsRcm)
+                        {
+                            // ✅ RCM: No GST charged
+                            item.BillDetailIgst = 0;
+                            item.BillDetailCgst = 0;
+                            item.BillDetailSgst = 0;
+                            item.BillDetailIgstPer = 0;
+                            item.BillDetailCgstPer = 0;
+                            item.BillDetailSgstPer = 0;
+                            item.BillDetailSlabId = "RCM";
+                        }
+                        else
+                        {
+
+                            string supplyType = EditModel.BillSupplyType ?? "B2B";
+
+                            switch (supplyType)
+                            {
+                                case "B2B":
+                                case "B2CS":
+                                    // Normal GST logic (domestic)
+                                    if (companyStateId == EditModel.BillPlaceOfSupply)
+                                    {
+                                        // Intra-state → CGST + SGST
+                                        item.BillDetailIgst = 0;
+                                        item.BillDetailIgstPer = 0;
+                                        item.BillDetailCgstPer = item.BillDetailGstPer / 2;
+                                        item.BillDetailSgstPer = item.BillDetailGstPer / 2;
+                                        item.BillDetailCgst = item.BillDetailTaxableAmt * (item.BillDetailCgstPer / 100);
+                                        item.BillDetailSgst = item.BillDetailTaxableAmt * (item.BillDetailSgstPer / 100);
+                                    }
+                                    else
+                                    {
+                                        // Inter-state → IGST
+                                        item.BillDetailCgstPer = 0;
+                                        item.BillDetailSgstPer = 0;
+                                        item.BillDetailIgstPer = item.BillDetailGstPer;
+                                        item.BillDetailIgst = item.BillDetailTaxableAmt * (item.BillDetailIgstPer / 100);
+                                    }
+                                    break;
+
+                                case "SEZWP":
+                                case "EXPWP":
+                                case "DEXP":
+                                    // ✅ Export or SEZ with payment → only IGST
+                                    item.BillDetailCgstPer = 0;
+                                    item.BillDetailSgstPer = 0;
+                                    item.BillDetailIgstPer = item.BillDetailGstPer;
+                                    item.BillDetailIgst = item.BillDetailTaxableAmt * (item.BillDetailIgstPer / 100);
+                                    break;
+
+                                case "SEZWOP":
+                                case "EXPWOP":
+                                    // ✅ Export or SEZ without payment → no GST
+                                    item.BillDetailIgst = 0;
+                                    item.BillDetailCgst = 0;
+                                    item.BillDetailSgst = 0;
+                                    item.BillDetailIgstPer = 0;
+                                    item.BillDetailCgstPer = 0;
+                                    item.BillDetailSgstPer = 0;
+                                    break;
+                            }
+                        }
+
+                    }
+
+
+
+
+                }
+
+
+            }
+        }
+
+        // Calculate amounts
+        item.BillDetailAmount = item.BillDetailQty * item.BillDetailRate??0;
+        item.BillDetailTaxableAmt = item.BillDetailAmount * item.BillDetailExchRate + item.BillDetailExtraChrg;
+        item.BillDetailTotal = item.BillDetailTaxableAmt + item.BillDetailIgst + item.BillDetailCgst + item.BillDetailSgst;
+        // Update main bill total
+        if (EditModel != null)
+        {
+            // EditModel.BillNetAmount = (float)BillDetails
+            //     .Where(d => !UnsavedChanges.ContainsKey(d) || UnsavedChanges[d].Type != DataChangeType.Delete)
+            //     .Sum(d => d.BillDetailTotal);
+
+            EditModel.BillTotalUsd = (float)BillDetails
+           .Where(d => !UnsavedChanges.ContainsKey(d) || UnsavedChanges[d].Type != DataChangeType.Delete)
+           .Sum(d => d.BillDetailAmount);
+            // ✅ Calculate Non-Taxable Amount (only HSN with 0% GST)
+            EditModel.BillNonTaxable = (float)BillDetails
+        .Where(d =>
+            (!UnsavedChanges.ContainsKey(d) || UnsavedChanges[d].Type != DataChangeType.Delete)
+            && (d.BillDetailGstPer == 0)
+        )
+        .Sum(d => d.BillDetailTaxableAmt);
+
+            EditModel.BillIgst = (float)BillDetails
+           .Where(d => !UnsavedChanges.ContainsKey(d) || UnsavedChanges[d].Type != DataChangeType.Delete)
+           .Sum(d => d.BillDetailIgst);
+            EditModel.BillCgst = (float)BillDetails
+            .Where(d => !UnsavedChanges.ContainsKey(d) || UnsavedChanges[d].Type != DataChangeType.Delete)
+            .Sum(d => d.BillDetailCgst);
+            EditModel.BillSgst = (float)BillDetails
+            .Where(d => !UnsavedChanges.ContainsKey(d) || UnsavedChanges[d].Type != DataChangeType.Delete)
+            .Sum(d => d.BillDetailSgst);
+            // ApplyRoundOff(EditModel.BillIsRoundOff);
+            RecalculateNetAmount(EditModel.BillIsRoundOff);
+        }
+    }
+    // ✅ NEW: Centralized calculation method
+    private void RecalculateNetAmount(bool isChecked)
+    {
+        EditModel.BillIsRoundOff = isChecked;
+        if (EditModel == null) return;
+
+        // Calculate base amount (sum of all active line items)
+        var baseAmount = (decimal)BillDetails
+            .Where(d => !UnsavedChanges.ContainsKey(d) || UnsavedChanges[d].Type != DataChangeType.Delete)
+            .Sum(d => d.BillDetailTotal);
+
+        if (EditModel.BillIsRoundOff)
+        {
+            // Round to nearest whole number
+            var roundedAmount = Math.Round(baseAmount, 0, MidpointRounding.AwayFromZero);
+
+            // Calculate round-off difference
+            var roundOffDifference = roundedAmount - baseAmount;
+
+            EditModel.BillRoundAmt = (float)roundOffDifference;
+            EditModel.BillNetAmount = (float)roundedAmount;
+        }
+        else
+        {
+            EditModel.BillRoundAmt = 0;
+            EditModel.BillNetAmount = (float)Math.Round(baseAmount, 2);
+        }
+
+        ConvertNumberToWords((decimal)EditModel.BillNetAmount);
+    }
+    private HashSet<string> ApplyModifiedFields(BillDetail source, BillDetail target)
+    {
+        var changedFields = new HashSet<string>();
+        var properties = typeof(BillDetail).GetProperties();
+
+        foreach (var prop in properties)
+        {
+            if (prop.Name == "BillDetailSno" || prop.Name == "BillDetailId") continue;
+
+            var sourceValue = prop.GetValue(source);
+            var targetValue = prop.GetValue(target);
+
+            if (!Equals(sourceValue, targetValue))
+            {
+                prop.SetValue(target, sourceValue);
+                changedFields.Add(prop.Name);
+            }
+        }
+
+        return changedFields;
+    }
+    private void ApplyRcmLogic(bool isChecked)
+    {
+        EditModel.BillIsRcm = isChecked;
+        if (EditModel.BillIsRcm)
+        {
+            // Under RCM, NO GST is charged on invoice
+            foreach (var detail in BillDetails)
+            {
+                // detail.BillDetailIgst = 0;
+                // detail.BillDetailCgst = 0;
+                // detail.BillDetailSgst = 0;
+                // detail.BillDetailIgstPer = 0;
+                // detail.BillDetailCgstPer = 0;
+                // detail.BillDetailSgstPer = 0;
+
+                // Total = Taxable amount only (no GST added)
+                detail.BillDetailTotal = detail.BillDetailTaxableAmt;
+            }
+
+            // // Update bill totals
+            // EditModel.BillIgst = 0;
+            // EditModel.BillCgst = 0;
+            // EditModel.BillSgst = 0;
+
+            // Add remark for RCM
+            if (!EditModel.BillRemarks?.Contains("RCM") ?? true)
+            {
+                EditModel.BillRemarks = (EditModel.BillRemarks ?? "") +
+                    "Tax is payable under Reverse Charge Mechanism by the recipient as per Section 9(3) of CGST Act 2017.";
+            }
+        }
+        else
+        {
+            // Remove RCM remark
+            EditModel.BillRemarks = EditModel.BillRemarks?.Replace(
+                "Tax is payable under Reverse Charge Mechanism by the recipient as per Section 9(3) of CGST Act 2017.", "");
+
+            // Recalculate GST for all rows
+            foreach (var detail in BillDetails)
+            {
+                UpdateRowAmounts(detail);
+            }
+        }
+
+        // // Recalculate totals
+        // var baseTotal = (float)BillDetails
+        //     .Where(d => !UnsavedChanges.ContainsKey(d) || UnsavedChanges[d].Type != DataChangeType.Delete)
+        //     .Sum(d => d.BillDetailTotal);
+
+        // EditModel.BillNetAmount = baseTotal;
+        // ApplyRoundOff(EditModel.BillIsRoundOff);
+        RecalculateNetAmount(EditModel.BillIsRoundOff); // ✅ Single source of truth
+        StateHasChanged();
+    }
+    private void ApplyRoundOff(bool isChecked)
+    {
+
+        EditModel.BillIsRoundOff = isChecked;
+        RecalculateNetAmount(EditModel.BillIsRoundOff);
+        StateHasChanged();
+        // EditModel.BillIsRoundOff = isChecked;
+        // // Calculate base amount (sum of all line items)
+        // var baseAmount = BillDetails
+        //     .Where(d => !UnsavedChanges.ContainsKey(d) || UnsavedChanges[d].Type != DataChangeType.Delete)
+        //     .Sum(d => (decimal)d.BillDetailTotal);
+
+        // if (EditModel.BillIsRoundOff)
+        // {
+        //     // Round to nearest whole number
+        //     var roundedAmount = Math.Round(baseAmount, 0, MidpointRounding.AwayFromZero);
+
+        //     // Calculate round-off difference with 2 decimal precision
+        //     var roundOffDifference = Math.Round(roundedAmount - baseAmount, 2);
+
+        //     // Set values
+        //     EditModel.BillRoundAmt = (float)roundOffDifference;
+        //     EditModel.BillNetAmount = (float)roundedAmount;
+        // }
+        // else
+        // {
+        //     // No rounding - reset
+        //     EditModel.BillRoundAmt = 0;
+        //     EditModel.BillNetAmount = (float)Math.Round(baseAmount, 2);
+        // }
+        // ConvertNumberToWords((decimal)EditModel.BillNetAmount);
+        // StateHasChanged();
+    }
+
+    //FOR COPY  NEW ENTRY
+    private async Task CopyDetails()
+    {
+        LoadingService.Show();
+        try
+        {
+            // --- STEP 1: Apply Unsaved Changes ---
+            foreach (var unsavedChange in UnsavedChanges)
+            {
+                var changedItem = unsavedChange.Key;
+                var changeType = unsavedChange.Value.Type;
+
+                switch (changeType)
+                {
+                    case DataChangeType.Addition:
+                        // You can handle additions later in final save
+                        break;
+
+                    case DataChangeType.Delete:
+                        // Simply skip these rows in total calculations
+                        break;
+
+                    case DataChangeType.Modification:
+                        // Update row calculations (GST, totals, etc.)
+                        UpdateRowAmounts(changedItem);
+                        break;
+                }
+            }
+
+
+
+            // --- STEP 2: Prepare Active Rows (non-deleted) ---
+            var activeDetails = BillDetails
+                .Where(d => !UnsavedChanges.ContainsKey(d) || UnsavedChanges[d].Type != DataChangeType.Delete)
+                .OrderBy(d => d.BillDetailSno)
+                .ToList();
+
+                // ✅ Reindex sequentially
+        int sequentialSno = 1;
+        foreach (var detail in activeDetails)
+        {
+            detail.BillDetailSno = sequentialSno++;
+        }
+            // --- STEP 3: Recalculate Bill Totals ---
+            //EditModel.BillNetAmount = (float)activeDetails.Sum(d => d.BillDetailTotal);
+            EditModel.BillAmount = activeDetails.Sum(d => d.BillDetailAmount);
+            EditModel.BillTaxableAmt = activeDetails.Sum(d => d.BillDetailTaxableAmt);
+            // EditModel.BillIgst = activeDetails.Sum(d => d.BillDetailIgst);
+            // EditModel.BillCgst = activeDetails.Sum(d => d.BillDetailCgst);
+            // EditModel.BillSgst = activeDetails.Sum(d => d.BillDetailSgst);
+            EditModel.BillTotal = EditModel.BillNetAmount;
+            EditModel.BillYearId = YearStatechangeService.SelectedYearId;
+            EditModel.BillNo = EditModel.BillNo;
+
+            //after copy null the e-invoice details
+             EditModel.BillIrnNo = "";
+              EditModel.BillAckNo = "";
+               EditModel.BillAckDate = "";
+
+            // --- STEP 4: Filter only valid detail lines ---
+            var validDetails = activeDetails
+                .Where(d => d.BillDetailProductId > 0 || !string.IsNullOrEmpty(d.BillDetailHsnCode))
+                .ToList();
+
+            EditModel.BillDetails = validDetails.OrderBy(d => d.BillDetailSno).ToList();
+
+            // --- STEP 5: Save Bill (Create or Update) ---
+            int result;
+            EditModel.BillId = 0;
+            EditModel.BillTime = DateTime.Now.ToString("hh:mm tt");
+            result = await BillService.CreateAsync(EditModel);
+            if (result>0)
+                ToastService.Success("Bill created successfully!");
+            else
+            {
+                ToastService.Error("Failed to create Bill!");
+                return;
+            }
+
+
+            // LoadingService.Hide();
+            // --- STEP 6: UI Cleanup ---
+            //ToastService.Success("Changes applied successfully!");
+            // var confirm = await ConfirmDialogService.ShowAsync("Are you sure you want to print selected bill(s)?");
+            // if (confirm)
+            // {
+
+
+            //     await PreviewMergedReports();
+
+            // }
+            UnsavedChanges.Clear();
+            Visible = false;
+            await OnSaved.InvokeAsync();
+
+
+
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Error saving bill: {ex.Message}");
+            Console.WriteLine($"❌ Full error: {ex}");
+        }
+        finally
+        {
+
+            LoadingService.Hide();
+        }
+    }
+
+
+
+    private async Task HandleValidSubmit(bool isprint= false)
+    {
+        LoadingService.Show();
+        try
+        {
+            // --- STEP 1: Apply Unsaved Changes ---
+            foreach (var unsavedChange in UnsavedChanges)
+            {
+                var changedItem = unsavedChange.Key;
+                var changeType = unsavedChange.Value.Type;
+
+                switch (changeType)
+                {
+                    case DataChangeType.Addition:
+                        // You can handle additions later in final save
+                        break;
+
+                    case DataChangeType.Delete:
+                        // Simply skip these rows in total calculations
+                        break;
+
+                    case DataChangeType.Modification:
+                        // Update row calculations (GST, totals, etc.)
+                        UpdateRowAmounts(changedItem);
+                        break;
+                }
+            }
+
+
+
+            // --- STEP 2: Prepare Active Rows (non-deleted) ---
+            var activeDetails = BillDetails
+                .Where(d => !UnsavedChanges.ContainsKey(d) || UnsavedChanges[d].Type != DataChangeType.Delete)
+ .OrderBy(d => d.BillDetailSno)
+                .ToList();
+
+            // ✅ STEP 2.5: Reindex all active rows sequentially
+            int sequentialSno = 1;
+            foreach (var detail in activeDetails)
+            {
+                detail.BillDetailSno = sequentialSno++;
+            }
+            // --- STEP 3: Recalculate Bill Totals ---
+            //EditModel.BillNetAmount = (float)activeDetails.Sum(d => d.BillDetailTotal);
+            EditModel.BillAmount = activeDetails.Sum(d => d.BillDetailAmount);
+            EditModel.BillTaxableAmt = activeDetails.Sum(d => d.BillDetailTaxableAmt);
+            // EditModel.BillIgst = activeDetails.Sum(d => d.BillDetailIgst);
+            // EditModel.BillCgst = activeDetails.Sum(d => d.BillDetailCgst);
+            // EditModel.BillSgst = activeDetails.Sum(d => d.BillDetailSgst);
+            EditModel.BillTotal = EditModel.BillNetAmount;
+            EditModel.BillYearId = YearStatechangeService.SelectedYearId;
+            EditModel.BillNo = EditModel.BillNo;
+
+            // --- STEP 4: Filter only valid detail lines ---
+            var validDetails = activeDetails
+                .Where(d => d.BillDetailProductId > 0 || !string.IsNullOrEmpty(d.BillDetailHsnCode))
+                .ToList();
+
+            EditModel.BillDetails = validDetails.OrderBy(d => d.BillDetailSno).ToList();
+
+             int savedBillId = EditModel.BillId;
+            // --- STEP 5: Save Bill (Create or Update) ---
+            bool result;
+            if (EditModel.BillId == 0)
+            {
+                EditModel.BillTime = DateTime.Now.ToString("hh:mm tt");
+                savedBillId = await BillService.CreateAsync(EditModel);
+                if (savedBillId >0)
+                    ToastService.Success("Bill created successfully!");
+                else
+                {
+                   // ToastService.Error(BillService.LastError);
+                    ToastService.Error("Failed to created Bill!");
+                    return;
+
+                }
+            }
+            else
+            {
+                result = await BillService.UpdateAsync(EditModel);
+                if (result)
+                    ToastService.Success("Bill updated successfully!");
+                else
+                {
+                    // ToastService.Error(BillService.LastError);
+                    ToastService.Error("Failed to update Bill!");
+
+                    return;
+                }
+            }
+           // LoadingService.Hide();
+            // --- STEP 6: UI Cleanup ---
+            //ToastService.Success("Changes applied successfully!");
+            if (isprint == true)
+            {
+                // var confirm = await ConfirmDialogService.ShowAsync("Are you sure you want to print selected bill(s)?");
+                // if (confirm)
+                // {
+
+
+                //     await PreviewMergedReports();
+
+                // }
+                await PreviewMergedReports(EditModel.BillReportId, savedBillId);
+            }
+            UnsavedChanges.Clear();
+            Visible = false;
+            await OnSaved.InvokeAsync();
+
+
+
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Error saving bill: {ex.Message}");
+            Console.WriteLine($"❌ Full error: {ex}");
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+
+
+    record DataChange(DataChangeType Type, HashSet<string> ChangedFields);
+    enum DataChangeType { Modification, Addition, Delete }
+
+
+    private async Task PreviewMergedReports(int reportid, int billid)
+    {
+        if (reportid == 0)
+        {
+            ToastService.Warning("No bill to print.");
+            return;
+        }
+
+        LoadingService.Show("Building merged report...");
+        try
+        {
+            var layoutBytes = await ReportDataService.GetLayoutBytesAsync(reportid);
+            if (layoutBytes == null || layoutBytes.Length == 0)
+            {
+                ToastService.Error("Failed to load report layout.");
+                return;
+            }
+
+            var billList = new List<Bill> { EditModel };
+            var dto = await BillService.GetPrintableBillAsync(billid);
+
+            var dtoDict = new Dictionary<Bill, PrintBillFullDto?>
+            {
+                { EditModel, dto }
+            };
+            await ReportService.CreateMergedReportAsync(
+                billList,
+                bill => dtoDict.ContainsKey(bill) ? dtoDict[bill] : null,
+                layoutBytes);
+
+            Navigation.NavigateTo("/reportviewer");
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+}

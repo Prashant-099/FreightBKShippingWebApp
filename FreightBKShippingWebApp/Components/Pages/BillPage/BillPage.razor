@@ -4,6 +4,7 @@
 @using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Services
 @using FreightBKShippingWebApp.Components.Pages
+@using FreightBKShippingWebApp.Components.Pages.TestPage
 @using Microsoft.AspNetCore.Components.Authorization
 @inject BillService BillService
 @inject ToasteService ToastService
@@ -425,7 +426,7 @@ CloseOnEscape="true">
     </div>
 </DxPopup>
 
-<BillAddEditPage @ref="popup" OnSaved="LoadBillsAsync" />
+<BillAddEditPage2 @ref="popup" OnSaved="LoadBillsAsync" />
 <EInvoicePopUP @ref="EInvoicePopupRef" />
 <FreightBKShippingWebApp.Components.Pages.Eiinvoice_IRN_.CancelingEInvoices @ref="EInvoiceCancelPopupRef" OnCancelIRN="HandleIRNCancelled"></FreightBKShippingWebApp.Components.Pages.Eiinvoice_IRN_.CancelingEInvoices>
 <SendMsg IsVisible="visiblemsgsendwin"
@@ -511,7 +512,7 @@ DefaultFileName="@PendingFileName"
     private List<Bill> billList = new();
     private IReadOnlyList<object> SelectedBills { get; set; } = new List<object>();
     private List<ReportData> ReportDataList = new();
-    private BillAddEditPage popup;
+    private BillAddEditPage2 popup;
     private bool IsAdmin = false;
     private string CurrentUserId = string.Empty;
     private EInvoicePopUP EInvoicePopupRef { get; set; }
