@@ -1,5 +1,6 @@
 ﻿@page "/jobexport"
 @using FreightBKShippingWebApp.Components.Pages.BillPage
+@using FreightBKShippingWebApp.Components.Pages.TestPage
 @using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Services
 @using FreightBKShippingWebApp.Services.PdfReaderAndHelperService
@@ -30,8 +31,8 @@
         KeyFieldName="JobId"
         ShowSearchBox="true"
         ShowFilterRow="true"
-        PageSize="10"
-
+        PageSize="100"
+        AllowSort="false"
         ShowGroupPanel="true"
         FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always"
         FocusedRowEnabled="true"
@@ -355,9 +356,9 @@
 <AddContainerJob @ref="addContainerJob"></AddContainerJob>
 
 
-<FreightBKShippingWebApp.Components.Pages.BillPage.BillAddEditPage @ref="billAddEditPage"></FreightBKShippingWebApp.Components.Pages.BillPage.BillAddEditPage>
+<FreightBKShippingWebApp.Components.Pages.TestPage.BillAddEditPage2 @ref="billAddEditPage"/>
 @code {
-    BillAddEditPage billAddEditPage;
+    BillAddEditPage2 billAddEditPage;
     async Task OpenBilleditPopup(Job job)
     {
         var bill = new Bill
