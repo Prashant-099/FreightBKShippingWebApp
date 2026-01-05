@@ -1,4 +1,5 @@
 ﻿@page "/jobimport"
+@using FreightBKShippingWebApp.Components.Pages.TestPage
 @using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Services
 
@@ -121,9 +122,8 @@
                 <DxButton RenderStyle="ButtonRenderStyle.Link"
                           IconCssClass="bi bi-receipt"
                           SizeMode="SizeMode.Small"
-                       
-                          Click="@(() => OpenPopup((Job)cellContext.DataItem))" />
-                          </div>
+                              Click="@(() => OpenBilleditPopup((Job)cellContext.DataItem))" />
+                </div>
             </CellDisplayTemplate>
         </DxGridCommandColumn>
         <DxGridDataColumn FieldName="BranchName"
@@ -319,8 +319,23 @@
                 SpinnerClass="text-primary"
                 SuccessCardClass="border-success" />
 <AddContainerJob @ref="addContainerJob"></AddContainerJob>
-
+<FreightBKShippingWebApp.Components.Pages.TestPage.BillAddEditPage2 @ref="billAddEditPage" />
 @code {
+    BillAddEditPage2 billAddEditPage;
+    async Task OpenBilleditPopup(Job job)
+    {
+        var bill = new Bill
+        {
+            BillJobId = job.JobId,
+            BillJobNo = job.JobNo,
+            BillJobType = job.JobType,
+            BillPartyId = job.JobPartyId ?? 0,
+            BillBranchId = job.JobBranchId ?? 0,
+
+
+        };
+        billAddEditPage.Show(bill);
+    }
     AddContainerJob addContainerJob;
     void OpenPopup(Job job)
     {
