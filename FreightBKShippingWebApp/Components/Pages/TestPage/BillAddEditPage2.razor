@@ -2447,6 +2447,12 @@
     // private EditContext? editContext;
     private void OnJobDetailsChanged(string selectedjobno)
     {
+        if (string.IsNullOrWhiteSpace(selectedjobno))
+            return;
+
+        if (JobList == null || !JobList.Any())
+            return;
+
         EditModel.BillJobNo = selectedjobno;
         // if (editContext != null)
         // {
