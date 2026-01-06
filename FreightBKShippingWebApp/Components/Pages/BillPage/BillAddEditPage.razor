@@ -358,7 +358,8 @@
                                     ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
                                     AllowUserInput="true"
                                      ShowValidationIcon="true"
-                                    SearchMode="ListSearchMode.AutoSearch" SearchFilterCondition="ListSearchFilterCondition.StartsWith"
+                                    SearchMode="ListSearchMode.AutoSearch"
+                                    SearchFilterCondition="ListSearchFilterCondition.Contains"
                                     Value="@EditModel.BillJobNo"
                                     ValueChanged="@((string jobno) => OnJobDetailsChanged(jobno))"
                                     ValueExpression="@(() => EditModel.BillJobNo)"/>
@@ -2061,7 +2062,7 @@ value
 
             // Set critical data
             JobList = jobTask.Result;
-            FilteredJobList = JobList;
+            FilteredJobList = JobList.Take(1000).ToList(); ;
             branchList = branchtask.Result;
             CompanyList = companyTask.Result;
             var allAccounts = accountTask.Result;

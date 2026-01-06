@@ -11,7 +11,7 @@
 
 <style>
     .grid-size {
-        max-height: 600px;
+        max-height: 570px;
     }
 
     .layout-combobox {
@@ -31,8 +31,8 @@
             @ref="MyGrid"
             KeyFieldName="JobId"
             ShowSearchBox="true"
-            PageSize="20"
-            PageSizeSelectorVisible="true"
+            PageSize="100"
+            PageSizeSelectorVisible="false"
             ShowGroupPanel="true"
             FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always"
             FocusedRowEnabled="true"
@@ -57,61 +57,67 @@
                 <!-- Job Type Filter -->
                 <DxToolbarItem BeginGroup="true"
                                Alignment="ToolbarItemAlignment.Right"
-                               AdaptivePriority="3">
-                    <Template Context="t">
+                               AdaptivePriority="5">
+                    <Template>
                         <DxComboBox Data="@jobTypes"
                                     @bind-Value="SelectedJobType"
-                                    NullText="All Job Types"
-                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                                    NullText="All Types"
+                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                    SizeMode="SizeMode.Small" />
                     </Template>
                 </DxToolbarItem>
 
                 <!-- From Date -->
                 <DxToolbarItem BeginGroup="true"
-                               AdaptivePriority="2"
+                               AdaptivePriority="4"
                                Alignment="ToolbarItemAlignment.Right">
-                    <Template Context="t">
+                    <Template>
                         <DxDateEdit @bind-Date="FromDate"
-                                    NullText="From Date"
+                                    NullText="From"
                                     DisplayFormat="dd/MM/yyyy"
-                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                    SizeMode="SizeMode.Small" />
                     </Template>
                 </DxToolbarItem>
 
                 <!-- To Date -->
                 <DxToolbarItem BeginGroup="true"
-                               AdaptivePriority="2"
+                               AdaptivePriority="4"
                                Alignment="ToolbarItemAlignment.Right">
-                    <Template Context="t">
+                    <Template>
                         <DxDateEdit @bind-Date="ToDate"
-                                    NullText="To Date"
+                                    NullText="To"
                                     DisplayFormat="dd/MM/yyyy"
-                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                    SizeMode="SizeMode.Small" />
                     </Template>
                 </DxToolbarItem>
 
                 <!-- Search Button -->
                 <DxToolbarItem Alignment="ToolbarItemAlignment.Right"
-                               BeginGroup="true"
-                               AdaptivePriority="1">
-                    <Template Context="t">
-                        <DxButton Text="Search"
+                               BeginGroup="true" 
+                               AdaptivePriority="2">
+                    <Template>
+                        <DxButton 
                                   IconCssClass="bi bi-search"
                                   RenderStyle="ButtonRenderStyle.Primary"
-                                  Click="OnSearch" />
+                                  Click="OnSearch"
+                                  SizeMode="SizeMode.Small" />
                     </Template>
                 </DxToolbarItem>
 
                 <!-- Reset Button -->
                 <DxToolbarItem Alignment="ToolbarItemAlignment.Right"
-                               AdaptivePriority="1">
-                    <Template Context="t">
-                        <DxButton Text="Reset"
+                               AdaptivePriority="3">
+                    <Template>
+                        <DxButton
                                   IconCssClass="bi bi-arrow-counterclockwise"
                                   RenderStyle="ButtonRenderStyle.Secondary"
-                                  Click="OnReset" />
+                                  Click="OnReset"
+                                  SizeMode="SizeMode.Small" />
                     </Template>
                 </DxToolbarItem>
+
 
                 <!-- Layout Selector -->
                 <DxToolbarItem IconCssClass="bi bi-gear-wide-connected"
@@ -168,6 +174,11 @@
                               SortIndex="0"
                               SortOrder="GridColumnSortOrder.Descending" />
 
+            <DxGridDataColumn FieldName="JobState"
+                              Caption="Status"
+                              Visible="@GetColumnVisibility("JobState")"
+                              Width="@GetColumnWidth("JobState")" />
+
             <DxGridDataColumn FieldName="BranchName"
                               Caption="Branch"
                               Visible="@GetColumnVisibility("BranchName")"
@@ -188,6 +199,11 @@
                               Caption="Job Type"
                               Visible="@GetColumnVisibility("JobType")"
                               Width="@GetColumnWidth("JobType")" />
+
+            <DxGridDataColumn FieldName="Partyname"
+                              Caption="Customer"
+                              Visible="@GetColumnVisibility("Partyname")"
+                              Width="@GetColumnWidth("Partyname")" />
 
             <DxGridDataColumn FieldName="JobBlNo"
                               Caption="B/L No"
@@ -257,10 +273,7 @@
                               Visible="@GetColumnVisibility("JobRemarks")"
                               Width="@GetColumnWidth("JobRemarks")" />
 
-            <DxGridDataColumn FieldName="JobState"
-                              Caption="Status"
-                              Visible="@GetColumnVisibility("JobState")"
-                              Width="@GetColumnWidth("JobState")" />
+           
         </Columns>
 
         <TotalSummary>
@@ -384,25 +397,27 @@
     {
         allColumns = new List<GridColumnLayout>
         {
-            new() { FieldName = "JobId", Caption = "ID", Visible = false, Width = 80, DisplayIndex = 0 },
-            new() { FieldName = "BranchName", Caption = "Branch", Visible = true, Width = 120, DisplayIndex = 1 },
-            new() { FieldName = "JobNo", Caption = "Job No", Visible = true, Width = 150, DisplayIndex = 2 },
-            new() { FieldName = "JobDate", Caption = "Job Date", Visible = true, Width = 130, DisplayIndex = 3 },
-            new() { FieldName = "JobType", Caption = "Job Type", Visible = true, Width = 120, DisplayIndex = 4 },
-            new() { FieldName = "JobBlNo", Caption = "B/L No", Visible = true, Width = 150, DisplayIndex = 5 },
-            new() { FieldName = "JobBlDate", Caption = "B/L Date", Visible = true, Width = 130, DisplayIndex = 6 },
-            new() { FieldName = "VesselName", Caption = "Vessel", Visible = true, Width = 180, DisplayIndex = 7 },
-            new() { FieldName = "PolName", Caption = "POL", Visible = true, Width = 150, DisplayIndex = 8 },
-            new() { FieldName = "PodName", Caption = "POD", Visible = true, Width = 150, DisplayIndex = 9 },
-            new() { FieldName = "JobFreightBy", Caption = "Freight By", Visible = true, Width = 130, DisplayIndex = 10 },
-            new() { FieldName = "Job20Ft", Caption = "20ft Count", Visible = true, Width = 100, DisplayIndex = 11 },
-            new() { FieldName = "Job40Ft", Caption = "40ft Count", Visible = true, Width = 100, DisplayIndex = 12 },
-            new() { FieldName = "JobGrossWt", Caption = "Gross Weight", Visible = true, Width = 130, DisplayIndex = 13 },
-            new() { FieldName = "JobVolume", Caption = "Volume (CBM)", Visible = true, Width = 130, DisplayIndex = 14 },
-            new() { FieldName = "JobQty", Caption = "Quantity", Visible = true, Width = 100, DisplayIndex = 15 },
-            new() { FieldName = "JobChaId", Caption = "Customs Agent", Visible = true, Width = 160, DisplayIndex = 16 },
-            new() { FieldName = "JobRemarks", Caption = "Remarks", Visible = true, Width = 200, DisplayIndex = 17 },
-            new() { FieldName = "JobState", Caption = "Status", Visible = true, Width = 100, DisplayIndex = 18 }
+             new() { FieldName = "JobState", Caption = "Status", Visible = true, Width = 100, DisplayIndex = 0 },
+            new() { FieldName = "JobId", Caption = "ID", Visible = false, Width = 80, DisplayIndex = 1 },
+            new() { FieldName = "BranchName", Caption = "Branch", Visible = true, Width = 120, DisplayIndex = 2 },
+            new() { FieldName = "JobNo", Caption = "Job No", Visible = true, Width = 150, DisplayIndex = 3 },
+            new() { FieldName = "JobDate", Caption = "Job Date", Visible = true, Width = 130, DisplayIndex = 4 },
+            new() { FieldName = "JobType", Caption = "Job Type", Visible = true, Width = 120, DisplayIndex = 5 },
+             new() { FieldName = "Partyname", Caption = "Customer", Visible = true, Width = 100, DisplayIndex = 6 },
+            new() { FieldName = "JobBlNo", Caption = "B/L No", Visible = true, Width = 150, DisplayIndex = 7 },
+            new() { FieldName = "JobBlDate", Caption = "B/L Date", Visible = true, Width = 130, DisplayIndex = 8},
+            new() { FieldName = "VesselName", Caption = "Vessel", Visible = true, Width = 180, DisplayIndex = 9 },
+            new() { FieldName = "PolName", Caption = "POL", Visible = true, Width = 150, DisplayIndex = 10},
+            new() { FieldName = "PodName", Caption = "POD", Visible = true, Width = 150, DisplayIndex = 11 },
+            new() { FieldName = "JobFreightBy", Caption = "Freight By", Visible = true, Width = 130, DisplayIndex = 12 },
+            new() { FieldName = "Job20Ft", Caption = "20ft Count", Visible = true, Width = 100, DisplayIndex = 13 },
+            new() { FieldName = "Job40Ft", Caption = "40ft Count", Visible = true, Width = 100, DisplayIndex = 14 },
+            new() { FieldName = "JobGrossWt", Caption = "Gross Weight", Visible = true, Width = 130, DisplayIndex = 15 },
+            new() { FieldName = "JobVolume", Caption = "Volume (CBM)", Visible = true, Width = 130, DisplayIndex = 16 },
+            new() { FieldName = "JobQty", Caption = "Quantity", Visible = true, Width = 100, DisplayIndex = 17 },
+            new() { FieldName = "JobChaId", Caption = "Customs Agent", Visible = true, Width = 160, DisplayIndex = 18 },
+            new() { FieldName = "JobRemarks", Caption = "Remarks", Visible = true, Width = 200, DisplayIndex = 19 },
+           
         };
         currentLayout = allColumns.ToList();
     }

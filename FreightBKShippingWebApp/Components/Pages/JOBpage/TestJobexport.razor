@@ -127,7 +127,10 @@
                           </div>
             </CellDisplayTemplate>
         </DxGridCommandColumn>
-       
+        <DxGridDataColumn FieldName="JobState" Caption="Status"
+                          Visible="@GetColumnVisibility("JobState")"
+                          Width="@GetColumnWidth("JobState")" />
+
         <DxGridDataColumn FieldName="BranchName"
                           Caption="Branch"
                           Visible="@GetColumnVisibility("BranchName")"
@@ -149,6 +152,11 @@
                           Visible="@GetColumnVisibility("JobType")"
                           Width="@GetColumnWidth("JobType")" />
 
+        <DxGridDataColumn FieldName="Partyname"
+                          Caption="Customer"
+                          Visible="@GetColumnVisibility("Partyname")"
+                          Width="@GetColumnWidth("Partyname")" />
+
         <DxGridDataColumn FieldName="JobBlNo"
                           Caption="B/L No"
                           Visible="@GetColumnVisibility("JobBlNo")"
@@ -165,6 +173,16 @@
                           Visible="@GetColumnVisibility("JobVesselId")"
                           Width="@GetColumnWidth("JobVesselId")" />
 
+        <DxGridDataColumn FieldName="Job20Ft"
+                          Caption="20ft Count"
+                          Visible="@GetColumnVisibility("Job20Ft")"
+                          Width="@GetColumnWidth("Job20Ft")" />
+
+        <DxGridDataColumn FieldName="Job40Ft"
+                          Caption="40ft Count"
+                          Visible="@GetColumnVisibility("Job40Ft")"
+                          Width="@GetColumnWidth("Job40Ft")" />
+
         <DxGridDataColumn FieldName="PolName"
                           Caption="POL"
                           Visible="@GetColumnVisibility("JobPolId")"
@@ -174,11 +192,6 @@
                           Caption="POD"
                           Visible="@GetColumnVisibility("JobPodId")"
                           Width="@GetColumnWidth("JobPodId")" />
-
-        <DxGridDataColumn FieldName="JobFreightBy"
-                          Caption="Freight By"
-                          Visible="@GetColumnVisibility("JobFreightBy")"
-                          Width="@GetColumnWidth("JobFreightBy")" />
 
         <DxGridDataColumn FieldName="JobGrossWt"
                           Caption="Gross Weight"
@@ -195,17 +208,12 @@
                           Visible="@GetColumnVisibility("JobQty")"
                           Width="@GetColumnWidth("JobQty")" />
 
-        <DxGridDataColumn FieldName="JobChaId"
-                          Caption="Customs Agent"
-                          Visible="@GetColumnVisibility("JobChaId")"
-                          Width="@GetColumnWidth("JobChaId")" />
-
         <DxGridDataColumn FieldName="JobRemarks"
                           Caption="Remarks"
                           Visible="@GetColumnVisibility("JobRemarks")"
                           Width="@GetColumnWidth("JobRemarks")" />
 
-        <DxGridDataColumn FieldName="JobState" Caption="Status" />
+        <DxGridDataColumn FieldName="JobChaId" Caption="Agent" />
     </Columns>
 
 </DxGrid>
@@ -423,34 +431,23 @@
     {
         allColumns = new List<GridColumnLayout>
         {
-             new(){ FieldName = "BranchName", Caption = "Branch", Visible = true, Width = 120, DisplayIndex = 0 },
-        new(){ FieldName = "JobNo", Caption = "Job No", Visible = true, Width = 120, DisplayIndex = 1 },
-
-        new(){ FieldName = "JobDate", Caption = "Job Date", Visible = true, Width = 130, DisplayIndex = 2 },
-
-        new(){ FieldName = "JobType", Caption = "Job Type", Visible = true, Width = 130, DisplayIndex = 3 },
-
-        new(){ FieldName = "JobBlNo", Caption = "B/L No", Visible = true, Width = 150, DisplayIndex = 4 },
-
-        new(){ FieldName = "JobBlDate", Caption = "B/L Date", Visible = true, Width = 130, DisplayIndex = 5 },
-
-        new(){ FieldName = "JobVesselId", Caption = "Vessel", Visible = true, Width = 150, DisplayIndex = 6 },
-
-        new(){ FieldName = "JobPolId", Caption = "POL", Visible = true, Width = 120, DisplayIndex = 7 },
-
-        new(){ FieldName = "JobPodId", Caption = "POD", Visible = true, Width = 120, DisplayIndex = 8 },
-
-        new(){ FieldName = "JobFreightBy", Caption = "Freight By", Visible = true, Width = 150, DisplayIndex = 9 },
-
-        new(){ FieldName = "JobGrossWt", Caption = "Gross Weight", Visible = true, Width = 140, DisplayIndex =10 },
-
-        new(){ FieldName = "JobVolume", Caption = "Volume / CBM", Visible = true, Width = 160, DisplayIndex = 11 },
-
-        new(){ FieldName = "JobQty", Caption = "Quantity", Visible = true, Width = 120, DisplayIndex = 12 },
-
-        new(){ FieldName = "JobChaId", Caption = "Customs Agent", Visible = true, Width = 160, DisplayIndex = 13 },
-
-        new(){ FieldName = "JobRemarks", Caption = "Remarks", Visible = true, Width = 220, DisplayIndex = 14 }
+             new(){ FieldName = "JobState", Caption = "Status", Visible = true, Width = 120, DisplayIndex = 0 },
+             new(){ FieldName = "BranchName", Caption = "Branch", Visible = true, Width = 120, DisplayIndex = 1},
+    new() { FieldName = "JobNo", Caption = "Job No", Visible = true, Width = 120, DisplayIndex = 2 },
+        new() { FieldName = "JobDate", Caption = "Job Date", Visible = true, Width = 130, DisplayIndex = 3 },
+        new() { FieldName = "JobType", Caption = "Job Type", Visible = true, Width = 130, DisplayIndex = 4},
+        new() { FieldName = "Partyname", Caption = "Customer", Visible = true, Width = 130, DisplayIndex = 5 },
+        new() { FieldName = "JobBlNo", Caption = "B/L No", Visible = true, Width = 150, DisplayIndex = 6 },
+        new() { FieldName = "JobBlDate", Caption = "B/L Date", Visible = true, Width = 130, DisplayIndex = 7 },
+        new() { FieldName = "VesselName", Caption = "Vessel", Visible = true, Width = 160, DisplayIndex = 8 },
+        new() { FieldName = "Job20Ft", Caption = "20ft Count", Visible = true, Width = 100, DisplayIndex = 9 },
+        new() { FieldName = "Job40Ft", Caption = "40ft Count", Visible = true, Width = 100, DisplayIndex = 10},
+         new() { FieldName = "PolName", Caption = "POL", Visible = true, Width = 100, DisplayIndex = 11 },
+          new() { FieldName = "PodName", Caption = "POD", Visible = true, Width = 100, DisplayIndex = 12 },
+           new() { FieldName = "JobGrossWt", Caption = "Gross Weight", Visible = true, Width = 100, DisplayIndex = 13 },
+            new() { FieldName = "JobVolume", Caption = "Volume / CBM", Visible = true, Width = 100, DisplayIndex = 14 },
+             new() { FieldName = "JobQty", Caption = "Quantity", Visible = true, Width = 100, DisplayIndex = 15 },
+              new() { FieldName = "Job20Ft", Caption = "Remarks", Visible = true, Width = 100, DisplayIndex = 16 }
     };
         currentLayout = allColumns.Select(c => new GridColumnLayout
         {
@@ -747,9 +744,9 @@
     }
     private async Task LoadJobsAsync()
     {
-        LoadingService.Show();
+       
         try
-        {
+        { LoadingService.Show();
             var allJobs = await JobService.GetAllAsync();
             jobList = allJobs
                 .Where(j => j.JobType != null && j.JobType.Equals(JobType, StringComparison.OrdinalIgnoreCase) &&

@@ -390,11 +390,34 @@
                 <h1 class="fw-bold mb-2">
                     <i class="bi bi-speedometer2 me-2"></i>Welcome, @UserName!
                 </h1>
-                <p class="lead mb-0">Your Shipping Operations Command Center</p>
+                
             </div>
             <div class="year-indicator">
-                <i class="bi bi-calendar3 me-2"></i>
-                <strong>FY @CurrentYearName</strong>
+                <div class="row g-3 mb-3">
+                  @* <div class="col-12 col-md-4">
+                        <DxDateEdit @bind-Date="FromDate"
+                                    DisplayFormat="dd MMM yyyy"
+                                    Placeholder="From Date"
+                                    Width="100%" />
+                    </div> *@
+
+                    <div class="col-12 col-md-4">
+                        <DxDateRangePicker @bind-StartDate="@FromDate"
+                                           @bind-EndDate="@ToDate"
+                                           CssClass="cw-320"
+                                           InputId="deOverview"></DxDateRangePicker>
+                        @* <DxDateEdit @bind-Date="ToDate"
+                                    DisplayFormat="dd MMM yyyy"
+                                    Placeholder="To Date"
+                                    Width="100%" /> *@
+                    </div>
+
+                    <div class="col-12 col-md-4 d-grid">
+                        <DxButton Text="Apply Filter"
+                                  RenderStyle="ButtonRenderStyle.Primary"
+                                  Click="ApplyDateFilter" />
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -727,6 +750,13 @@
     private List<RevenueData> revenueData = new();
     private List<ActivityItem> recentActivities = new();
 
+    DateTime? FromDate = DateTime.Today.AddMonths(-1);
+    DateTime? ToDate = DateTime.Today;
+
+    private async Task ApplyDateFilter()
+    {
+        await LoadDashboardData();
+    }
     protected override async Task OnInitializedAsync()
     {
         try
@@ -824,6 +854,14 @@
 
             var yearJobs = allJobs.Where(j => j.JobYearId == YearStatechangeService.SelectedYearId.ToString()).ToList();
             var yearBills = allBills.Where(b => b.BillYearId == YearStatechangeService.SelectedYearId).ToList();
+
+            yearJobs = yearJobs
+    .Where(j => j.JobDate >= FromDate && j.JobDate <= ToDate)
+    .ToList();
+
+            yearBills = yearBills
+                .Where(b => b.BillDate >= FromDate && b.BillDate <= ToDate)
+                .ToList();
 
             stats = new DashboardStats
             {

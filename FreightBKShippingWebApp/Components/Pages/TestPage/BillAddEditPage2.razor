@@ -343,7 +343,9 @@
                                     ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
                                     AllowUserInput="true"
                                      ShowValidationIcon="true"
-                                    SearchMode="ListSearchMode.AutoSearch" SearchFilterCondition="ListSearchFilterCondition.StartsWith"
+                                ListRenderMode="ListRenderMode.Virtual"
+                                    SearchMode="ListSearchMode.AutoSearch" 
+                                    SearchFilterCondition="ListSearchFilterCondition.Contains"
                                     Value="@EditModel.BillJobNo"
                                     ValueChanged="@((string jobno) => OnJobDetailsChanged(jobno))"
                                     ValueExpression="@(() => EditModel.BillJobNo)"/>
@@ -2436,6 +2438,8 @@
     {
         EditModel.BillPartyId = partyid;
         var selectedparty = AccountList.FirstOrDefault(s => s.AccountId == EditModel.BillPartyId);
+        if (selectedparty == null)
+            return;
         var Duedate = selectedparty.AccountCreditDays ?? 30;
         EditModel.BillDueDate = DateTime.Now.AddDays(Duedate);
 
@@ -2483,6 +2487,8 @@
 
             var selectedCompany = CompanyList?.FirstOrDefault(c => c.Status == true);
             var selectedparty = AccountList.FirstOrDefault(s => s.AccountId == EditModel.BillShipPartyId);
+            if (selectedparty == null)
+                return;
             EditModel.BillAddress1 = selectedparty.AccountAddress1 ?? " ";
             EditModel.BillContactNo = selectedparty.AccountMobile;
             EditModel.BillGstNo = selectedparty.AccountGstNo;
