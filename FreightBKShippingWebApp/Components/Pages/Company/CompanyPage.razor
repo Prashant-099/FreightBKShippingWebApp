@@ -5,6 +5,7 @@
 @using FreightBKShippingWebApp.Services
 @using DevExpress.Blazor
 @using FreightBKShippingWebApp.Components.Pages
+@using Microsoft.AspNetCore.Components.Authorization
 
 @inject CompanyService CompanyService
 @inject ToasteService ToastService
@@ -14,6 +15,7 @@
 @inject EinvConfigService EinvConfigService
 @inject ConfirmationDialogService ConfirmDialogService
 @inject GridLayoutService GridLayoutService
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 <style>
     .grid-size {
@@ -51,12 +53,14 @@
                 </div>
             </TitleTemplate>
             <Items>
-               @* <DxToolbarItem Text="Add" IconCssClass="bi bi-plus-circle" Click="OnCreateNew" /> *@
+
+                <DxToolbarItem Text="Add" IconCssClass="bi bi-plus-circle" Click="OnCreateNew" Visible="@IsSuperAdmin" />
+                
                 <DxToolbarItem Text="Edit" IconCssClass="bi bi-pencil-square" Click="OnEdit" />
                 <DxToolbarItem Text="Delete" IconCssClass="bi bi-trash" Click="OnDelete" />
                 <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="@LoadCompaniesAsync" />
                 <DxToolbarItem Text="Config" IconCssClass="bi bi-gear" Click="OnConfig" />
-
+              
                 <DxToolbarItem BeginGroup="true" IconCssClass="bi bi-gear-wide-connected" Alignment="ToolbarItemAlignment.Right">
                     <Template>
                         <DxComboBox Data="@availableLayouts"
@@ -277,6 +281,10 @@
 <ConfirmationDialog />
 
 @code {
+   
+
+  
+
     DxGrid CompanyGrid;
     private List<Company> companyList = [];
     // private List<Company> SelectedCompanies = new();
@@ -298,8 +306,16 @@
     private List<GridColumnLayout> allColumns = [];
     private List<GridColumnLayout> currentLayout = [];
 
+    private bool IsSuperAdmin { get; set; }
     protected override async Task OnInitializedAsync()
     {
+
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+       
+        var user = authState.User;
+
+        IsSuperAdmin = user.IsInRole("SuperAdmin");
+
         await LoadCompaniesAsync();
         InitializeColumns();
         await LoadAvailableLayouts();
