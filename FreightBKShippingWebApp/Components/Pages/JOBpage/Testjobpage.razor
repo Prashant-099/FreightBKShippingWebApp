@@ -400,11 +400,8 @@
     {
         try
         {
-            CurrentYearId = YearStatechangeService.SelectedYearId;
             await LoadJobsAsync();
-            InitializeColumns();
-            await LoadAvailableLayouts();
-            await LoadDefaultLayout();
+           
         }
         catch (Exception ex)
         {
@@ -731,6 +728,12 @@
         LoadingService.Show();
         try
         {
+            CurrentYearId = YearStatechangeService.SelectedYearId;
+
+            InitializeColumns();
+            await LoadAvailableLayouts();
+            await LoadDefaultLayout();
+
             var allJobs = await JobService.GetAllAsync();
             jobList = allJobs.Where(j => j.JobType == JobType &&
         j.JobYearId == YearStatechangeService.SelectedYearId.ToString()).ToList();
