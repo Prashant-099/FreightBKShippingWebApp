@@ -10,6 +10,7 @@
 @inject YearStatechangeService YearStatechangeService
 @inject JobBuilderService JobBuilder
 @inject GridLayoutService GridLayoutService
+@inject StatusService StatusService
 <style>
     .grid-size {
         max-height: 570px;
@@ -126,7 +127,25 @@
                 </div>
             </CellDisplayTemplate>
         </DxGridCommandColumn>
-        <DxGridDataColumn FieldName="JobState" Caption="Status" />
+
+        <DxGridDataColumn FieldName="JobStatus" Caption="Status" TextAlignment="GridTextAlignment.Right" MinWidth="100">
+            <CellDisplayTemplate Context="cellContext">
+                @{
+                    var statusId = (int?)cellContext.Value;
+                    var statusText = statuslist
+                    .FirstOrDefault(s => s.StatusId == statusId)?
+                    .StatusName;
+
+                    // Fallback to dash if null or empty
+                    var displayText = string.IsNullOrWhiteSpace(statusText)
+                    ? "-"
+                    : statusText;
+                }
+                @displayText
+            </CellDisplayTemplate>
+
+        </DxGridDataColumn>
+
         <DxGridDataColumn FieldName="BranchName"
                           Caption="Branch"
                           Visible="@GetColumnVisibility("BranchName")"
@@ -149,7 +168,7 @@
                           Width="@GetColumnWidth("JobType")" />
 
         <DxGridDataColumn FieldName="Partyname"
-                          Caption="Customer"
+                          Caption="Importer"
                           Visible="@GetColumnVisibility("Partyname")"
                           Width="@GetColumnWidth("Partyname")" />
 
@@ -401,7 +420,10 @@
         try
         {
             await LoadJobsAsync();
-           
+            InitializeColumns();
+            await LoadAvailableLayouts();
+            await LoadDefaultLayout();
+
         }
         catch (Exception ex)
         {
@@ -723,16 +745,15 @@
         isDefaultLayout = false;
         isEditMode = false;
     }
+    List<Status> statuslist;
     private async Task LoadJobsAsync()
     {
         LoadingService.Show();
         try
         {
             CurrentYearId = YearStatechangeService.SelectedYearId;
+            statuslist =await StatusService.GetAllAsync();
 
-            InitializeColumns();
-            await LoadAvailableLayouts();
-            await LoadDefaultLayout();
 
             var allJobs = await JobService.GetAllAsync();
             jobList = allJobs.Where(j => j.JobType == JobType &&
