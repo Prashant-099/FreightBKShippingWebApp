@@ -38,6 +38,8 @@ namespace FreightBKShippingWebApp.Model
         public string? Address3 { get; set; }
 
         [Column("company_stateid")]
+        [Range(1, int.MaxValue, ErrorMessage = "Please select a valid State.")]
+        [Required]
         public int StateId { get; set; }
 
         [Column("company_statecode")]

@@ -1951,12 +1951,13 @@ MinWidth="200"
         {
             // Find the selected cargo from the cargos list
             var selectedCargo = cargos?.FirstOrDefault(c => c.CargoId == value.Value);
-
+            if (selectedCargo == null)
+                return;
             if (selectedCargo != null)
             {
                 // Auto-fill the cargo description if it exists
                 EditModel.JobGoodsDesc = selectedCargo.CargoRemarks ?? string.Empty;
-                EditModel.JobHsnCode = selectedCargo.cargohsnname.ToString() ?? " ";
+                EditModel.JobHsnCode = selectedCargo.cargohsnname ?? string.Empty;
 
                 // Or use whatever property name contains the description
                 // EditModel.JobGoodsDesc = selectedCargo.Description ?? string.Empty;
