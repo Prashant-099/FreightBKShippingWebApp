@@ -15,7 +15,8 @@
 @inject ToasteService ToasteService
 @inject YearStatechangeService YearStatechangeService
 @using FreightBKShippingWebApp.Components.Layout
-
+@inject JobService JobService
+@inject BillService BillService
 <style>
     .user-profile-popup-modern {
         width: 250px;
@@ -78,6 +79,43 @@
 
     .dxbl-btn.dxbl-btn-text-none {
         padding: 4px 5px !important;
+    }
+
+    .activity-item {
+       
+        border-left: 4px solid #667eea;
+        margin-top: 0.5rem;
+        margin-bottom: 0.5rem;
+        background: #f8f9fa;
+        border-radius: 0 10px 10px 0;
+       /*  transition: all 0.3s ease; */
+
+         width: 250px;
+        max-width: 90vw;
+        padding: 16px;
+      /*   background: #ffffff; */
+       /*  border-radius: 16px; */
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+        display: flex;
+        flex-direction: column;
+    }
+
+       /*  .activity-item:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+        } */
+
+    .activity-time {
+        font-size: 0.85rem;
+        color: #6c757d;
+    }
+
+    .status-badge {
+        padding: 0.4rem 0.9rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        display: inline-block;
     }
 </style>
 
@@ -191,6 +229,43 @@
                         <!-- About -->
                      @*    <DxMenuItem NavigateUrl="/about" Text="About" IconCssClass="bi bi-info-square-fill"  /> *@
 
+                        <DxMenuItem 
+                                    IconCssClass="bi bi-bell-fill"
+                                    Position="ItemPosition.End" CssClass="notoggle">
+                            <TextTemplate>
+                                <div class="menu-icon-person-circle menu-icon"></div>
+                            </TextTemplate>
+
+                            <SubMenuTemplate>
+                                <div style="max-height: 260px; overflow-y: auto;">
+                                @if (recentActivities.Any())
+                                {
+                                    @foreach (var activity in recentActivities)
+                                    {
+                                        <div class="activity-item">
+                                            <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                                                <div class="flex-grow-1">
+                                                    <strong>@activity.Title</strong>
+                                                    <p class="mb-1 text-muted small">@activity.Description</p>
+                                                    <span class="status-badge badge-@activity.Status.ToLower()">
+                                                            @activity.Status - @activity.Time.ToString("dd MMM, hh:mm tt")
+                                                    </span>
+                                                </div>
+                                               
+                                            </div>
+                                        </div>
+                                    }
+                                }
+                                else
+                                {
+                                    <div class="text-center text-muted py-5">
+                                        <i class="bi bi-inbox" style="font-size: 3rem; opacity: 0.4;"></i>
+                                        <p class="mt-3">No recent activity</p>
+                                    </div>
+                                }
+                                </div>
+                            </SubMenuTemplate>
+                        </DxMenuItem>
                         <!-- User Profile -->
                         <DxMenuItem Text="User"
                                     IconCssClass="bi bi-people-fill"
@@ -246,6 +321,43 @@
 </DxGridLayout>
 
 @code {
+    private List<ActivityItem> recentActivities = new();
+    public class ActivityItem
+    {
+        public string Title { get; set; }
+        public string Description { get; set; }
+        public string Status { get; set; }
+        public DateTime Time { get; set; }
+    }
+    private void PrepareRecentActivity(List<Job> jobs, List<Bill> bills)
+    {
+        var recentJobs = jobs
+            .OrderByDescending(j => j.JobCreated)
+            .Take(5)
+            .Select(j => new ActivityItem
+            {
+                Title = $"Job {j.JobNo} - {j.JobType}",
+                Description = $"B/L No: {j.JobBlNo}",
+                Status = j.JobState ?? "Pending",
+                Time = j.JobCreated
+            });
+
+        var recentBills = bills
+            .OrderByDescending(b => b.BillCreated)
+            .Take(5)
+            .Select(b => new ActivityItem
+            {
+                Title = $"Invoice {b.BillNo}",
+                Description = $"Amount: ₹{b.BillNetAmount:N2}",
+                Status = b.BillStatus ? "Complete" : "Pending",
+                Time = b.BillCreated
+            });
+
+        recentActivities = recentJobs.Concat(recentBills)
+            .OrderByDescending(a => a.Time)
+            .Take(10)
+            .ToList();
+    }
     [Inject] IJSRuntime JS { get; set; }
     [Inject] private AuthService AuthService { get; set; }
     // [Inject] private CompanyConfigService CompanyConfigService { get; set; }
@@ -300,6 +412,13 @@
 
             await YearStatechangeService.LoadYearsAsync();
             await InvokeAsync(StateHasChanged);
+
+            var allJobs = await JobService.GetAllAsync();
+            var allBills = await BillService.GetAllAsync();
+           
+            var yearJobs = allJobs.Where(j => j.JobYearId == YearStatechangeService.SelectedYearId.ToString()).ToList();
+            var yearBills = allBills.Where(b => b.BillYearId == YearStatechangeService.SelectedYearId).ToList();
+            PrepareRecentActivity(yearJobs, yearBills);
         }
     }
 

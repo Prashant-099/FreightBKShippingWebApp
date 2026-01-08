@@ -1,0 +1,229 @@
+﻿@using FreightBKShippingWebApp.Services
+@inject ToasteService ToastService
+
+<style>
+    .date-filter-body {
+        padding: 0.5rem;
+    }
+
+    .quick-filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+        padding: 0.75rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+
+    .quick-filter-btn {
+        padding: 0.4rem 0.8rem;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        border: 1px solid #dee2e6;
+        background: white;
+        color: #495057;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+        .quick-filter-btn:hover {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+    .error-text {
+        color: #dc3545;
+        font-size: 0.875rem;
+        margin-top: 0.5rem;
+    }
+</style>
+
+<DxPopup @bind-Visible="Visible"
+         ShowCloseButton="true"
+         HeaderText="@Title"
+         MaxWidth="550"
+         CloseOnOutsideClick="false"
+         HorizontalAlignment="HorizontalAlignment.Center"
+         VerticalAlignment="VerticalAlignment.Center"
+         BodyCssClass="date-filter-body"
+         ShowFooter="true">
+
+    <BodyContentTemplate Context="bdydt">
+        <EditForm EditContext="@editContext" OnValidSubmit="HandleValidSubmit" Context="ctxeditform" id="dateFilterForm">
+            <DataAnnotationsValidator />
+
+            <!-- Quick Filter Buttons -->
+            <div class="quick-filters">
+                <button type="button" class="quick-filter-btn" @onclick="SetToday">
+                    <i class="bi bi-calendar-day me-1"></i>Today
+                </button>
+                <button type="button" class="quick-filter-btn" @onclick="SetYesterday">
+                    <i class="bi bi-calendar-minus me-1"></i>Yesterday
+                </button>
+                <button type="button" class="quick-filter-btn" @onclick="SetThisWeek">
+                    <i class="bi bi-calendar-week me-1"></i>This Week
+                </button>
+                <button type="button" class="quick-filter-btn" @onclick="SetThisMonth">
+                    <i class="bi bi-calendar-month me-1"></i>This Month
+                </button>
+                <button type="button" class="quick-filter-btn" @onclick="SetLastMonth">
+                    <i class="bi bi-calendar3 me-1"></i>Last Month
+                </button>
+            </div>
+
+            <DxFormLayout>
+                <DxFormLayoutItem Caption="From Date">
+                    <ChildContent Context="ctx">
+                        <DxDateEdit @bind-Date="EditModel.FromDate"
+                                    DisplayFormat="dd/MM/yyyy"
+                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                    NullText="Select start date..." />
+                    </ChildContent>
+                </DxFormLayoutItem>
+
+                <DxFormLayoutItem Caption="To Date">
+                    <ChildContent Context="ctx">
+                        <DxDateEdit @bind-Date="EditModel.ToDate"
+                                    DisplayFormat="dd/MM/yyyy"
+                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                    NullText="Select end date..." />
+                    </ChildContent>
+                </DxFormLayoutItem>
+            </DxFormLayout>
+
+            @if (!string.IsNullOrEmpty(ErrorMessage))
+            {
+                <div class="error-text">
+                    <i class="bi bi-exclamation-circle me-1"></i>@ErrorMessage
+                </div>
+            }
+        </EditForm>
+    </BodyContentTemplate>
+
+    <FooterContentTemplate Context="ftrdt">
+        <div class="mt-3 text-end">
+            <DxButton Text="Clear" RenderStyle="ButtonRenderStyle.Secondary" Click="ClearFilter" />
+            <DxButton Text="Apply" RenderStyle="ButtonRenderStyle.Primary" SubmitFormOnClick="true" Form="dateFilterForm" />
+            <DxButton Text="Cancel" RenderStyle="ButtonRenderStyle.Secondary" Click="Hide" />
+        </div>
+    </FooterContentTemplate>
+</DxPopup>
+
+@code {
+    private EditContext? editContext;
+
+    [Parameter] public EventCallback<(DateTime? FromDate, DateTime? ToDate)> OnFilterApplied { get; set; }
+
+    private bool Visible { get; set; }
+    private string Title { get; set; } = "Filter by Date Range";
+    private DateFilterModel EditModel { get; set; } = new();
+    private string ErrorMessage { get; set; } = string.Empty;
+
+    public void Show(DateTime? fromDate = null, DateTime? toDate = null)
+    {
+        EditModel = new DateFilterModel
+        {
+            FromDate = fromDate,
+            ToDate = toDate
+        };
+
+        editContext = new EditContext(EditModel);
+        ErrorMessage = string.Empty;
+        Visible = true;
+    }
+
+    private void Hide()
+    {
+        Visible = false;
+        ErrorMessage = string.Empty;
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        ErrorMessage = string.Empty;
+
+        // Validation
+        if (EditModel.FromDate.HasValue && EditModel.ToDate.HasValue)
+        {
+            if (EditModel.FromDate.Value > EditModel.ToDate.Value)
+            {
+                ErrorMessage = "From Date cannot be greater than To Date";
+                return;
+            }
+        }
+
+        // Invoke callback
+        if (OnFilterApplied.HasDelegate)
+        {
+            await OnFilterApplied.InvokeAsync((EditModel.FromDate, EditModel.ToDate));
+        }
+
+        ToastService.Success("Date filter applied successfully!");
+        Visible = false;
+    }
+
+    private async Task ClearFilter()
+    {
+        EditModel.FromDate = null;
+        EditModel.ToDate = null;
+        ErrorMessage = string.Empty;
+
+        if (OnFilterApplied.HasDelegate)
+        {
+            await OnFilterApplied.InvokeAsync((null, null));
+        }
+
+        ToastService.Info("Date filter cleared.");
+        Visible = false;
+    }
+
+    // Quick Filter Methods
+    private void SetToday()
+    {
+        EditModel.FromDate = DateTime.Today;
+        EditModel.ToDate = DateTime.Today;
+        ErrorMessage = string.Empty;
+    }
+
+    private void SetYesterday()
+    {
+        EditModel.FromDate = DateTime.Today.AddDays(-1);
+        EditModel.ToDate = DateTime.Today.AddDays(-1);
+        ErrorMessage = string.Empty;
+    }
+
+    private void SetThisWeek()
+    {
+        var today = DateTime.Today;
+        var startOfWeek = today.AddDays(-(int)today.DayOfWeek);
+        EditModel.FromDate = startOfWeek;
+        EditModel.ToDate = DateTime.Today;
+        ErrorMessage = string.Empty;
+    }
+
+    private void SetThisMonth()
+    {
+        var today = DateTime.Today;
+        EditModel.FromDate = new DateTime(today.Year, today.Month, 1);
+        EditModel.ToDate = DateTime.Today;
+        ErrorMessage = string.Empty;
+    }
+
+    private void SetLastMonth()
+    {
+        var today = DateTime.Today;
+        var lastMonth = today.AddMonths(-1);
+        EditModel.FromDate = new DateTime(lastMonth.Year, lastMonth.Month, 1);
+        EditModel.ToDate = new DateTime(lastMonth.Year, lastMonth.Month, DateTime.DaysInMonth(lastMonth.Year, lastMonth.Month));
+        ErrorMessage = string.Empty;
+    }
+
+    // Model Class
+    public class DateFilterModel
+    {
+        public DateTime? FromDate { get; set; } 
+        public DateTime? ToDate { get; set; }
+    }
+}

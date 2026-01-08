@@ -21,7 +21,7 @@
         padding: 1rem;
         overflow-x: hidden;
     }
-
+   
     .welcome-header {
         background: linear-gradient(135deg, #67cef8 0%, #ffffff 100%);
         border-radius: 20px;
@@ -131,7 +131,7 @@
     }
 
     .stat-value {
-        font-size: 20px;
+        font-size: 25px;
         font-weight: 700;
       /*   margin: 0.5rem 0; */
         line-height: 1;
@@ -141,7 +141,7 @@
         color: black;
         font-size: 0.89rem;
         font-weight: 500;
-        text-transform: uppercase;
+       /*  text-transform: uppercase; */
         letter-spacing: 0.5px;
     }
 
@@ -156,35 +156,18 @@
      border-radius: 16px;
     /*  padding: 1.5rem; */
     /*  box-shadow: 0 4px 15px rgba(0,0,0,0.08); */
-     height: 100%;
+     height: 379px;
  }
 
  .chart-title {
+     padding-left:1rem;
      font-size: 0.89rem;
      font-weight: 500;
     /*  margin-bottom: 1.5rem; */
      color:black;
  }
 
-    .activity-item {
-        padding: 1rem;
-        border-left: 4px solid #667eea;
-        margin-bottom: 1rem;
-        background: #f8f9fa;
-        border-radius: 0 10px 10px 0;
-        transition: all 0.3s ease;
-    }
-
-        .activity-item:hover {
-            background: #e9ecef;
-            transform: translateX(5px);
-        }
-
-    .activity-time {
-        font-size: 0.85rem;
-        color: #6c757d;
-    }
-
+    
     .stat-import {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     }
@@ -213,13 +196,7 @@
         background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
     }
 
-    .status-badge {
-        padding: 0.4rem 0.9rem;
-        border-radius: 20px;
-        font-size: 0.85rem;
-        font-weight: 600;
-        display: inline-block;
-    }
+    
 
     .touch-indicator {
         display: none;
@@ -230,6 +207,41 @@
         color: rgba(102, 126, 234, 0.6);
         font-size: 2rem;
         animation: swipeHint 2s infinite;
+    }
+
+    .chart-card-sale 
+    {
+        background: white;
+        border-radius: 16px;
+        /*  padding: 1.5rem; */
+        /*  box-shadow: 0 4px 15px rgba(0,0,0,0.08); */
+        height: 530px;
+    
+    }
+
+    .swiper-slide1 {
+        flex-shrink: 0;
+        width: 100%;
+        height: auto;
+    }
+    @@media (max-width: 576px) { /* mobile screens */
+        .swiper-slide1
+
+    {
+        max-height: 430px;
+        overflow-y: auto;
+    }
+
+    }
+     @@media (max-width: 576px) { /* mobile screens */
+        .swiper-slide
+
+    {
+            max-width: 576px;
+        max-height: 430px;
+        overflow-y: auto;
+    }
+
     }
 </style>
 
@@ -243,7 +255,7 @@
                 </h1>
                 
             </div>
-            <div class="year-indicator">
+            <div class="year-indicator" @onclick="OpenDateFilter">
                 <i class="bi bi-calendar3 me-2"></i>
                 <strong>FY @CurrentYearName</strong>
             </div>
@@ -272,9 +284,9 @@
             </button>
 
             <div class="swiper-wrapper" style="transform: translateX(-@(currentSlide * 100)%)">
-              
+                
                 <!-- Slide 1: Statistics Cards -->
-                <div class="swiper-slide">
+                <div class="swiper-slide1" >
                     
                     <div class="row g-3 g-md-4">
                         <!-- Import Jobs -->
@@ -290,12 +302,12 @@
                                 <!-- Column 2: Details -->
                                 <div class="flex-grow-1">
                                     <div class="stat-label">Import Active</div>
-                                    <div class="stat-value text-primary">@stats.TotalImportJobs</div>
+                                    
                                     <div class="stat-change">
                                         <i class="bi bi-arrow-up"></i> @stats.ImportJobsThisMonth this month
                                     </div>
                                 </div>
-
+                                <div class="stat-value text-primary ms-3" style="min-width: 5ch; text-align:right; font-variant-numeric: tabular-nums;">@stats.TotalImportJobs</div>
                             </div>
                         </div>
 
@@ -309,11 +321,13 @@
                                 </div>
                                 <div class="flex-grow-1">
                                 <div class="stat-label">Export Active</div> 
-                                <div class="stat-value text-danger">@stats.TotalExportJobs</div>
                                 <div class="stat-change">
                                     <i class="bi bi-arrow-up"></i> @stats.ExportJobsThisMonth this month
                                 </div>
                                 </div>
+
+                                <div class="stat-value text-danger ms-3" style="min-width: 5ch; text-align:right; font-variant-numeric: tabular-nums;">@stats.TotalExportJobs</div>
+
                             </div>
                         </div>
 
@@ -325,82 +339,90 @@
                                 </div>
                                 <div class="flex-grow-1">
                                 <div class="stat-label">Pending</div>
-                                <div class="stat-value text-info">@stats.PendingJobs</div>
                                 <div class="stat-change text-warning">
                                     <i class="bi bi-exclamation-triangle"></i> Requires attention
                                 </div>
                                 </div>
+
+                                <div class="stat-value text-infoms-3 ms-3" style="min-width: 5ch; text-align:right; font-variant-numeric: tabular-nums;">@stats.PendingJobs</div>
+
                             </div>
                         </div>
 
                         <!-- Completed Jobs -->
                         <div class="col-12 col-sm-3 ">
                             <div class="stat-card d-flex align-items-center" @onclick="@(() => Navigation.NavigateTo("/jobregister"))">
-                                <div class="stat-icostat-completen  me-3">
+                                <div class="stat-icon stat-complete  me-3">
                                     <i class="bi bi-check-circle text-white"></i>
                                 </div>
                                     <div class="flex-grow-1">
                                 <div class="stat-label">Completed</div>
-                                <div class="stat-value text-success">@stats.CompletedJobs</div>
                                 <div class="stat-change">
                                     <i class="bi bi-graph-up"></i> @stats.CompletionRate% rate
                                 </div>
                                 </div>
+
+                                <div class="stat-value text-success ms-3" style="min-width: 5ch; text-align:right; font-variant-numeric: tabular-nums;">@stats.CompletedJobs</div>
+
                             </div>
                         </div>
                         <!-- Cancelled -->
-                        <div class="col-12 col-sm-3 ">
+                        <div class="col-12 col-sm-3 mt-2">
                             <div class="stat-card  d-flex align-items-center" @onclick="@(() => Navigation.NavigateTo("/jobregister"))">
                                 <div class="stat-icon stat-cancelled me-3">
                                     <i class="bi bi-x-circle text-white"></i>
                                 </div>
                                 <div class="flex-grow-1">
                                     <div class="stat-label">Cancelled</div>
-                                <div class="stat-value text-danger">@stats.CancelledJobs</div>
                                 <div class="stat-change">
                                     <i class="bi bi-arrow-down"></i> @stats.CancellationRate% rate
                                 </div>
                                 </div>
+                                <div class="stat-value text-danger  ms-3" style="min-width: 5ch; text-align:right; font-variant-numeric: tabular-nums;">@stats.CancelledJobs</div>
+
                             </div>
                         </div>
                         <!-- Total Bills -->
-                        <div class="col-12 col-sm-3 ">
+                        <div class="col-12 col-sm-3 mt-2 ">
                             <div class="stat-card  d-flex align-items-center" @onclick="@(() => Navigation.NavigateTo("/bill"))">
                                 <div class="stat-icon stat-bills me-3">
                                     <i class="bi bi-receipt text-white "></i>
                                 </div>
                                 <div class="flex-grow-1">
                                 <div class="stat-label">Total Invoices</div>
-                                <div class="stat-value text-info">@stats.TotalBills</div>
                                 <div class="stat-change">
                                     <i class="bi bi-arrow-up"></i> @stats.BillsThisMonth this month
                                     </div>
                                 </div>
+
+                                <div class="stat-value text-info ms-3" style="min-width: 5ch; text-align:right; font-variant-numeric: tabular-nums;">@stats.TotalBills</div>
+
                             </div>
                         </div>
 
                         <!-- Revenue -->
-                        <div class="col-12 col-sm-6">
+                        <div class="col-12 col-sm-6 mt-2">
                             <div class="stat-card  d-flex align-items-center" @onclick="@(() => Navigation.NavigateTo("/invoiceregister"))">
                                 <div class="stat-icon stat-revenue me-3">
                                     <i class="bi bi-currency-rupee text-white"></i>
                                 </div>
                                     <div class="flex-grow-1">
                                 <div class="stat-label">Total Revenue</div>
-                                <div class="stat-value text-success">₹@stats.TotalRevenue.ToString("N0")</div>
                                 <div class="stat-change">
                                     <i class="bi bi-graph-up"></i> ₹@stats.RevenueThisMonth.ToString("N0") this month
                                 </div>
                                 </div>
+                                <div class="stat-value text-success ms-3" style="min-width: 5ch; text-align:right; font-variant-numeric: tabular-nums;" >₹@stats.TotalRevenue.ToString("N0")</div>
+
                             </div>
                         </div>
 
                         <!-- Job Status Chart -->
-                        <div class="col-12 col-md-6">
+                        <div class="col-12 col-md-6 mt-2">
                             <div class="chart-card">
-                                <h5 class="chart-title d-flex align-items-center justify-content-center">
+                                <div class="chart-title pt-2">
                                     <i class="bi bi-pie-chart-fill me-2"></i>Job Status Distribution
-                                </h5>
+                                </div>
                                 <DxChart Data="@jobStatusData" Width="100%" Height="320px">
                                     <DxChartLegend Visible="true"
                                                    Position="RelativePosition.Outside"
@@ -417,11 +439,11 @@
                         </div>
 
                         <!-- Job Type Chart -->
-                        <div class="col-12 col-md-6">
+                        <div class="col-12 col-md-6 mt-2">
                             <div class="chart-card">
-                                <h5 class="chart-title d-flex align-items-center justify-content-center">
+                                <div class="chart-title pt-2">
                                     <i class="bi bi-bar-chart-fill me-2"></i>Import vs Export Jobs
-                                </h5>
+                                </div>
                                 <DxChart Data="@jobTypeData" Width="100%" Height="320px">
                                     <DxChartLegend Visible="true" Position="RelativePosition.Outside" />
                                     <DxChartBarSeries ArgumentField="@((JobTypeData j) => j.Month)"
@@ -444,39 +466,64 @@
                 
                 </div>
 
-              
 
-                <!-- Slide 3: Quick Actions & Recent Activity -->
+
+
                 <div class="swiper-slide">
                       
-                    <div class="row g-3 g-md-4">
-                       
-                            <!-- Revenue Chart -->
-                        <div class="col-12 col-md-9">
-                            <div class="chart-card">
-                                <h5 class="chart-title">
-                                    <i class="bi bi-graph-up me-2"></i>Monthly Revenue Trend
+                    <div class="row g-1">
+
+                        <!-- Revenue Chart -->
+                        <div class="col-12">
+                            <div class="chart-card-sale">
+                                <h5 class="chart-title d-flex align-items-center justify-content-center pt-2">
+                                    <i class="bi bi-graph-up me-2"></i>Monthly Revenue Trend - FY @CurrentYearName
                                 </h5>
-                                <DxChart Data="@revenueData" Width="100%" Height="320px">
-                                    <DxChartLegend Visible="false" />
-                                    <DxChartLineSeries ArgumentField="@((RevenueData r) => r.Month)"
-                                                       ValueField="@((RevenueData r) => r.Amount)"
-                                                       Name="Revenue">
-                                        <DxChartSeriesPoint Symbol="ChartPointSymbol.Circle" Size="8" />
-                                        <DxChartSeriesLabel Visible="true" />
-                                    </DxChartLineSeries>
-                                    <DxChartArgumentAxis>
-                                        <DxChartAxisLabel Format="ChartElementFormat.ShortDate" />
-                                    </DxChartArgumentAxis>
-                                    <DxChartValueAxis>
-                                        <DxChartAxisLabel />
-                                    </DxChartValueAxis>
-                                </DxChart>
+
+                                @if (revenueData != null && revenueData.Any())
+                                {
+                                    <DxChart Data="@revenueData" Width="100%" Height="480px">
+                                        <DxChartLegend Visible="false" />
+
+                                        <!-- Use MonthName for X-axis display -->
+                                        <DxChartLineSeries ArgumentField="@((RevenueData r) => r.MonthName)"
+                                                           ValueField="@((RevenueData r) => r.Amount)"
+                                                           Name="Revenue">
+                                            <DxChartSeriesPoint Symbol="ChartPointSymbol.Circle" Size="8" />
+                                            @* <DxChartSeriesLabel Visible="true"
+                                                                Format="ChartElementFormat.ShortDate"
+                                                                Position="RelativePosition.Outside" /> *@
+                                        </DxChartLineSeries>
+
+                                        @* <DxChartArgumentAxis>
+                                            <DxChartAxisLabel />
+                                        </DxChartArgumentAxis> *@
+
+                                        @* <DxChartValueAxis>
+                                            <DxChartAxisLabel Format="ChartElementFormat.ShortDate" />
+                                            <DxChartAxisTitle Text="Revenue (₹)" />
+                                        </DxChartValueAxis> *@
+
+                                        <DxChartTooltip Enabled="true">
+                                            <div class="p-2">
+                                                <strong>@context.Point.Argument</strong><br />
+                                                Revenue: ₹@(((float)context.Point.Value).ToString("N0"))
+                                            </div>
+                                        </DxChartTooltip>
+                                    </DxChart>
+                                }
+                                else
+                                {
+                                    <div class="text-center py-5">
+                                        <i class="bi bi-graph-up" style="font-size: 4rem; opacity: 0.3;"></i>
+                                        <p class="mt-3 text-muted">No revenue data available for FY @CurrentYearName</p>
+                                    </div>
+                                }
                             </div>
                         </div>
 
 
-                        <!-- Recent Activity -->
+                      @*   <!-- Recent Activity -->
                         <div class="col-6 col-md-3">
                             <div class="chart-card">
                                 <h5 class="chart-title">
@@ -512,15 +559,15 @@
                                     }
                                 </div>
                             </div>
-                        </div>
+                        </div> *@
                     </div>
 
 
                   
                 </div>
             </div>
-            </div>
-
+            
+        </div>
             <div class="touch-indicator">
                 <i class="bi bi-chevron-compact-right"></i>
             </div>
@@ -535,8 +582,9 @@
         </div> *@
     }
 </div>
-
+<DateFilterPage @ref="dateFilterPopup" OnFilterApplied="HandleFilterApplied" />
 @code {
+    private DateFilterPage dateFilterPopup;
     private string UserName { get; set; } = "User";
     private string CurrentYearName { get; set; } = "";
     private bool isLoading = true;
@@ -552,7 +600,32 @@
     private List<JobStatusData> jobStatusData = new();
     private List<JobTypeData> jobTypeData = new();
     private List<RevenueData> revenueData = new();
-    private List<ActivityItem> recentActivities = new();
+    private DateTime? filterFromDate;
+    private DateTime? filterToDate;
+
+    private void OpenDateFilter()
+    {
+        dateFilterPopup.Show(filterFromDate, filterToDate);
+    }
+
+    // Handle Filter Applied
+    private async Task HandleFilterApplied((DateTime? FromDate, DateTime? ToDate) dateRange)
+    {
+        filterFromDate = dateRange.FromDate;
+        filterToDate = dateRange.ToDate;
+
+        await LoadDashboardData();
+    }
+
+    // Clear Date Filter
+    private async Task ClearDateFilter()
+    {
+        filterFromDate = null;
+        filterToDate = null;
+
+        await LoadDashboardData();
+        ToastService.Info("Date filter cleared.");
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -574,16 +647,16 @@
         {
             ToastService.Error($"Error loading dashboard: {ex.Message}");
         }
-        finally
-        {
-            isLoading = false;
-        }
+        // finally
+        // {
+        //     isLoading = false;
+        // }
     }
 
     // Carousel Navigation
     private void NextSlide()
     {
-        if (currentSlide < 2)
+        if (currentSlide < 1)
         {
             currentSlide++;
             StateHasChanged();
@@ -601,7 +674,7 @@
 
     private void GoToSlide(int slideIndex)
     {
-        if (slideIndex >= 0 && slideIndex <= 2)
+        if (slideIndex >= 0 && slideIndex <= 1)
         {
             currentSlide = slideIndex;
             StateHasChanged();
@@ -641,41 +714,73 @@
 
     private async Task LoadDashboardData()
     {
-        isLoading = true;
         StateHasChanged();
 
         try
         {
+            isLoading = true;
             var allJobs = await JobService.GetAllAsync();
             var allBills = await BillService.GetAllAsync();
+            isLoading = false;
 
+            // Get jobs and bills for selected year
             var yearJobs = allJobs.Where(j => j.JobYearId == YearStatechangeService.SelectedYearId.ToString()).ToList();
             var yearBills = allBills.Where(b => b.BillYearId == YearStatechangeService.SelectedYearId).ToList();
 
+            // Create a copy for filtered data (for stats and charts in Slide 1)
+            var filteredJobs = yearJobs.ToList();
+            var filteredBills = yearBills.ToList();
+
+            // Apply date filter ONLY to filtered data (not to yearJobs/yearBills)
+            if (filterFromDate.HasValue)
+            {
+                filteredJobs = filteredJobs
+                    .Where(j => j.JobDate.Date >= filterFromDate.Value.Date)
+                    .ToList();
+
+                filteredBills = filteredBills
+                    .Where(b => b.BillDate.Date >= filterFromDate.Value.Date)
+                    .ToList();
+            }
+
+            if (filterToDate.HasValue)
+            {
+                filteredJobs = filteredJobs
+                    .Where(j => j.JobDate.Date <= filterToDate.Value.Date)
+                    .ToList();
+
+                filteredBills = filteredBills
+                    .Where(b => b.BillDate.Date <= filterToDate.Value.Date)
+                    .ToList();
+            }
+
+            // Calculate stats using FILTERED data
             stats = new DashboardStats
             {
-                TotalImportJobs = yearJobs.Count(j => j.JobType?.ToUpper() == "IMPORT"),
-                TotalExportJobs = yearJobs.Count(j => j.JobType?.ToUpper() == "EXPORT"),
-                PendingJobs = yearJobs.Count(j => j.JobState?.ToUpper() == "PENDING"),
-                CompletedJobs = yearJobs.Count(j => j.JobState?.ToUpper() == "COMPLETE"),
-                CancelledJobs = yearJobs.Count(j => j.JobState?.ToUpper() == "CANCEL"),
-                TotalBills = yearBills.Count,
-                TotalRevenue = yearBills.Sum(b => b.BillNetAmount)
+                TotalImportJobs = filteredJobs.Count(j => j.JobType?.ToUpper() == "IMPORT"),
+                TotalExportJobs = filteredJobs.Count(j => j.JobType?.ToUpper() == "EXPORT"),
+                PendingJobs = filteredJobs.Count(j => j.JobState?.ToUpper() == "PENDING"),
+                CompletedJobs = filteredJobs.Count(j => j.JobState?.ToUpper() == "COMPLETE"),
+                CancelledJobs = filteredJobs.Count(j => j.JobState?.ToUpper() == "CANCEL"),
+                TotalBills = filteredBills.Count,
+                TotalRevenue = filteredBills.Sum(b => b.BillNetAmount)
             };
 
             var currentMonth = DateTime.Now.Month;
-            stats.ImportJobsThisMonth = yearJobs.Count(j => j.JobType?.ToUpper() == "IMPORT" && j.JobDate.Month == currentMonth);
-            stats.ExportJobsThisMonth = yearJobs.Count(j => j.JobType?.ToUpper() == "EXPORT" && j.JobDate.Month == currentMonth);
-            stats.BillsThisMonth = yearBills.Count(b => b.BillDate.Month == currentMonth);
-            stats.RevenueThisMonth = yearBills.Where(b => b.BillDate.Month == currentMonth).Sum(b => b.BillNetAmount);
+            stats.ImportJobsThisMonth = filteredJobs.Count(j => j.JobType?.ToUpper() == "IMPORT" && j.JobDate.Month == currentMonth);
+            stats.ExportJobsThisMonth = filteredJobs.Count(j => j.JobType?.ToUpper() == "EXPORT" && j.JobDate.Month == currentMonth);
+            stats.BillsThisMonth = filteredBills.Count(b => b.BillDate.Month == currentMonth);
+            stats.RevenueThisMonth = filteredBills.Where(b => b.BillDate.Month == currentMonth).Sum(b => b.BillNetAmount);
 
-            stats.CompletionRate = yearJobs.Count > 0 ? (int)((stats.CompletedJobs * 100.0) / yearJobs.Count) : 0;
-            stats.CancellationRate = yearJobs.Count > 0 ? (int)((stats.CancelledJobs * 100.0) / yearJobs.Count) : 0;
+            stats.CompletionRate = filteredJobs.Count > 0 ? (int)((stats.CompletedJobs * 100.0) / filteredJobs.Count) : 0;
+            stats.CancellationRate = filteredJobs.Count > 0 ? (int)((stats.CancelledJobs * 100.0) / filteredJobs.Count) : 0;
 
-            PrepareJobStatusData(yearJobs);
-            PrepareJobTypeData(yearJobs);
-            PrepareRevenueData(yearBills);
-            PrepareRecentActivity(yearJobs, yearBills);
+            // Prepare charts using FILTERED data for Slide 1
+            PrepareJobStatusData(filteredJobs);
+            PrepareJobTypeData(filteredJobs);
+
+            // ✅ Prepare revenue chart using FULL YEAR data (NOT filtered) for Slide 2
+            PrepareRevenueDataForYear(yearBills);
         }
         catch (Exception ex)
         {
@@ -683,7 +788,6 @@
         }
         finally
         {
-            isLoading = false;
             StateHasChanged();
         }
     }
@@ -715,49 +819,45 @@
         jobTypeData = monthlyData;
     }
 
-    private void PrepareRevenueData(List<Bill> bills)
+    // ✅ NEW METHOD: Prepare revenue data for FULL YEAR only (ignores date filter)
+    private void PrepareRevenueDataForYear(List<Bill> yearBills)
     {
-        var monthlyRevenue = bills
-            .GroupBy(b => new { b.BillDate.Year, b.BillDate.Month })
-            .OrderBy(g => g.Key.Year).ThenBy(g => g.Key.Month)
-            .Take(6)
-            .Select(g => new RevenueData
-            {
-                Month = new DateTime(g.Key.Year, g.Key.Month, 1),
-                Amount = g.Sum(b => b.BillNetAmount)
-            })
+        // Get the selected year's date range
+        var selectedYear = YearStatechangeService.Years
+            .FirstOrDefault(y => y.YearId == YearStatechangeService.SelectedYearId);
+
+        if (selectedYear == null)
+        {
+            revenueData = new List<RevenueData>();
+            return;
+        }
+
+        // Filter bills to only include those within the selected financial year
+        var billsInYear = yearBills
+            .Where(b => YearStatechangeService.IsDateWithinSelectedYear(b.BillDate))
             .ToList();
 
-        revenueData = monthlyRevenue;
-    }
+        // Generate all months in the financial year
+        var allMonths = new List<DateTime>();
+        var currentDate = new DateTime(selectedYear.YearDateFrom.Value.Year, selectedYear.YearDateFrom.Value.Month, 1);
+        var endDate = new DateTime(selectedYear.YearDateTo.Value.Year, selectedYear.YearDateTo.Value.Month, 1);
 
-    private void PrepareRecentActivity(List<Job> jobs, List<Bill> bills)
-    {
-        var recentJobs = jobs
-            .OrderByDescending(j => j.JobCreated)
-            .Take(5)
-            .Select(j => new ActivityItem
+        while (currentDate <= endDate)
+        {
+            allMonths.Add(currentDate);
+            currentDate = currentDate.AddMonths(1);
+        }
+
+        // Create revenue data for all months (with 0 for months without bills)
+        revenueData = allMonths
+            .Select(month => new RevenueData
             {
-                Title = $"Job {j.JobNo} - {j.JobType}",
-                Description = $"B/L No: {j.JobBlNo}",
-                Status = j.JobState ?? "Pending",
-                Time = j.JobCreated
-            });
-
-        var recentBills = bills
-            .OrderByDescending(b => b.BillCreated)
-            .Take(5)
-            .Select(b => new ActivityItem
-            {
-                Title = $"Invoice {b.BillNo}",
-                Description = $"Amount: ₹{b.BillNetAmount:N2}",
-                Status = b.BillStatus ? "Complete" : "Pending",
-                Time = b.BillCreated
-            });
-
-        recentActivities = recentJobs.Concat(recentBills)
-            .OrderByDescending(a => a.Time)
-            .Take(10)
+                Month = month,
+                MonthName = month.ToString("MMM yy"), // e.g., "Jan 24", "Feb 24"
+                Amount = billsInYear
+                    .Where(b => b.BillDate.Year == month.Year && b.BillDate.Month == month.Month)
+                    .Sum(b => b.BillNetAmount)
+            })
             .ToList();
     }
 
@@ -807,14 +907,7 @@
     public class RevenueData
     {
         public DateTime Month { get; set; }
+        public string MonthName { get; set; } // Added for display
         public float Amount { get; set; }
-    }
-
-    public class ActivityItem
-    {
-        public string Title { get; set; }
-        public string Description { get; set; }
-        public string Status { get; set; }
-        public DateTime Time { get; set; }
     }
 }
