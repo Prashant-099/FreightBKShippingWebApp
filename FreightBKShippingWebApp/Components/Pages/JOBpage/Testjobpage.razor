@@ -120,10 +120,10 @@
                           SizeMode="SizeMode.Medium"
                           Click="@(() => OpenPopup((Job)cellContext.DataItem))" />
 
-                <DxButton RenderStyle="ButtonRenderStyle.Link"
-                          IconCssClass="bi bi-receipt"
-                          SizeMode="SizeMode.Small"
-                              Click="@(() => OpenBilleditPopup((Job)cellContext.DataItem))" />
+                    <DxButton RenderStyle="ButtonRenderStyle.Link"
+                              IconCssClass="bi bi-three-dots"
+                              SizeMode="SizeMode.Medium"
+                              Click="@(e => ShowVoucherMenu(e, (Job)cellContext.DataItem))" />
                 </div>
             </CellDisplayTemplate>
         </DxGridCommandColumn>
@@ -370,9 +370,42 @@
                 SuccessCardClass="border-success" />
 <AddContainerJob @ref="addContainerJob"></AddContainerJob>
 <FreightBKShippingWebApp.Components.Pages.TestPage.BillAddEditPage2 @ref="billAddEditPage" />
+
+<DxContextMenu @ref="voucherMenu" ItemClick="@OnMenuItemClick">
+    <Items>
+        @foreach (var voucher in VoucherList)
+        {
+            <DxContextMenuItem Text="@voucher.VoucherName"
+                               Name="@voucher.VoucherId.ToString()" />
+        }
+    </Items>
+</DxContextMenu>
+
+
 @code {
+
+    DxContextMenu voucherMenu;
+    async Task ShowVoucherMenu(MouseEventArgs e, Job job)
+    {
+        selectedJob = job; // store clicked job
+        await voucherMenu.ShowAsync(e); // show at mouse coords
+    }
+    private Job selectedJob;
+
+    private List<Voucher> VoucherList = new();
+    void OnMenuItemClick(ContextMenuItemClickEventArgs args)
+    {
+
+        var id = int.Parse(args.ItemInfo.Name);
+        var selectedVoucher = VoucherList.FirstOrDefault(v => v.VoucherId == id);
+
+        if (selectedVoucher != null)
+        {
+            OpenBilleditPopup(selectedJob, selectedVoucher);
+        }
+    }
     BillAddEditPage2 billAddEditPage;
-    async Task OpenBilleditPopup(Job job)
+    async Task OpenBilleditPopup(Job job, Voucher voucher)
     {
         var bill = new Bill
         {
@@ -381,11 +414,12 @@
             BillJobType = job.JobType,
             BillPartyId = job.JobPartyId ?? 0,
             BillBranchId = job.JobBranchId ?? 0,
-
-
+            BillVoucherId = voucher.VoucherId
         };
+
         billAddEditPage.Show(bill);
     }
+
     AddContainerJob addContainerJob;
     void OpenPopup(Job job)
     {
