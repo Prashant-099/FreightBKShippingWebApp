@@ -13,6 +13,7 @@
 @inject ExportPdfExtractorService ExportExtractorService
 @inject ExportJobBuilderService ExportJobBuilder
 @inject GridLayoutService GridLayoutService
+@inject StatusService StatusService
 <style>
     .grid-size {
         max-height: 570px;
@@ -73,6 +74,7 @@
                     </Template>
                     
                 </DxToolbarItem>
+
                 <DxToolbarItem BeginGroup="true" Context="cfdr"
                                Alignment="ToolbarItemAlignment.Right"
                                RenderStyleMode="ToolbarItemRenderStyleMode.Contained"
@@ -127,9 +129,25 @@
                           </div>
             </CellDisplayTemplate>
         </DxGridCommandColumn>
-        <DxGridDataColumn FieldName="JobState" Caption="Status"
-                          Visible="@GetColumnVisibility("JobState")"
-                          Width="@GetColumnWidth("JobState")" />
+        <DxGridDataColumn FieldName="JobStatus" Caption="Status" TextAlignment="GridTextAlignment.Right" MinWidth="100"
+                          Visible="@GetColumnVisibility("JobStatus")"
+                          Width="@GetColumnWidth("JobStatus")">
+            <CellDisplayTemplate Context="cellContext">
+                @{
+                    var statusId = (int?)cellContext.Value;
+                    var statusText = statuslist
+                    .FirstOrDefault(s => s.StatusId == statusId)?
+                    .StatusName;
+
+                    // Fallback to dash if null or empty
+                    var displayText = string.IsNullOrWhiteSpace(statusText)
+                    ? "-"
+                    : statusText;
+                }
+                @displayText
+            </CellDisplayTemplate>
+
+        </DxGridDataColumn>
 
         <DxGridDataColumn FieldName="BranchName"
                           Caption="Branch"
@@ -431,7 +449,7 @@
     {
         allColumns = new List<GridColumnLayout>
         {
-             new(){ FieldName = "JobState", Caption = "Status", Visible = true, Width = 120, DisplayIndex = 0 },
+             new(){ FieldName = "JobStatus", Caption = "Status", Visible = true, Width = 120, DisplayIndex = 0 },
              new(){ FieldName = "BranchName", Caption = "Branch", Visible = true, Width = 120, DisplayIndex = 1},
     new() { FieldName = "JobNo", Caption = "Job No", Visible = true, Width = 120, DisplayIndex = 2 },
         new() { FieldName = "JobDate", Caption = "Job Date", Visible = true, Width = 130, DisplayIndex = 3 },
@@ -742,12 +760,17 @@
         isDefaultLayout = false;
         isEditMode = false;
     }
+
+    List<Status> statuslist;
+
     private async Task LoadJobsAsync()
     {
        
         try
         { LoadingService.Show();
             var allJobs = await JobService.GetAllAsync();
+            statuslist = await StatusService.GetAllAsync();
+
             jobList = allJobs
                 .Where(j => j.JobType != null && j.JobType.Equals(JobType, StringComparison.OrdinalIgnoreCase) &&
         j.JobYearId == YearStatechangeService.SelectedYearId.ToString())

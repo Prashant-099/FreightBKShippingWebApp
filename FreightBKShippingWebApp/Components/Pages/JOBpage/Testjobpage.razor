@@ -128,7 +128,9 @@
             </CellDisplayTemplate>
         </DxGridCommandColumn>
 
-        <DxGridDataColumn FieldName="JobStatus" Caption="Status" TextAlignment="GridTextAlignment.Right" MinWidth="100">
+        <DxGridDataColumn FieldName="JobStatus" Caption="Status" TextAlignment="GridTextAlignment.Right" MinWidth="100"
+                          Visible="@GetColumnVisibility("JobStatus")"
+                          Width="@GetColumnWidth("JobStatus")">
             <CellDisplayTemplate Context="cellContext">
                 @{
                     var statusId = (int?)cellContext.Value;
@@ -434,7 +436,7 @@
     {
         allColumns = new List<GridColumnLayout>
         {
-            new(){ FieldName = "JobState", Caption = "Status", Visible = true, Width = 120, DisplayIndex = 0 },
+            new(){ FieldName = "JobStatus", Caption = "Status", Visible = true, Width = 120, DisplayIndex = 0 },
              new(){ FieldName = "BranchName", Caption = "Branch", Visible = true, Width = 120, DisplayIndex = 1},
     new() { FieldName = "JobNo", Caption = "Job No", Visible = true, Width = 120, DisplayIndex = 2 },
         new() { FieldName = "JobDate", Caption = "Job Date", Visible = true, Width = 130, DisplayIndex = 3 },
