@@ -113,7 +113,7 @@ MinWidth="200"
                                 </div>
                             </DxFormLayoutItem>
 
-                                <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="@AddressCaption" ColSpanMd="12"  >
+                             <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="@AddressCaption" ColSpanMd="12"  >
                                 <DxMemo @bind-Text="EditModel.JobPartyAddress" Rows="3"   ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" CssClass="editor-smooth"></DxMemo>
                             </DxFormLayoutItem>
 
@@ -207,17 +207,57 @@ MinWidth="200"
                                 </div>
 
                             </DxFormLayoutItem>
-                            <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Def Currency" ColSpanMd="12">
-                                 <div style="position: relative; display: inline-block; width: 100%;">
-                                    <DxButton Click="newpopupcurrency"
-                                    Text="+"
-                                    CssClass="custom-plus-button" />
-                                <DxComboBox Data="@Currencies" @bind-Value="EditModel.JobDefCurrId"
-                                TextFieldName="CurrencyName" ValueFieldName="CurrencyId" AllowUserInput="true"
-                                                    SearchMode="ListSearchMode.AutoSearch" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
-                                SearchFilterCondition="ListSearchFilterCondition.Contains" CssClass="editor-smooth"></DxComboBox>
-                                </div>
-                            </DxFormLayoutItem>
+                                <DxFormLayoutItem Caption="Def Currency"
+                                                  CaptionCssClass="caption-bold"
+                                                  ColSpanMd="12">
+
+                                    <!-- Parent: relative (required for + button) -->
+                                    <div style="position: relative; width: 100%;">
+
+                                        <!-- Row layout -->
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+
+                                            <!-- ComboBox wrapper -->
+                                            <div style="position: relative; flex: 1;">
+
+                                                <!-- + Button (overlay on ComboBox) -->
+                                                <DxButton Click="newpopupcurrency"
+                                                          Text="+"
+                                                          CssClass="custom-plus-button"
+                                                          style="
+                              position: absolute;
+                              top: -10px;
+                              right: -6px;
+                              z-index: 5;
+                          " />
+
+                                                <DxComboBox Data="@Currencies"
+                                                            @bind-Value="EditModel.JobDefCurrId"
+                                                            TextFieldName="CurrencyName"
+                                                            ValueFieldName="CurrencyId"
+                                                            AllowUserInput="true"
+                                                            SearchMode="ListSearchMode.AutoSearch"
+                                                            SearchFilterCondition="ListSearchFilterCondition.Contains"
+                                                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                                            CssClass="editor-smooth" />
+                                            </div>
+
+                                            <!-- SpinEdit -->
+                                            <DxSpinEdit @bind-Value="EditModel.JobExchRate"
+                                                        ShowSpinButtons="false"
+                                                        ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                                        NullText="Enter Exchange Rate"
+                                                        CssClass="editor-smooth"
+                                                        style="width: 160px;" />
+
+                                        </div>
+                                    </div>
+
+                                </DxFormLayoutItem>
+
+
+                              @*   <DxFormLayoutItem CaptionCssClass="caption-bold" ColSpanMd="6">
+                                </DxFormLayoutItem> *@
                                 <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Status" ColSpanMd="12">
                                     <div style="position: relative; display: inline-block; width: 100%;">
                                         <DxButton Click="newpopupstastus"
@@ -238,6 +278,10 @@ MinWidth="200"
                                         </DxComboBox>
 
                                     </div>
+                                </DxFormLayoutItem>
+
+                                <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Remarks" ColSpanMd="12">
+                                    <DxMemo @bind-Text="EditModel.JobRemarks" Rows="1" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" CssClass="editor-smooth" />
                                 </DxFormLayoutItem>
 
                         </DxFormLayoutGroup>
@@ -402,6 +446,11 @@ MinWidth="200"
                                                     SearchFilterCondition="ListSearchFilterCondition.Contains" CssClass="editor-smooth" />
                                     </div>
                                 </DxFormLayoutItem>
+
+
+                                <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Booking No." ColSpanMd="12">
+                                    <DxTextBox @bind-Text="EditModel.JobBookingNo" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" CssClass="editor-smooth" />
+                                </DxFormLayoutItem>
                         </DxFormLayoutGroup>
 
 
@@ -411,27 +460,17 @@ MinWidth="200"
 
                         <DxFormLayoutGroup Decoration="FormLayoutGroupDecoration.None">
 
-                         
 
 
 
-
-
-                            <DxFormLayoutItem  CaptionCssClass="caption-bold" Caption="Booking No." ColSpanMd="6">
-                                <DxTextBox @bind-Text="EditModel.JobBookingNo"  ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" CssClass="editor-smooth" />
-                            </DxFormLayoutItem>
-                            <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Exch Rate" ColSpanMd="6">
-                                <DxSpinEdit @bind-Value="EditModel.JobExchRate" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" ShowSpinButtons=false CssClass="editor-smooth" />
-                            </DxFormLayoutItem>
+                          
                          @*<DxFormLayoutItem CaptionCssClass="caption-bold" Caption="CFS" ColSpanMd="6">
                                 <DxTextBox @bind-Text="EditModel.JobCfs"  ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" CssClass="editor-smooth" />
                             </DxFormLayoutItem>*@   
 
 
                             
-                            <DxFormLayoutItem CaptionCssClass="caption-bold"  Caption="Remarks" ColSpanMd="12">
-                                <DxMemo @bind-Text="EditModel.JobRemarks" Rows="3"  ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" CssClass="editor-smooth" />
-                            </DxFormLayoutItem>
+                            
 
                         </DxFormLayoutGroup>
                     </DxFormLayoutGroup>
