@@ -53,8 +53,13 @@
                         </div>
                     </Template>
                 </DxToolbarItem>
-
-                <!-- Job Type Filter -->
+                <DxToolbarItem Text="Filter"
+                               IconCssClass="bi bi-funnel-fill"
+                               Click="OpenDateFilter"
+                             
+                               RenderStyle="ButtonRenderStyle.None"
+                               AdaptivePriority="2" />
+             @*    <!-- Job Type Filter -->
                 <DxToolbarItem BeginGroup="true"
                                Alignment="ToolbarItemAlignment.Right"
                                AdaptivePriority="5">
@@ -117,7 +122,7 @@
                                   SizeMode="SizeMode.Small" />
                     </Template>
                 </DxToolbarItem>
-
+ *@
 
                 <!-- Layout Selector -->
                 <DxToolbarItem IconCssClass="bi bi-gear-wide-connected"
@@ -361,6 +366,7 @@
         </div>
     </div>
 }
+<DateFilterPage @ref="dateFilterPopup" ShowJobTypeFilter ="true" OnFilterApplied="HandleFilterApplied" />
 
 @code {
     private IGrid MyGrid;
@@ -384,7 +390,62 @@
     private const string VOUCHER_TYPE = "JobRegister";
     private List<GridColumnLayout> allColumns = [];
     private List<GridColumnLayout> currentLayout = [];
+    private DateFilterPage dateFilterPopup;
+    private void OpenDateFilter()
+    {
+        dateFilterPopup.Show(FromDate, ToDate, SelectedJobType,null);
+    }
+    private async Task HandleFilterApplied((DateTime? FromDate, DateTime? ToDate, string? JobType, int? vouchertype ) f)
+    {
+        FromDate = f.FromDate;
+        ToDate = f.ToDate;
+        SelectedJobType = f.JobType;
+        OnSearch();
 
+    }
+    private async Task OnSearch()
+    {
+        jobList = allJobs;
+
+        // Apply date filter
+        if (FromDate.HasValue)
+        {
+            jobList = jobList.Where(j => j.JobDate.Date >= FromDate.Value.Date).ToList();
+        }
+
+        if (ToDate.HasValue)
+        {
+            jobList = jobList.Where(j => j.JobDate.Date <= ToDate.Value.Date).ToList();
+        }
+
+        // Apply job type filter
+        if (!string.IsNullOrEmpty(SelectedJobType))
+        {
+            jobList = jobList.Where(j => j.JobType != null &&
+                j.JobType.Equals(SelectedJobType, StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+
+        if (jobList.Count == 0)
+        {
+            ToastService.Warning("No jobs found matching the criteria.");
+        }
+        else
+        {
+            ToastService.Success($"Found {jobList.Count} job(s).");
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OnReset()
+    {
+        FromDate = null;
+        ToDate = null;
+        SelectedJobType = null;
+        jobList = allJobs;
+        ToastService.Info("Filters reset.");
+        await InvokeAsync(StateHasChanged);
+    }
     protected override async Task OnInitializedAsync()
     {
         InitializeColumns();
@@ -442,49 +503,7 @@
         }
     }
 
-    private async Task OnSearch()
-    {
-        jobList = allJobs;
-
-        // Apply date filter
-        if (FromDate.HasValue)
-        {
-            jobList = jobList.Where(j => j.JobDate.Date >= FromDate.Value.Date).ToList();
-        }
-
-        if (ToDate.HasValue)
-        {
-            jobList = jobList.Where(j => j.JobDate.Date <= ToDate.Value.Date).ToList();
-        }
-
-        // Apply job type filter
-        if (!string.IsNullOrEmpty(SelectedJobType))
-        {
-            jobList = jobList.Where(j => j.JobType != null &&
-                j.JobType.Equals(SelectedJobType, StringComparison.OrdinalIgnoreCase)).ToList();
-        }
-
-        if (jobList.Count == 0)
-        {
-            ToastService.Warning("No jobs found matching the criteria.");
-        }
-        else
-        {
-            ToastService.Success($"Found {jobList.Count} job(s).");
-        }
-
-        await InvokeAsync(StateHasChanged);
-    }
-
-    private async Task OnReset()
-    {
-        FromDate = null;
-        ToDate = null;
-        SelectedJobType = null;
-        jobList = allJobs;
-        ToastService.Info("Filters reset.");
-        await InvokeAsync(StateHasChanged);
-    }
+  
 
     // Layout Management Methods
     private string GetColumnWidth(string fieldName)

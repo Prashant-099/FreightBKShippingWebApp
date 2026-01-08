@@ -1,6 +1,7 @@
 ﻿@using FreightBKShippingWebApp.Services
+@using FreightBKShippingWebApp.Model
 @inject ToasteService ToastService
-
+@inject VoucherService VoucherService
 <style>
     .date-filter-body {
         padding: 0.5rem;
@@ -72,8 +73,37 @@
                     <i class="bi bi-calendar3 me-1"></i>Last Month
                 </button>
             </div>
-
+          
+             
             <DxFormLayout>
+                @if (ShowJobTypeFilter)
+                {
+                    <DxFormLayoutItem Caption="Job Type">
+                        <ChildContent Context="ctx">
+                    <DxComboBox Data="@jobTypeslist"
+                                @bind-Value="EditModel.SelectedJobType"
+                                NullText="All Types"
+                                ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                SizeMode="SizeMode.Small" />
+                            </ChildContent>
+                </DxFormLayoutItem>
+                }
+                @if (ShowVoucherTypeFilter)
+                {
+                    <DxFormLayoutItem Caption="Voucher Type">
+                        <ChildContent Context="ctx">
+                            <DxComboBox Data="@voucherTypes" TData="Voucher" TValue="int?"
+                                        @bind-Value="EditModel.SelectedVoucherType"
+                                        NullText="All Vouchers"
+                                        TextFieldName="VoucherName"
+                                        ValueFieldName="VoucherId"
+                                        AllowUserInput="true"
+                                        SearchMode="ListSearchMode.AutoSearch"
+                                        SearchFilterCondition="ListSearchFilterCondition.Contains"
+                                        ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                        </ChildContent>
+                    </DxFormLayoutItem>
+                }
                 <DxFormLayoutItem Caption="From Date">
                     <ChildContent Context="ctx">
                         <DxDateEdit @bind-Date="EditModel.FromDate"
@@ -114,19 +144,23 @@
 @code {
     private EditContext? editContext;
 
-    [Parameter] public EventCallback<(DateTime? FromDate, DateTime? ToDate)> OnFilterApplied { get; set; }
-
+    [Parameter] public EventCallback<(DateTime? FromDate, DateTime? ToDate, string? JobType ,int? Vouchertype)> OnFilterApplied { get; set; }
+    [Parameter] public bool ShowJobTypeFilter { get; set; } = false;
+    [Parameter] public bool ShowVoucherTypeFilter { get; set; } = false;
     private bool Visible { get; set; }
     private string Title { get; set; } = "Filter by Date Range";
     private DateFilterModel EditModel { get; set; } = new();
     private string ErrorMessage { get; set; } = string.Empty;
-
-    public void Show(DateTime? fromDate = null, DateTime? toDate = null)
+    private List<string> jobTypeslist = new() { "IMPORT", "EXPORT" };
+    private List<Voucher> voucherTypes = new();
+    public void Show(DateTime? fromDate, DateTime? toDate , string? SelectedJobType ,int? vouchertype)
     {
         EditModel = new DateFilterModel
         {
             FromDate = fromDate,
-            ToDate = toDate
+            ToDate = toDate,
+            SelectedJobType = SelectedJobType,
+            SelectedVoucherType = vouchertype
         };
 
         editContext = new EditContext(EditModel);
@@ -139,7 +173,24 @@
         Visible = false;
         ErrorMessage = string.Empty;
     }
+    protected override async Task OnInitializedAsync()
+    {
+        if (ShowVoucherTypeFilter == true)
+        {
+            voucherTypes = (await VoucherService.GetAllAsync()).Where(v =>
+    !string.IsNullOrWhiteSpace(v.VoucherGroup) &&
+    (
+        v.VoucherGroup.Trim().Equals("SALES", StringComparison.OrdinalIgnoreCase) ||
+        v.VoucherGroup.Trim().Equals("CREDIT NOTE", StringComparison.OrdinalIgnoreCase) ||
+        v.VoucherGroup.Trim().Equals("DEBIT NOTE", StringComparison.OrdinalIgnoreCase) ||
+        v.VoucherGroup.Trim().Equals("PURCHASE", StringComparison.OrdinalIgnoreCase)
+    ))
+.ToList();
 
+        }
+
+    
+    }
     private async Task HandleValidSubmit()
     {
         ErrorMessage = string.Empty;
@@ -157,7 +208,7 @@
         // Invoke callback
         if (OnFilterApplied.HasDelegate)
         {
-            await OnFilterApplied.InvokeAsync((EditModel.FromDate, EditModel.ToDate));
+            await OnFilterApplied.InvokeAsync((EditModel.FromDate, EditModel.ToDate, EditModel.SelectedJobType, EditModel.SelectedVoucherType));
         }
 
         ToastService.Success("Date filter applied successfully!");
@@ -172,7 +223,7 @@
 
         if (OnFilterApplied.HasDelegate)
         {
-            await OnFilterApplied.InvokeAsync((null, null));
+            await OnFilterApplied.InvokeAsync((null, null, null,null));
         }
 
         ToastService.Info("Date filter cleared.");
@@ -225,5 +276,7 @@
     {
         public DateTime? FromDate { get; set; } 
         public DateTime? ToDate { get; set; }
+        public string? SelectedJobType { get; set; }
+        public int? SelectedVoucherType { get; set; }
     }
 }

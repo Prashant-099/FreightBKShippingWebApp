@@ -52,8 +52,12 @@
                         </div>
                     </Template>
                 </DxToolbarItem>
-
-                <!-- Voucher Type Filter -->
+                <DxToolbarItem Text="Filter"
+                               IconCssClass="bi bi-funnel-fill"
+                               Click="OpenDateFilter"
+                               RenderStyle="ButtonRenderStyle.None"
+                               AdaptivePriority="2" />
+               @*  <!-- Voucher Type Filter -->
                 <DxToolbarItem BeginGroup="true"
                                Alignment="ToolbarItemAlignment.Right"
                                AdaptivePriority="3">
@@ -115,7 +119,7 @@
                                   RenderStyle="ButtonRenderStyle.Secondary"
                                   Click="OnReset" />
                     </Template>
-                </DxToolbarItem>
+                </DxToolbarItem> *@
 
                 <!-- Layout Selector -->
                 <DxToolbarItem IconCssClass="bi bi-gear-wide-connected"
@@ -416,7 +420,7 @@ DeleteCurrentLayout
         </div>
     </div>
 }
-
+<DateFilterPage @ref="dateFilterPopup" ShowVoucherTypeFilter="true" OnFilterApplied="HandleFilterApplied" />
 @code {
     private IGrid MyGrid;
     private List<Bill> billList = new();
@@ -439,13 +443,25 @@ DeleteCurrentLayout
     private const string VOUCHER_TYPE = "InvoiceRegister";
     private List<GridColumnLayout> allColumns = [];
     private List<GridColumnLayout> currentLayout = [];
+    private DateFilterPage dateFilterPopup;
+    private void OpenDateFilter()
+    {
+        dateFilterPopup.Show(FromDate, ToDate, null,SelectedVoucherType);
+    }
+    private async Task HandleFilterApplied((DateTime? FromDate, DateTime? ToDate, string? JobType, int? SelectedVoucherType) f)
+    {
+        FromDate = f.FromDate;
+        ToDate = f.ToDate;
+        SelectedVoucherType = f.SelectedVoucherType;
+        OnSearch();
 
+    }
     protected override async Task OnInitializedAsync()
     {
         InitializeColumns();
         await LoadAvailableLayouts();
         await LoadDefaultLayout();
-        await LoadVoucherTypes();
+        // await LoadVoucherTypes();
         await LoadAllBills();
     }
 
@@ -470,25 +486,25 @@ DeleteCurrentLayout
         currentLayout = allColumns.ToList();
     }
 
-    private async Task LoadVoucherTypes()
-    {
-        try
-        {
-            voucherTypes = (await VoucherService.GetAllAsync()).Where(v =>
-        !string.IsNullOrWhiteSpace(v.VoucherGroup) &&
-        (
-            v.VoucherGroup.Trim().Equals("SALES", StringComparison.OrdinalIgnoreCase) ||
-            v.VoucherGroup.Trim().Equals("CREDIT NOTE", StringComparison.OrdinalIgnoreCase) ||
-            v.VoucherGroup.Trim().Equals("DEBIT NOTE", StringComparison.OrdinalIgnoreCase) ||
-            v.VoucherGroup.Trim().Equals("PURCHASE", StringComparison.OrdinalIgnoreCase)
-        ))
-    .ToList(); 
-        }
-        catch (Exception ex)
-        {
-            ToastService.Error($"Failed to load voucher types: {ex.Message}");
-        }
-    }
+    // private async Task LoadVoucherTypes()
+    // {
+    //     try
+    //     {
+    //         voucherTypes = (await VoucherService.GetAllAsync()).Where(v =>
+    //     !string.IsNullOrWhiteSpace(v.VoucherGroup) &&
+    //     (
+    //         v.VoucherGroup.Trim().Equals("SALES", StringComparison.OrdinalIgnoreCase) ||
+    //         v.VoucherGroup.Trim().Equals("CREDIT NOTE", StringComparison.OrdinalIgnoreCase) ||
+    //         v.VoucherGroup.Trim().Equals("DEBIT NOTE", StringComparison.OrdinalIgnoreCase) ||
+    //         v.VoucherGroup.Trim().Equals("PURCHASE", StringComparison.OrdinalIgnoreCase)
+    //     ))
+    // .ToList(); 
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         ToastService.Error($"Failed to load voucher types: {ex.Message}");
+    //     }
+    // }
 
     private async Task LoadAllBills()
     {
