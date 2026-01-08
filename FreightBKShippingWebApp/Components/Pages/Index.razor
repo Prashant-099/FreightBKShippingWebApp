@@ -234,17 +234,18 @@
         overflow-y: auto;
     }
 
-    }
-     @@media (max-width: 576px) { /* mobile screens */
-        .swiper-slide
-
-    {
+        .swiper-slide {
             max-width: 576px;
-        max-height: 430px;
-        overflow-y: auto;
-    }
+            max-height: 430px;
+            overflow-y: auto;
+        }
 
+        .stat-change {
+            font-size: 0rem;
+           
+        }
     }
+     
 </style>
 
 <div class="dashboard-container">
@@ -782,7 +783,8 @@
             stats.CancellationRate = filteredJobs.Count > 0 ? (int)((stats.CancelledJobs * 100.0) / filteredJobs.Count) : 0;
 
             // Prepare charts using FILTERED data for Slide 1
-            PrepareJobStatusData(filteredJobs);
+            // PrepareJobStatusData(filteredJobs);
+            PrepareJobStatusData(filteredJobs, pendingIds, completeIds, cancelIds);
             PrepareJobTypeData(filteredJobs);
 
             // ✅ Prepare revenue chart using FULL YEAR data (NOT filtered) for Slide 2
@@ -798,16 +800,39 @@
         }
     }
 
-    private void PrepareJobStatusData(List<Job> jobs)
+    // private void PrepareJobStatusData(List<Job> jobs)
+    // {
+    //     jobStatusData = new List<JobStatusData>
+    //     {
+    //         new() { Status = "Pending", Count = jobs.Count(j => pendingIds.Contains(j.JobStatus ?? 0) },
+    //         new() { Status = "Complete", Count = jobs.Count(j => j.JobState?.ToUpper() == "COMPLETE") },
+    //         new() { Status = "Cancelled", Count = jobs.Count(j => j.JobState?.ToUpper() == "CANCELLED") }
+    //     };
+    // }
+    private void PrepareJobStatusData(List<Job> jobs,
+                                  List<int> pendingIds,
+                                  List<int> completeIds,
+                                  List<int> cancelIds)
     {
         jobStatusData = new List<JobStatusData>
+    {
+        new()
         {
-            new() { Status = "Pending", Count = jobs.Count(j => j.JobState?.ToUpper() == "PENDING") },
-            new() { Status = "Complete", Count = jobs.Count(j => j.JobState?.ToUpper() == "COMPLETE") },
-            new() { Status = "Cancelled", Count = jobs.Count(j => j.JobState?.ToUpper() == "CANCELLED") }
-        };
+            Status = "Pending",
+            Count = jobs.Count(j => j.JobStatus.HasValue && pendingIds.Contains(j.JobStatus.Value))
+        },
+        new()
+        {
+            Status = "Complete",
+            Count = jobs.Count(j => j.JobStatus.HasValue && completeIds.Contains(j.JobStatus.Value))
+        },
+        new()
+        {
+            Status = "Cancelled",
+            Count = jobs.Count(j => j.JobStatus.HasValue && cancelIds.Contains(j.JobStatus.Value))
+        }
+    };
     }
-
     private void PrepareJobTypeData(List<Job> jobs)
     {
         var monthlyData = jobs
