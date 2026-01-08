@@ -10,6 +10,7 @@
 @inject JobService JobService
 @inject BillService BillService
 @inject LoadingService LoadingService
+@inject StatusService StatusService
 @inject IJSRuntime JS
 
 <PageTitle>Dashboard - Freight BK Shipping</PageTitle>
@@ -135,6 +136,7 @@
         font-weight: 700;
       /*   margin: 0.5rem 0; */
         line-height: 1;
+        padding-right:15px;
     }
 
     .stat-label {
@@ -232,17 +234,18 @@
         overflow-y: auto;
     }
 
-    }
-     @@media (max-width: 576px) { /* mobile screens */
-        .swiper-slide
-
-    {
+        .swiper-slide {
             max-width: 576px;
-        max-height: 430px;
-        overflow-y: auto;
-    }
+            max-height: 430px;
+            overflow-y: auto;
+        }
 
+        .stat-change {
+            font-size: 0rem;
+           
+        }
     }
+     
 </style>
 
 <div class="dashboard-container">
@@ -584,6 +587,7 @@
 </div>
 <DateFilterPage @ref="dateFilterPopup" OnFilterApplied="HandleFilterApplied" />
 @code {
+    private List<Status> statusList = new();
     private DateFilterPage dateFilterPopup;
     private string UserName { get; set; } = "User";
     private string CurrentYearName { get; set; } = "";
@@ -605,14 +609,14 @@
 
     private void OpenDateFilter()
     {
-        dateFilterPopup.Show(filterFromDate, filterToDate);
+        dateFilterPopup.Show(filterFromDate, filterToDate ,null ,null);
     }
 
     // Handle Filter Applied
-    private async Task HandleFilterApplied((DateTime? FromDate, DateTime? ToDate) dateRange)
+    private async Task HandleFilterApplied((DateTime? FromDate, DateTime? ToDate, string? JobType, int? vouchertype) f)
     {
-        filterFromDate = dateRange.FromDate;
-        filterToDate = dateRange.ToDate;
+        filterFromDate = f.FromDate;
+        filterToDate = f.ToDate;
 
         await LoadDashboardData();
     }
@@ -721,6 +725,7 @@
             isLoading = true;
             var allJobs = await JobService.GetAllAsync();
             var allBills = await BillService.GetAllAsync();
+            statusList = await StatusService.GetAllAsync();
             isLoading = false;
 
             // Get jobs and bills for selected year
@@ -753,15 +758,17 @@
                     .Where(b => b.BillDate.Date <= filterToDate.Value.Date)
                     .ToList();
             }
-
+            var pendingIds = statusList.Where(x => string.Equals(x.StatusName?.Trim(), "Pending", StringComparison.OrdinalIgnoreCase)).Select(x => x.StatusId).ToList();
+            var cancelIds = statusList.Where(x => string.Equals(x.StatusName?.Trim(), "Cancel", StringComparison.OrdinalIgnoreCase)).Select(x => x.StatusId).ToList();
+            var completeIds = statusList.Where(x => string.Equals(x.StatusName?.Trim(), "Completed", StringComparison.OrdinalIgnoreCase)).Select(x => x.StatusId).ToList();
             // Calculate stats using FILTERED data
             stats = new DashboardStats
             {
                 TotalImportJobs = filteredJobs.Count(j => j.JobType?.ToUpper() == "IMPORT"),
                 TotalExportJobs = filteredJobs.Count(j => j.JobType?.ToUpper() == "EXPORT"),
-                PendingJobs = filteredJobs.Count(j => j.JobState?.ToUpper() == "PENDING"),
-                CompletedJobs = filteredJobs.Count(j => j.JobState?.ToUpper() == "COMPLETE"),
-                CancelledJobs = filteredJobs.Count(j => j.JobState?.ToUpper() == "CANCEL"),
+                PendingJobs = filteredJobs.Count(j => pendingIds.Contains(j.JobStatus ?? 0)),
+                CompletedJobs = filteredJobs.Count(j => completeIds.Contains(j.JobStatus ?? 0)),
+                CancelledJobs = filteredJobs.Count(j => cancelIds.Contains(j.JobStatus ?? 0)),
                 TotalBills = filteredBills.Count,
                 TotalRevenue = filteredBills.Sum(b => b.BillNetAmount)
             };
@@ -776,7 +783,8 @@
             stats.CancellationRate = filteredJobs.Count > 0 ? (int)((stats.CancelledJobs * 100.0) / filteredJobs.Count) : 0;
 
             // Prepare charts using FILTERED data for Slide 1
-            PrepareJobStatusData(filteredJobs);
+            // PrepareJobStatusData(filteredJobs);
+            PrepareJobStatusData(filteredJobs, pendingIds, completeIds, cancelIds);
             PrepareJobTypeData(filteredJobs);
 
             // ✅ Prepare revenue chart using FULL YEAR data (NOT filtered) for Slide 2
@@ -792,16 +800,39 @@
         }
     }
 
-    private void PrepareJobStatusData(List<Job> jobs)
+    // private void PrepareJobStatusData(List<Job> jobs)
+    // {
+    //     jobStatusData = new List<JobStatusData>
+    //     {
+    //         new() { Status = "Pending", Count = jobs.Count(j => pendingIds.Contains(j.JobStatus ?? 0) },
+    //         new() { Status = "Complete", Count = jobs.Count(j => j.JobState?.ToUpper() == "COMPLETE") },
+    //         new() { Status = "Cancelled", Count = jobs.Count(j => j.JobState?.ToUpper() == "CANCELLED") }
+    //     };
+    // }
+    private void PrepareJobStatusData(List<Job> jobs,
+                                  List<int> pendingIds,
+                                  List<int> completeIds,
+                                  List<int> cancelIds)
     {
         jobStatusData = new List<JobStatusData>
+    {
+        new()
         {
-            new() { Status = "Pending", Count = jobs.Count(j => j.JobState?.ToUpper() == "PENDING") },
-            new() { Status = "Complete", Count = jobs.Count(j => j.JobState?.ToUpper() == "COMPLETE") },
-            new() { Status = "Cancelled", Count = jobs.Count(j => j.JobState?.ToUpper() == "CANCELLED") }
-        };
+            Status = "Pending",
+            Count = jobs.Count(j => j.JobStatus.HasValue && pendingIds.Contains(j.JobStatus.Value))
+        },
+        new()
+        {
+            Status = "Complete",
+            Count = jobs.Count(j => j.JobStatus.HasValue && completeIds.Contains(j.JobStatus.Value))
+        },
+        new()
+        {
+            Status = "Cancelled",
+            Count = jobs.Count(j => j.JobStatus.HasValue && cancelIds.Contains(j.JobStatus.Value))
+        }
+    };
     }
-
     private void PrepareJobTypeData(List<Job> jobs)
     {
         var monthlyData = jobs
