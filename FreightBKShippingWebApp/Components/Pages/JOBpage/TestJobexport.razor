@@ -14,6 +14,7 @@
 @inject ExportJobBuilderService ExportJobBuilder
 @inject GridLayoutService GridLayoutService
 @inject StatusService StatusService
+@inject VoucherService VoucherService
 <style>
     .grid-size {
         max-height: 570px;
@@ -25,6 +26,7 @@
         border-radius: 6px;
         width: 185px;
     }
+
 </style>
 <DxGrid TItem="Job"
         Data="@jobList"
@@ -42,7 +44,7 @@
         SelectedDataItemsChanged="OnSelectedJobsChanged"
         ColumnResizeMode="GridColumnResizeMode.NextColumn"
         CssClass="grid-size"
-        AllowSelectRowByClick="true">
+        AllowSelectRowByClick="true"> 
 
     <ToolbarTemplate>
         <DxToolbar>
@@ -105,7 +107,9 @@
         </DxToolbar>
     </ToolbarTemplate>
 
+    
     <Columns>
+        
         <DxGridSelectionColumn Width="30"
                                FixedPosition="GridColumnFixedPosition.Left" />
 
@@ -116,19 +120,31 @@
                              NewButtonVisible="false" Width="90px">
             <HeaderCaptionTemplate>Actions</HeaderCaptionTemplate>
             <CellDisplayTemplate Context="cellContext">
+
                   <div style="display: flex; align-items: center;">
                 <DxButton RenderStyle="ButtonRenderStyle.Link"
                           IconCssClass="bi bi-file-earmark-diff-fill"
                          SizeMode="SizeMode.Medium"
                           Click="@(() => OpenPopup((Job)cellContext.DataItem))" />
-
-                <DxButton RenderStyle="ButtonRenderStyle.Link"
-                          IconCssClass="bi bi-receipt"
-                          SizeMode="SizeMode.Small"
-                              Click="@(() => OpenBilleditPopup((Job)cellContext.DataItem))" />
+                    <!-- Menu Button -->
+          
+        @*             <DxContextMenu ItemClick="@OnMenuItemClick">
+                        <Items>
+                            @foreach (var voucher in VoucherList)
+                            {
+                                <DxContextMenuItem Text="@voucher.VoucherName" Name="@voucher.VoucherId.ToString()" />
+                            }
+                        </Items>
+                    </DxContextMenu> *@
+                    <DxButton RenderStyle="ButtonRenderStyle.Link"
+                              IconCssClass="bi bi-three-dots"
+                              SizeMode="SizeMode.Medium"
+                              Click="@(e => ShowVoucherMenu(e, (Job)cellContext.DataItem))" />
                           </div>
             </CellDisplayTemplate>
+
         </DxGridCommandColumn>
+
         <DxGridDataColumn FieldName="JobStatus" Caption="Status" TextAlignment="GridTextAlignment.Right" MinWidth="100"
                           Visible="@GetColumnVisibility("JobStatus")"
                           Width="@GetColumnWidth("JobStatus")">
@@ -393,21 +409,56 @@
 
 
 <FreightBKShippingWebApp.Components.Pages.TestPage.BillAddEditPage2 @ref="billAddEditPage"/>
+
+
+<DxContextMenu @ref="voucherMenu" ItemClick="@OnMenuItemClick">
+    <Items>
+        @foreach (var voucher in VoucherList)
+        {
+            <DxContextMenuItem Text="@voucher.VoucherName"
+                               Name="@voucher.VoucherId.ToString()" />
+        }
+    </Items>
+</DxContextMenu>
+
 @code {
+    DxContextMenu voucherMenu;
+    async Task ShowVoucherMenu(MouseEventArgs e, Job job)
+    {
+        selectedJob = job; // store clicked job
+        await voucherMenu.ShowAsync(e); // show at mouse coords
+    }
+    private Job selectedJob;
+
+    private List<Voucher> VoucherList = new();
+    void OnMenuItemClick(ContextMenuItemClickEventArgs args )
+    {
+
+        var id = int.Parse(args.ItemInfo.Name);
+        var selectedVoucher = VoucherList.FirstOrDefault(v => v.VoucherId == id);
+
+        if (selectedVoucher != null)
+        {
+            OpenBilleditPopup(selectedJob, selectedVoucher);
+        }
+    }
     BillAddEditPage2 billAddEditPage;
-    async Task OpenBilleditPopup(Job job)
+
+    async Task OpenBilleditPopup(Job job, Voucher voucher)
     {
         var bill = new Bill
-        { BillJobId=job.JobId,
-           BillJobNo=job.JobNo,
-           BillJobType=job.JobType,
+        {
+            BillJobId = job.JobId,
+            BillJobNo = job.JobNo,
+            BillJobType = job.JobType,
             BillPartyId = job.JobPartyId ?? 0,
-           BillBranchId=job.JobBranchId ?? 0,
-
-
+            BillBranchId = job.JobBranchId ?? 0,
+            BillVoucherId = voucher.VoucherId
         };
+
         billAddEditPage.Show(bill);
     }
+
 
     AddContainerJob addContainerJob;
     void OpenPopup(Job job)
@@ -449,6 +500,18 @@
             InitializeColumns();
             await LoadAvailableLayouts();
             await LoadDefaultLayout();
+
+            var voucherTask = await VoucherService.GetAllAsync(); // ya jo bhi tumhara method hai
+
+            VoucherList = voucherTask.Where(v =>
+                !string.IsNullOrWhiteSpace(v.VoucherGroup) &&
+                (
+                    v.VoucherGroup.Trim().Equals("SALES", StringComparison.OrdinalIgnoreCase) ||
+                    v.VoucherGroup.Trim().Equals("CREDIT NOTE", StringComparison.OrdinalIgnoreCase) ||
+                    v.VoucherGroup.Trim().Equals("DEBIT NOTE", StringComparison.OrdinalIgnoreCase) ||
+                    v.VoucherGroup.Trim().Equals("PURCHASE", StringComparison.OrdinalIgnoreCase)
+                ))
+                .ToList();
         }
         catch (Exception ex)
         {
