@@ -24,7 +24,7 @@
 <body>
 
     <Routes @rendermode="new InteractiveServerRenderMode(prerender: false)" />
-    <script src="_framework/blazor.web.js"></script>
+  
     <script>
         function closeMobileMenuIfNeeded() {
              if (window.innerWidth < 768) {
@@ -33,6 +33,49 @@
                  document.getElementById('sidebar')?.classList.remove('auto-expanded');
              }
          }</script>
+
+         <script>
+
+        //js for focus and tab index!!
+                        window.downloadFileFromBytes = function (fileName, base64Data) {
+                        const link = document.createElement('a');
+                        link.href = "data:application/pdf;base64," + base64Data;
+                        link.download = fileName;
+                        link.click();
+                    }
+
+
+                      window.generateLandscapePdfBase64 = async function (elementId) {
+                      const element = document.getElementById(elementId);
+                      const opt = {
+                          margin: 5,
+                          image: { type: 'jpeg', quality: 0.98 },
+                          html2canvas: { scale: 2 },
+                          jsPDF: {
+                              unit: 'mm',
+                              format: 'a4',
+                              orientation: 'landscape'
+                          }
+                      };
+                      const worker = html2pdf().set(opt).from(element).toPdf();
+                      const pdf = await worker.get('pdf');
+                      return pdf.output('datauristring').split(',')[1];
+                  };
+
+
+                              window.downloadFile = function (filename, bytesBase64) {
+                            const link = document.createElement('a');
+                            link.download = filename;
+                            link.href = "data:application/pdf;base64," + bytesBase64;
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                        }
+    </script>
+
+
+    <script src="_framework/blazor.web.js"></script>
+    <script src="js/javascriptforall.js"></script>
 </body>
 
 </html>

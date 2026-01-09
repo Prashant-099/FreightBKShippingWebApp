@@ -135,16 +135,26 @@
             <CellDisplayTemplate Context="cellContext">
                 @{
                     var statusId = (int?)cellContext.Value;
-                    var statusText = statuslist
-                    .FirstOrDefault(s => s.StatusId == statusId)?
-                    .StatusName;
+                    var statusText = statuslist.FirstOrDefault(s => s.StatusId == statusId)?.StatusName ?? "-";
 
-                    // Fallback to dash if null or empty
-                    var displayText = string.IsNullOrWhiteSpace(statusText)
-                    ? "-"
-                    : statusText;
+                    // Normalize case
+                    var normalized = statusText?.Trim().ToLower();
+
+                    // Decide cell background color
+                    var bgColor = normalized switch
+                    {
+                        "pending" => "lightcoral",
+                        "complete" => "lightgreen",
+                        "completed" => "lightgreen",
+                        "cancel" => "orange",
+                        "cancelled" => "orange",
+                        _ => "white"
+                    };
                 }
-                @displayText
+
+                <div style="width:100%; height:100%; background-color:@bgColor; display:flex; align-items:center; justify-content:center; font-weight:bold;">
+                    @statusText
+                </div>
             </CellDisplayTemplate>
 
         </DxGridDataColumn>
@@ -932,10 +942,18 @@
                 foreach (var job in selectedList)
                 {
                 var result = await JobService.DeleteAsync(job.JobId);
-                if (result) successCount++; else failCount++;
+              if (result.Success)
+{
+    successCount++;
+}
+else
+{
+    failCount++;
+    ToastService.Error(result.Error);   // 🎉 show real API message
+}
                 }
             if (successCount > 0) ToastService.Success($"{successCount} job(s) Deleted Successfully.");
-            if (failCount > 0) ToastService.Error($"{failCount} job(s) Failed To Delete.");
+            // if (failCount > 0) ToastService.Error($"{failCount} job(s) Failed To Delete.");
                 await LoadJobsAsync();
             }
             finally

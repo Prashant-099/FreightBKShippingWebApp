@@ -22,6 +22,74 @@
         display: flex;
         align-items: center;
     }
+    /* Print section ko hide rakho normally */
+    .print-only-section {
+        display: none;
+    }
+
+    /* Print time pe sirf print section dikhao */
+    @@media print {
+        body * {
+            visibility: hidden;
+        }
+
+        .print-only-section,
+        .print-only-section * {
+            visibility: visible;
+        }
+
+        .print-only-section {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            display: block !important;
+        }
+        
+        @@page {
+            size: A4 landscape;
+            margin: 1cm;
+        }
+    }
+
+    /* Print table styling */
+    .print-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+        font-size: 12px;
+    }
+
+        .print-table th,
+        .print-table td {
+            border: 1px solid #000;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .print-table th {
+            background-color: #f0f0f0;
+            font-weight: bold;
+        }
+
+        .print-table tfoot td {
+            font-weight: bold;
+            background-color: #e8e8e8;
+        }
+
+    .print-header {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+        .print-header h2 {
+            margin: 5px 0;
+        }
+
+    .print-info {
+        margin-bottom: 15px;
+        font-size: 14px;
+    }
 </style>
 
 <div class="px-3 py-3">
@@ -57,7 +125,25 @@
                                Click="OpenDateFilter"
                                RenderStyle="ButtonRenderStyle.None"
                                AdaptivePriority="2" />
-               @*  <!-- Voucher Type Filter -->
+
+                <DxToolbarItem Text="Export"
+                               RenderStyle="ButtonRenderStyle.None"
+                               AdaptivePriority="2">
+                    <Items>
+                        <DxToolbarItem Text="Excel"
+                                       RenderStyle="ButtonRenderStyle.None"
+                                       IconCssClass="bi bi-file-earmark-spreadsheet"
+                                       Click="ExportXlsx" />
+                        <DxToolbarItem Text="PDF"
+                                       RenderStyle="ButtonRenderStyle.None"
+                                       IconCssClass="bi bi-printer"
+                                       Click="PrintGridPage" />
+                    </Items>
+                </DxToolbarItem>
+
+
+
+                @*  <!-- Voucher Type Filter -->
                 <DxToolbarItem BeginGroup="true"
                                Alignment="ToolbarItemAlignment.Right"
                                AdaptivePriority="3">
@@ -252,6 +338,79 @@
         </TotalSummary>
     </DxGrid>
 </div>
+<!-- PRINT ONLY SECTION -->
+<div class="print-only-section" id="printInvoiceSection">
+    <div class="print-header">
+        <h2>Invoice Register</h2>
+        <div class="print-info">
+            <strong>From:</strong> @FromDate?.ToString("dd/MM/yyyy") &nbsp;&nbsp;
+            <strong>To:</strong> @ToDate?.ToString("dd/MM/yyyy") &nbsp;&nbsp;
+            <strong>Print Date:</strong> @DateTime.Now.ToString("dd/MM/yyyy hh:mm tt")
+        </div>
+    </div>
+
+    <table class="print-table">
+        <thead>
+            <tr>
+            
+                <th>Branch</th>
+                <th>Invoice No</th>
+                <th>Invoice Date</th>
+                <th>Voucher Type</th>
+                <th>Customer</th>
+                <th>Job No</th>
+                <th>Job Type</th>
+                <th>Basic Amount</th>
+                <th>Total Amount</th>
+                <th>GST No</th>
+                <th>Place of Supply</th>
+              
+            </tr>
+        </thead>
+
+        <tbody>
+            @if (billList != null && billList.Any())
+            {
+                @foreach (var bill in billList)
+                {
+                    
+
+                    <tr>
+                       
+                        <td>@bill.branchname</td>
+                        <td>@bill.BillNo</td>
+                        <td>@bill.BillDate.ToString("dd/MM/yyyy")</td>
+                        <td>@bill.Vouchname</td>
+                        <td>@bill.partyname</td>
+                        <td>@bill.BillJobNo</td>
+                        <td>@bill.BillJobType</td>
+                        <td>@bill.BillTotal.ToString("N2")</td>
+                        <td>@bill.BillNetAmount.ToString("N2")</td>
+                        <td>@bill.BillGstNo</td>
+                        <td>@bill.posname</td>
+                        
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr>
+                    <td colspan="13" style="text-align:center">No records available</td>
+                </tr>
+            }
+        </tbody>
+
+        <tfoot>
+            <tr>
+                <td colspan="7"><strong>Total Invoices:</strong></td>
+                <td><strong>@billList?.Sum(b => b.BillTotal).ToString("N2")</strong></td>
+                <td><strong>@billList?.Sum(b => b.BillNetAmount).ToString("N2")</strong></td>
+                <td colspan="3"></td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+
 
 <!-- Layout Dialog -->
 @if (showLayoutDialog)
@@ -382,6 +541,38 @@
 }
 <DateFilterPage @ref="dateFilterPopup" ShowVoucherTypeFilter="true" OnFilterApplied="HandleFilterApplied" />
 @code {
+
+    
+    private async Task ExportXlsx()
+    {
+
+        if (billList == null || !billList.Any())
+        {
+            ToastService.Warning("No data to print.");
+            return;
+        }
+        await MyGrid.ExportToXlsxAsync("JobRegister.xlsx");
+    }
+    // ✅ PRINT - Using JavaScript to print specific section
+    private async Task PrintGridPage()
+    {
+        if (billList == null || !billList.Any())
+        {
+            ToastService.Warning("No data to print.");
+            return;
+        }
+
+        try
+        {
+            await JS.InvokeVoidAsync("window.print");
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Print error: {ex.Message}");
+        }
+    }
+
+
     private IGrid MyGrid;
     private List<Bill> billList = new();
     private List<Bill> allBills = new();

@@ -1,4 +1,5 @@
-﻿using FreightBKShippingWebApp.Model;
+﻿using DevExpress.XtraRichEdit.Import.Html;
+using FreightBKShippingWebApp.Model;
 
 namespace FreightBKShippingWebApp.Services
 {
@@ -81,17 +82,17 @@ namespace FreightBKShippingWebApp.Services
         }
 
         // Delete a job by ID
-        public async Task<bool> DeleteAsync(int jobId)
+        public async Task<(bool Success, string Error)> DeleteAsync(int jobId)
         {
             try
             {
                 var result = await _api.DeleteAsync<bool>($"api/Job/{jobId}");
-                return result;
-            }
+                return (true, null);
+            }   
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Error deleting job {jobId}: {ex.Message}");
-                return false;
+                return (false, ex.Message);
             }
            
 
