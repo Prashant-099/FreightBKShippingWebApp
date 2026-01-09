@@ -225,11 +225,11 @@ MinWidth="200"
                                                           Text="+"
                                                           CssClass="custom-plus-button"
                                                           style="
-                              position: absolute;
-                              top: -10px;
-                              right: -6px;
-                              z-index: 5;
-                          " />
+                                                                  position: absolute;
+                                                                  top: -10px;
+                                                                  right: -6px;
+                                                                  z-index: 5;
+                                                              " />
 
                                                 <DxComboBox Data="@Currencies"
                                                             @bind-Value="EditModel.JobDefCurrId"
@@ -288,68 +288,60 @@ MinWidth="200"
 
 
                         <DxFormLayoutGroup  ColSpanMd="6" Decoration="FormLayoutGroupDecoration.None">
-                            <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="BL No" ColSpanMd="7">
-                                    <DxTextBox @bind-Text="EditModel.JobBlNo" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" CssClass="editor-smooth" />
-                            </DxFormLayoutItem>
+                                <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="BL No" ColSpanMd="12">
+                                    <div style="display: flex; gap: 10px;">
+                                        <DxTextBox @bind-Text="EditModel.JobBlNo" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" CssClass="editor-smooth" style="flex: 1;" />
+                                        <DxDateEdit NullText="Select Date" @bind-Date="EditModel.JobBlDate" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" DisplayFormat="dd/MM/yyyy" CssClass="editor-smooth" style="flex: 1;" />
+                                    </div>
+                                </DxFormLayoutItem>
 
-                            <DxFormLayoutItem CaptionCssClass="caption-bold"   ColSpanMd="5">
-                                    <DxDateEdit NullText="Select Date" @bind-Date="EditModel.JobBlDate" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" DisplayFormat="dd/MM/yyyy" CssClass="editor-smooth" />
-                            </DxFormLayoutItem>
-                            <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="HBL No" ColSpanMd="7">
-                                    <DxTextBox @bind-Text="EditModel.JobHblNo" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" CssClass="editor-smooth" />
-                            </DxFormLayoutItem>
+                                <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="HBL No" ColSpanMd="12">
+                                    <div style="display: flex; gap: 10px;">
+                                        <DxTextBox @bind-Text="EditModel.JobHblNo" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" CssClass="editor-smooth" style="flex: 1;" />
+                                        <DxDateEdit NullText="Select Date" @bind-Date="EditModel.JobHblDate" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" DisplayFormat="dd/MM/yyyy" CssClass="editor-smooth" style="flex: 1;" />
+                                    </div>
+                                </DxFormLayoutItem>
 
-                            <DxFormLayoutItem CaptionCssClass="caption-bold"   ColSpanMd="5">
-                                <DxDateEdit NullText="Select Date" @bind-Date="EditModel.JobHblDate" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" DisplayFormat="dd/MM/yyyy" CssClass="editor-smooth" />
-                            </DxFormLayoutItem>
-                            <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="BE No" ColSpanMd="7">
-                                    <DxTextBox @bind-Text="EditModel.JobBeNo" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" CssClass="editor-smooth" />
-                            </DxFormLayoutItem>
+                                <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="BE No" ColSpanMd="12">
+                                    <div style="display: flex; gap: 10px;">
+                                        <DxTextBox @bind-Text="EditModel.JobBeNo" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" CssClass="editor-smooth" style="flex: 1;" />
+                                        <DxDateEdit NullText="Select Date" @bind-Date="EditModel.JobBeDate" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" DisplayFormat="dd/MM/yyyy" CssClass="editor-smooth" style="flex: 1;" />
+                                    </div>
+                                </DxFormLayoutItem>
 
-                            <DxFormLayoutItem CaptionCssClass="caption-bold"   ColSpanMd="5">
-                                    <DxDateEdit NullText="Select Date" @bind-Date="EditModel.JobBeDate" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" DisplayFormat="dd/MM/yyyy" CssClass="editor-smooth" />
-                            </DxFormLayoutItem>
+                                <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="ShipperInv No" ColSpanMd="12">
+                                    <div style="display: flex; gap: 10px;">
+                                        <DxTextBox @bind-Text="EditModel.JobShipperInvNo" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" CssClass="editor-smooth" style="flex: 1;" />
+                                        <DxDateEdit NullText="Select Date" @bind-Date="EditModel.JobShipperInvDate" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" DisplayFormat="dd/MM/yyyy" CssClass="editor-smooth" style="flex: 1;" />
+                                    </div>
+                                </DxFormLayoutItem>
 
-                            <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="ShipperInv No" ColSpanMd="7">
-                                <DxTextBox @bind-Text="EditModel.JobShipperInvNo"  ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" CssClass="editor-smooth" />
-                            </DxFormLayoutItem>
+                                <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Gross Wt" ColSpanMd="12">
+                                    <div style="display: flex; gap: 10px;">
+                                        <DxSpinEdit @bind-Value="EditModel.JobGrossWt" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" ShowSpinButtons=false CssClass="editor-smooth" style="flex: 1;" />
+                                        <DxComboBox Data="@weightUnits" @bind-Value="EditModel.JobGrossUnit" AllowUserInput="true"
+                                                    SearchMode="ListSearchMode.AutoSearch" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                                    SearchFilterCondition="ListSearchFilterCondition.Contains" CssClass="editor-smooth" NullText="Select Unit" style="flex: 1;"></DxComboBox>
+                                    </div>
+                                </DxFormLayoutItem>
 
-                            <DxFormLayoutItem CaptionCssClass="caption-bold"   ColSpanMd="5">
-                                    <DxDateEdit NullText="Select Date" @bind-Date="EditModel.JobShipperInvDate" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" DisplayFormat="dd/MM/yyyy" CssClass="editor-smooth" />
-                            </DxFormLayoutItem>
+                                <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Net Wt" ColSpanMd="12">
+                                    <div style="display: flex; gap: 10px;">
+                                        <DxSpinEdit @bind-Value="EditModel.JobNetWt" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" ShowSpinButtons=false CssClass="editor-smooth" style="flex: 1;" />
+                                        <DxComboBox Data="@weightUnits" @bind-Value="EditModel.JobNetUnit" AllowUserInput="true"
+                                                    SearchMode="ListSearchMode.AutoSearch" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                                    SearchFilterCondition="ListSearchFilterCondition.Contains" CssClass="editor-smooth" NullText="Select Unit" style="flex: 1;"></DxComboBox>
+                                    </div>
+                                </DxFormLayoutItem>
 
-
-                            <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Gross Wt" ColSpanMd="7">
-                                    <DxSpinEdit @bind-Value="EditModel.JobGrossWt" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" ShowSpinButtons=false CssClass="editor-smooth" />
-                            </DxFormLayoutItem>
-
-                            <DxFormLayoutItem CaptionCssClass="caption-bold"  ColSpanMd="5">
-                                <DxComboBox Data="@weightUnits" @bind-Value="EditModel.JobGrossUnit" AllowUserInput="true"
-                                SearchMode="ListSearchMode.AutoSearch" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
-                                SearchFilterCondition="ListSearchFilterCondition.Contains" CssClass="editor-smooth" NullText="Select Unit"></DxComboBox>
-                            </DxFormLayoutItem>
-
-
-                            <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Net Wt" ColSpanMd="7">
-                                <DxSpinEdit @bind-Value="EditModel.JobNetWt"  ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" ShowSpinButtons=false CssClass="editor-smooth" />
-                            </DxFormLayoutItem>
-                            <DxFormLayoutItem  CaptionCssClass="caption-bold"  ColSpanMd="5">
-                                <DxComboBox Data="@weightUnits" @bind-Value="EditModel.JobNetUnit" AllowUserInput="true"
-                                SearchMode="ListSearchMode.AutoSearch"  ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
-                                SearchFilterCondition="ListSearchFilterCondition.Contains" CssClass="editor-smooth" NullText="Select Unit"></DxComboBox>
-                            </DxFormLayoutItem>
-
-
-                            <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Qty" ColSpanMd="7">
-                                <DxSpinEdit @bind-Value="EditModel.JobQty"  ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" ShowSpinButtons=false CssClass="editor-smooth" />
-
-                            </DxFormLayoutItem>
-
-                            <DxFormLayoutItem CaptionCssClass="caption-bold"  ColSpanMd="5">
-                                <DxComboBox Data="@weightUnits" @bind-Value="EditModel.JobQtyUnit" AllowUserInput="true"
-                                SearchMode="ListSearchMode.AutoSearch" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
-                                SearchFilterCondition="ListSearchFilterCondition.Contains" CssClass="editor-smooth" NullText="Select Unit"></DxComboBox>
-                            </DxFormLayoutItem>
+                                <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Qty" ColSpanMd="12">
+                                    <div style="display: flex; gap: 10px;">
+                                        <DxSpinEdit @bind-Value="EditModel.JobQty" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" ShowSpinButtons=false CssClass="editor-smooth" style="flex: 1;" />
+                                        <DxComboBox Data="@weightUnits" @bind-Value="EditModel.JobQtyUnit" AllowUserInput="true"
+                                                    SearchMode="ListSearchMode.AutoSearch" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                                    SearchFilterCondition="ListSearchFilterCondition.Contains" CssClass="editor-smooth" NullText="Select Unit" style="flex: 1;"></DxComboBox>
+                                    </div>
+                                </DxFormLayoutItem>
 
                             <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="CBM" ColSpanMd="12">
                                 <DxSpinEdit @bind-Value="EditModel.JobCbm"  ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" ShowSpinButtons=false CssClass="editor-smooth" />

@@ -663,6 +663,8 @@ public class JobBuilderService
                 if (TryGetValue(extractedData, "SB Date", out var sbDate) &&
                     DateTime.TryParse(_cleanupService.CleanValue(sbDate), out var parsedSbDate))
                     j.JobSbDate = parsedSbDate;
+
+
             }
 
             _logger.LogInformation($"✅ Job built successfully (Type: {pdfType}) with {extractedData.Count} fields mapped");
