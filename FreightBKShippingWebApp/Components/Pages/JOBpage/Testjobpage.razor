@@ -11,6 +11,7 @@
 @inject JobBuilderService JobBuilder
 @inject GridLayoutService GridLayoutService
 @inject StatusService StatusService
+@inject VoucherService VoucherService
 <style>
     .grid-size {
         max-height: 570px;
@@ -459,6 +460,18 @@
             InitializeColumns();
             await LoadAvailableLayouts();
             await LoadDefaultLayout();
+            var voucherTask = await VoucherService.GetAllAsync(); // ya jo bhi tumhara method hai
+
+            VoucherList = voucherTask.Where(v =>
+                !string.IsNullOrWhiteSpace(v.VoucherGroup) &&
+                (
+                    v.VoucherGroup.Trim().Equals("SALES", StringComparison.OrdinalIgnoreCase) ||
+                    v.VoucherGroup.Trim().Equals("CREDIT NOTE", StringComparison.OrdinalIgnoreCase) ||
+                    v.VoucherGroup.Trim().Equals("DEBIT NOTE", StringComparison.OrdinalIgnoreCase) ||
+                    v.VoucherGroup.Trim().Equals("PURCHASE", StringComparison.OrdinalIgnoreCase)
+                ))
+                .ToList();
+
 
         }
         catch (Exception ex)
