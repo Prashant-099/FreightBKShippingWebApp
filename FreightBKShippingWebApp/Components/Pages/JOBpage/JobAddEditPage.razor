@@ -705,8 +705,8 @@ MinWidth="200"
         {
             statuslist = await StatusService.GetAllAsync();
 
-           
-          
+
+
         }
         finally
         {
@@ -851,7 +851,8 @@ MinWidth="200"
         LoadingService.Show("Loading accounts...");
         try
         {
-            party = await AccountService.GetAllAsync();
+            var parties = await AccountService.GetAllAsync();
+            party = parties.Where(a => a.AccountTypeId == 18).ToList();
         }
         finally
         {
@@ -1775,7 +1776,7 @@ MinWidth="200"
     private List<Voucher> VoucherList = new();
     private List<Job> jobList = new();
     private List<Branch> branchList = new();
-     private List<Status> statuslist = new();
+    private List<Status> statuslist = new();
     public void Show(Job model)
     {
         IsEdit = model.JobId > 0;
@@ -1786,11 +1787,12 @@ MinWidth="200"
         }
         Visible = true;
         var defaultBranch = statuslist.FirstOrDefault();
-
+        EditModel.JobActive = true;
         // only set default if JobStatus is null or 0
         if (EditModel.JobStatus == null || EditModel.JobStatus == 0)
         {
             EditModel.JobStatus = defaultBranch?.StatusId ?? 0;
+
         }
         StateHasChanged();
     }

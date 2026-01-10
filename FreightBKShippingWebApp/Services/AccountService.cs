@@ -79,18 +79,18 @@ namespace FreightBKShippingWebApp.Services
         }
 
 
-        public async Task<bool> DeleteAsync(int accountId)
+        public async Task<(bool Success, string Error)> DeleteAsync(int accountId)
         {
             
             try
             {
                 var result = await _api.DeleteAsync<bool>($"api/Accounts/{accountId}");
-                return result;
+                return (true, null); 
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Error deleting account: {ex.Message}");
-                return false;
+                return (false, ex.Message); 
             }
            
             
