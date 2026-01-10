@@ -678,10 +678,18 @@
             {
               
                 var result = await AccountService.DeleteAsync(account.AccountId);
-                if (result) successCount++; else failCount++;
+                if (result.Success)
+                {
+                    successCount++;
+                }
+                else
+                {
+                    failCount++;
+                    ToastService.Error(result.Error);   // 🎉 show real API message
+                }
             }
             if (successCount > 0) ToastService.Success($"{successCount} Account(s) Deleted Successfully.");
-            if (failCount > 0) ToastService.Error($"{failCount} Account(s) Failed To Delete.");
+            // if (failCount > 0) ToastService.Error($"{failCount} Account(s) Failed To Delete.");
             await LoadAccountsAsync();
         }
         finally

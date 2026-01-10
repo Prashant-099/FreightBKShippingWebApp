@@ -72,8 +72,8 @@ namespace FreightBKShippingWebApp.Services.PdfReaderAndHelperService
                         job.JobPolId = polId.Value;
                 }
 
-                if (TryGetValue(extractedData, "State of Origin Code", out var stateOrigin))
-                    job.JobState = _cleanupService.CleanValue(stateOrigin);
+                //if (TryGetValue(extractedData, "State of Origin Code", out var stateOrigin))
+                //    job.JobActive = _cleanupService.CleanValue(stateOrigin);
 
                 // ==================== EXPORTER DETAILS (7 fields) ====================
                 if (TryGetValue(extractedData, "Exporter Code", out var exporterCode))

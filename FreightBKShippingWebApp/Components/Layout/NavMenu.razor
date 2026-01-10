@@ -18,6 +18,7 @@
 @using FreightBKShippingWebApp.Components.Layout
 @inject JobService JobService
 @inject BillService BillService
+@inject StatusService StatusService
 <style>
     .user-profile-popup-modern {
         width: 250px;
@@ -342,35 +343,59 @@
         public string Status { get; set; }
         public DateTime Time { get; set; }
     }
+    private List<Status> statuslist = new();
+    private string GetStatusName(int? statusId)
+    {
+        if (statusId == null) return "Pending";
+
+        var item = statuslist.FirstOrDefault(s => s.StatusId == statusId.Value);
+        return item?.StatusName ?? "Pending";
+    }
+
     private void PrepareRecentActivity(List<Job> jobs, List<Bill> bills)
     {
+        jobs ??= new();
+        bills ??= new();
+
+        // Jobs
         var recentJobs = jobs
+            .Where(j => j != null)
             .OrderByDescending(j => j.JobCreated)
             .Take(5)
             .Select(j => new ActivityItem
             {
                 Title = $"Job {j.JobNo} - {j.JobType}",
-                Description = $"B/L No: {j.JobBlNo}",
-                Status = j.JobState ?? "Pending",
+                Description = $"B/L No: {j.JobBlNo ?? "-"}",
+
+                // convert status id -> name
+                Status = GetStatusName(j.JobStatus),
+
                 Time = j.JobCreated
             });
 
+        // Bills
         var recentBills = bills
+            .Where(b => b != null)
             .OrderByDescending(b => b.BillCreated)
             .Take(5)
             .Select(b => new ActivityItem
             {
                 Title = $"Invoice {b.BillNo}",
-                Description = $"Amount: ₹{b.BillNetAmount:N2}",
-                Status = b.BillStatus ? "Complete" : "Pending",
-                Time = b.BillCreated
+                Description = $"Amount: ₹{(b.BillNetAmount):N2}",
+
+                // bool → Active / Inactive
+                Status = b.BillStatus ? "Active" : "Inactive",
+
+                Time = b.BillCreated 
             });
 
-        recentActivities = recentJobs.Concat(recentBills)
+        recentActivities = recentJobs
+            .Concat(recentBills)
             .OrderByDescending(a => a.Time)
             .Take(10)
             .ToList();
     }
+
     [Inject] IJSRuntime JS { get; set; }
     [Inject] private AuthService AuthService { get; set; }
     // [Inject] private CompanyConfigService CompanyConfigService { get; set; }
@@ -428,7 +453,7 @@
 
             var allJobs = await JobService.GetAllAsync();
             var allBills = await BillService.GetAllAsync();
-           
+            statuslist = await StatusService.GetAllAsync();
             var yearJobs = allJobs.Where(j => j.JobYearId == YearStatechangeService.SelectedYearId.ToString()).ToList();
             var yearBills = allBills.Where(b => b.BillYearId == YearStatechangeService.SelectedYearId).ToList();
             PrepareRecentActivity(yearJobs, yearBills);
