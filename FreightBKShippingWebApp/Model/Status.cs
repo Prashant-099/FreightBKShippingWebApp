@@ -27,5 +27,9 @@ namespace FreightBKShippingWebApp.Model
         public string? StatusUpdatedByUser { get; set; } = string.Empty;
         [Column("Status_code")]
         public string? Status_code { get; set; }
+
+        [Column("Status_companyid")]
+        public int StatusCompanyId { get; set; }
+
     }
 }

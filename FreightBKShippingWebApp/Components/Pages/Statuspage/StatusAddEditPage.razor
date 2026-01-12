@@ -32,7 +32,7 @@
                 </DxFormLayoutItem>
 
                 <DxFormLayoutItem Caption="Status Code" Context="gts2" ColSpanMd="12">
-                    <DxComboBox @bind-Value="EditModel.Status_code" Data="@statusCodeList" TextFieldName="Status_code" ValueFieldName="Status_code" SearchFilterCondition="ListSearchFilterCondition.Default" SearchMode="ListSearchMode.Default" AllowUserInput></DxComboBox>
+                    <DxComboBox @bind-Value="EditModel.Status_code" Data="@statusCodeList" TextFieldName="Text" ValueFieldName="Value" SearchFilterCondition="ListSearchFilterCondition.Default" SearchMode="ListSearchMode.Default" AllowUserInput></DxComboBox>
 
                     </DxFormLayoutItem>
 
@@ -62,13 +62,23 @@
 
     private Status EditModel { get; set; } = new();
 
-    List<Status> statusCodeList;
+    // List<Status> statusCodeList;
     [Parameter] public EventCallback OnSaved { get; set; }
-
+    public class SelectItem
+    {
+        public string Text { get; set; }
+        public string Value { get; set; }
+    }
+    List<SelectItem> statusCodeList = new()
+{
+    new SelectItem { Text = "PENDING", Value = "PENDING" },
+    new SelectItem { Text = "COMPLETED", Value = "COMPLETED" },
+     new SelectItem { Text = "CANCELLED", Value = "CANCELLED" }
+};
 
     protected override async Task OnInitializedAsync()
     {
-        statusCodeList = await StatusService.GetAllAsync();
+        // statusCodeList = await StatusService.GetAllAsync();
     }
 
     public void Show(Status status)

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using FreightBKShippingWebApp.Services;
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -28,6 +29,7 @@ namespace FreightBKShippingWebApp.Model
         public string? JobYearId { get; set; }
 
         [Column("job_date")]
+        [CustomValidation(typeof(YearStatechangeService), nameof(YearStatechangeService.ValidateDateWithinYear))]
         public DateTime JobDate { get; set; } = DateTime.UtcNow;
 
         [Column("job_no")]
