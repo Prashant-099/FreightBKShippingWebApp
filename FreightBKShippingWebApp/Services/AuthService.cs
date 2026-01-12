@@ -26,7 +26,7 @@ namespace FreightBKShippingWebApp.Services
             ProtectedLocalStorage localStorage,
             NavigationManager navigationManager,
             AuthenticationStateProvider authStateProvider,
-            ApiClient apiClient,LoadingService loadingService)
+            ApiClient apiClient,LoadingService loadingService)  
         {
            
             _localStorage = localStorage;
@@ -77,6 +77,18 @@ namespace FreightBKShippingWebApp.Services
                     Console.WriteLine("⚠️ Company ID not found in token.");
                 }
 
+                // 🔹 NEW: Decide ActiveBranchId
+                int? activeBranchId = null;
+                if (result.Branches != null && result.Branches.Count == 1)
+                {
+                    activeBranchId = result.Branches.First().BranchId;
+                    result.ActiveBranchId = activeBranchId;
+                }
+
+
+
+
+
                 await _localStorage.SetAsync("sessionState", result);
 
 
@@ -93,6 +105,21 @@ namespace FreightBKShippingWebApp.Services
          
         }
 
+        public async Task<bool> SelectBranchAsync(int branchId)
+        {
+            var session = (await _localStorage.GetAsync<LoginResponseModel>("sessionState")).Value;
+            if (session == null) return false;
+
+            var dto = new { UserId = session, BranchId = branchId };
+
+            var result = await _api.PostAsync<object, object>("api/Auth/select-branch", dto);
+
+            // update local storage with selected branch
+            session.ActiveBranchId = branchId;
+            await _localStorage.SetAsync("sessionState", session);
+
+            return true;
+        }
 
         public async Task LogoutAsync()
         {

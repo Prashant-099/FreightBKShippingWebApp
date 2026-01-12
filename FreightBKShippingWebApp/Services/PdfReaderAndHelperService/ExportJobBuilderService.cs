@@ -1,5 +1,6 @@
 ﻿using FreightBKShippingWebApp.Model;
 using System.Text;
+using static Google.Protobuf.Reflection.SourceCodeInfo.Types;
 namespace FreightBKShippingWebApp.Services.PdfReaderAndHelperService
 {
     public class ExportJobBuilderService
@@ -72,8 +73,14 @@ namespace FreightBKShippingWebApp.Services.PdfReaderAndHelperService
                         job.JobPolId = polId.Value;
                 }
 
-                //if (TryGetValue(extractedData, "State of Origin Code", out var stateOrigin))
-                //    job.JobActive = _cleanupService.CleanValue(stateOrigin);
+                if (TryGetValue(extractedData, "State of Origin Code", out var stateOrigin))
+                {
+                    // "Rajasthan,08" → "08"
+                    var stateCode = stateOrigin.Split(',').Last().Trim();
+
+                    //location.StateOfOriginCode = stateCode;
+                }
+                //job.JobActive = _cleanupService.CleanValue(stateOrigin);
 
                 // ==================== EXPORTER DETAILS (7 fields) ====================
                 if (TryGetValue(extractedData, "Exporter Code", out var exporterCode))

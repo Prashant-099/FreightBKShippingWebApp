@@ -12,6 +12,7 @@ public class JobDataCreationService
     private readonly CargoService _cargoService;
     private readonly VesselService _vesselService;
     private readonly DataCleanupService _cleanupService;
+    private readonly StateService _stateservice;
     private readonly ILogger<JobDataCreationService> _logger;
 
     public JobDataCreationService(
@@ -23,6 +24,7 @@ public class JobDataCreationService
         CargoService cargoService,
         VesselService vesselService,
         DataCleanupService cleanupService,
+        StateService stateService,
         ILogger<JobDataCreationService> logger)
     {
         _locationService = locationService;
@@ -33,6 +35,7 @@ public class JobDataCreationService
         _cargoService = cargoService;
         _vesselService = vesselService;
         _cleanupService = cleanupService;
+        _stateservice = stateService;
         _logger = logger;
     }
 
@@ -50,7 +53,7 @@ public class JobDataCreationService
             if (existing != null)
                 return existing.LocationId;
 
-            var newLoc = new Location { LocationName = name.Trim(), LocationType = "PORT" };
+            var newLoc = new Location { LocationName = name.Trim(), LocationType = "PORT"  };
             bool created = await _locationService.CreateAsync(newLoc);
 
             if (created)
@@ -69,19 +72,35 @@ public class JobDataCreationService
         }
     }
 
-    public async Task<int?> GetOrCreateLocationWithCountryAsync(string portName, string countryName = null, string locType = "PORT")
+    public async Task<int?> GetOrCreateLocationWithCountryAsync(
+      string portName,
+      string countryName = null,
+      string locType = "PORT")
     {
         if (string.IsNullOrWhiteSpace(portName)) return null;
 
         try
         {
+            // 🔹 1️⃣ STATE CODE NIKALO -> "08"
+            string stateCode = null;
+            var stateMatch = Regex.Match(portName, @",\s*(\d+)$");
+            if (stateMatch.Success)
+                stateCode = stateMatch.Groups[1].Value;
+
+            // 🔹 2️⃣ CLEAN LOCATION NAME
+            var cleanName = portName
+                .Split("State of Origin", StringSplitOptions.RemoveEmptyEntries)[0]
+                .Trim();
+
+            // 🔹 3️⃣ Existing check (STATE CODE se)
             var all = await _locationService.GetAllAsync();
             var existing = all.FirstOrDefault(x =>
-                string.Equals(x.LocationName?.Trim(), portName.Trim(), StringComparison.OrdinalIgnoreCase));
+                x.LocationCode == stateCode);
 
             if (existing != null)
                 return existing.LocationId;
 
+            // 🔹 4️⃣ Country resolve
             int? countryId = null;
 
             if (!string.IsNullOrEmpty(countryName))
@@ -90,43 +109,41 @@ public class JobDataCreationService
             }
             else
             {
-                var countryMatch = Regex.Match(portName, @"-([A-Z]{2})(?:[A-Z]{2,})?$");
-                if (countryMatch.Success)
-                {
-                    var countryCode = countryMatch.Groups[1].Value;
-                    countryId = await GetOrCreateCountryIdAsync(countryCode);
-                }
+                countryId = await GetDefaultCountryIdAsync();
             }
 
-            if (countryId == null)
-                countryId = await GetDefaultCountryIdAsync();
-
-            if (countryId == null)
+            if (countryId == null || stateCode == null)
                 return null;
 
+            // 🔹 5️⃣ CREATE LOCATION (🔥 IMPORTANT PART)
             var newLoc = new Location
             {
-                LocationName = portName.Trim(),
-                LocationCode = portName.Trim(),
+                LocationName = cleanName,   // Customs, Mundra-INMUN1
+                LocationCode = stateCode,   // ✅ 08 (ONLY)
                 LocationCountryId = countryId.Value,
-                LocationType=locType
-              
+                LocationType = locType
             };
+
+            // 🔍 PROOF LOG
+            _logger.LogError(
+                "SAVING -> Name: {Name}, Code: {Code}",
+                newLoc.LocationName,
+                newLoc.LocationCode);
 
             bool created = await _locationService.CreateAsync(newLoc);
 
             if (created)
             {
-                var refreshed = await _locationService.GetAllAsync();
-                return refreshed.FirstOrDefault(x =>
-                    string.Equals(x.LocationName?.Trim(), portName.Trim(), StringComparison.OrdinalIgnoreCase))?.LocationId;
+                return (await _locationService.GetAllAsync())
+                    .FirstOrDefault(x => x.LocationCode == stateCode)
+                    ?.LocationId;
             }
 
             return null;
         }
         catch (Exception ex)
         {
-            _logger.LogError($"Error creating location: {ex.Message}");
+            _logger.LogError(ex, "Error creating location");
             return null;
         }
     }
@@ -384,6 +401,47 @@ public class JobDataCreationService
                 var codeKey = string.IsNullOrEmpty(prefix) ? "Code" : $"{prefix} Code";
                 if (data.TryGetValue(codeKey, out var code))
                     newAcc.AccountCode = _cleanupService.CleanValue(code?.ToString());
+
+                if (data != null && data.Count > 0)
+                {
+                    // 1️⃣ Sabse pehle input string ko find karo jisme state code ho
+                    // Example: "Port of Loading, Customs, Mundra-INMUN1   State of Origin,Code :RAJASTHAN,08"
+                    string stateString = data.Values.FirstOrDefault(v => v != null && v.Contains("State of Origin"));
+
+                    if (!string.IsNullOrWhiteSpace(stateString))
+                    {
+                        // 2️⃣ Last comma ke baad number extract karo (state code)
+                        var match = Regex.Match(stateString, @",\s*(\d+)$");
+
+                        if (match.Success)
+                        {
+                            string stateCode = match.Groups[1].Value;
+                            _logger.LogInformation($"Extracted state code: {stateCode}");
+
+                            // 3️⃣ DB se state lookup
+                            var state = await _stateservice.GetStateByCodeAsync(stateCode);
+                            if (state != null)
+                            {
+                                newAcc.AccountStateId = state.StateId;
+                                _logger.LogInformation($"AccountStateId set to {state.StateId}");
+                            }
+                            else
+                            {
+                                _logger.LogWarning($"State code '{stateCode}' not found in DB");
+                            }
+                        }
+                        else
+                        {
+                            _logger.LogWarning($"No state code found in string: {stateString}");
+                        }
+                    }
+                    else
+                        
+                    {
+                        _logger.LogWarning("No field containing 'State of Origin' found in data");
+                    }
+                }
+
             }
 
             var createdAcc = await _accountService.CreateAsync(newAcc);
