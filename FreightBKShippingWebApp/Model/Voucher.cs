@@ -29,8 +29,8 @@ namespace FreightBKShippingWebApp.Model
         public string VoucherName { get; set; } = string.Empty;
 
         [Column("voucher_method")]
-       
-        public string VoucherMethod { get; set; } = "Manual"; // "Automatic" / "Manual"
+        [Required]
+        public string VoucherMethod { get; set; } = "Automatic"; // "Automatic" / "Manual"
 
         [Required]
         [Column("voucher_title")]

@@ -61,9 +61,9 @@ MinWidth="200"
             <!-- Basic Info -->
             <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Job No" ColSpanMd="4">
                   
-                    <DxTextBox @bind-Text="EditModel.JobNo"   ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" ShowValidationIcon="true"/> 
-            
-            </DxFormLayoutItem>
+                    <DxTextBox @bind-Text="EditModel.JobNo" ReadOnly="JobnoVisible" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" ShowValidationIcon="true" />
+
+                </DxFormLayoutItem>
 
             <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="Job Date" ColSpanMd="4">
                     <DxDateEdit @bind-Date="EditModel.JobDate" Format="dd-MM-yyyy" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
@@ -1752,6 +1752,7 @@ MinWidth="200"
     string[] weightUnits = new string[] { "NOS", "KGS", "MTS", "PKG", "BOX", "CTN" };
     // string[] stuslist = new string[] { "Complete", "Cancel", "Pending" };
 
+    private bool JobnoVisible { get; set; } = true;
     // private List<Account> parties = new();
     private List<Account> party = new();
     private List<Vessel> vessels = new();
@@ -1804,6 +1805,21 @@ MinWidth="200"
             v.VoucherName.Equals(JobType, StringComparison.OrdinalIgnoreCase)
 && v.VoucherBranchId == branchId)
 .ToList();
+
+var voucher = VoucherList.FirstOrDefault();
+
+if (voucher != null)
+{
+    // Example property name: change "VoucherMethod" to your real field
+            if (string.Equals(voucher.VoucherMethod, "Manual", StringComparison.OrdinalIgnoreCase))
+    {
+        JobnoVisible = false;
+    }
+    else
+    {
+        JobnoVisible = true;
+    }
+}
         // Check if VoucherList is empty
         if (VoucherList == null || !VoucherList.Any())
         {

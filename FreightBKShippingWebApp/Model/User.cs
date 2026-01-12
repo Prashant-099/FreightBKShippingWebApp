@@ -30,7 +30,7 @@ namespace FreightBKShippingWebApp.Model
         [Column("user_email")]
         public string UserEmail { get; set; }
 
-        [Required]
+        
         [Column("user_password")]
         public string UserPassword { get; set; }
 

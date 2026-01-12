@@ -103,18 +103,18 @@ namespace FreightBKShippingWebApp.Services
         }
 
         // ✅ Delete bill by ID
-        public async Task<bool> DeleteAsync(int billId)
+        public async Task<(bool Success, string Error)> DeleteAsync(int billId)
         {
            
             try
             {
                 var result = await _api.DeleteAsync<bool>($"api/Bills/{billId}");
-                return result;
+                return (true, null); 
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Error deleting bill {billId}: {ex.Message}");
-                return false;
+                return (false, ex.Message);
             }
             
         }

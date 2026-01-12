@@ -82,6 +82,7 @@ builder.Services.AddScoped<EinvConfigService>();
 builder.Services.AddScoped<GstinService>();
 builder.Services.AddScoped<StatusService>();
 builder.Services.AddScoped<GstinAuthTokenService>();
+builder.Services.AddScoped<DashboardService>();
 
 //pdfreder services
 builder.Services.AddScoped<DataCleanupService>();

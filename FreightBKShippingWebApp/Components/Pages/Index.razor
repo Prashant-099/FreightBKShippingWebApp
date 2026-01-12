@@ -2,6 +2,8 @@
 @using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Services
 @using Microsoft.AspNetCore.Components.Authorization
+@using System.Globalization
+@using static FreightBKShippingWebApp.Model.DashboardResponseDto
 @inject ToasteService ToastService
 @inject NavigationManager Navigation
 @inject AuthService AuthService
@@ -11,6 +13,7 @@
 @inject BillService BillService
 @inject LoadingService LoadingService
 @inject StatusService StatusService
+@inject DashboardService DashboardService
 @inject IJSRuntime JS
 
 <PageTitle>Dashboard - Freight BK Shipping</PageTitle>
@@ -92,12 +95,12 @@
 
         .swiper-nav.swiper-prev {
             left: 10px;
-            top: 250px;
+            top: 220px;
         }
 
         .swiper-nav.swiper-next {
             right: 10px;
-            top: 250px;
+            top: 220px;
         }
 
         .swiper-nav:disabled {
@@ -230,13 +233,13 @@
         .swiper-slide1
 
     {
-        max-height: 430px;
+        max-height: 410px;
         overflow-y: auto;
     }
 
         .swiper-slide {
             max-width: 576px;
-            max-height: 430px;
+            max-height: 410px;
             overflow-y: auto;
         }
 
@@ -426,18 +429,30 @@
                                 <div class="chart-title pt-2">
                                     <i class="bi bi-pie-chart-fill me-2"></i>Job Status Distribution
                                 </div>
-                                <DxChart Data="@jobStatusData" Width="100%" Height="320px">
-                                    <DxChartLegend Visible="true"
-                                                   Position="RelativePosition.Outside"
-                                                   HorizontalAlignment="HorizontalAlignment.Center" />
-                                    <DxChartPieSeries ArgumentField="@((JobStatusData s) => s.Status)"
-                                                      ValueField="@((JobStatusData s) => s.Count)"
-                                                      Name="Jobs">
-                                        <DxChartSeriesLabel Visible="true">
-                                            <DxChartSeriesLabelConnector Visible="true" />
-                                        </DxChartSeriesLabel>
-                                    </DxChartPieSeries>
-                                </DxChart>
+                                @if (jobStatusData != null && jobStatusData.Any(x => !string.IsNullOrWhiteSpace(x.Label)))
+                                {
+                                    <DxChart Data="@jobStatusData">
+                                        <DxChartLegend Visible="true"
+                                                       Position="RelativePosition.Outside"
+                                                       HorizontalAlignment="HorizontalAlignment.Center" />
+
+                                        <DxChartPieSeries ArgumentField="@((JobTypeData s) => s.Label)"
+                                                          ValueField="@((JobTypeData s) => s.Count)"
+                                                          Name="Jobs">
+                                            <DxChartSeriesLabel Visible="true">
+                                                <DxChartSeriesLabelConnector Visible="true" />
+                                            </DxChartSeriesLabel>
+                                        </DxChartPieSeries>
+                                    </DxChart>
+                                }
+                                else
+                                {
+                                    <div class="text-center py-5 text-muted">
+                                        <i class="bi bi-pie-chart" style="font-size:3rem;"></i>
+                                        <p>No job status data available</p>
+                                    </div>
+                                }
+
                             </div>
                         </div>
 
@@ -449,16 +464,26 @@
                                 </div>
                                 <DxChart Data="@jobTypeData" Width="100%" Height="320px">
                                     <DxChartLegend Visible="true" Position="RelativePosition.Outside" />
-                                    <DxChartBarSeries ArgumentField="@((JobTypeData j) => j.Month)"
-                                                      ValueField="@((JobTypeData j) => j.ImportCount)"
-                                                      Name="Import">
-                                        <DxChartSeriesLabel Visible="false" />
-                                    </DxChartBarSeries>
-                                    <DxChartBarSeries ArgumentField="@((JobTypeData j) => j.Month)"
-                                                      ValueField="@((JobTypeData j) => j.ExportCount)"
-                                                      Name="Export">
-                                        <DxChartSeriesLabel Visible="false" />
-                                    </DxChartBarSeries>
+
+                                   <!-- Import Series -->
+    <DxChartBarSeries T="JobTypeData"
+                      TArgument="string"
+                      TValue="int"
+                      Name="Import"
+                      ArgumentField="@(j => j.Label)"
+                      ValueField="@(j => j.Count)"
+                      Filter="@(j => j.Label == "IMPORT")">
+    </DxChartBarSeries>
+
+    <!-- Export Series -->
+    <DxChartBarSeries T="JobTypeData"
+                      TArgument="string"
+                      TValue="int"
+                      Name="Export"
+                      ArgumentField="@(j => j.Label)"
+                      ValueField="@(j => j.Count)"
+                      Filter="@(j => j.Label == "EXPORT")">
+    </DxChartBarSeries>
                                 </DxChart>
                             </div>
                         </div>
@@ -489,8 +514,8 @@
                                         <DxChartLegend Visible="false" />
 
                                         <!-- Use MonthName for X-axis display -->
-                                        <DxChartLineSeries ArgumentField="@((RevenueData r) => r.MonthName)"
-                                                           ValueField="@((RevenueData r) => r.Amount)"
+                                        <DxChartLineSeries ArgumentField="@((MonthlyRevenueDto r) => r.MonthName)"
+                                                           ValueField="@((MonthlyRevenueDto r) => Math.Round((decimal)r.Amount, 3))"
                                                            Name="Revenue">
                                             <DxChartSeriesPoint Symbol="ChartPointSymbol.Circle" Size="8" />
                                             @* <DxChartSeriesLabel Visible="true"
@@ -510,7 +535,7 @@
                                         <DxChartTooltip Enabled="true">
                                             <div class="p-2">
                                                 <strong>@context.Point.Argument</strong><br />
-                                                Revenue: ₹@(((float)context.Point.Value).ToString("N0"))
+                                                Revenue: ₹@(((decimal)context.Point.Value).ToString("N0"))
                                             </div>
                                         </DxChartTooltip>
                                     </DxChart>
@@ -601,9 +626,9 @@
     private const double SWIPE_THRESHOLD = 50;
 
     private DashboardStats stats = new();
-    private List<JobStatusData> jobStatusData = new();
+    private List<JobTypeData> jobStatusData = new();
     private List<JobTypeData> jobTypeData = new();
-    private List<RevenueData> revenueData = new();
+    private List<MonthlyRevenueDto> revenueData = new();
     private DateTime? filterFromDate;
     private DateTime? filterToDate;
 
@@ -722,73 +747,41 @@
 
         try
         {
+            var yearid = YearStatechangeService.SelectedYearId;
             isLoading = true;
-            var allJobs = await JobService.GetAllAsync();
-            var allBills = await BillService.GetAllAsync();
-            statusList = await StatusService.GetAllAsync();
+            var result = await DashboardService.GetDashboardAsync(
+           yearid,
+           filterFromDate,
+           filterToDate);
             isLoading = false;
-
-            // Get jobs and bills for selected year
-            var yearJobs = allJobs.Where(j => j.JobYearId == YearStatechangeService.SelectedYearId.ToString()).ToList();
-            var yearBills = allBills.Where(b => b.BillYearId == YearStatechangeService.SelectedYearId).ToList();
-
-            // Create a copy for filtered data (for stats and charts in Slide 1)
-            var filteredJobs = yearJobs.ToList();
-            var filteredBills = yearBills.ToList();
-
-            // Apply date filter ONLY to filtered data (not to yearJobs/yearBills)
-            if (filterFromDate.HasValue)
+            if (result == null)
             {
-                filteredJobs = filteredJobs
-                    .Where(j => j.JobDate.Date >= filterFromDate.Value.Date)
-                    .ToList();
-
-                filteredBills = filteredBills
-                    .Where(b => b.BillDate.Date >= filterFromDate.Value.Date)
-                    .ToList();
+                ToastService.Warning("No dashboard data available.");
+                return;
             }
 
-            if (filterToDate.HasValue)
+            stats = result.Stats;
+            jobStatusData = result.JobStatusChart?
+    .Where(x => !string.IsNullOrWhiteSpace(x.Label))
+    .Select(x => new JobTypeData
+    {
+        Label = x.Label!,
+        Count = x.Count
+    })
+    .ToList()
+    ?? new();
+            jobTypeData = result.JobTypeChart;
+            revenueData = result.RevenueChart;
+            if (result != null && result.RevenueChart != null)
             {
-                filteredJobs = filteredJobs
-                    .Where(j => j.JobDate.Date <= filterToDate.Value.Date)
-                    .ToList();
-
-                filteredBills = filteredBills
-                    .Where(b => b.BillDate.Date <= filterToDate.Value.Date)
-                    .ToList();
+                revenueData = result.RevenueChart.Select(r => new MonthlyRevenueDto
+                {
+                    Month = r.Month,
+                    MonthName = CultureInfo.CurrentCulture
+                        .DateTimeFormat.GetAbbreviatedMonthName(r.Month),
+                    Amount = r.Amount
+                }).ToList();
             }
-            var pendingIds = statusList.Where(x => string.Equals(x.StatusName?.Trim(), "Pending", StringComparison.OrdinalIgnoreCase)).Select(x => x.StatusId).ToList();
-            var cancelIds = statusList.Where(x => string.Equals(x.StatusName?.Trim(), "Cancel", StringComparison.OrdinalIgnoreCase)).Select(x => x.StatusId).ToList();
-            var completeIds = statusList.Where(x => string.Equals(x.StatusName?.Trim(), "Completed", StringComparison.OrdinalIgnoreCase)).Select(x => x.StatusId).ToList();
-            // Calculate stats using FILTERED data
-            stats = new DashboardStats
-            {
-                TotalImportJobs = filteredJobs.Count(j => j.JobType?.ToUpper() == "IMPORT"),
-                TotalExportJobs = filteredJobs.Count(j => j.JobType?.ToUpper() == "EXPORT"),
-                PendingJobs = filteredJobs.Count(j => pendingIds.Contains(j.JobStatus ?? 0)),
-                CompletedJobs = filteredJobs.Count(j => completeIds.Contains(j.JobStatus ?? 0)),
-                CancelledJobs = filteredJobs.Count(j => cancelIds.Contains(j.JobStatus ?? 0)),
-                TotalBills = filteredBills.Count,
-                TotalRevenue = filteredBills.Sum(b => b.BillNetAmount)
-            };
-
-            var currentMonth = DateTime.Now.Month;
-            stats.ImportJobsThisMonth = filteredJobs.Count(j => j.JobType?.ToUpper() == "IMPORT" && j.JobDate.Month == currentMonth);
-            stats.ExportJobsThisMonth = filteredJobs.Count(j => j.JobType?.ToUpper() == "EXPORT" && j.JobDate.Month == currentMonth);
-            stats.BillsThisMonth = filteredBills.Count(b => b.BillDate.Month == currentMonth);
-            stats.RevenueThisMonth = filteredBills.Where(b => b.BillDate.Month == currentMonth).Sum(b => b.BillNetAmount);
-
-            stats.CompletionRate = filteredJobs.Count > 0 ? (int)((stats.CompletedJobs * 100.0) / filteredJobs.Count) : 0;
-            stats.CancellationRate = filteredJobs.Count > 0 ? (int)((stats.CancelledJobs * 100.0) / filteredJobs.Count) : 0;
-
-            // Prepare charts using FILTERED data for Slide 1
-            // PrepareJobStatusData(filteredJobs);
-            PrepareJobStatusData(filteredJobs, pendingIds, completeIds, cancelIds);
-            PrepareJobTypeData(filteredJobs);
-
-            // ✅ Prepare revenue chart using FULL YEAR data (NOT filtered) for Slide 2
-            PrepareRevenueDataForYear(yearBills);
         }
         catch (Exception ex)
         {
@@ -809,88 +802,88 @@
     //         new() { Status = "Cancelled", Count = jobs.Count(j => j.JobState?.ToUpper() == "CANCELLED") }
     //     };
     // }
-    private void PrepareJobStatusData(List<Job> jobs,
-                                  List<int> pendingIds,
-                                  List<int> completeIds,
-                                  List<int> cancelIds)
-    {
-        jobStatusData = new List<JobStatusData>
-    {
-        new()
-        {
-            Status = "Pending",
-            Count = jobs.Count(j => j.JobStatus.HasValue && pendingIds.Contains(j.JobStatus.Value))
-        },
-        new()
-        {
-            Status = "Complete",
-            Count = jobs.Count(j => j.JobStatus.HasValue && completeIds.Contains(j.JobStatus.Value))
-        },
-        new()
-        {
-            Status = "Cancelled",
-            Count = jobs.Count(j => j.JobStatus.HasValue && cancelIds.Contains(j.JobStatus.Value))
-        }
-    };
-    }
-    private void PrepareJobTypeData(List<Job> jobs)
-    {
-        var monthlyData = jobs
-            .GroupBy(j => new { j.JobDate.Year, j.JobDate.Month })
-            .OrderBy(g => g.Key.Year).ThenBy(g => g.Key.Month)
-            .Take(6)
-            .Select(g => new JobTypeData
-            {
-                Month = new DateTime(g.Key.Year, g.Key.Month, 1).ToString("MMM yy"),
-                ImportCount = g.Count(j => j.JobType?.ToUpper() == "IMPORT"),
-                ExportCount = g.Count(j => j.JobType?.ToUpper() == "EXPORT")
-            })
-            .ToList();
+    // private void PrepareJobStatusData(List<Job> jobs,
+    //                               List<int> pendingIds,
+    //                               List<int> completeIds,
+    //                               List<int> cancelIds)
+    // {
+    //     jobStatusData = new List<JobStatusData>
+    // {
+    //     new()
+    //     {
+    //         Status = "Pending",
+    //         Count = jobs.Count(j => j.JobStatus.HasValue && pendingIds.Contains(j.JobStatus.Value))
+    //     },
+    //     new()
+    //     {
+    //         Status = "Complete",
+    //         Count = jobs.Count(j => j.JobStatus.HasValue && completeIds.Contains(j.JobStatus.Value))
+    //     },
+    //     new()
+    //     {
+    //         Status = "Cancelled",
+    //         Count = jobs.Count(j => j.JobStatus.HasValue && cancelIds.Contains(j.JobStatus.Value))
+    //     }
+    // };
+    // }
+    // private void PrepareJobTypeData(List<Job> jobs)
+    // {
+    //     var monthlyData = jobs
+    //         .GroupBy(j => new { j.JobDate.Year, j.JobDate.Month })
+    //         .OrderBy(g => g.Key.Year).ThenBy(g => g.Key.Month)
+    //         .Take(6)
+    //         .Select(g => new JobTypeData
+    //         {
+    //             Month = new DateTime(g.Key.Year, g.Key.Month, 1).ToString("MMM yy"),
+    //             ImportCount = g.Count(j => j.JobType?.ToUpper() == "IMPORT"),
+    //             ExportCount = g.Count(j => j.JobType?.ToUpper() == "EXPORT")
+    //         })
+    //         .ToList();
 
-        jobTypeData = monthlyData;
-    }
+    //     jobTypeData = monthlyData;
+    // }
 
     // ✅ NEW METHOD: Prepare revenue data for FULL YEAR only (ignores date filter)
-    private void PrepareRevenueDataForYear(List<Bill> yearBills)
-    {
-        // Get the selected year's date range
-        var selectedYear = YearStatechangeService.Years
-            .FirstOrDefault(y => y.YearId == YearStatechangeService.SelectedYearId);
+    // private void PrepareRevenueDataForYear(List<Bill> yearBills)
+    // {
+    //     // Get the selected year's date range
+    //     var selectedYear = YearStatechangeService.Years
+    //         .FirstOrDefault(y => y.YearId == YearStatechangeService.SelectedYearId);
 
-        if (selectedYear == null)
-        {
-            revenueData = new List<RevenueData>();
-            return;
-        }
+    //     if (selectedYear == null)
+    //     {
+    //         revenueData = new List<RevenueData>();
+    //         return;
+    //     }
 
-        // Filter bills to only include those within the selected financial year
-        var billsInYear = yearBills
-            .Where(b => YearStatechangeService.IsDateWithinSelectedYear(b.BillDate))
-            .ToList();
+    //     // Filter bills to only include those within the selected financial year
+    //     var billsInYear = yearBills
+    //         .Where(b => YearStatechangeService.IsDateWithinSelectedYear(b.BillDate))
+    //         .ToList();
 
-        // Generate all months in the financial year
-        var allMonths = new List<DateTime>();
-        var currentDate = new DateTime(selectedYear.YearDateFrom.Value.Year, selectedYear.YearDateFrom.Value.Month, 1);
-        var endDate = new DateTime(selectedYear.YearDateTo.Value.Year, selectedYear.YearDateTo.Value.Month, 1);
+    //     // Generate all months in the financial year
+    //     var allMonths = new List<DateTime>();
+    //     var currentDate = new DateTime(selectedYear.YearDateFrom.Value.Year, selectedYear.YearDateFrom.Value.Month, 1);
+    //     var endDate = new DateTime(selectedYear.YearDateTo.Value.Year, selectedYear.YearDateTo.Value.Month, 1);
 
-        while (currentDate <= endDate)
-        {
-            allMonths.Add(currentDate);
-            currentDate = currentDate.AddMonths(1);
-        }
+    //     while (currentDate <= endDate)
+    //     {
+    //         allMonths.Add(currentDate);
+    //         currentDate = currentDate.AddMonths(1);
+    //     }
 
-        // Create revenue data for all months (with 0 for months without bills)
-        revenueData = allMonths
-            .Select(month => new RevenueData
-            {
-                Month = month,
-                MonthName = month.ToString("MMM yy"), // e.g., "Jan 24", "Feb 24"
-                Amount = billsInYear
-                    .Where(b => b.BillDate.Year == month.Year && b.BillDate.Month == month.Month)
-                    .Sum(b => b.BillNetAmount)
-            })
-            .ToList();
-    }
+    //     // Create revenue data for all months (with 0 for months without bills)
+    //     revenueData = allMonths
+    //         .Select(month => new RevenueData
+    //         {
+    //             Month = month,
+    //             MonthName = month.ToString("MMM yy"), // e.g., "Jan 24", "Feb 24"
+    //             Amount = billsInYear
+    //                 .Where(b => b.BillDate.Year == month.Year && b.BillDate.Month == month.Month)
+    //                 .Sum(b => b.BillNetAmount)
+    //         })
+    //         .ToList();
+    // }
 
     private async void HandleYearChanged()
     {
@@ -905,40 +898,5 @@
     }
 
     // Data Classes
-    public class DashboardStats
-    {
-        public int TotalImportJobs { get; set; }
-        public int TotalExportJobs { get; set; }
-        public int PendingJobs { get; set; }
-        public int CompletedJobs { get; set; }
-        public int CancelledJobs { get; set; }
-        public int TotalBills { get; set; }
-        public float TotalRevenue { get; set; }
-        public int ImportJobsThisMonth { get; set; }
-        public int ExportJobsThisMonth { get; set; }
-        public int BillsThisMonth { get; set; }
-        public float RevenueThisMonth { get; set; }
-        public int CompletionRate { get; set; }
-        public int CancellationRate { get; set; }
-    }
-
-    public class JobStatusData
-    {
-        public string Status { get; set; }
-        public int Count { get; set; }
-    }
-
-    public class JobTypeData
-    {
-        public string Month { get; set; }
-        public int ImportCount { get; set; }
-        public int ExportCount { get; set; }
-    }
-
-    public class RevenueData
-    {
-        public DateTime Month { get; set; }
-        public string MonthName { get; set; } // Added for display
-        public float Amount { get; set; }
-    }
+       
 }

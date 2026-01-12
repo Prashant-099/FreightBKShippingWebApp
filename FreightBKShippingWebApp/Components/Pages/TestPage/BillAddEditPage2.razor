@@ -305,7 +305,7 @@
 
                                 <DxFormLayoutItem Caption="Bill No" ColSpanMd="3">
                                     <ChildContent Context="ctx">
-                                        <DxTextBox @bind-Text="EditModel.BillNo"  />
+                        <DxTextBox @bind-Text="EditModel.BillNo" ReadOnly="BillnoVisible" />
                                     </ChildContent>
                                 </DxFormLayoutItem>
                                 <DxFormLayoutItem Caption="Bill Date" ColSpanMd="3">
@@ -2210,7 +2210,7 @@
 
         StateHasChanged();
     }
-
+    private bool BillnoVisible { get; set; } = true;
     // ============================================
     // 📝 Show Method (Remains mostly the same)
     // ============================================
@@ -2264,7 +2264,7 @@
                         BillDetailStatus = true
                     });
             }
-
+            BillnoVisible = true;
             Title = "Edit Bill";
         }
         else
@@ -2542,6 +2542,25 @@
         if (voucherId == null || voucherId == 0)
             return;
         model.BillVoucherId = voucherId.Value;
+
+        var voucher = VoucherList.FirstOrDefault(c => c.VoucherId == model.BillVoucherId);
+
+        if (voucher != null)
+        {
+            model.BillReportId = voucher?.VoucherReportId ?? voucher?.VoucherReportId2 ?? 0;
+            model.BillBankId = voucher?.VoucherBank1 ?? voucher?.VoucherBank2 ?? 0;
+
+            // Example property name: change "VoucherMethod" to your real field
+            if (string.Equals(voucher.VoucherMethod, "Manual", StringComparison.OrdinalIgnoreCase))
+            {
+                BillnoVisible = false;
+            }
+            else
+            {
+                BillnoVisible = true;
+            }
+        }
+       
         if (string.IsNullOrEmpty(model.BillNo) || model.BillId == 0)
         {
 

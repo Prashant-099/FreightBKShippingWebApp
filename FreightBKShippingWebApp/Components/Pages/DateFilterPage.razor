@@ -1,5 +1,6 @@
 ﻿@using FreightBKShippingWebApp.Services
 @using FreightBKShippingWebApp.Model
+@using System.ComponentModel.DataAnnotations
 @inject ToasteService ToastService
 @inject VoucherService VoucherService
 <style>
@@ -54,7 +55,7 @@
     <BodyContentTemplate Context="bdydt">
         <EditForm EditContext="@editContext" OnValidSubmit="HandleValidSubmit" Context="ctxeditform" id="dateFilterForm">
             <DataAnnotationsValidator />
-
+            <ValidationSummary/>
             <!-- Quick Filter Buttons -->
             <div class="quick-filters">
                 <button type="button" class="quick-filter-btn" @onclick="SetToday">
@@ -122,7 +123,8 @@
                     </ChildContent>
                 </DxFormLayoutItem>
             </DxFormLayout>
-
+            <ValidationMessage For="@(() => EditModel.FromDate)" />
+            <ValidationMessage For="@(() => EditModel.ToDate)" />
             @if (!string.IsNullOrEmpty(ErrorMessage))
             {
                 <div class="error-text">
@@ -274,7 +276,10 @@
     // Model Class
     public class DateFilterModel
     {
+        [CustomValidation(typeof(YearStatechangeService), nameof(YearStatechangeService.ValidateDateWithinYear))]
         public DateTime? FromDate { get; set; } 
+
+        [CustomValidation(typeof(YearStatechangeService), nameof(YearStatechangeService.ValidateDateWithinYear))]
         public DateTime? ToDate { get; set; }
         public string? SelectedJobType { get; set; }
         public int? SelectedVoucherType { get; set; }

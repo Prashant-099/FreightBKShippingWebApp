@@ -51,14 +51,30 @@ namespace FreightBKShippingWebApp.Services
 
             return date >= year.YearDateFrom && date <= year.YearDateTo;
         }
-        public static ValidationResult ValidateDateWithinYear(DateTime date, ValidationContext context)
+        public static ValidationResult ValidateDateWithinYear(object value, ValidationContext context)
         {
+            // allow empty values
+            if (value == null)
+                return ValidationResult.Success;
+
+            // convert value
+            if (!(value is DateTime date))
+                return ValidationResult.Success;
+
+            // resolve the service from DI
             var yearService = (YearStatechangeService)context.GetService(typeof(YearStatechangeService));
+
+            // if service missing, do not crash UI
+            if (yearService == null)
+                return ValidationResult.Success;
+
+            // actual validation
             if (!yearService.IsDateWithinSelectedYear(date))
-                return new ValidationResult("Date Not Valid");
+                return new ValidationResult("Date is not within current financial year");
 
             return ValidationResult.Success;
         }
+
 
         public List<Voucher> VoucherConfigs { get; set; } = new();
 

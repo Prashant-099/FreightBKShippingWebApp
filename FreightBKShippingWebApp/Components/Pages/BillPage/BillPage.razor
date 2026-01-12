@@ -453,7 +453,7 @@ DefaultFileName="@PendingFileName"
 </script>
 <IRNDetailsFetch @ref="irnDetailsPopup" />
 @code {
-	private IRNDetailsFetch irnDetailsPopup;
+    private IRNDetailsFetch irnDetailsPopup;
     private void ShowIrnDetails(ToolbarItemClickEventArgs e)
     {
         var bills = SelectedBills.Cast<Bill>().ToList();
@@ -540,8 +540,8 @@ DefaultFileName="@PendingFileName"
         await LoadDefaultLayout();
         await CheckUserRole();
         await LoadBillsAsync();
-      
-       
+
+
     }
     private void InitializeColumns()
     {
@@ -960,11 +960,11 @@ DefaultFileName="@PendingFileName"
                 }
             }
 
-          
+
             await ClearSelection();
             if (locked > 0) ToastService.Success($"{locked} bill(s) locked.");
             if (unlocked > 0) ToastService.Success($"{unlocked} bill(s) unlocked.");
-           
+
             await LoadBillsAsync();
         }
         catch (Exception ex)
@@ -974,7 +974,7 @@ DefaultFileName="@PendingFileName"
         finally
         {
             LoadingService.Hide();
-           
+
         }
     }
 
@@ -1063,11 +1063,16 @@ DefaultFileName="@PendingFileName"
             foreach (var bill in selectedBillsList)
             {
                 var result = await BillService.DeleteAsync(bill.BillId);
-                if (result) successCount++; else failCount++;
+                if (result.Success) successCount++;
+                else
+                { failCount++; 
+                    failCount++;
+                    ToastService.Error(result.Error);
+                }
             }
 
             if (successCount > 0) ToastService.Success($"{successCount} Bill(s) Deleted Successfully.");
-            if (failCount > 0) ToastService.Error($"{failCount} Bill(s) Failed To Delete.");
+            // if (failCount > 0) ToastService.Error($"{failCount} Bill(s) Failed To Delete.");
 
             await LoadBillsAsync();
         }
