@@ -49,7 +49,7 @@
 
                     </DxFormLayoutItem>
                 }
-
+@* 
             <DxFormLayoutItem Caption="Branch" ColSpanMd="12">
                 <DxComboBox Data="@branchList"
                             TextFieldName="BranchName"
@@ -58,7 +58,29 @@
                                 SearchMode="ListSearchMode.AutoSearch"
                                 SearchFilterCondition="ListSearchFilterCondition.Contains" 
                                 ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"></DxComboBox>
-            </DxFormLayoutItem> 
+
+                                <DxListBox TData="Branch"
+            TValue="int"
+           Data="@branchList"
+           TextFieldName="BranchName"
+           ValueFieldName="BranchId"
+           @bind-SelectedValues="EditModel.AssignedBranchIds"
+           ValuesExpression="() => EditModel.AssignedBranchIds"
+           SelectionMode="ListBoxSelectionMode.Multiple"
+           ShowClearButton="true" />
+           </DxFormLayoutItem> *@
+
+                    <DxFormLayoutItem Caption="Assigned Branches" ColSpanMd="12">
+
+                        <DxTagBox Data="@branchList" Context="ctxtag"
+                                  ListRenderMode="ListRenderMode.Virtual"
+                                  @bind-Values="SelectedBranches"
+                                  TextFieldName="@nameof(Branch.BranchName)"
+                                  ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                  NullText="Selected branches will appear here..." />
+
+                    </DxFormLayoutItem>
+
 
             <DxFormLayoutItem Caption="Address" ColSpanMd="12">
                     <DxMemo @bind-Text="EditModel.UserAddress" Rows="2" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
@@ -96,6 +118,13 @@
 </DxPopup>
 
 @code {
+    // private IEnumerable<int> SelectedBranchIds { get; set; } = new List<int>();
+
+    // void OnBranchesSelected(IEnumerable<int> values)
+    // {
+    //     SelectedBranchIds = values.ToList();
+    //     You can optionally do more here
+    // }
     [Parameter]
     public bool Password { get; set; }
     private bool showPassword = false;
@@ -105,7 +134,8 @@
 
 
     private List<UserRole> rolelist = new();
-    private List<Branch> branchList = new();
+    private IEnumerable<Branch> branchList { get; set; } = new List<Branch>();
+    private IEnumerable<Branch> SelectedBranches { get; set; } = new List<Branch>();
 
     private void TogglePasswordVisibility()
     {
@@ -132,6 +162,17 @@
             IsNewUser = isNew;
             EditModel = user;
             Title = "Edit User";
+            if (!string.IsNullOrEmpty(EditModel?.UserId))
+            {
+                SelectedBranches = branchList
+                    .Where(b => EditModel.AssignedBranchIds.Contains(b.BranchId))
+                    .ToList();
+            }
+            else
+            {
+                SelectedBranches = new List<Branch>();
+            }
+
         }
         else
         {
@@ -155,7 +196,11 @@
         LoadingService.Show();
         try
         {
-            bool isNew = string.IsNullOrEmpty(EditModel.UserId);
+            EditModel.AssignedBranchIds = SelectedBranches
+                   .Select(b => b.BranchId)
+                   .ToList();
+
+           bool isNew = string.IsNullOrEmpty(EditModel.UserId);
             if (isNew && string.IsNullOrWhiteSpace(EditModel.UserPassword))
             {
                 ToastService.Error("Password is required for new user!");

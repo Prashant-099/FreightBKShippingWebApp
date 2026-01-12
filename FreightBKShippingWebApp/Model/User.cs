@@ -140,6 +140,10 @@ namespace FreightBKShippingWebApp.Model
         [Column("refresh_token_expiry")]
         public DateTime? RefreshTokenExpiryTime { get; set; }
 
+        //LocalDataStoreSlot multiple branches
+        public List<int> AssignedBranchIds { get; set; } = new List<int>();
+
+
     }
 
     public class PagedUserResponse

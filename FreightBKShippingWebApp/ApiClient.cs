@@ -79,6 +79,14 @@ namespace FreightBKShippingWebApp
                 httpClient.DefaultRequestHeaders.Authorization =
                     new AuthenticationHeaderValue("Bearer", sessionState.Token);
 
+
+                // 🔹 7️⃣ **HERE ADD THE BRANCH AUTO-SELECT CODE**
+                if (sessionState.Branches != null && sessionState.Branches.Count == 1 && !sessionState.ActiveBranchId.HasValue)
+                {
+                    sessionState.ActiveBranchId = sessionState.Branches.First().BranchId;
+                    await localStorage.SetAsync("sessionState", sessionState);
+                }
+
                 // Add culture info
                 AddCultureHeader();
             }
