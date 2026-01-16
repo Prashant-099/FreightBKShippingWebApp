@@ -19,90 +19,108 @@ namespace FreightBKShippingWebApp.Services
         private readonly ProtectedLocalStorage _localStorage;
         private readonly NavigationManager _navigationManager;
         private readonly AuthenticationStateProvider _authStateProvider;
-         
+        private readonly IBranchContext _branchContext;
 
         public AuthService(
-        
             ProtectedLocalStorage localStorage,
             NavigationManager navigationManager,
             AuthenticationStateProvider authStateProvider,
-            ApiClient apiClient,LoadingService loadingService)  
+            ApiClient apiClient,
+            IBranchContext branchContext)
         {
-           
             _localStorage = localStorage;
             _navigationManager = navigationManager;
             _authStateProvider = authStateProvider;
             _api = apiClient;
-            
+            _branchContext = branchContext;
         }
 
-     
+
+
 
         public async Task<LoginResponseModel?> LoginAsync(LoginModel model)
         {
-        
             try
             {
- 
-                if (model == null || string.IsNullOrWhiteSpace(model.UserEmail) || string.IsNullOrWhiteSpace(model.UserPassword))
+                if (model == null ||
+                    string.IsNullOrWhiteSpace(model.UserEmail) ||
+                    string.IsNullOrWhiteSpace(model.UserPassword))
                 {
-                    Console.WriteLine("⚠️ Invalid login model: email or password is empty.");
                     return null;
                 }
 
-                var result = await _api.PostAsync<LoginResponseModel, LoginModel>("api/Auth/login", model);
+                var result = await _api.PostAsync<LoginResponseModel, LoginModel>(
+                    "api/Auth/login", model);
 
                 if (result == null || string.IsNullOrWhiteSpace(result.Token))
-                {
-                    Console.WriteLine("❌ Login failed or token missing.");
                     return null;
-                }
-                var userId = BaseService.JwtHelper.GetUserIdFromToken(result.Token);
-                if (!string.IsNullOrEmpty(userId))
-                {
-                    Console.WriteLine($"👤 Logged-in User ID: {userId}");
 
-                    // Optionally save to local storage
-                    await _localStorage.SetAsync("loggedInUserId", userId);
-                }
+                // ================= BRANCH DECISION =================
+                int activeBranchId = 0;
 
-                var companyId = BaseService.JwtHelper.GetCompanyIdFromToken(result.Token);
-                if (!string.IsNullOrEmpty(companyId))
+                if (result.ActiveBranchId.HasValue && result.ActiveBranchId > 0)
                 {
-                    Console.WriteLine($"🏢 Logged-in Company ID: {companyId}");
-                    await _localStorage.SetAsync("loggedInCompanyId", companyId);
+                    activeBranchId = result.ActiveBranchId.Value;
                 }
-                else
-                {
-                    Console.WriteLine("⚠️ Company ID not found in token.");
-                }
-
-                // 🔹 NEW: Decide ActiveBranchId
-                int? activeBranchId = null;
-                if (result.Branches != null && result.Branches.Count == 1)
+                else if (result.Branches != null && result.Branches.Any())
                 {
                     activeBranchId = result.Branches.First().BranchId;
+                }
+
+                if (activeBranchId > 0)
+                {
+                    Console.WriteLine($"🌿 Active Branch set to: {activeBranchId}");
+
+                    await _localStorage.SetAsync("activeBranchId", activeBranchId);
+                    _branchContext.BranchId = activeBranchId;
+
+                    // keep response model in sync
                     result.ActiveBranchId = activeBranchId;
                 }
 
 
+                // 🔥 SET GLOBAL CONTEXT
+                _branchContext.BranchId = activeBranchId;
 
+                // UX only
+                await _localStorage.SetAsync("activeBranchId", activeBranchId);
 
+                // ================= TOKEN INFO =================
+                var userId = BaseService.JwtHelper.GetUserIdFromToken(result.Token);
+                var companyId = BaseService.JwtHelper.GetCompanyIdFromToken(result.Token);
 
+                await _localStorage.SetAsync("loggedInUserId", userId);
+                await _localStorage.SetAsync("loggedInCompanyId", companyId);
+
+                // ================= SESSION =================
+                result.ActiveBranchId = activeBranchId;
                 await _localStorage.SetAsync("sessionState", result);
 
+                // ================= AUTH STATE =================
+                await ((CustomAuthStateProvider)_authStateProvider)
+                    .MarkUserAsAuthenticated(result);
 
+                _navigationManager.NavigateTo("/", true);
 
-                Console.WriteLine("✅ Login successful, session state saved.");
                 return result;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"🔥 LoginAsync Exception: {ex.Message}");
+                Console.WriteLine($"🔥 LoginAsync Error: {ex}");
                 return null;
             }
-           
-         
+        }
+        public async Task<LoginResponseModel?> GetSessionAsync()
+        {
+            var result = await _localStorage.GetAsync<LoginResponseModel>("sessionState");
+            var session = result.Value;
+
+            if (session?.ActiveBranchId != null)
+            {
+                _branchContext.BranchId = session.ActiveBranchId.Value;
+            }
+
+            return session;
         }
 
         public async Task<bool> SelectBranchAsync(int branchId)
@@ -110,16 +128,27 @@ namespace FreightBKShippingWebApp.Services
             var session = (await _localStorage.GetAsync<LoginResponseModel>("sessionState")).Value;
             if (session == null) return false;
 
-            var dto = new { UserId = session, BranchId = branchId };
-
-            var result = await _api.PostAsync<object, object>("api/Auth/select-branch", dto);
-
-            // update local storage with selected branch
             session.ActiveBranchId = branchId;
             await _localStorage.SetAsync("sessionState", session);
 
             return true;
         }
+
+        //public async Task<bool> SelectBranchAsync(int branchId)
+        //{
+        //    var session = (await _localStorage.GetAsync<LoginResponseModel>("sessionState")).Value;
+        //    if (session == null) return false;
+
+        //    var dto = new { UserId = session, BranchId = branchId };
+
+        //    var result = await _api.PostAsync<object, object>("api/Auth/select-branch", dto);
+
+        //    // update local storage with selected branch
+        //    session.ActiveBranchId = branchId;
+        //    await _localStorage.SetAsync("sessionState", session);
+
+        //    return true;
+        //}
 
         public async Task LogoutAsync()
         {

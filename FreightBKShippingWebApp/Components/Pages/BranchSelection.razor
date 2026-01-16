@@ -1,0 +1,39 @@
+﻿@using FreightBKShippingWebApp.Services
+@using FreightBKShippingWebApp.Model
+
+@inject AuthService AuthService
+@inject IBranchContext BranchContext
+
+<DxComboBox Data="@branches"
+            TextFieldName="BranchName"
+            ValueFieldName="BranchId"
+           Value="selectedBranchId"
+             ValueChanged="@( (int id) => OnBranchChanged(id) )"
+            CssClass="form-select w-100" />
+
+@code {
+    List<UserBranchDto> branches = new();
+    int selectedBranchId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var session = await AuthService.GetSessionAsync();
+        if (session == null) return;
+
+        branches = session.Branches;
+        selectedBranchId =
+            session.ActiveBranchId ?? branches.First().BranchId;
+
+        BranchContext.BranchId = selectedBranchId;
+    }
+
+    async Task OnBranchChanged(int branchId)
+    {
+        selectedBranchId = branchId;
+        BranchContext.BranchId = branchId;
+
+        await AuthService.SelectBranchAsync(branchId);
+
+        Console.WriteLine($"🔁 Branch changed to {branchId}");
+    }
+}

@@ -152,5 +152,19 @@ namespace FreightBKShippingWebApp.Model
         public PaginationInfo Pagination { get; set; }
        
     }
-   
+
+    public class UserCreateRequest
+    {
+        public string UserRoleId { get; set; }
+        public string UserFirstName { get; set; }
+        public string UserName { get; set; }
+        public string UserEmail { get; set; }
+        public string UserPassword { get; set; }
+        public string UserMobile { get; set; }
+
+        // ⭐ MOST IMPORTANT
+        public List<int> AssignedBranchIds { get; set; } = new();
+    }
+
+
 }
