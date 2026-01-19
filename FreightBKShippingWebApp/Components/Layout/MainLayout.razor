@@ -4,6 +4,8 @@
 @using FreightBKShippingWebApp.Components.Pages
 @using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Services
+@inject IBranchContext BranchContext
+@inject AuthService AuthService
 @inject CompanyService CompanyService
 
 @using Microsoft.AspNetCore.Components.Authorization
@@ -123,11 +125,26 @@
     private string? CompanyName { get; set; }
     private string? Yearname { get; set; }
     private string finYear => YearStatechangeService.Years.FirstOrDefault(y => y.YearId == YearStatechangeService.SelectedYearId)?.YearName ?? Yearname ;
+    private bool _branchInitialized;
 
     protected override async Task OnInitializedAsync()
     {
         LoadingService.OnChange += StateHasChanged;
         YearStatechangeService.OnYearChanged += StateHasChanged; // <-- listen for year changes
+
+        if (_branchInitialized)
+            return;
+        _branchInitialized = true;
+
+        // 🔥 restore from storage / token
+        var storedBranchId = await AuthService.GetSelectedBranchAsync();
+
+        if (storedBranchId.HasValue && storedBranchId.Value > 0)
+        {
+            BranchContext.SetBranch(storedBranchId.Value);
+            Console.WriteLine($"🌿 Branch restored: {storedBranchId}");
+        }
+
 
         var authState = await ((CustomAuthStateProvider)AuthStateProvider).GetAuthenticationStateAsync();
         var user = authState.User;

@@ -56,34 +56,19 @@ namespace FreightBKShippingWebApp.Services
                     return null;
 
                 // ================= BRANCH DECISION =================
-                int activeBranchId = 0;
-
-                if (result.ActiveBranchId.HasValue && result.ActiveBranchId > 0)
-                {
-                    activeBranchId = result.ActiveBranchId.Value;
-                }
-                else if (result.Branches != null && result.Branches.Any())
-                {
-                    activeBranchId = result.Branches.First().BranchId;
-                }
+                int activeBranchId = ResolveActiveBranch(result);
 
                 if (activeBranchId > 0)
                 {
-                    Console.WriteLine($"🌿 Active Branch set to: {activeBranchId}");
+                    // 🔥 SINGLE SOURCE OF TRUTH
+                    _branchContext.SetBranch(activeBranchId);
+
+                    result.ActiveBranchId = activeBranchId;
 
                     await _localStorage.SetAsync("activeBranchId", activeBranchId);
-                    _branchContext.BranchId = activeBranchId;
 
-                    // keep response model in sync
-                    result.ActiveBranchId = activeBranchId;
+                    Console.WriteLine($"🌿 Active Branch Selected: {activeBranchId}");
                 }
-
-
-                // 🔥 SET GLOBAL CONTEXT
-                _branchContext.BranchId = activeBranchId;
-
-                // UX only
-                await _localStorage.SetAsync("activeBranchId", activeBranchId);
 
                 // ================= TOKEN INFO =================
                 var userId = BaseService.JwtHelper.GetUserIdFromToken(result.Token);
@@ -93,13 +78,13 @@ namespace FreightBKShippingWebApp.Services
                 await _localStorage.SetAsync("loggedInCompanyId", companyId);
 
                 // ================= SESSION =================
-                result.ActiveBranchId = activeBranchId;
                 await _localStorage.SetAsync("sessionState", result);
 
-                // ================= AUTH STATE =================
+                // ================= AUTH =================
                 await ((CustomAuthStateProvider)_authStateProvider)
                     .MarkUserAsAuthenticated(result);
 
+                // 🚀 Redirect only AFTER branch is set
                 _navigationManager.NavigateTo("/", true);
 
                 return result;
@@ -110,18 +95,57 @@ namespace FreightBKShippingWebApp.Services
                 return null;
             }
         }
+
+        private int ResolveActiveBranch(LoginResponseModel result)
+        {
+            if (result.ActiveBranchId.HasValue && result.ActiveBranchId.Value > 0)
+                return result.ActiveBranchId.Value;
+
+            if (result.Branches != null && result.Branches.Any())
+                return result.Branches.First().BranchId;
+
+            return 0;
+        }
         public async Task<LoginResponseModel?> GetSessionAsync()
         {
-            var result = await _localStorage.GetAsync<LoginResponseModel>("sessionState");
-            var session = result.Value;
+            var result =
+                await _localStorage.GetAsync<LoginResponseModel>("sessionState");
 
-            if (session?.ActiveBranchId != null)
-            {
-                _branchContext.BranchId = session.ActiveBranchId.Value;
-            }
-
-            return session;
+            return result.Success ? result.Value : null;
         }
+
+
+        // ✅ SELECTED BRANCH
+        public async Task<int?> GetSelectedBranchAsync()
+        {
+            var result = await _localStorage.GetAsync<int?>("activeBranchId");
+            return result.Success ? result.Value : null;
+        }
+
+
+        // ✅ WHEN USER CHANGES BRANCH
+
+        //public async Task<LoginResponseModel?> GetSessionAsync()
+        //{
+        //    var result = await _localStorage.GetAsync<LoginResponseModel>("sessionState");
+        //    var session = result.Value;
+
+        //    if (session?.ActiveBranchId is > 0)
+        //    {
+        //        // 🔥 CORRECT WAY
+        //        int initialBranchId = session.ActiveBranchId ?? session.Branches.First().BranchId;
+        //        _branchContext.SetBranch(initialBranchId);
+        //    }
+
+        //    return session;
+        //}
+
+        //public async Task<int?> GetSelectedBranchAsync()
+        //{
+        //    var result = await _localStorage.GetAsync<int?>("branchId");
+        //    return result.Value;
+        //}
+
 
         public async Task<bool> SelectBranchAsync(int branchId)
         {

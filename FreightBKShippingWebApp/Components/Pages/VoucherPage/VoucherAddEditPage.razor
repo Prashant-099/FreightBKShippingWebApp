@@ -1,5 +1,6 @@
 ﻿@using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Services
+
 @inject VoucherService VoucherService
 @inject ToasteService ToastService
 @inject LoadingService LoadingService
@@ -9,12 +10,16 @@
 @inject BranchService BranchService
 @inject YearStatechangeService YearStatechangeService
 @inject IBranchContext BranchContext
+
 <DxPopup @bind-Visible="Visible" ShowCloseButton="true" HeaderText="@Title" CloseOnOutsideClick="false" MaxWidth="1050"
 horizontalAlignment="HorizontalAlignment.Center"
          verticalAlignment="VerticalAlignment.Center"
          scrollable="true" ShowFooter="true">
+
          <BodyContentTemplate Context="bdy">
+
         <EditForm Model="@EditModel" OnValidSubmit="HandleValidSubmit" Context="ctnaddeditvocher" id="voucherForm">
+
         <DataAnnotationsValidator />
        @*  <ValidationSummary /> *@
 
@@ -76,19 +81,20 @@ horizontalAlignment="HorizontalAlignment.Center"
                         <DxCheckBox @bind-Checked="EditModel.VoucherIsTaxInvoice" />
                     </DxFormLayoutItem>
                         <DxFormLayoutItem Caption="Branch" >
-                           
-                                <DxComboBox Data="@branchList"
-                                            TValue="int?"
-                                            TData="Branch"
-                                            TextFieldName="BranchName"
-                                            ValueFieldName="BranchId"
-                                            ShowValidationIcon="true"
-                                            @bind-Value="EditModel.VoucherBranchId"
-                                            NullText="Select Branch..."
-                                            SearchMode="ListSearchMode.AutoSearch"
-                                            SearchFilterCondition="ListSearchFilterCondition.Contains"
-                                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
-                          
+
+                            <DxComboBox Data="@branchList"
+                                        TValue="int?"
+                                        TData="Branch"
+                                        TextFieldName="BranchName"
+                                        ValueFieldName="BranchId"
+                                        Value="EditModel.VoucherBranchId"
+                                        ValueChanged="OnBranchChanged"
+                                        ValueExpression="@( () => EditModel.VoucherBranchId )"
+                                        NullText="Select Branch..."
+                                        SearchMode="ListSearchMode.AutoSearch"
+                                        SearchFilterCondition="ListSearchFilterCondition.Contains"
+                                        ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+
                         </DxFormLayoutItem>
                     <DxFormLayoutItem Caption="Bank">
                         <DxComboBox Data="@BankAccountList"
@@ -235,22 +241,59 @@ horizontalAlignment="HorizontalAlignment.Center"
 
 
 
-    protected async Task OnInitializedAsync()
+    protected override async Task OnInitializedAsync()
     {
+        BranchContext.OnBranchChanged += GlobalBranchChanged;
+
+        branchList = await BranchService.GetAllAsync();
 
         var allAccounts = await AccountService.GetAllAsync();
-
-        // Filter only Sales & Purchase Accounts (group id 22, 23)
         BankAccountList = allAccounts
-            .Where(a => a.AccountTypeId == 10 )
+            .Where(a => a.AccountTypeId == 10)
             .ToList();
 
         FinYearList = await YearService.GetAllAsync();
         ReportDataList = await ReportDataService.GetAllAsync();
-        branchList = await BranchService.GetAllAsync();
-     
+    }
+
+    protected override Task OnParametersSetAsync()
+    {
+        if (EditModel != null && EditModel.VoucherBranchId == null)
+        {
+            if (BranchContext.BranchId > 0)
+            {
+                EditModel.VoucherBranchId = BranchContext.BranchId;
+            }
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private void GlobalBranchChanged()
+    {
+        if (EditModel != null)
+        {
+            EditModel.VoucherBranchId = BranchContext.BranchId;
+            InvokeAsync(StateHasChanged);
+        }
+    }
+
+
+    public void Dispose()
+    {
+        BranchContext.OnBranchChanged -= GlobalBranchChanged;
+    }
+
+    private async Task OnBranchChanged(int? branchId)
+    {
+        if (!branchId.HasValue)
+            return;
+
+        EditModel.VoucherBranchId = branchId;
+        BranchContext.SetBranch(branchId.Value); // 🔥 GLOBAL
 
     }
+
 
     public async Task Show(Voucher voucher)
     {
@@ -265,7 +308,7 @@ horizontalAlignment="HorizontalAlignment.Center"
             EditModel = new Voucher
             {
                 VoucherStatus = true,
-                VoucherBranchId = BranchContext.BranchId // ✅ AUTO SELECT BRANCH
+                VoucherBranchId = BranchContext.BranchId //✅ AUTO SELECT BRANCH
             };
             VoucherDetailList.Clear();
             VoucherDetailList.Add(new VoucherDetail
@@ -348,7 +391,7 @@ horizontalAlignment="HorizontalAlignment.Center"
     }
 
 
-    private Task OnVoucherDetailSaving(GridEditModelSavingEventArgs e)
+    private async Task OnVoucherDetailSaving(GridEditModelSavingEventArgs e)
     {
         var model = (VoucherDetail)e.EditModel;
         if (e.IsNew)
@@ -373,7 +416,7 @@ horizontalAlignment="HorizontalAlignment.Center"
                 existing.VoucherDetailLutno = model.VoucherDetailLutno;
             }
         }
-        return Task.CompletedTask;
+    
     }
 
     private Task OnVoucherDetailDeleting(GridDataItemDeletingEventArgs e)
