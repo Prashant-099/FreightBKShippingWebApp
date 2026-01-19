@@ -47,16 +47,18 @@ MinWidth="200"
 
               
                 <DxFormLayoutItem Caption="Branch" ColSpanMd="4" CaptionCssClass="caption-bold">
-                <DxComboBox Data="@branchList" TData="Branch" TValue="int?"
+                    <DxComboBox Data="@branchList" TData="Branch" TValue="int?"
                                 TextFieldName="BranchName"
                                 ValueFieldName="BranchId"
-                                 Value="@EditModel.JobBranchId"
-                                ValueChanged="@((int? voucherId) => OnBranchChanged(voucherId))"
-                    ValueExpression="@( () => EditModel.JobBranchId )"
+                                Value="EditModel.JobBranchId"
+                                ValueChanged="OnBranchChanged"
+                                ValueExpression="@( () => EditModel.JobBranchId )"
                                 AllowUserInput="true"
                                 SearchMode="ListSearchMode.AutoSearch"
                                 SearchFilterCondition="ListSearchFilterCondition.Contains"
-                                ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" CssClass="editor-smooth" />
+                                ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                CssClass="editor-smooth" />
+
                   
                 </DxFormLayoutItem>
             <!-- Basic Info -->
@@ -756,6 +758,7 @@ MinWidth="200"
     private NotifyAddEditPage popuplines;
     private StatusAddEditPage popupStatus;
     private string notifytype = "";
+
     private async Task LoadNotifiesAsync()
     {
         LoadingService.Show("Loading notifies...");
@@ -780,10 +783,12 @@ MinWidth="200"
                 NotifyUpdated = DateTime.Now
             });
     }
+
     private void newpopupstastus()
     {
         popupStatus.Show(new Status());
     }
+
     // + butoon for Cargo
     private CargoAddEditPage popupCargo;
     private void newpopupcargo()
@@ -796,6 +801,7 @@ MinWidth="200"
                 CargoCreated = DateTime.Now
             });
     }
+
     private async Task LoadCargosAsync()
     {
         LoadingService.Show();
@@ -1775,109 +1781,113 @@ MinWidth="200"
     private List<Branch> branchList = new();
     private List<Status> statuslist = new();
 
-    public void Show(Job model)
-    {
-        IsEdit = model.JobId > 0;
-        EditModel = model;
-        if (model == null || model.JobId == 0) // New job
-        {
-            EditModel = new Job
+            public void Show(Job model)
             {
-                JobBranchId = BranchContext.BranchId, 
-                JobDate = DateTime.Now
-            };
-        }
-        else
-        {
-            EditModel = model; // Existing job, edit mode
-        }
-        Visible = true;
-        var defaultBranch = statuslist.FirstOrDefault();
-        EditModel.JobActive = true;
-        // only set default if JobStatus is null or 0
-        if (EditModel.JobStatus == null || EditModel.JobStatus == 0)
-        {
-            EditModel.JobStatus = defaultBranch?.StatusId ?? 0;
+                IsEdit = model.JobId > 0;
+                EditModel = model;
+                if (model == null || model.JobId == 0) // New job
+                {
+                    EditModel = new Job
+                    {
+                        JobBranchId = BranchContext.BranchId, 
+                        JobDate = DateTime.Now
+                    };
+                }
+                else
+                {
+                    EditModel = model; // Existing job, edit mode
+                }
+                Visible = true;
+                var defaultBranch = statuslist.FirstOrDefault();
+                EditModel.JobActive = true;
+                // only set default if JobStatus is null or 0
+                if (EditModel.JobStatus == null || EditModel.JobStatus == 0)
+                {
+                    EditModel.JobStatus = defaultBranch?.StatusId ?? 0;
 
-        }
-        StateHasChanged();
-    }
+                }
+                StateHasChanged();
+            }
+
     private async Task OnBranchChanged(int? branchId)
     {
-        EditModel.JobBranchId = branchId;
-        if (branchId.HasValue)
-        {
-            await LoadVoucherAndGenerateJobNo(branchId.Value);
-        }
+        if (!branchId.HasValue) return;
+
+        EditModel.JobBranchId = branchId.Value;
+        BranchContext.SetBranch(branchId.Value); // 🔥 global update
+        await LoadVoucherAndGenerateJobNo(branchId.Value);
     }
-    private async Task LoadVoucherAndGenerateJobNo(int branchId)
-{
-
-        VoucherList = (await VoucherService.GetAllAsync())
-.Where(v => v.VoucherName != null &&
-            v.VoucherName.Equals(JobType, StringComparison.OrdinalIgnoreCase)
-&& v.VoucherBranchId == branchId)
-.ToList();
-
-var voucher = VoucherList.FirstOrDefault();
-
-if (voucher != null)
-{
-    // Example property name: change "VoucherMethod" to your real field
-            if (string.Equals(voucher.VoucherMethod, "Manual", StringComparison.OrdinalIgnoreCase))
-    {
-        JobnoVisible = false;
-    }
-    else
-    {
-        JobnoVisible = true;
-    }
-}
-        // Check if VoucherList is empty
-        if (VoucherList == null || !VoucherList.Any())
-        {
-            ToastService.Warning($"Voucher not found for {JobType}. Please configure voucher in master settings.");
-            return;
-        }
-        var VoucherId = VoucherList.FirstOrDefault()?.VoucherId;
-        if (VoucherId == null || VoucherId == 0)
-        {
-            ToastService.Warning($"Voucher not configured for {JobType}. Please add voucher in master settings.");
-            return;
-        }
-
-        var finYearId = YearStatechangeService.SelectedYearId;
-        if (finYearId == 0)
-        {
-            ToastService.Error(" Financial year not selected. Please select a year.");
-            return;
-        }
-        try
-        {
-            var result = await YearStatechangeService.GeneratebillNoAsync(VoucherId, finYearId, EditModel.JobBranchId);
-            var fulljobno = result.prefix + result.number + result.suffix;
-            if (!string.IsNullOrEmpty(result.number))
-            {
-                var existingJob = jobList?.FirstOrDefault(j => j.JobNo == fulljobno && j.JobBranchId == branchId);
-
-                if (existingJob != null)
-                {
-                    ToastService.Warning($" Job number '{result.prefix}{result.number}{result.suffix}' already exists!");
-                }
-            }
-            EditModel.JobPrefix = result.prefix;
-            EditModel.JobNo = result.prefix + result.number + result.suffix;
-            EditModel.JobSufix = result.suffix;
-            EditModel.JobVchNo = int.Parse(result.number);
-            StateHasChanged();
-        }
-        catch (Exception ex)
-        {
-            ToastService.Error("Error: " + ex.Message);
-        }
 
 
-}
+      private async Task LoadVoucherAndGenerateJobNo(int branchId)
+      {
+
+                                    VoucherList = (await VoucherService.GetAllAsync())
+                            .Where(v => v.VoucherName != null &&
+                                        v.VoucherName.Equals(JobType, StringComparison.OrdinalIgnoreCase)
+                            && v.VoucherBranchId == branchId)
+                            .ToList();
+
+                            var voucher = VoucherList.FirstOrDefault();
+
+                            if (voucher != null)
+                            {
+                                // Example property name: change "VoucherMethod" to your real field
+                                        if (string.Equals(voucher.VoucherMethod, "Manual", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    JobnoVisible = false;
+                                }
+                                else
+                                {
+                                    JobnoVisible = true;
+                                }
+                            }
+                            // Check if VoucherList is empty
+                            if (VoucherList == null || !VoucherList.Any())
+                            {
+                                ToastService.Warning($"Voucher not found for {JobType}. Please configure voucher in master settings.");
+                                return;
+                            }
+                            var VoucherId = VoucherList.FirstOrDefault()?.VoucherId;
+                            if (VoucherId == null || VoucherId == 0)
+                            {
+                                ToastService.Warning($"Voucher not configured for {JobType}. Please add voucher in master settings.");
+                                return;
+                            }
+
+                            var finYearId = YearStatechangeService.SelectedYearId;
+                            if (finYearId == 0)
+                            {
+                                ToastService.Error(" Financial year not selected. Please select a year.");
+                                return;
+                            }
+                            try
+                            {
+                                var result = await YearStatechangeService.GeneratebillNoAsync(VoucherId, finYearId, EditModel.JobBranchId);
+                                var fulljobno = result.prefix + result.number + result.suffix;
+                                if (!string.IsNullOrEmpty(result.number))
+                                {
+                                    var existingJob = jobList?.FirstOrDefault(j => j.JobNo == fulljobno && j.JobBranchId == branchId);
+
+                                    if (existingJob != null)
+                                    {
+                                        ToastService.Warning($" Job number '{result.prefix}{result.number}{result.suffix}' already exists!");
+                                    }
+                                }
+                                EditModel.JobPrefix = result.prefix;
+                                EditModel.JobNo = result.prefix + result.number + result.suffix;
+                                EditModel.JobSufix = result.suffix;
+                                EditModel.JobVchNo = int.Parse(result.number);
+                                StateHasChanged();
+                            }
+                            catch (Exception ex)
+                            {
+                                ToastService.Error("Error: " + ex.Message);
+                            }
+
+
+      }
+
     private async Task OnvoucherChanged()
     {
         var defaultBranch = branchList.FirstOrDefault(b => b.Branchisdefault);
@@ -1888,53 +1898,84 @@ if (voucher != null)
             return;
         }
 
+        // set globally
+        BranchContext.SetBranch(defaultBranch.BranchId);
         EditModel.JobBranchId = defaultBranch.BranchId;
         await LoadVoucherAndGenerateJobNo(defaultBranch.BranchId);
-
-      
     }
+
+
     protected override async Task OnInitializedAsync()
     {
+        BranchContext.OnBranchChanged += GlobalBranchChanged;
         await Refresh();
+
+        // Set initial branch
+        if (EditModel.JobBranchId == 0 && BranchContext.BranchId > 0)
+        {
+            EditModel.JobBranchId = BranchContext.BranchId;
+            await LoadVoucherAndGenerateJobNo(BranchContext.BranchId);
+        }
+    }
+
+    public void Dispose()
+    {
+        BranchContext.OnBranchChanged -= GlobalBranchChanged;
+    }
+
+    private async void GlobalBranchChanged()
+    {
+        if (EditModel != null)
+        {
+            EditModel.JobBranchId = BranchContext.BranchId;
+            await LoadVoucherAndGenerateJobNo(BranchContext.BranchId);
+            StateHasChanged();
+        }
     }
 
     private async Task Refresh()
     {
-        var parties = await AccountService.GetAllAsync();
-        party = parties.Where(a => a.AccountTypeId == 18).ToList();
-        statuslist = await StatusService.GetAllAsync();
-      
-        branchList=await BranchService.GetAllAsync();
-        cargos = await CargoService.GetAllAsync();
-        vessels = await VesselService.GetAllAsync();
-        countryList = await CountryService.GetAllAsync();
-        Currencies = await CurrencyService.GetAllAsync();
-        if (Currencies.Any())
+        try
         {
-            EditModel.JobDefCurrId = Currencies.FirstOrDefault().CurrencyId;
+            var parties = await AccountService.GetAllAsync();
+            party = parties.Where(a => a.AccountTypeId == 18).ToList();
+
+            statuslist = await StatusService.GetAllAsync();
+
+            branchList = await BranchService.GetAllAsync();
+            cargos = await CargoService.GetAllAsync();
+            vessels = await VesselService.GetAllAsync();
+            countryList = await CountryService.GetAllAsync();
+            Currencies = await CurrencyService.GetAllAsync();
+            if (Currencies.Any())
+                EditModel.JobDefCurrId = Currencies.First().CurrencyId;
+
+            var allJobs = await JobService.GetAllAsync();
+
+            jobList = allJobs
+                .Where(j => j.JobType != null &&
+                            j.JobType.Equals(JobType, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            var locationlist = await LocationService.GetAllAsync();
+            locationList = locationlist.Where(l => l.LocationType == "PORT").ToList();
+
+            var allNotify = await NotifyService.GetAllAsync();
+            shippers = allNotify.Where(n => n.NotifyType == "SHIPPER").ToList();
+            lines = allNotify.Where(n => n.NotifyType == "LINE").ToList();
+            consignees = allNotify.Where(n => n.NotifyType == "CONSIGNEE").ToList();
+            consignor = allNotify.Where(n => n.NotifyType == "CONSIGNOR").ToList();
+            agent = allNotify.Where(n => n.NotifyType == "AGENT").ToList();
+            chaList = allNotify.Where(n => n.NotifyType == "CHA").ToList();
+
+            StateHasChanged();
         }
-        
-
-        var allJobs = await JobService.GetAllAsync();
-        jobList = allJobs
-            .Where(j => j.JobType != null &&
-                        j.JobType.Equals(JobType, StringComparison.OrdinalIgnoreCase))
-            .ToList();
-
-        var locationlist = await LocationService.GetAllAsync();
-        locationList = locationlist.Where(l => l.LocationType == "PORT").ToList();
-
-        var allNotify = await NotifyService.GetAllAsync();
-
-        shippers = allNotify.Where(n => n.NotifyType == "SHIPPER").ToList();
-        lines = allNotify.Where(n => n.NotifyType == "LINE").ToList();
-        consignees = allNotify.Where(n => n.NotifyType == "CONSIGNEE").ToList();
-        consignor = allNotify.Where(n => n.NotifyType == "CONSIGNOR").ToList();
-        agent = allNotify.Where(n => n.NotifyType == "AGENT").ToList();
-        chaList = allNotify.Where(n => n.NotifyType == "CHA").ToList();
-
-        StateHasChanged();
+        catch (Exception ex)
+        {
+            ToastService.Error("Error loading data: " + ex.Message);
+        }
     }
+
 
 
     private async Task HandleValidSubmit()
@@ -1973,7 +2014,7 @@ if (voucher != null)
         {
             LoadingService.Hide();
         }
-        }
+    }
 
         private void Cancel()
         {

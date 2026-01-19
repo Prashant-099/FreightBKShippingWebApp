@@ -1,39 +1,65 @@
 ﻿@using FreightBKShippingWebApp.Services
 @using FreightBKShippingWebApp.Model
-
-@inject AuthService AuthService
 @inject IBranchContext BranchContext
+@inject AuthService AuthService
 
-<DxComboBox Data="@branches"
-            TextFieldName="BranchName"
-            ValueFieldName="BranchId"
-           Value="selectedBranchId"
-             ValueChanged="@( (int id) => OnBranchChanged(id) )"
-            CssClass="form-select w-100" />
+@if (branches.Count > 0)
+{
+    <DxComboBox Data="@branches"
+                TextFieldName="BranchName"
+                ValueFieldName="BranchId"
+                Value="SelectedBranchId"
+                ValueChanged="@((int newVal) => OnBranchChanged(newVal))"
+                CssClass="form-select w-100" />
+
+}
+else
+{
+    <div class="text-muted small">Loading branches…</div>
+}
 
 @code {
     List<UserBranchDto> branches = new();
-    int selectedBranchId;
+    private int _selectedBranchId;
+
+    int SelectedBranchId
+    {
+        get => _selectedBranchId;
+        set
+        {
+            if (_selectedBranchId == value || value == 0) return;
+
+            _selectedBranchId = value;
+            BranchContext.SetBranch(value);
+            _ = AuthService.SelectBranchAsync(value);
+        }
+    }
+
 
     protected override async Task OnInitializedAsync()
     {
+
         var session = await AuthService.GetSessionAsync();
         if (session == null) return;
 
         branches = session.Branches;
-        selectedBranchId =
-            session.ActiveBranchId ?? branches.First().BranchId;
 
-        BranchContext.BranchId = selectedBranchId;
+        var storedBranchId = await AuthService.GetSelectedBranchAsync();
+
+        int initialBranchId =
+            storedBranchId
+            ?? session.ActiveBranchId
+            ?? branches.First().BranchId;
+
+        SelectedBranchId = initialBranchId;
     }
 
-    async Task OnBranchChanged(int branchId)
+
+    private void OnBranchChanged(int newVal)
     {
-        selectedBranchId = branchId;
-        BranchContext.BranchId = branchId;
-
-        await AuthService.SelectBranchAsync(branchId);
-
-        Console.WriteLine($"🔁 Branch changed to {branchId}");
+        BranchContext.SetBranch(newVal);
+        _ = AuthService.SelectBranchAsync(newVal); // localStorage
     }
+
+
 }
