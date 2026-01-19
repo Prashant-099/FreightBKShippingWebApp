@@ -404,10 +404,24 @@ width:fit-content;
                                    
                                 </DxFormLayoutItem>
                                 <DxFormLayoutItem Caption="Branch" ColSpanMd="3">
-                                    <DxComboBox Data="@branchList"
+                                  @*   <DxComboBox Data="@branchList"
                                     TextFieldName="BranchName"
                                     ValueFieldName="BranchId"
-                                    @bind-Value="EditModel.BillBranchId" />
+                                    @bind-Value="EditModel.BillBranchId" /> *@
+
+                                      <DxComboBox TData="Branch" TValue="int"
+                                Data="@branchList"
+                                TextFieldName="BranchName"
+                                ValueFieldName="BranchId"
+                                        AllowUserInput="true"
+                                        ShowValidationIcon="true"
+                                        NullText="-- Select Branch --"
+                                        Value="@EditModel.BillBranchId"
+                                        ValueChanged="@((int branchId) => OnBranchChanged(EditModel, branchId))"
+                                ValueExpression="@( () => EditModel.BillBranchId )"
+                                        SearchMode="ListSearchMode.AutoSearch"
+                                        SearchFilterCondition="ListSearchFilterCondition.StartsWith"
+                                        ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" CssClass="editor-smooth" />
                                 </DxFormLayoutItem>
 
                                 <DxFormLayoutItem Caption="Is RCM Applicable" ColSpanMd="3">
@@ -2354,6 +2368,16 @@ width:fit-content;
         FilteredJobList = JobList
             .Where(j => j.JobType == selectedType)
             .ToList();
+    }
+    private async Task OnBranchChanged(Bill model, int branchId)
+    {
+        model.BillBranchId = branchId;
+
+        // 🔁 Re-generate Bill No if voucher already selected
+        if ( model.BillVoucherId > 0)
+        {
+            await OnvoucherChanged(model, model.BillVoucherId);
+        }
     }
 
     private async Task OnvoucherChanged(Bill model, int? voucherId)
