@@ -6,6 +6,9 @@
 @inject StateService StateService
 @inject CountryService CountryService
 @inject IJSRuntime JSRuntime
+
+@inject IBranchContext BranchContext
+
 <DxPopup @bind-Visible="Visible" ShowCloseButton="true" HeaderText="@Title" MaxWidth="600" CloseOnOutsideClick="false" horizontalAlignment="HorizontalAlignment.Center"
          verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body" ShowFooter="true" scrollable="true">
 
@@ -163,19 +166,23 @@
     // }
     public void Show(Branch branch)
     {
-
-        if (branch.BranchId > 0)
+        if (branch != null && branch.BranchId > 0)
         {
-            // Edit mode – bind directly to the selected object
+            // Edit mode – bind directly to the selected branch
             EditModel = branch;
             Title = "Edit Branch";
         }
         else
         {
-            // Add mode – create new object
-            EditModel = new Branch { BranchStatus = true };
+            // Add mode – create new branch
+            EditModel = new Branch
+            {
+                BranchStatus = true,
+                BranchId = BranchContext.BranchId // 🔥 set default selected branch
+            };
             Title = "Add Branch";
         }
+
         // Create EditContext when showing the form
         editContext = new EditContext(EditModel);
         Visible = true;

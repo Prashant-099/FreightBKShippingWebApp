@@ -102,6 +102,7 @@ builder.Services.AddScoped<Sentwpcerti>();
 builder.Services.AddScoped<BillUploadService>();
 //
 builder.Services.AddScoped<AuthTokenService>();
+builder.Services.AddScoped<IBranchContext, BranchContext>();
 
 //builder.Services.AddHttpClient<ApiClient>(client =>
 //{

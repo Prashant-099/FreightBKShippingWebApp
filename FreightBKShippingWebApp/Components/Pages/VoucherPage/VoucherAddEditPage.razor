@@ -8,6 +8,7 @@
 @inject ReportDataService ReportDataService
 @inject BranchService BranchService
 @inject YearStatechangeService YearStatechangeService
+@inject IBranchContext BranchContext
 <DxPopup @bind-Visible="Visible" ShowCloseButton="true" HeaderText="@Title" CloseOnOutsideClick="false" MaxWidth="1050"
 horizontalAlignment="HorizontalAlignment.Center"
          verticalAlignment="VerticalAlignment.Center"
@@ -47,9 +48,9 @@ horizontalAlignment="HorizontalAlignment.Center"
 
                     <DxFormLayoutItem Caption="Method Of Numbering">
                         <DxComboBox Data="@methodList"
-                            ShowValidationIcon="true"
-                        @bind-Value="EditModel.VoucherMethod"
-                        TextFieldName="Text"
+                                    ShowValidationIcon="true"
+                                    @bind-Value="EditModel.VoucherMethod"
+                                    TextFieldName="Text"
                                     ValueFieldName="Value" 
                                      SearchMode="ListSearchMode.AutoSearch"
                                     SearchFilterCondition="ListSearchFilterCondition.Contains"
@@ -75,11 +76,19 @@ horizontalAlignment="HorizontalAlignment.Center"
                         <DxCheckBox @bind-Checked="EditModel.VoucherIsTaxInvoice" />
                     </DxFormLayoutItem>
                         <DxFormLayoutItem Caption="Branch" >
-                            <DxComboBox Data="@branchList"
-                                        TextFieldName="BranchName"
-                                        ValueFieldName="BranchId"
-                                        ShowValidationIcon="true"
-                                        @bind-Value="EditModel.VoucherBranchId" />
+                           
+                                <DxComboBox Data="@branchList"
+                                            TValue="int?"
+                                            TData="Branch"
+                                            TextFieldName="BranchName"
+                                            ValueFieldName="BranchId"
+                                            ShowValidationIcon="true"
+                                            @bind-Value="EditModel.VoucherBranchId"
+                                            NullText="Select Branch..."
+                                            SearchMode="ListSearchMode.AutoSearch"
+                                            SearchFilterCondition="ListSearchFilterCondition.Contains"
+                                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                          
                         </DxFormLayoutItem>
                     <DxFormLayoutItem Caption="Bank">
                         <DxComboBox Data="@BankAccountList"
@@ -226,7 +235,7 @@ horizontalAlignment="HorizontalAlignment.Center"
 
 
 
-    protected override async Task OnInitializedAsync()
+    protected async Task OnInitializedAsync()
     {
 
         var allAccounts = await AccountService.GetAllAsync();
@@ -239,9 +248,11 @@ horizontalAlignment="HorizontalAlignment.Center"
         FinYearList = await YearService.GetAllAsync();
         ReportDataList = await ReportDataService.GetAllAsync();
         branchList = await BranchService.GetAllAsync();
+     
+
     }
 
-    public void Show(Voucher voucher)
+    public async Task Show(Voucher voucher)
     {
         if (voucher.VoucherId >0)
         {
@@ -251,10 +262,15 @@ horizontalAlignment="HorizontalAlignment.Center"
         }
         else
         {
-            EditModel = new Voucher { VoucherStatus = true };
+            EditModel = new Voucher
+            {
+                VoucherStatus = true,
+                VoucherBranchId = BranchContext.BranchId // ✅ AUTO SELECT BRANCH
+            };
             VoucherDetailList.Clear();
             VoucherDetailList.Add(new VoucherDetail
                 {
+                    
                 VoucherDetailYearId = YearStatechangeService.SelectedYearId,
                     VoucherDetailDate = DateTime.UtcNow,
                     VoucherDetailPrefix = "",
@@ -400,3 +416,5 @@ horizontalAlignment="HorizontalAlignment.Center"
         }
     }
 }
+
+

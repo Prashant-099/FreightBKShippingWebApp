@@ -27,11 +27,12 @@
 @inject BranchService BranchService
 @inject StatusService StatusService
 @inject VoucherService VoucherService
+
 <DxPopup @bind-Visible="Visible"
 ShowCloseButton="true"
 HeaderText="@PopupTitle"
 Scrollable="true"
-MaxWidth="999" 
+MaxWidth="999"
 MinWidth="200"
  BodyCssClass="my-popup-body"
          CloseOnOutsideClick="false" horizontalAlignment="HorizontalAlignment.Center"
@@ -928,11 +929,11 @@ MinWidth="200"
 
     //be
     private readonly HashSet<string> AllowedTablesBE = new()
-{
-    "BE", "INVOICE", "ITEMS", "CONTAINER", "EXCHANGE", "IGMS",
-    "DEPB", "BOND", "CERT", "SBEDUTY", "CTX", "BE_ITEM_SW_INFO_TYPE",
-    "STATEMENT", "SUPPORTINGDOCS"
-};
+    {
+        "BE", "INVOICE", "ITEMS", "CONTAINER", "EXCHANGE", "IGMS",
+        "DEPB", "BOND", "CERT", "SBEDUTY", "CTX", "BE_ITEM_SW_INFO_TYPE",
+        "STATEMENT", "SUPPORTINGDOCS"
+    };
 
     private void ReadDataBE(List<string> fileContent)
     {
@@ -1028,11 +1029,11 @@ MinWidth="200"
 
     //sb
     private readonly HashSet<string> AllowedTables = new()
-{
-    "SB","INVOICE","ITEM","CONTAINER","Supportingdocs","ITEMACCESS",
-    "DBK","LICENCE","PACKINGLIST","SW_INFO_TYPE","SW_CONST","SW_PROD",
-    "AR4","STR","SW_CTRL","CARGOBACK","PCKGBACK","CONTAINERBACK"
-};
+    {
+        "SB","INVOICE","ITEM","CONTAINER","Supportingdocs","ITEMACCESS",
+        "DBK","LICENCE","PACKINGLIST","SW_INFO_TYPE","SW_CONST","SW_PROD",
+        "AR4","STR","SW_CTRL","CARGOBACK","PCKGBACK","CONTAINERBACK"
+    };
 
 
     private void ReadDataSB(List<string> fileContent)
@@ -1151,26 +1152,26 @@ MinWidth="200"
             string exporterName = GetField(fields, 9);
 
             var exporterDict = new Dictionary<string, string>
-{
-    { "Exporter Address Line 1", extractedData["ExporterAddress1"] },
-    { "Exporter Address Line 2", extractedData["ExporterAddress2"] },
-    { "Exporter Address Line 3", extractedData["ExporterAddress3"] },
-    { "Exporter Address Line 4", extractedData["ExporterAddress4"] },
+                {
+                    { "Exporter Address Line 1", extractedData["ExporterAddress1"] },
+                    { "Exporter Address Line 2", extractedData["ExporterAddress2"] },
+                    { "Exporter Address Line 3", extractedData["ExporterAddress3"] },
+                    { "Exporter Address Line 4", extractedData["ExporterAddress4"] },
 
-    { "Exporter Phone", extractedData.GetValueOrDefault("ExporterPhone") },
-    { "Exporter Email", extractedData.GetValueOrDefault("ExporterEmail") },
-    { "Exporter GSTIN", extractedData.GetValueOrDefault("ExporterGSTIN") },
-    { "Exporter PAN", extractedData.GetValueOrDefault("ExporterPAN") }
-};
+                    { "Exporter Phone", extractedData.GetValueOrDefault("ExporterPhone") },
+                    { "Exporter Email", extractedData.GetValueOrDefault("ExporterEmail") },
+                    { "Exporter GSTIN", extractedData.GetValueOrDefault("ExporterGSTIN") },
+                    { "Exporter PAN", extractedData.GetValueOrDefault("ExporterPAN") }
+                };
 
 
             if (!string.IsNullOrWhiteSpace(exporterName))
             {
                 EditModel.JobPartyId = await JobDataCreationService.GetOrCreateAccountIdAsync(
-     exporterName,
-     exporterDict,
-     "Exporter"
-     );
+                 exporterName,
+                 exporterDict,
+                 "Exporter"
+                 );
 
             }
             EditModel.JobPartyAddress =
@@ -1181,14 +1182,14 @@ MinWidth="200"
             string consigneeName = extractedData.GetValueOrDefault("ConsigneeName");
 
             var consigneeDict = new Dictionary<string, string>
-{
-    { "Consignee Address Line 1", extractedData.GetValueOrDefault("ConsigneeAddress1") },
-    { "Consignee Address Line 2", extractedData.GetValueOrDefault("ConsigneeAddress2") },
-    { "Consignee Address Line 3", extractedData.GetValueOrDefault("ConsigneeAddress3") },
+                {
+                    { "Consignee Address Line 1", extractedData.GetValueOrDefault("ConsigneeAddress1") },
+                    { "Consignee Address Line 2", extractedData.GetValueOrDefault("ConsigneeAddress2") },
+                    { "Consignee Address Line 3", extractedData.GetValueOrDefault("ConsigneeAddress3") },
 
-    { "Consignee Phone", extractedData.GetValueOrDefault("ConsigneePhone") },
-    { "Consignee Email", extractedData.GetValueOrDefault("ConsigneeEmail") }
-};
+                    { "Consignee Phone", extractedData.GetValueOrDefault("ConsigneePhone") },
+                    { "Consignee Email", extractedData.GetValueOrDefault("ConsigneeEmail") }
+                };
 
             if (!string.IsNullOrWhiteSpace(consigneeName))
             {
@@ -1391,14 +1392,14 @@ MinWidth="200"
                 string supplierName = GetField(invFields, 22);
 
                 var consigneeDict = new Dictionary<string, string>
-{
-    { "Consignee Address Line 1", GetField(invFields, 23) },
-    { "Consignee Address Line 2", GetField(invFields, 24) },
-    { "Consignee Address Line 3", GetField(invFields, 25) },
+                    {
+                        { "Consignee Address Line 1", GetField(invFields, 23) },
+                        { "Consignee Address Line 2", GetField(invFields, 24) },
+                        { "Consignee Address Line 3", GetField(invFields, 25) },
 
-    { "Consignee Phone", extractedData.GetValueOrDefault("ConsigneePhone") },
-    { "Consignee Email", extractedData.GetValueOrDefault("ConsigneeEmail") }
-};
+                        { "Consignee Phone", extractedData.GetValueOrDefault("ConsigneePhone") },
+                        { "Consignee Email", extractedData.GetValueOrDefault("ConsigneeEmail") }
+                    };
 
                 if (!string.IsNullOrWhiteSpace(supplierName))
                 {
@@ -1752,6 +1753,8 @@ MinWidth="200"
     private string PopupTitle => IsEdit ? "Edit Job" : "Add Job";
     string[] weightUnits = new string[] { "NOS", "KGS", "MTS", "PKG", "BOX", "CTN" };
     // string[] stuslist = new string[] { "Complete", "Cancel", "Pending" };
+    [Inject]
+    public IBranchContext BranchContext { get; set; }
 
     private bool JobnoVisible { get; set; } = true;
     // private List<Account> parties = new();
@@ -1771,13 +1774,22 @@ MinWidth="200"
     private List<Job> jobList = new();
     private List<Branch> branchList = new();
     private List<Status> statuslist = new();
+
     public void Show(Job model)
     {
         IsEdit = model.JobId > 0;
         EditModel = model;
-        if (model.JobId <= 0)
+        if (model == null || model.JobId == 0) // New job
         {
-            OnvoucherChanged();
+            EditModel = new Job
+            {
+                JobBranchId = BranchContext.BranchId, 
+                JobDate = DateTime.Now
+            };
+        }
+        else
+        {
+            EditModel = model; // Existing job, edit mode
         }
         Visible = true;
         var defaultBranch = statuslist.FirstOrDefault();

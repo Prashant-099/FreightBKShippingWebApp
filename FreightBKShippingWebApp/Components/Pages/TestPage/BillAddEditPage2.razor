@@ -31,7 +31,7 @@
 @inject ConfirmationDialogService ConfirmDialogService
 @inject NavigationManager Navigation
 @inject GridLayoutService GridLayoutService
-
+@inject IBranchContext BranchContext
 <style>
     /* ========== MOBILE GRID FIX ========== */
 
@@ -2280,8 +2280,13 @@
             var selectedCompany = CompanyList?.FirstOrDefault(c => c.Status == true);
 
 
+            // if (EditModel.BillBranchId == 0)
+            //     EditModel.BillBranchId = defaultBranch?.BranchId ?? 0;
+            
+            // Set default branch from BranchContext
             if (EditModel.BillBranchId == 0)
-                EditModel.BillBranchId = defaultBranch?.BranchId ?? 0;
+                EditModel.BillBranchId = BranchContext.BranchId;
+
 
             if (EditModel.BillPlaceOfSupply == 0)
                 EditModel.BillPlaceOfSupply = selectedCompany?.StateId ?? 0;
@@ -2583,7 +2588,7 @@
             var finYearId = YearStatechangeService.SelectedYearId;
             try
             {
-                var result = await YearStatechangeService.GeneratebillNoAsync(voucherId, finYearId , model.BillBranchId);
+                var result = await YearStatechangeService.GeneratebillNoAsync(voucherId, finYearId , BranchContext.BranchId);
 
                 model.BillPrefix = result.prefix;
                 model.BillNo = result.prefix + result.number + result.suffix;

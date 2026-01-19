@@ -47,22 +47,27 @@ namespace FreightBKShippingWebApp.Services
            
         }
 
+
+
+
+
+
+
         // ✅ CREATE USER
         public async Task<bool> CreateAsync(User user)
         {
             try
             {
-                var result = await _api.PostAsync<bool, User>("api/Users", user);
-                return result;
+                await _api.PostAsync<User, User>("api/Users", user);
+                return true;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Error creating user: {ex.Message}");
+                Console.WriteLine(ex);
                 return false;
             }
-           
-           
         }
+
 
         // ✅ UPDATE USER
         public async Task<bool> UpdateAsync(User user)
@@ -80,6 +85,11 @@ namespace FreightBKShippingWebApp.Services
            
             
         }
+
+
+
+
+
 
         // ✅ DELETE USER
         public async Task<bool> DeleteAsync(string userId)

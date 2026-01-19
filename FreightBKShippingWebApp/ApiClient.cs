@@ -19,7 +19,7 @@ namespace FreightBKShippingWebApp
         private readonly TimeSpan _cacheExpiry = TimeSpan.FromMinutes(5);
         private bool _isRefreshing = false; // Prevent concurrent refresh attempts
         private readonly SemaphoreSlim _refreshSemaphore = new(1, 1);
-
+        private readonly IBranchContext branchContext;
         private readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true,
@@ -94,6 +94,21 @@ namespace FreightBKShippingWebApp
             {
                 Console.WriteLine($"❌ Error in SetAuthorizeHeader: {ex.Message}");
                 navigationManager.NavigateTo("/login");
+            }
+        }
+
+        private void SetBranchHeader()
+        {
+            httpClient.DefaultRequestHeaders.Remove("X-Branch-Id");
+
+            if (branchContext.BranchId > 0)
+            {
+                httpClient.DefaultRequestHeaders.Add(
+                    "X-Branch-Id",
+                    branchContext.BranchId.ToString()
+                );
+
+                Console.WriteLine($"🌿 X-Branch-Id set: {branchContext.BranchId}");
             }
         }
 
