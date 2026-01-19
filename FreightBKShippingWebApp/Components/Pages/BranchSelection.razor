@@ -22,44 +22,45 @@ else
     List<UserBranchDto> branches = new();
     private int _selectedBranchId;
 
+    // ✅ Setter has NO side effects
     int SelectedBranchId
     {
         get => _selectedBranchId;
-        set
-        {
-            if (_selectedBranchId == value || value == 0) return;
-
-            _selectedBranchId = value;
-            BranchContext.SetBranch(value);
-            _ = AuthService.SelectBranchAsync(value);
-        }
+        set => _selectedBranchId = value;
     }
-
 
     protected override async Task OnInitializedAsync()
     {
-
         var session = await AuthService.GetSessionAsync();
         if (session == null) return;
 
         branches = session.Branches;
 
-        var storedBranchId = await AuthService.GetSelectedBranchAsync();
+        // 🔒 if already decided globally, use it
+        if (BranchContext.BranchId > 0)
+        {
+            SelectedBranchId = BranchContext.BranchId;
+            return;
+        }
 
-        int initialBranchId =
-            storedBranchId
+        // 🔥 initial resolve ONLY ONCE
+        SelectedBranchId =
+            await AuthService.GetSelectedBranchAsync()
             ?? session.ActiveBranchId
             ?? branches.First().BranchId;
 
-        SelectedBranchId = initialBranchId;
+        BranchContext.SetBranch(SelectedBranchId);
     }
 
-
-    private void OnBranchChanged(int newVal)
+    // ✅ SINGLE SOURCE OF TRUTH
+    private async Task OnBranchChanged(int newVal)
     {
+        if (newVal == 0 || newVal == SelectedBranchId)
+            return;
+
+        SelectedBranchId = newVal;
+
         BranchContext.SetBranch(newVal);
-        _ = AuthService.SelectBranchAsync(newVal); // localStorage
+        await AuthService.SelectBranchAsync(newVal);
     }
-
-
 }

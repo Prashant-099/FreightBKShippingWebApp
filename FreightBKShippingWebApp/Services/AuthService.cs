@@ -28,7 +28,7 @@ namespace FreightBKShippingWebApp.Services
             ApiClient apiClient,
             IBranchContext branchContext)
         {
-            _localStorage = localStorage;
+             _localStorage = localStorage;
             _navigationManager = navigationManager;
             _authStateProvider = authStateProvider;
             _api = apiClient;
