@@ -452,6 +452,11 @@ namespace FreightBKShippingWebApp
                             Console.WriteLine($"📤 PUT {path} => {response.StatusCode}");
                 Console.WriteLine($"📥 Content: '{content}'");
 
+                if (!response.IsSuccessStatusCode)
+                {
+                    //Console.WriteLine($"❌ API Error: {res.StatusCode}");
+                    throw new Exception(content);
+                }
                 if (response.IsSuccessStatusCode)
                 {
                     if (string.IsNullOrWhiteSpace(content))

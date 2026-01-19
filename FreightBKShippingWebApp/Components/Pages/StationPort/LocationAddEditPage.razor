@@ -23,11 +23,11 @@
                 </ChildContent>
             </DxFormLayoutItem>
 
-           @*  <DxFormLayoutItem Caption="Code">
+            <DxFormLayoutItem Caption="Code">
                 <ChildContent >
                     <DxTextBox @bind-Text="EditModel.LocationCode" />
                 </ChildContent>
-            </DxFormLayoutItem> *@
+            </DxFormLayoutItem>
 
             <DxFormLayoutItem Caption="Type">
                 <ChildContent >
@@ -86,12 +86,12 @@
                         <DxTextBox @bind-Text="EditModel.LocationPincode" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
                 </ChildContent>
             </DxFormLayoutItem>
-
+@* 
             <DxFormLayoutItem Caption="Active">
                 <ChildContent >
                     <DxCheckBox @bind-Checked="EditModel.LocationStatus" />
                 </ChildContent>
-            </DxFormLayoutItem>
+            </DxFormLayoutItem> *@
 
         </DxFormLayout>
 
@@ -115,12 +115,12 @@
     private Location EditModel { get; set; } = new();
     private List<State> stateList = new();
     private List<Country> CountryList = new();
-       protected override async Task OnInitializedAsync()
-        {
-            stateList = await StateService.GetStatesAsync();
+    protected override async Task OnInitializedAsync()
+    {
+        stateList = await StateService.GetStatesAsync();
         CountryList = await CountryService.GetAllAsync();
-           
-        }
+
+    }
     public class SelectItem
     {
         public string Text { get; set; }
@@ -135,7 +135,7 @@
 
     public void Show(Location location)
     {
-        
+
 
         if (location.LocationId > 0)
         {
@@ -145,8 +145,10 @@
         }
         else
         {
+            var country = CountryList.FirstOrDefault(c => string.Equals(c.CountryName, "INDIA", StringComparison.OrdinalIgnoreCase)).CountryId;
+
             // Add mode – create new object
-            EditModel = new Location { LocationStatus = true };
+            EditModel = new Location { LocationStatus = true, LocationType = "PORT", LocationCountryId = country };
             Title = "Add Location";
         }
         // Create EditContext when showing the form

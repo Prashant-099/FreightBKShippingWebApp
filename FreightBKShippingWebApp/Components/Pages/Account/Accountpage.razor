@@ -674,6 +674,7 @@
         {
             LoadingService.Show("Deleting...");
             int successCount = 0, failCount = 0;
+            List<string> errorMessages = new();
             foreach (var account in selectedList)
             {
               
@@ -685,11 +686,11 @@
                 else
                 {
                     failCount++;
-                    ToastService.Error(result.Error);   // 🎉 show real API message
+                    errorMessages.Add(result.Error);  // 🎉 show real API message
                 }
             }
             if (successCount > 0) ToastService.Success($"{successCount} Account(s) Deleted Successfully.");
-            // if (failCount > 0) ToastService.Error($"{failCount} Account(s) Failed To Delete.");
+            if (failCount > 0) ToastService.Error($"{failCount} Account(s) failed.\nDetails: {string.Join("\n", errorMessages.Distinct())}");
             await LoadAccountsAsync();
         }
         finally

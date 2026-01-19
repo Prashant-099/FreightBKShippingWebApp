@@ -83,7 +83,7 @@ builder.Services.AddScoped<GstinService>();
 builder.Services.AddScoped<StatusService>();
 builder.Services.AddScoped<GstinAuthTokenService>();
 builder.Services.AddScoped<DashboardService>();
-
+builder.Services.AddScoped<AuditLogService>();
 //pdfreder services
 builder.Services.AddScoped<DataCleanupService>();
 //builder.Services.AddScoped<PdfExtractionService>();

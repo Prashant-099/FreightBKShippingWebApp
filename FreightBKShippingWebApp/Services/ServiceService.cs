@@ -83,17 +83,17 @@ namespace FreightBKShippingWebApp.Services
         }
 
         // ✅ DELETE
-        public async Task<bool> DeleteAsync(int serviceId)
+        public async Task<(bool Success, string Error)> DeleteAsync(int serviceId)
         {
             try
             {
                 var result = await _api.DeleteAsync<bool>($"api/Services/{serviceId}");
-                return result;
+                return (true, null);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Error deleting service: {ex.Message}");
-                return false;
+                return (false, ex.Message);
             }
            
            

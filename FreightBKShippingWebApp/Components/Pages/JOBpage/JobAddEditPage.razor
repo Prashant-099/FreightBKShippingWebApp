@@ -855,7 +855,7 @@ MinWidth="200"
     private string currentPopupType = "";
     private async Task ShowAccountPopup()
     {
-        popup.Show();
+        popup.Show(new Account(){AccountTypeId=18});
         // currentPopupType = type;
         // newJob = new Job { JobType = type };
         newJob = new Job();
@@ -1843,16 +1843,17 @@ if (voucher != null)
         try
         {
             var result = await YearStatechangeService.GeneratebillNoAsync(VoucherId, finYearId, EditModel.JobBranchId);
-            var fulljobno = result.prefix + result.number + result.suffix;
-            if (!string.IsNullOrEmpty(result.number))
-            {
-                var existingJob = jobList?.FirstOrDefault(j => j.JobNo == fulljobno && j.JobBranchId == branchId);
+            // var fulljobno = result.prefix + result.number + result.suffix;
+            // if (!string.IsNullOrEmpty(result.number))
+            // {
+            //     var existingJob = jobList?.FirstOrDefault(j => j.JobNo == fulljobno && j.JobBranchId == branchId);
 
-                if (existingJob != null)
-                {
-                    ToastService.Warning($" Job number '{result.prefix}{result.number}{result.suffix}' already exists!");
-                }
-            }
+            //     if (existingJob != null)
+            //     {
+            //         ToastService.Warning($" Job number '{result.prefix}{result.number}{result.suffix}' already exists!");
+            //         await LoadVoucherAndGenerateJobNo(EditModel.JobBranchId??0);
+            //     }
+            // }
             EditModel.JobPrefix = result.prefix;
             EditModel.JobNo = result.prefix + result.number + result.suffix;
             EditModel.JobSufix = result.suffix;
@@ -1935,22 +1936,25 @@ if (voucher != null)
             if (!IsEdit)
             {
                 var result =  await JobService.CreateAsync(EditModel);
-                if (result)
+                if (result.Success)
                 {
                     ToastService.Success("Import Job created successfully.");
                 }
 
-                else { ToastService.Error("Import Job Failed  To Created ."); }
+                else {  ToastService.Error(result.Error);
+                return; }
             }
             else
             {
                 var result = await JobService.UpdateAsync(EditModel);
-                if (result)
+                if (result.Success)
                 {
                 ToastService.Success("Import Job updated successfully.");
                 }
 
-                else {ToastService.Error("Import Job Failed  To Update .");}
+                else { 
+                    ToastService.Error(result.Error);
+                return;}
 
             }
 

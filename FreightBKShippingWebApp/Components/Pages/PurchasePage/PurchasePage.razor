@@ -1,4 +1,4 @@
-﻿@page "/bill"
+﻿@page "/purchase"
 @using FreightBKShippingWebApp.Components.Pages.Eiinvoice_IRN_
 @using FreightBKShippingWebApp.Components.Pages.Wp_mail_Configpagess
 @using FreightBKShippingWebApp.Model
@@ -17,6 +17,7 @@
 @inject YearStatechangeService YearStatechangeService
 @inject IJSRuntime JSRuntime
 @inject GridLayoutService GridLayoutService
+@inject VoucherService VoucherService
 <style>
     .grid-size {
         max-height: 570px;
@@ -53,7 +54,7 @@ SelectedDataItemsChanged="OnSelectedBillsChanged"
             <TitleTemplate Context="tl">
                 <div class="d-flex align-items-center">
                     <i class="bi bi-receipt-cutoff me-2"></i>
-                    <span class="fs-5">Sale Invoice</span>
+                    <span class="fs-5">Purchase Invoice</span>
                     @*       @if (SelectedBills?.Count > 0)
                     {
                         <span class="badge bg-primary ms-2">@SelectedBills.Count Selected</span>
@@ -429,7 +430,7 @@ CloseOnEscape="true">
     </div>
 </DxPopup>
 
-<BillAddEditPage2 @ref="popup" OnSaved="LoadBillsAsync" />
+<PurchaseAddEditPage @ref="popup" OnSaved="LoadBillsAsync" />
 <EInvoicePopUP @ref="EInvoicePopupRef" />
 <FreightBKShippingWebApp.Components.Pages.Eiinvoice_IRN_.CancelingEInvoices @ref="EInvoiceCancelPopupRef" OnCancelIRN="HandleIRNCancelled"></FreightBKShippingWebApp.Components.Pages.Eiinvoice_IRN_.CancelingEInvoices>
 <SendMsg IsVisible="visiblemsgsendwin"
@@ -515,7 +516,7 @@ DefaultFileName="@PendingFileName"
     private List<Bill> billList = new();
     private IReadOnlyList<object> SelectedBills { get; set; } = new List<object>();
     private List<ReportData> ReportDataList = new();
-    private BillAddEditPage2 popup;
+    private PurchaseAddEditPage popup;
     private bool IsAdmin = false;
     private string CurrentUserId = string.Empty;
     private EInvoicePopUP EInvoicePopupRef { get; set; }
@@ -984,7 +985,14 @@ DefaultFileName="@PendingFileName"
         try
         {
             LoadingService.Show();
-            billList = (await BillService.GetAllAsync()).Where(j => j.BillYearId == YearStatechangeService.SelectedYearId).ToList();
+            var purchaseVoucherIds = (await VoucherService.GetAllAsync())
+    .Where(v => v.VoucherGroup == "PURCHASE")
+    .Select(v => v.VoucherId)
+    .ToList();
+
+            billList = (await BillService.GetAllAsync()).Where(j => j.BillYearId == YearStatechangeService.SelectedYearId &&
+        purchaseVoucherIds.Contains(j.BillVoucherId)).ToList();
+
             LoadingService.Hide();
             await InvokeAsync(StateHasChanged);
 

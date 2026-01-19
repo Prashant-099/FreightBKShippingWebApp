@@ -186,6 +186,7 @@
         border-radius: 8px;
         padding: 6px 10px;
         font-weight: bold;
+width:fit-content;
     }
 
     .net-amount-field {
@@ -383,8 +384,6 @@
                                 </DxFormLayoutItem>
                                 <DxFormLayoutItem Caption="Party Name" ColSpanMd="6">
 
-                                    @* <ChildContent Context="ctx" > *@
-                                    @* <div class="hsn-field-wrapper"> *@
                                     <div style="position: relative; display: inline-block; width: 100%;">
                                         <DxButton Click="@ShowAccountPopup"
                                         Text="+"
@@ -402,7 +401,7 @@
                                         SearchFilterCondition="ListSearchFilterCondition.StartsWith" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
 
                                     </div>
-                                    @* </ChildContent> *@
+                                   
                                 </DxFormLayoutItem>
                                 <DxFormLayoutItem Caption="Branch" ColSpanMd="3">
                                     <DxComboBox Data="@branchList"
@@ -536,88 +535,7 @@
                                     PageSize="10"
                                     CssClass="fixed-height-grid mobile-grid" >
 
-                                            <ToolbarTemplate Context="gridToolbarContext">
-                                                <DxToolbar>
-
-                                                    <Items>
-                                                        <DxToolbarItem BeginGroup="true">
-                                                            <Template Context="groupActions">
-                                                                <div class="d-flex align-items-center gap-2">
-                                                                   @*  <DxButton RenderStyle="ButtonRenderStyle.Success"
-                                                                    @onclick="New_Click">
-                                                                        <i class="bi bi-plus"></i>
-                                                                    </DxButton>
-                                                                    <DxButton RenderStyle="ButtonRenderStyle.Danger"
-                                                                    @onclick="Revert_Click">
-                                                                        <i class="bi bi-trash"></i>
-                                                                    </DxButton> *@
-                                                                   @* <DxButton RenderStyle="ButtonRenderStyle.Primary"
-                                                                    @onclick="ColumnChooserButton_Click">
-                                                                        <i class="bi bi-list-columns"></i>
-                                                                    </DxButton> *@
-                                                                   @*  <DxButton RenderStyle="ButtonRenderStyle.Success"
-                                                                    @onclick="ShowServicePopup" CssClass="service-plus-button">
-                                                                        <i class="bi bi-plus"></i>
-                                                                    </DxButton> *@
-                                                                </div>
-                                                            </Template>
-                                                        </DxToolbarItem>
-                                                        @*  <DxToolbarItem Text="" IconCssClass="bi bi-plus" RenderStyle="ButtonRenderStyle.Success" Click="New_Click" />
-                                                        <DxToolbarItem Type="Spacer" />
-                                                        <DxToolbarItem Text="" IconCssClass="bi bi-trash" RenderStyle="ButtonRenderStyle.Danger" Click="Revert_Click" />
-                                                        <DxToolbarItem Type="Spacer" />
-                                                        <DxToolbarItem Text="" RenderStyle="ButtonRenderStyle.Primary" IconCssClass="bi bi-list-columns" Click="ColumnChooserButton_Click" />
-                                                        <DxToolbarItem Type="Spacer" />
-                                                        <DxToolbarItem Text="" IconCssClass="bi bi-plus" CssClass="service-plus-button" Click="@ShowServicePopup" /> *@
-                                                            <DxToolbarItem BeginGroup="true" IconCssClass="bi bi-gear-wide-connected" >
-                                                                <Template Context="Cyx">
-
-                                                                    <DxComboBox Data="@availableGridLayouts"
-                                                                                Value="@selectedGridLayoutId"
-                                                                                ValueExpression="@(() => selectedGridLayoutId)"
-                                                                                ValueChanged="@((int? value) => OnGridLayoutSelectedAsync(value))"
-                                                                                ValueFieldName="GridLayoutId"
-                                                                                TextFieldName="GridLayoutName"
-                                                                                NullText="Default View"
-                                                                                ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
-                                                                                CssClass="layout-combobox" />
-
-                                                                </Template>
-
-                                                            </DxToolbarItem>
-                                                            <DxToolbarItem BeginGroup="true" Context="cfdr"
-                                                                           RenderStyleMode="ToolbarItemRenderStyleMode.Contained"
-                                                                           RenderStyle="ButtonRenderStyle.Secondary"
-                                                                           IconCssClass="bi bi-gear-wide-connected">
-                                                                <Items>
-                                                                    <DxToolbarItem Text="Save Current Layout"
-                                                                                   RenderStyle="ButtonRenderStyle.Primary"
-                                                                                   IconCssClass="bi bi-floppy"
-                                                                                   Click="ShowSaveGridLayoutDialog" />
-
-                                                                    <DxToolbarItem Text="Create New Layout"
-                                                                                   RenderStyle="ButtonRenderStyle.Success"
-                                                                                   IconCssClass="bi bi-plus-square"
-                                                                                   Click="ShowNewGridLayoutDialog" />
-
-                                                                    @if (selectedGridLayoutId.HasValue)
-                                                                    {
-                                                                        <DxToolbarItem Text="Delete Current Layout"
-                                                                                       RenderStyle="ButtonRenderStyle.Danger"
-                                                                                       IconCssClass="bi bi-trash"
-                                                                                       Click="DeleteCurrentGridLayout" />
-                                                                    }
-
-                                                                </Items>
-                                                            </DxToolbarItem>
-
-
-
-
-
-                                                        </Items>
-                                                    </DxToolbar>
-                                            </ToolbarTemplate>
+                                          
 
                                             <Columns>
 
@@ -910,181 +828,9 @@
                                         </DxGrid>
 
                                      </div>
-                                @* <div class="mt-2 d-flex justify-content-between align-items-center border-top pt-2">
-                                        <div class="w-75">xccccccccccc 
-                                            <label>Remarks</label>
-                                            <DxTextBox @bind-Text="EditModel.BillRemarks" Width="100%" />
-
-                                        </div>
-                                        <div class="text-end pe-3">
-                                        <label >Branch</label>
-                                        <DxComboBox Data="@branchList"
-                                                    TextFieldName="BranchName"
-                                                    ValueFieldName="BranchId"
-                                                    @bind-Value="EditModel.BillBranchId"></DxComboBox>
-
-                                        </div>
-                                    <div class="text-end pe-3">
-                                        <label>is RCM Applicable</label>
-                                        <DxCheckBox @bind-Checked="EditModel.BillIsRcm" Text="is RCM Applicable" />
-
-                                    </div>
-                                    <div class="text-end pe-3">
-                                        <label>is Round Off</label>
-                                        <DxCheckBox @bind-Checked="EditModel.BillIsRoundOff" Text="is Round Off" />
-
-                                    </div>
-                                    <div class="text-end pe-3">
-                                        <label class="fw-bold me-2">Total Amount:</label>
-                                        <DxSpinEdit @bind-Value="EditModel.BillNetAmount" ReadOnly="true" Format="N2" Width="150px" />
-                                    </div>
-                                    </div> *@
-                                    </DxFormLayoutTabPage>
+                    </DxFormLayoutTabPage>
                             
-                               @* <DxFormLayoutTabPage Caption="Job Details">
-                                <DxFormLayout>
-
-
-                                    <DxFormLayoutItem Caption="POL" ColSpanMd="3" CssClass="jobdetailslabel">
-                                        <DxComboBox TData="Location" TValue="int"
-                                        Data="@locationList"
-                                        TextFieldName="LocationName"
-                                        ValueFieldName="LocationId"
-                                        AllowUserInput="true"
-                                        NullText="-- Select POL --"
-                                        @bind-Value="EditModel.BillPolId"
-                                        SearchMode="ListSearchMode.AutoSearch"
-                                        SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="jobdetails" />
-                                    </DxFormLayoutItem>
-
-                                    <DxFormLayoutItem Caption="Consignee" ColSpanMd="3" CssClass="jobdetailslabel">
-                                        <DxComboBox TData="Notify" TValue="int"
-                                        Data="@ConsigneeList"
-                                        TextFieldName="NotifyName"
-                                        ValueFieldName="NotifyId"
-                                        AllowUserInput="true"
-                                        NullText="-- Select Consignee --"
-                                        @bind-Value="EditModel.BillConsigneeId"
-                                        SearchMode="ListSearchMode.AutoSearch"
-                                        SearchFilterCondition="ListSearchFilterCondition.StartsWith" CssClass="jobdetails" />
-                                    </DxFormLayoutItem>
-                                    <DxFormLayoutItem Caption="SB/BE No" ColSpanMd="2" CssClass="jobdetailslabel">
-                                        <DxTextBox @bind-Text="EditModel.BillSbNo" CssClass="jobdetails" />
-                                    </DxFormLayoutItem>
-                                    <DxFormLayoutItem Caption="Date" ColSpanMd="2" CssClass="jobdetailslabel">
-                                        <DxDateEdit @bind-Date="EditModel.BillSbDate" CssClass="jobdetails" Format="dd-MM-yyyy" />
-                                    </DxFormLayoutItem>
-                                    <DxFormLayoutItem Caption="QTY" ColSpanMd="2" CssClass="jobdetailslabel">
-                                        <DxSpinEdit @bind-Value="EditModel.BillQty" ShowSpinButtons="false" CssClass="jobdetails" />
-                                    </DxFormLayoutItem>
-                                    <DxFormLayoutItem Caption="POD" ColSpanMd="3">
-                                        <DxComboBox TData="Location" TValue="int"
-                                        Data="@locationList"
-                                        TextFieldName="LocationName"
-                                        ValueFieldName="LocationId"
-                                        AllowUserInput="true"
-                                        NullText="-- Select POD --"
-                                        @bind-Value="EditModel.BillPodId"
-                                        SearchMode="ListSearchMode.AutoSearch"
-                                        SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
-                                    </DxFormLayoutItem>
-                                    <DxFormLayoutItem Caption="Cargo" ColSpanMd="3">
-                                        <DxComboBox TData="Cargo" TValue="int"
-                                        Data="@CargoList"
-                                        TextFieldName="CargoName"
-                                        ValueFieldName="CargoId"
-                                        AllowUserInput="true"
-                                        NullText="-- Select Cargo --"
-                                        @bind-Value="EditModel.BillCargoId"
-                                        SearchMode="ListSearchMode.AutoSearch"
-                                        SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
-                                    </DxFormLayoutItem>
-                                    <DxFormLayoutItem Caption="BL No" ColSpanMd="2">
-                                        <DxTextBox @bind-Text="EditModel.BillBlNo" />
-                                    </DxFormLayoutItem>
-                                    <DxFormLayoutItem Caption="Date" ColSpanMd="2">
-                                        <DxDateEdit @bind-Date="EditModel.BillBlDate" Format="dd-MM-yyyy" />
-                                    </DxFormLayoutItem>
-                                    <DxFormLayoutItem Caption="Gross WT" ColSpanMd="2">
-                                        <DxSpinEdit @bind-Value="EditModel.BillGrossWt" ShowSpinButtons="false" />
-                                    </DxFormLayoutItem>
-
-                                    <DxFormLayoutItem Caption="Vessel" ColSpanMd="3">
-                                        <DxComboBox TData="Vessel" TValue="int"
-                                        Data="@VesselList"
-                                        TextFieldName="VesselName"
-                                        ValueFieldName="VesselId"
-                                        AllowUserInput="true"
-                                        NullText="-- Select Vessel --"
-                                        @bind-Value="EditModel.BillVesselId"
-                                        SearchMode="ListSearchMode.AutoSearch"
-                                        SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
-                                    </DxFormLayoutItem>
-                                    <DxFormLayoutItem Caption="Shipper" ColSpanMd="3">
-                                        <DxComboBox TData="Notify" TValue="int"
-                                        Data="@ShipperList"
-                                        TextFieldName="NotifyName"
-                                        ValueFieldName="NotifyId"
-                                        AllowUserInput="true"
-                                        NullText="-- Select Shipper --"
-                                        @bind-Value="EditModel.BillShipperId"
-                                        SearchMode="ListSearchMode.AutoSearch"
-                                        SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
-                                    </DxFormLayoutItem>
-                                    <DxFormLayoutItem Caption="S.Inv." ColSpanMd="2">
-                                        <DxTextBox @bind-Text="EditModel.BillShipperInvNo" />
-                                    </DxFormLayoutItem>
-                                    <DxFormLayoutItem Caption="Date" ColSpanMd="2">
-                                        <DxDateEdit @bind-Date="EditModel.BillShipperInvDate" Format="dd-MM-yyyy" />
-                                    </DxFormLayoutItem>
-                                    <DxFormLayoutItem Caption="Net WT" ColSpanMd="2">
-                                        <DxSpinEdit @bind-Value="EditModel.BillNetWt" ShowSpinButtons="false" />
-                                    </DxFormLayoutItem>
-                                    <DxFormLayoutItem Caption="Line" ColSpanMd="3">
-                                        <DxComboBox TData="Notify" TValue="int"
-                                        Data="@LineList"
-                                        TextFieldName="NotifyName"
-                                        ValueFieldName="NotifyId"
-                                        AllowUserInput="true"
-                                        NullText="-- Select Line --"
-                                        @bind-Value="EditModel.BillLineId"
-                                        SearchMode="ListSearchMode.AutoSearch"
-                                        SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
-                                    </DxFormLayoutItem>
-                                    <DxFormLayoutItem Caption="Cont 20 FT" ColSpanMd="2">
-                                        <DxTextBox @bind-Text="EditModel.Bill20Ft" />
-                                    </DxFormLayoutItem>
-                                    <DxFormLayoutItem Caption="Cont 40 FT" ColSpanMd="2">
-                                        <DxTextBox @bind-Text="EditModel.Bill40Ft" />
-                                    </DxFormLayoutItem>
-                                    <DxFormLayoutItem Caption="Ex. Rate" ColSpanMd="3">
-                                        <div class="d-flex gap-1">
-                                            <DxComboBox TData="Currency" TValue="int"
-                                            Data="@CurrList"
-                                            TextFieldName="CurrencyName"
-                                            ValueFieldName="CurrencyId"
-                                            AllowUserInput="true"
-                                            NullText="-- Select Currency --"
-                                            @bind-Value="EditModel.BillDefaultCurrencyId"
-                                            SearchMode="ListSearchMode.AutoSearch"
-                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
-                                            <DxSpinEdit @bind-Value="EditModel.BillExchRate" ShowSpinButtons="false" />
-                                        </div>
-                                    </DxFormLayoutItem>
-
-                                    <DxFormLayoutItem Caption="HBL No" ColSpanMd="2">
-                                        <DxTextBox @bind-Text="EditModel.BillHblNo" />
-                                    </DxFormLayoutItem>
-                                    <DxFormLayoutItem Caption="CBM" ColSpanMd="2">
-                                        <DxSpinEdit @bind-Value="EditModel.BillCbmQty" ShowSpinButtons="false" />
-                                    </DxFormLayoutItem>
-
-                                </DxFormLayout>
-
-                            </DxFormLayoutTabPage>
-                             *@
-                            
-                                <DxFormLayoutTabPage Caption="Extra Details">
+                               @*  <DxFormLayoutTabPage Caption="Extra Details">
                                 <div class="popup-content-container">
                                     <!-- Scrollable section -->
                                     <div class="form-scroll-section">
@@ -1184,7 +930,7 @@
 
                                     </div>
                                 </div>
-                            </DxFormLayoutTabPage>
+                            </DxFormLayoutTabPage> *@
 
                             </DxFormLayoutTabPages>
 
@@ -1244,10 +990,59 @@
     </BodyContentTemplate>
 
       <FooterContentTemplate Context="ftr">
-        <div class="my-footer">
+       <DxToolbar >
 
-            <!-- LEFT SIDE -->
+
+
+
+
+
+                <DxToolbarItem BeginGroup="true" Context="cfdr"
+                               RenderStyleMode="ToolbarItemRenderStyleMode.Contained"
+                               RenderStyle="ButtonRenderStyle.Secondary"
+                           Alignment="ToolbarItemAlignment.Right"
+                               IconCssClass="bi bi-gear-wide-connected">
+                    <Items>
+                        <DxToolbarItem Text="Save Current Layout"
+                                       RenderStyle="ButtonRenderStyle.Primary"
+                                       IconCssClass="bi bi-floppy"
+                                       Click="ShowSaveGridLayoutDialog" />
+
+                        <DxToolbarItem Text="Create New Layout"
+                                       RenderStyle="ButtonRenderStyle.Success"
+                                       IconCssClass="bi bi-plus-square"
+                                       Click="ShowNewGridLayoutDialog" />
+
+                        @if (selectedGridLayoutId.HasValue)
+                        {
+                            <DxToolbarItem Text="Delete Current Layout"
+                                           RenderStyle="ButtonRenderStyle.Danger"
+                                           IconCssClass="bi bi-trash"
+                                           Click="DeleteCurrentGridLayout" />
+                        }
+
+                    </Items>
+                </DxToolbarItem>
+
+              
+            </DxToolbar>
+       
+        <div class="my-footer">
+             
+            
+                  
+                                              
             <div class="footer-left">
+                <DxComboBox Data="@availableGridLayouts"
+                        Value="@selectedGridLayoutId"
+                        ValueExpression="@(() => selectedGridLayoutId)"
+                        ValueChanged="@((int? value) => OnGridLayoutSelectedAsync(value))"
+                        ValueFieldName="GridLayoutId"
+                        TextFieldName="GridLayoutName"
+                        NullText="Default View"
+                        ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                        CssClass="layout-combobox" />
+               
                 <DxComboBox TData="Account" TValue="int" 
                             Data="@BankList"
                             TextFieldName="AccountName"
@@ -1972,17 +1767,24 @@
         {
             // ✅ Only load what's ABSOLUTELY needed for initial render
             var jobTask = JobService.GetAllAsync();
+            var voucherTask = VoucherService.GetAllAsync();
             var accountTask = AccountService.GetAllAsync();
             var stateTask = StateService.GetStatesAsync();
             var companyTask = CompanyService.GetAllAsync();
             var branchtask = BranchService.GetAllAsync();
-            await Task.WhenAll(jobTask, accountTask, companyTask, stateTask, branchtask);
+            await Task.WhenAll(jobTask, accountTask, voucherTask,companyTask, stateTask, branchtask);
 
             // Set critical data
             JobList = jobTask.Result;
             FilteredJobList = JobList;
             branchList = branchtask.Result;
             CompanyList = companyTask.Result;
+            VoucherList = voucherTask.Result.Where(v =>
+        !string.IsNullOrWhiteSpace(v.VoucherGroup) &&
+        (
+            v.VoucherGroup.Trim().Equals("PURCHASE", StringComparison.OrdinalIgnoreCase)
+        ))
+    .ToList();
             var allAccounts = accountTask.Result;
             AccountList = allAccounts.Where(a => a.AccountTypeId == 14 || a.AccountTypeId == 18).ToList();
             BankList = allAccounts.Where(a => a.AccountTypeId == 10).ToList();
@@ -2013,7 +1815,7 @@
         {
             // ✅ Load common dropdowns that might be used soon
             var serviceTask = ServiceService.GetAllAsync();
-            var voucherTask = VoucherService.GetAllAsync();
+
             var currTask = CurrencyService.GetAllAsync();
             var unitTask = UnitService.GetAllAsync();
             var hsnTask = HsnSacService.GetAllAsync();
@@ -2023,24 +1825,14 @@
 
             var reportTask = ReportDataService.GetAllAsync();
             await Task.WhenAll(
-                serviceTask, voucherTask, currTask, unitTask,rateTask,
+                serviceTask, currTask, unitTask,rateTask,
                 hsnTask, gstTask,   reportTask
             );
 
             // Assign results
             RateMasterList = rateTask.Result;
             ReportDataList  = reportTask.Result;
-
             ServiceList = serviceTask.Result;
-            VoucherList = voucherTask.Result.Where(v =>
-        !string.IsNullOrWhiteSpace(v.VoucherGroup) &&
-        (
-            v.VoucherGroup.Trim().Equals("SALES", StringComparison.OrdinalIgnoreCase) ||
-            v.VoucherGroup.Trim().Equals("CREDIT NOTE", StringComparison.OrdinalIgnoreCase) ||
-            v.VoucherGroup.Trim().Equals("DEBIT NOTE", StringComparison.OrdinalIgnoreCase) ||
-            v.VoucherGroup.Trim().Equals("PURCHASE", StringComparison.OrdinalIgnoreCase)
-        ))
-    .ToList();
             CurrList = currTask.Result;
             UnitList = unitTask.Result;
             HsnList = hsnTask.Result;
@@ -2271,7 +2063,7 @@
                     });
             }
             BillnoVisible = true;
-            Title = "Edit Bill";
+            Title = "Edit Purchase Bill";
         }
         else
         {
@@ -2292,11 +2084,22 @@
             EditModel.BillDate = EditModel.BillDate == default ? DateTime.Now : EditModel.BillDate;
             EditModel.BillStatus = true;
 
-            OnJobDetailsChanged(EditModel.BillJobNo);
+            var purchaseVoucherId = (await VoucherService.GetAllAsync())
+          .Where(v => v.VoucherGroup == "PURCHASE")
+          .Select(v => v.VoucherId)
+          .FirstOrDefault();
+
+            if (purchaseVoucherId == 0)
+            {
+                ToastService.Warning("Purchase voucher not found.");
+                return;
+            }
+            EditModel.BillVoucherId = purchaseVoucherId;
+            // OnJobDetailsChanged(EditModel.BillJobNo);
             OnvoucherChanged(EditModel,EditModel.BillVoucherId);
             BillDetails = new List<BillDetail>();
             nextSNo = 1;
-            Title = "Add Bill";
+            Title = "Add Purchase Bill";
             InitializeInvoiceDetails();
         }
 
@@ -2453,10 +2256,12 @@
     {
         EditModel.BillPartyId = partyid;
         var selectedparty = AccountList.FirstOrDefault(s => s.AccountId == EditModel.BillPartyId);
+        var selectedCompany = CompanyList?.FirstOrDefault(c => c.Status == true);
         if (selectedparty == null)
             return;
         var Duedate = selectedparty.AccountCreditDays ?? 30;
         EditModel.BillDueDate = DateTime.Now.AddDays(Duedate);
+        EditModel.BillPlaceOfSupply = selectedparty.AccountStateId ??selectedCompany.StateId;
 
     }
     // private EditContext? editContext;
@@ -2477,10 +2282,10 @@
         if (selectedjobno != null)
         {
             EditModel.BillJobId = selectedjobdetails.JobId;
-            EditModel.BillPartyId = selectedjobdetails.JobPartyId ?? 0;
+            // EditModel.BillPartyId = selectedjobdetails.JobPartyId ?? 0;
             EditModel.BillSupplyType = "B2B";
             EditModel.BillCargoId = selectedjobdetails.JobCargoId ?? 0;
-            EditModel.BillShipPartyId = EditModel.BillPartyId;
+            EditModel.BillShipPartyId = selectedjobdetails.JobPartyId ?? 0;
             EditModel.BillRemarksDefault = selectedjobdetails.JobGoodsDesc;
             EditModel.BillVesselId = selectedjobdetails.JobVesselId ?? 0;
             EditModel.BillLineId = selectedjobdetails.JobLineId ?? 0;
@@ -2658,7 +2463,7 @@
         {
             BillDetails.Clear();
 
-            for (int i = 1; i <= 7; i++)
+            for (int i = 1; i <= 8; i++)
             {
                 BillDetails.Add(new BillDetail
                     {
@@ -2669,7 +2474,7 @@
                     });
             }
 
-            nextSNo = 8;
+            nextSNo = 9;
         }
         catch (Exception ex)
         {
