@@ -48,34 +48,34 @@ namespace FreightBKShippingWebApp.Services
         }
 
         // Create a new job
-        public async Task<bool> CreateAsync(Job job)
+        public async Task<(bool Success, string Error)> CreateAsync(Job job)
          {
             try
             {
                 var result = await _api.PostAsync<bool, Job>("api/Job", job);
-                return result;
+                return (true, null);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Error creating job: {ex.Message}");
-                return false;
+                return (false, ex.Message);
             }
            
            
         }
 
         // Update an existing job
-        public async Task<bool> UpdateAsync(Job job)
+        public async Task<(bool Success, string Error)> UpdateAsync(Job job)
         {
             try
             {
                 var result = await _api.PutAsync<bool, Job>($"api/Job/{job.JobId}", job);
-                return result;
+                return (true, null);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Error updating job: {ex.Message}");
-                return false;
+                return (false, ex.Message);
             }
            
             

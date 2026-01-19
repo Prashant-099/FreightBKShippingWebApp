@@ -10,9 +10,9 @@ namespace FreightBKShippingWebApp.Model
 
         public List<JobTypeData> JobTypeChart { get; set; } = new();
 
-        [JsonPropertyName("monthlyRevenue")]
 
-        public List<MonthlyRevenueDto> RevenueChart { get; set; } = new();
+
+        public List<MonthlyRevenueDto> MonthlyRevenue { get; set; }
 
 
         public class DashboardStats
@@ -47,8 +47,9 @@ namespace FreightBKShippingWebApp.Model
         public class MonthlyRevenueDto
         {
             public int Month { get; set; }
-            public string MonthName { get; set; } // Added for display
             public decimal Amount { get; set; }
+            public string MonthName { get; set; }
+            public int MonthOrder { get; set; }
         }
     }
 }

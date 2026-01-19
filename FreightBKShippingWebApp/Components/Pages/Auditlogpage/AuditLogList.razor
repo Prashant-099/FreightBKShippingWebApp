@@ -1,0 +1,125 @@
+﻿@page "/audit-logs"
+
+@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Services
+@inject AuditLogService AuditLogService
+@inject LoadingService LoadingService
+@inject GridLayoutService GridLayoutService
+@inject ToasteService ToastService
+@inject YearStatechangeService YearStatechangeService
+<style>
+    .grid-size {
+        max-height: 600px;
+    }
+
+   
+</style>
+
+<DxGrid TItem="AuditLog"
+        Data="@auditLogs"
+        @ref="MyGrid"
+        KeyFieldName="AuditLogsId"
+        ShowSearchBox="true"
+        PageSize="10"
+        PageSizeSelectorVisible="true"
+        ShowGroupPanel="true"
+        FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always"
+        FocusedRowEnabled="true"
+        ColumnResizeMode="GridColumnResizeMode.NextColumn"
+        CssClass="grid-size">
+
+    <!-- 🔹 Toolbar -->
+    <ToolbarTemplate>
+        <DxToolbar>
+            <TitleTemplate Context="titl">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-shield-check me-2"></i>
+                    <span class="fs-5">Audit Logs</span>
+                </div>
+            </TitleTemplate>
+
+            <Items>
+                <DxToolbarItem Text="Refresh"
+                               IconCssClass="bi bi-arrow-clockwise"
+                               Click="@(async (_) => await LoadAuditLogsAsync())" />
+
+                
+            </Items>
+        </DxToolbar>
+    </ToolbarTemplate>
+
+    <!-- 🔹 Columns -->
+    <Columns>
+        <DxGridDataColumn FieldName="DateTime"
+                          Caption="Date & Time"
+                          DisplayFormat="dd/MM/yyyy HH:mm"/>
+
+        <DxGridDataColumn FieldName="BranchName"
+                          Caption="Branch"/>
+
+        <DxGridDataColumn FieldName="TableName"
+                          Caption="Name"/>
+
+
+        <DxGridDataColumn FieldName="VoucherType"
+                          Caption="Voucher"/>
+
+        <DxGridDataColumn FieldName="Operations"
+                          Caption="Operation"/>
+
+        <DxGridDataColumn FieldName="Amount"
+                          Caption="Amount"
+                          DisplayFormat="N2" />
+
+        <DxGridDataColumn FieldName="Remarks"
+                          Caption="Remarks"/>
+
+        <DxGridDataColumn FieldName="CreatedBy"
+                          Caption="User"/>
+
+      
+
+       
+    </Columns>
+
+</DxGrid>
+
+@code {
+
+    DxGrid MyGrid;
+
+    private List<AuditLog> auditLogs = new();
+
+
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAuditLogsAsync();
+       
+    }
+
+    private async Task LoadAuditLogsAsync()
+    {
+        LoadingService.Show();
+        try
+        {
+           var  CurrentYearId = YearStatechangeService.SelectedYearId;
+            auditLogs = (await AuditLogService.GetLatestAsync())
+                .Where(a => a.YearId == CurrentYearId)
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Failed to load audit logs: {ex.Message}");
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+
+  
+
+  
+}

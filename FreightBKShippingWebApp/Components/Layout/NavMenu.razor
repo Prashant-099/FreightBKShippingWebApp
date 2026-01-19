@@ -19,6 +19,7 @@
 @inject JobService JobService
 @inject BillService BillService
 @inject StatusService StatusService
+@inject AuditLogService AuditLogService 
 <style>
     .user-profile-popup-modern {
         width: 250px;
@@ -120,6 +121,31 @@
         display: inline-block;
     }
 
+    .badge-insert {
+        background: #d1e7dd;
+        color: #0f5132;
+    }
+
+    .badge-update {
+        background: #cff4fc;
+        color: #055160;
+    }
+
+    .badge-delete {
+        background: #f8d7da;
+        color: #842029;
+    }
+
+    .badge-approve {
+        background: #e2e3ff;
+        color: #383d7a;
+    }
+
+    .badge-cancel {
+        background: #fff3cd;
+        color: #664d03;
+    }
+
 
    
 
@@ -165,7 +191,7 @@
                                 <DxMenuItem Text="Voucher Type" NavigateUrl="/voucher" IconCssClass="bi bi-receipt" />
                                 <DxMenuItem Text="User" NavigateUrl="/user" IconCssClass="bi bi-person-circle" />
                                 <DxMenuItem Text="GST Slab" NavigateUrl="/gstslabs" IconCssClass="bi bi-cash-coin" />
-                                <DxMenuItem Text="Test" NavigateUrl="/Test" IconCssClass="bi bi-cash-coin" />
+                                <DxMenuItem Text="Users Activity" NavigateUrl="/audit-logs" IconCssClass="bi bi-person-video2" />
 
                                @*  <DxMenuItem NavigateUrl="/company-config" Text="Company Config" IconCssClass="bi bi-gear"/>
                                 <DxMenuItem NavigateUrl="/send-file" Text="send"></DxMenuItem> *@
@@ -210,6 +236,7 @@
                                 @* <DxMenuItem NavigateUrl="/jobimport" Text="Import Job" IconCssClass="bi bi-briefcase-fill" />
                                 <DxMenuItem NavigateUrl="/jobexport" Text="Export Job" IconCssClass="bi bi-briefcase-fill" /> *@
                                 <DxMenuItem NavigateUrl="/bill" Text="Sale Invoice" IconCssClass="bi bi-clipboard-data" />
+                                <DxMenuItem NavigateUrl="/purchase" Text="Purchase Invoice" IconCssClass="bi bi-clipboard-data" />
 
                             </Items>
                         </DxMenuItem>
@@ -218,7 +245,8 @@
                                
                                 <DxMenuItem NavigateUrl="/jobregister" Text="Job Register" IconCssClass="bi bi-printer" />
                                 <DxMenuItem NavigateUrl="/invoiceregister" Text="Invoice Register" IconCssClass="bi bi-printer" />
-                               
+
+                                <DxMenuItem NavigateUrl="/InvoiceExporttally" Text="Invoice Export Tally" IconCssClass="bi bi-printer" />
                             </Items>
                         </DxMenuItem>
                         <DxMenuItem Text="About" NavigateUrl="/about" IconCssClass="bi bi-info-square-fill">
@@ -242,7 +270,8 @@
 
                         <!-- About -->
                      @*    <DxMenuItem NavigateUrl="/about" Text="About" IconCssClass="bi bi-info-square-fill"  /> *@
-
+                        @if (IsAdmin)
+                        {
                         <DxMenuItem 
                                     IconCssClass="bi bi-bell-fill"
                                     Position="ItemPosition.End" CssClass="notoggle">
@@ -280,6 +309,7 @@
                                 </div>
                             </SubMenuTemplate>
                         </DxMenuItem>
+                        }
                         <!-- User Profile -->
                         <DxMenuItem Text="User"
                                     IconCssClass="bi bi-people-fill"
@@ -347,58 +377,88 @@
         public string Status { get; set; }
         public DateTime Time { get; set; }
     }
-    private List<Status> statuslist = new();
-    private string GetStatusName(int? statusId)
+    private async Task LoadRecentActivities()
     {
-        if (statusId == null) return "Pending";
 
-        var item = statuslist.FirstOrDefault(s => s.StatusId == statusId.Value);
-        return item?.StatusName ?? "Pending";
+        var CurrentYearId = YearStatechangeService.SelectedYearId;
+        var logs = (await AuditLogService.GetLatestAsync())
+            .Where(a => a.YearId == CurrentYearId)
+            .Take(10)
+            .ToList();
+       
+        recentActivities = MapAuditLogsToActivities(logs);
     }
-
-    private void PrepareRecentActivity(List<Job> jobs, List<Bill> bills)
+    private List<ActivityItem> MapAuditLogsToActivities(List<AuditLog> logs)
     {
-        jobs ??= new();
-        bills ??= new();
+        logs ??= new();
 
-        // Jobs
-        var recentJobs = jobs
-            .Where(j => j != null)
-            .OrderByDescending(j => j.JobCreated)
-            .Take(5)
-            .Select(j => new ActivityItem
+        return logs
+            .OrderByDescending(l => l.DateTime)
+            .Select(l => new ActivityItem
             {
-                Title = $"Job {j.JobNo} - {j.JobType}",
-                Description = $"B/L No: {j.JobBlNo ?? "-"}",
+                Title = $"{l.TableName}",
 
-                // convert status id -> name
-                Status = GetStatusName(j.JobStatus),
+                Description = $"{(!string.IsNullOrEmpty(l.Remarks) ? $"  {l.Remarks}" : "")}",
 
-                Time = j.JobCreated
-            });
-
-        // Bills
-        var recentBills = bills
-            .Where(b => b != null)
-            .OrderByDescending(b => b.BillCreated)
-            .Take(5)
-            .Select(b => new ActivityItem
-            {
-                Title = $"Invoice {b.BillNo}",
-                Description = $"Amount: ₹{(b.BillNetAmount):N2}",
-
-                // bool → Active / Inactive
-                Status = b.BillStatus ? "Active" : "Inactive",
-
-                Time = b.BillCreated 
-            });
-
-        recentActivities = recentJobs
-            .Concat(recentBills)
-            .OrderByDescending(a => a.Time)
+                Status = l.Operations, // INSERT / UPDATE / DELETE
+                Time = l.DateTime
+            })
             .Take(10)
             .ToList();
     }
+
+    private List<Status> statuslist = new();
+    // private string GetStatusName(int? statusId)
+    // {
+    //     if (statusId == null) return "Pending";
+
+    //     var item = statuslist.FirstOrDefault(s => s.StatusId == statusId.Value);
+    //     return item?.StatusName ?? "Pending";
+    // }
+
+    // private void PrepareRecentActivity(List<Job> jobs, List<Bill> bills)
+    // {
+    //     jobs ??= new();
+    //     bills ??= new();
+
+    //     // Jobs
+    //     var recentJobs = jobs
+    //         .Where(j => j != null)
+    //         .OrderByDescending(j => j.JobCreated)
+    //         .Take(5)
+    //         .Select(j => new ActivityItem
+    //         {
+    //             Title = $"Job {j.JobNo} - {j.JobType}",
+    //             Description = $"B/L No: {j.JobBlNo ?? "-"}",
+
+    //             // convert status id -> name
+    //             Status = GetStatusName(j.JobStatus),
+
+    //             Time = j.JobCreated
+    //         });
+
+    //     // Bills
+    //     var recentBills = bills
+    //         .Where(b => b != null)
+    //         .OrderByDescending(b => b.BillCreated)
+    //         .Take(5)
+    //         .Select(b => new ActivityItem
+    //         {
+    //             Title = $"Invoice {b.BillNo}",
+    //             Description = $"Amount: ₹{(b.BillNetAmount):N2}",
+
+    //             // bool → Active / Inactive
+    //             Status = b.BillStatus ? "Active" : "Inactive",
+
+    //             Time = b.BillCreated 
+    //         });
+
+    //     recentActivities = recentJobs
+    //         .Concat(recentBills)
+    //         .OrderByDescending(a => a.Time)
+    //         .Take(10)
+    //         .ToList();
+    // }
 
     [Inject] IJSRuntime JS { get; set; }
     [Inject] private AuthService AuthService { get; set; }
@@ -424,7 +484,7 @@
         // NavigationManager.NavigateTo("/login", true);
         await AuthService.LogoutAsync();
     }
-
+    private bool IsAdmin = false;
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
@@ -451,16 +511,17 @@
                             c.Type == ClaimTypes.Email ||
                             c.Type.ToLower() == "emails" ||
                             c.Type.ToLower() == "upn")?.Value ?? "No Email";
-
+            IsAdmin = user.IsInRole("Admin");
             await YearStatechangeService.LoadYearsAsync();
             await InvokeAsync(StateHasChanged);
 
-            var allJobs = await JobService.GetAllAsync();
-            var allBills = await BillService.GetAllAsync();
-            statuslist = await StatusService.GetAllAsync();
-            var yearJobs = allJobs.Where(j => j.JobYearId == YearStatechangeService.SelectedYearId.ToString()).ToList();
-            var yearBills = allBills.Where(b => b.BillYearId == YearStatechangeService.SelectedYearId).ToList();
-            PrepareRecentActivity(yearJobs, yearBills);
+            // var allJobs = await JobService.GetAllAsync();
+            // var allBills = await BillService.GetAllAsync();
+            // statuslist = await StatusService.GetAllAsync();
+            // var yearJobs = allJobs.Where(j => j.JobYearId == YearStatechangeService.SelectedYearId.ToString()).ToList();
+            // var yearBills = allBills.Where(b => b.BillYearId == YearStatechangeService.SelectedYearId).ToList();
+            // PrepareRecentActivity(yearJobs, yearBills);
+            await LoadRecentActivities();
         }
     }
 

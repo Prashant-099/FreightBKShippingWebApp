@@ -1,0 +1,1145 @@
+﻿@page "/InvoiceExporttally"
+@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Services
+@using System.Text.Json
+@inject BillService BillService
+@inject ToasteService ToastService
+@inject LoadingService LoadingService
+@inject YearStatechangeService YearStatechangeService
+@inject GridLayoutService GridLayoutService
+@inject VoucherService VoucherService
+@inject IJSRuntime JS
+@inject ServiceService ServiceService
+<style>
+    .grid-size {
+        max-height: 570px;
+    }
+    .layout-combobox {
+        border-radius: 6px;
+        width: 185px;
+    }
+    .toolbar-title {
+        display: flex;
+        align-items: center;
+    }
+    /* Print section ko hide rakho normally */
+    .print-only-section {
+        display: none;
+    }
+
+    /* Print time pe sirf print section dikhao */
+    @@media print {
+        body * {
+            visibility: hidden;
+        }
+
+        .print-only-section,
+        .print-only-section * {
+            visibility: visible;
+        }
+
+        .print-only-section {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            display: block !important;
+        }
+        
+        @@page {
+            size: A4 landscape;
+            margin: 1cm;
+        }
+    }
+
+    /* Print table styling */
+    .print-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+        font-size: 12px;
+    }
+
+        .print-table th,
+        .print-table td {
+            border: 1px solid #000;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .print-table th {
+            background-color: #f0f0f0;
+            font-weight: bold;
+        }
+
+        .print-table tfoot td {
+            font-weight: bold;
+            background-color: #e8e8e8;
+        }
+
+    .print-header {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+        .print-header h2 {
+            margin: 5px 0;
+        }
+
+    .print-info {
+        margin-bottom: 15px;
+        font-size: 14px;
+    }
+</style>
+
+<div class="px-3 py-3">
+    <DxGrid TItem="TallyExcelRowDto"
+            Data="@tallyRows"
+            @ref="MyGrid"
+            KeyFieldName="BillId"
+            ShowSearchBox="true"
+            PageSize="100"
+            PageSizeSelectorVisible="false"
+            ShowGroupPanel="true"
+            FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always"
+            FocusedRowEnabled="true"
+            ColumnResizeMode="GridColumnResizeMode.NextColumn"
+            CssClass="grid-size"
+            AllowColumnReorder="true"
+            LayoutAutoSaving="OnLayoutAutoSaving"
+            LayoutAutoLoading="OnLayoutAutoLoading">
+
+        <ToolbarTemplate Context="gridContext">
+            <DxToolbar>
+                <!-- Title -->
+                <DxToolbarItem Alignment="ToolbarItemAlignment.Left">
+                    <Template Context="t">
+                        <div class="toolbar-title">
+                            <i class="bi bi-clipboard-data me-2"></i>
+                            <span class="fs-5">Invoice Export To Tally</span>
+                        </div>
+                    </Template>
+                </DxToolbarItem>
+                <DxToolbarItem Text="Filter"
+                               IconCssClass="bi bi-funnel-fill"
+                               Click="OpenDateFilter"
+                               RenderStyle="ButtonRenderStyle.None"
+                               AdaptivePriority="2" />
+
+                <DxToolbarItem Text="Export"
+                               RenderStyle="ButtonRenderStyle.None"
+                               AdaptivePriority="2">
+                    <Items>
+                        <DxToolbarItem Text="Excel"
+                                       RenderStyle="ButtonRenderStyle.None"
+                                       IconCssClass="bi bi-file-earmark-spreadsheet"
+                                       Click="ExportXlsx" />
+                        <DxToolbarItem Text="PDF"
+                                       RenderStyle="ButtonRenderStyle.None"
+                                       IconCssClass="bi bi-printer"
+                                       Click="PrintGridPage" />
+                    </Items>
+                </DxToolbarItem>
+
+
+
+
+                @*  <!-- Voucher Type Filter -->
+                <DxToolbarItem BeginGroup="true"
+                               Alignment="ToolbarItemAlignment.Right"
+                               AdaptivePriority="3">
+                    <Template Context="t">
+                        <DxComboBox Data="@voucherTypes" TData="Voucher" TValue="int?"
+                                    @bind-Value="SelectedVoucherType"
+                                    NullText="All Vouchers"
+                                    TextFieldName="VoucherName"
+                                    ValueFieldName="VoucherId"
+                                    AllowUserInput="true"
+                                    SearchMode="ListSearchMode.AutoSearch"
+                                    SearchFilterCondition="ListSearchFilterCondition.Contains"
+                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                    </Template>
+                </DxToolbarItem>
+
+                <!-- From Date -->
+                <DxToolbarItem BeginGroup="true"
+                               AdaptivePriority="2"
+                               Alignment="ToolbarItemAlignment.Right">
+                    <Template Context="t">
+                        <DxDateEdit @bind-Date="FromDate"
+                                    NullText="From Date"
+                                    DisplayFormat="dd/MM/yyyy"
+                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                    </Template>
+                </DxToolbarItem>
+
+                <!-- To Date -->
+                <DxToolbarItem BeginGroup="true"
+                               AdaptivePriority="2"
+                               Alignment="ToolbarItemAlignment.Right">
+                    <Template Context="t">
+                        <DxDateEdit @bind-Date="ToDate"
+                                    NullText="To Date"
+                                    DisplayFormat="dd/MM/yyyy"
+                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                    </Template>
+                </DxToolbarItem>
+
+                <!-- Search Button -->
+                <DxToolbarItem Alignment="ToolbarItemAlignment.Right"
+                               BeginGroup="true"
+                               AdaptivePriority="1">
+                    <Template Context="t">
+                        <DxButton Text="Search"
+                                  IconCssClass="bi bi-search"
+                                  RenderStyle="ButtonRenderStyle.Primary"
+                                  Click="OnSearch" />
+                    </Template>
+                </DxToolbarItem>
+
+                <!-- Reset Button -->
+                <DxToolbarItem Alignment="ToolbarItemAlignment.Right"
+                               AdaptivePriority="1">
+                    <Template Context="t">
+                        <DxButton Text="Reset"
+                                  IconCssClass="bi bi-arrow-counterclockwise"
+                                  RenderStyle="ButtonRenderStyle.Secondary"
+                                  Click="OnReset" />
+                    </Template>
+                </DxToolbarItem> *@
+
+                <!-- Layout Selector -->
+                <DxToolbarItem IconCssClass="bi bi-gear-wide-connected"
+                               Alignment="ToolbarItemAlignment.Right"
+                               AdaptivePriority="1">
+                    <Template Context="ctx">
+                        <DxComboBox Data="@availableLayouts"
+                                    Value="@selectedLayoutId"
+                                    ValueExpression="@(() => selectedLayoutId)"
+                                    ValueChanged="@((int? value) => OnLayoutSelectedAsync(value))"
+                                    ValueFieldName="GridLayoutId"
+                                    TextFieldName="GridLayoutName"
+                                    NullText="Default View"
+                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                    CssClass="layout-combobox" />
+                    </Template>
+                </DxToolbarItem>
+
+                <!-- Layout Management -->
+                <DxToolbarItem Context="cfdr"
+                               Alignment="ToolbarItemAlignment.Right"
+                               RenderStyleMode="ToolbarItemRenderStyleMode.Contained"
+                               RenderStyle="ButtonRenderStyle.Secondary"
+                               IconCssClass="bi bi-gear-wide-connected"
+                               AdaptivePriority="1">
+                    <Items>
+                        <DxToolbarItem Text="Save Current Layout"
+                                       RenderStyle="ButtonRenderStyle.Primary"
+                                       IconCssClass="bi bi-floppy"
+                                       Click="ShowSaveLayoutDialog" />
+
+                        <DxToolbarItem Text="Create New Layout"
+                                       RenderStyle="ButtonRenderStyle.Success"
+                                       IconCssClass="bi bi-plus-square"
+                                       Click="ShowNewLayoutDialog" />
+
+
+                        @if (selectedLayoutId.HasValue)
+                        {
+                            <DxToolbarItem Text="Delete Current Layout"
+                                           RenderStyle="ButtonRenderStyle.Danger"
+                                           IconCssClass="bi bi-trash"
+                                           Click="DeleteCurrentLayout" />
+                        }
+                    </Items>
+                </DxToolbarItem>
+            </DxToolbar>
+        </ToolbarTemplate>
+
+        <Columns>
+            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.VoucherDate)"
+                              Caption="Voucher Date"
+                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.VoucherDate))"
+                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.VoucherDate))" />
+
+            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.VoucherNo)"
+                              Caption="Voucher No"
+                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.VoucherNo))"
+                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.VoucherNo))" />
+
+            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.VoucherType)"
+                              Caption="Voucher Type"
+                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.VoucherType))"
+                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.VoucherType))" />
+
+            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.BuyerSupplier)"
+                              Caption="Buyer/Supplier"
+                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.BuyerSupplier))"
+                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.BuyerSupplier))" />
+
+            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.Account)"
+                              Caption="Account (DR/CR)"
+                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.Account))"
+                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.Account))" />
+
+            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.BasicAmount)"
+                              Caption="Basic Amount"
+                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.BasicAmount))"
+                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.BasicAmount))" />
+
+            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.SGST_Amt)"
+                              Caption="SGST Amt"
+                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.SGST_Amt))"
+                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.SGST_Amt))" />
+
+            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.CGST_Amt)"
+                              Caption="CGST Amt"
+                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.CGST_Amt))"
+                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.CGST_Amt))" />
+
+            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.IGST_Amt)"
+                              Caption="IGST Amt"
+                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.IGST_Amt))"
+                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.IGST_Amt))" />
+
+            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.TotalAmount)"
+                              Caption="Total Amount"
+                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.TotalAmount))"
+                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.TotalAmount))" />
+
+            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.PlaceOfSupply)"
+                              Caption="Place of Supply"
+                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.PlaceOfSupply))"
+                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.PlaceOfSupply))" />
+
+            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.PartyGSTIN)"
+                              Caption="Party GSTIN"
+                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.PartyGSTIN))"
+                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.PartyGSTIN))" />
+
+            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.PartyAddress)"
+                              Caption="Party Address"
+                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.PartyAddress))"
+                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.PartyAddress))" />
+
+            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.ItemName)"
+                              Caption="Item"
+                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.ItemName))"
+                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.ItemName))"/>
+
+
+            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.HSN)"
+                              Caption="HSN"
+                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.HSN))"
+                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.HSN))" />
+
+            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.Unit)"
+                              Caption="Unit"
+                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.Unit))"
+                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.Unit))" />
+
+            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.Qty)"
+                              Caption="Qty"
+                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.Qty))"
+                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.Qty))" />
+
+            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.Rate)"
+                              Caption="Rate"
+                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.Rate))"
+                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.Rate))" />
+
+            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.Amount)"
+                              Caption="Amount"
+                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.Amount))"
+                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.Amount))" />
+
+            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.SGST)"
+                              Caption="SGST"
+                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.SGST))"
+                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.SGST))" />
+
+            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.SGST_Ac)"
+                              Caption="SGST A/c"
+                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.SGST_Ac))"
+                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.SGST_Ac))" />
+
+            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.CGST)"
+                              Caption="CGST"
+                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.CGST))"
+                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.CGST))" />
+
+            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.CGST_Ac)"
+                              Caption="CGST A/c"
+                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.CGST_Ac))"
+                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.CGST_Ac))" />
+
+            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.IGST)"
+                              Caption="IGST"
+                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.IGST))"
+                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.IGST))" />
+
+            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.IGST_Ac)"
+                              Caption="IGST A/c"
+                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.IGST_Ac))"
+                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.IGST_Ac))" />
+
+            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.TaxabilityType)"
+                              Caption="Taxability Type"
+                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.TaxabilityType))"
+                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.TaxabilityType))" />
+
+            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.Roundoff)"
+                              Caption="Roundoff"
+                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.Roundoff))"
+                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.Roundoff))" />
+
+            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.Remarks)"
+                              Caption="Remarks"
+                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.Remarks))"
+                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.Remarks))" />
+
+
+
+        </Columns>
+
+       
+    </DxGrid>
+</div>
+<!-- PRINT ONLY SECTION -->
+<div class="print-only-section" id="printInvoiceSection">
+    <div class="print-header">
+        <h2>Invoice Register</h2>
+        <div class="print-info">
+            <strong>From:</strong> @FromDate?.ToString("dd/MM/yyyy") &nbsp;&nbsp;
+            <strong>To:</strong> @ToDate?.ToString("dd/MM/yyyy") &nbsp;&nbsp;
+            <strong>Print Date:</strong> @DateTime.Now.ToString("dd/MM/yyyy hh:mm tt")
+        </div>
+    </div>
+
+    <table class="print-table">
+        <thead>
+            <tr>
+            
+                <th>Branch</th>
+                <th>Invoice No</th>
+                <th>Invoice Date</th>
+                <th>Voucher Type</th>
+                <th>Customer</th>
+                <th>Job No</th>
+                <th>Job Type</th>
+                <th>Basic Amount</th>
+                <th>Total Amount</th>
+                <th>GST No</th>
+                <th>Place of Supply</th>
+              
+            </tr>
+        </thead>
+
+        <tbody>
+            @if (billList != null && billList.Any())
+            {
+                @foreach (var bill in billList)
+                {
+                    
+
+                    <tr>
+                       
+                        <td>@bill.branchname</td>
+                        <td>@bill.BillNo</td>
+                        <td>@bill.BillDate.ToString("dd/MM/yyyy")</td>
+                        <td>@bill.Vouchname</td>
+                        <td>@bill.partyname</td>
+                        <td>@bill.BillJobNo</td>
+                        <td>@bill.BillJobType</td>
+                        <td>@bill.BillTotal.ToString("N2")</td>
+                        <td>@bill.BillNetAmount.ToString("N2")</td>
+                        <td>@bill.BillGstNo</td>
+                        <td>@bill.posname</td>
+                        
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr>
+                    <td colspan="13" style="text-align:center">No records available</td>
+                </tr>
+            }
+        </tbody>
+
+        <tfoot>
+            <tr>
+                <td colspan="7"><strong>Total Invoices:</strong></td>
+                <td><strong>@billList?.Sum(b => b.BillTotal).ToString("N2")</strong></td>
+                <td><strong>@billList?.Sum(b => b.BillNetAmount).ToString("N2")</strong></td>
+                <td colspan="3"></td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+
+
+<!-- Layout Dialog -->
+@if (showLayoutDialog)
+{
+    <div class="modal fade show d-block"
+         style="background-color: rgba(0,0,0,0.5); z-index:1050;">
+
+        <div class="modal-dialog modal-md"
+             @onclick:stopPropagation="true">
+
+            <div class="modal-content">
+
+                <!-- Header -->
+                <div class="modal-header">
+                    <h5 class="modal-title">@dialogTitle</h5>
+                    <button type="button"
+                            class="btn-close"
+                            @onclick="CloseLayoutDialog">
+                    </button>
+                </div>
+
+                <!-- Body -->
+                <div class="modal-body">
+
+                    <!-- Layout Name -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">
+                            Layout Name:
+                        </label>
+
+                        <input type="text"
+                               class="form-control"
+                               @bind="newLayoutName"
+                               @bind:event="oninput"
+                               placeholder="Enter layout name..."
+                               maxlength="100" />
+                    </div>
+
+                    <!-- Default Layout -->
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input"
+                                   type="checkbox"
+                                   @bind="isDefaultLayout"
+                                   id="defaultLayoutCheck" />
+
+                            <label class="form-check-label"
+                                   for="defaultLayoutCheck">
+                                Set as Default Layout
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Column Configuration -->
+                    <div class="mt-3">
+                        <label class="form-label fw-bold mb-2">
+                            Column Configuration:
+                        </label>
+
+                        <div class="table-responsive"
+                             style="max-height:400px; overflow-y:auto;">
+
+                            <table class="table table-sm table-bordered">
+                                <thead class="table-light sticky-top">
+                                    <tr>
+                                        <th style="width:50px;">Visible</th>
+                                        <th style="width:200px;">Column Name</th>
+                                        <th style="width:150px;">Width (px)</th>
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+                                    @foreach (var col in allColumns)
+                                    {
+                                        <tr>
+                                            <td class="text-center">
+                                                <input class="form-check-input"
+                                                       type="checkbox"
+                                                       @bind="col.Visible"
+                                                       id="col_@col.FieldName" />
+                                            </td>
+
+                                            <td>
+                                                <label class="mb-0"
+                                                       for="col_@col.FieldName">
+                                                    @col.Caption
+                                                </label>
+                                            </td>
+
+                                            <td>
+                                                <input type="number"
+                                                       class="form-control form-control-sm"
+                                                       @bind="col.Width"
+                                                       @bind:event="oninput"
+                                                       min="50"
+                                                       max="500"
+                                                       step="10" />
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Footer -->
+                <div class="modal-footer">
+                    <button type="button"
+                            class="btn btn-secondary"
+                            @onclick="CloseLayoutDialog">
+                        Cancel
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-primary"
+                            @onclick="SaveCurrentLayout">
+                        <i class="bi bi-floppy me-1"></i>
+                        @(isEditMode ? "Update" : "Create") Layout
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+}
+<DateFilterPage @ref="dateFilterPopup" ShowVoucherTypeFilter="true" OnFilterApplied="HandleFilterApplied" />
+@code {
+    // private async Task ExportTallyExcel(List<TallyExcelRowDto> rows)
+    // {
+    //     if (rows == null || !rows.Any())
+    //     {
+    //         ToastService.Warning("No Tally data to export.");
+    //         return;
+    //     }
+    //     ExportXlsx();
+    //     // TEMP: export grid later
+    //     ToastService.Success($"Ready to export {rows.Count} Tally rows.");
+    // }
+
+    public class TallyExcelRowDto
+    {
+        public int BillId { get; set; }
+
+        public DateTime VoucherDate { get; set; }
+    public string VoucherNo { get; set; }
+    public string VoucherType { get; set; }
+    public string BuyerSupplier { get; set; }
+    public string Account { get; set; }
+
+        public double BasicAmount { get; set; }
+        public double SGST_Amt { get; set; }
+    public double CGST_Amt { get; set; }
+    public double IGST_Amt { get; set; }
+        public double TotalAmount { get; set; }
+
+    public string PlaceOfSupply { get; set; }
+    public string PartyGSTIN { get; set; }
+    public string PartyAddress { get; set; }
+
+    public string PartyState { get; set; }
+    public string Country { get; set; }
+    public string RegisterType { get; set; }
+
+        public string ItemName { get; set; }
+    public string HSN { get; set; }
+    public string Unit { get; set; }
+        public double Qty { get; set; }
+        public double Rate { get; set; }
+        public double Amount { get; set; }
+
+        public double SGST { get; set; }
+        public double CGST { get; set; }
+        public double IGST { get; set; }
+
+        public int SGST_Ac { get; set; }
+        public int CGST_Ac { get; set; }
+        public int IGST_Ac { get; set; }
+
+    public string TaxabilityType { get; set; }
+        public double Roundoff { get; set; }
+    public string Remarks { get; set; }
+    }
+    private List<TallyExcelRowDto> tallyRows = new();
+
+    private void BuildTallyRows()
+    {
+        
+
+        tallyRows = billList
+            .Where(b => b.BillDetails != null && b.BillDetails.Any())
+            .SelectMany(bill =>
+            {
+                // var basicTotal = bill.BillDetails.Sum(x => (decimal)x.BillDetailAmount);
+                // var igstTotal = bill.BillDetails.Sum(x => (decimal)x.BillDetailAmount * gstRate);
+
+                return bill.BillDetails.Select(d => new TallyExcelRowDto
+                {
+                    BillId = bill.BillId,
+
+
+                    VoucherDate = bill.BillDate,
+                    VoucherNo = bill.BillNo,
+                    VoucherType = bill.Vouchname,
+                    BuyerSupplier = bill.partyname,
+
+                    BasicAmount = bill.BillTaxableAmt,
+                    CGST_Amt = d.BillDetailCgst,
+                    SGST_Amt = d.BillDetailSgst,
+                    IGST_Amt =d.BillDetailIgst,
+                    TotalAmount = bill.BillNetAmount,
+
+                    PlaceOfSupply = bill.posname,
+                    PartyGSTIN = bill.BillGstNo,
+                    PartyAddress = bill.BillAddress1,
+
+                    PartyState = bill.posname,
+                    Country = "India",
+                    RegisterType = "REGULAR",
+
+                    ItemName = ServiceList.FirstOrDefault(s => s.ServiceId == d.BillDetailProductId)?.ServiceName ?? "",
+                    HSN = d.BillDetailHsnCode,
+                    Unit = d.BillDetailUnit,
+                    Qty = d.BillDetailQty,
+                    Rate = d.BillDetailRate??0,
+                    Amount = d.BillDetailAmount,
+
+                    SGST = d.BillDetailSgstPer,
+                    CGST = d.BillDetailCgstPer,
+                    IGST = d.BillDetailIgstPer,
+
+                    SGST_Ac = d.BillDetailSgstAcId ?? 0,
+                    CGST_Ac = d.BillDetailCgstAcId ?? 0,
+                    IGST_Ac = d.BillDetailIgstAcId ?? 0,
+
+                    TaxabilityType = "Taxable",
+                    Roundoff = bill.BillRoundAmt,
+                    Remarks =bill.BillRemarks
+
+                  
+                   
+
+                  
+                });
+            })
+            .ToList();
+    }
+
+
+
+    private async Task ExportXlsx()
+    {
+
+        if (billList == null || !billList.Any())
+        {
+            ToastService.Warning("No data to print.");
+            return;
+        }
+        await MyGrid.ExportToXlsxAsync("JobRegister.xlsx");
+    }
+    // ✅ PRINT - Using JavaScript to print specific section
+    private async Task PrintGridPage()
+    {
+        if (billList == null || !billList.Any())
+        {
+            ToastService.Warning("No data to print.");
+            return;
+        }
+
+        try
+        {
+            await JS.InvokeVoidAsync("window.print");
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Print error: {ex.Message}");
+        }
+    }
+
+    private List<Service> ServiceList = new();
+    private IGrid MyGrid;
+    private List<Bill> billList = new();
+    private List<Bill> allBills = new();
+    private List<Voucher> voucherTypes = new();
+    
+    // Filter properties
+    private DateTime? FromDate;
+    private DateTime? ToDate;
+    private int? SelectedVoucherType;
+
+    // Grid Layout Management
+    private List<GridLayoutDto> availableLayouts = [];
+    private int? selectedLayoutId;
+    private bool showLayoutDialog = false;
+    private string newLayoutName = "";
+    private string dialogTitle = "";
+    private bool isEditMode = false;
+    private bool isDefaultLayout = false;
+    private const string VOUCHER_TYPE = "InvoiceExportTally";
+    private List<GridColumnLayout> allColumns = [];
+    private List<GridColumnLayout> currentLayout = [];
+    private DateFilterPage dateFilterPopup;
+    private void OpenDateFilter()
+    {
+        dateFilterPopup.Show(FromDate, ToDate, null,SelectedVoucherType);
+    }
+    private async Task HandleFilterApplied((DateTime? FromDate, DateTime? ToDate, string? JobType, int? SelectedVoucherType) f)
+    {
+        FromDate = f.FromDate;
+        ToDate = f.ToDate;
+        SelectedVoucherType = f.SelectedVoucherType;
+        OnSearch();
+
+    }
+    protected override async Task OnInitializedAsync()
+    {
+        InitializeColumns();
+        await LoadAvailableLayouts();
+        await LoadDefaultLayout();
+        // await LoadVoucherTypes();
+        await LoadAllBills();
+
+        BuildTallyRows();
+    }
+
+    private void InitializeColumns()
+    {
+        allColumns = new List<GridColumnLayout>
+        {
+             new() { FieldName = nameof(TallyExcelRowDto.VoucherDate), Caption = "Voucher Date", Visible = true, Width = 130, DisplayIndex = 0 },
+    new() { FieldName = nameof(TallyExcelRowDto.VoucherNo), Caption = "Voucher No", Visible = true, Width = 150, DisplayIndex = 1 },
+    new() { FieldName = nameof(TallyExcelRowDto.VoucherType), Caption = "Voucher Type", Visible = true, Width = 150, DisplayIndex = 2 },
+    new() { FieldName = nameof(TallyExcelRowDto.BuyerSupplier), Caption = "Buyer / Supplier", Visible = true, Width = 220, DisplayIndex = 3 },
+    new() { FieldName = nameof(TallyExcelRowDto.Account), Caption = "Account (DR/CR)", Visible = true, Width = 160, DisplayIndex = 4 },
+
+    new() { FieldName = nameof(TallyExcelRowDto.BasicAmount), Caption = "Basic Amount", Visible = true, Width = 130, DisplayIndex = 5 },
+    new() { FieldName = nameof(TallyExcelRowDto.SGST_Amt), Caption = "SGST Amt", Visible = true, Width = 110, DisplayIndex = 6 },
+    new() { FieldName = nameof(TallyExcelRowDto.CGST_Amt), Caption = "CGST Amt", Visible = true, Width = 110, DisplayIndex = 7 },
+    new() { FieldName = nameof(TallyExcelRowDto.IGST_Amt), Caption = "IGST Amt", Visible = true, Width = 110, DisplayIndex = 8 },
+    new() { FieldName = nameof(TallyExcelRowDto.TotalAmount), Caption = "Total Amount", Visible = true, Width = 140, DisplayIndex = 9 },
+
+    new() { FieldName = nameof(TallyExcelRowDto.PlaceOfSupply), Caption = "Place of Supply", Visible = true, Width = 160, DisplayIndex = 10 },
+    new() { FieldName = nameof(TallyExcelRowDto.PartyGSTIN), Caption = "Party GSTIN", Visible = true, Width = 170, DisplayIndex = 11 },
+    new() { FieldName = nameof(TallyExcelRowDto.PartyAddress), Caption = "Party Address", Visible = true, Width = 280, DisplayIndex = 12 },
+
+   new() { FieldName = nameof(TallyExcelRowDto.ItemName), Caption = "Item", Visible = true, Width = 240, DisplayIndex = 13 },
+
+    new() { FieldName = nameof(TallyExcelRowDto.HSN), Caption = "HSN", Visible = true, Width = 100, DisplayIndex = 14 },
+    new() { FieldName = nameof(TallyExcelRowDto.Unit), Caption = "Unit", Visible = true, Width = 80, DisplayIndex = 15 },
+    new() { FieldName = nameof(TallyExcelRowDto.Qty), Caption = "Qty", Visible = true, Width = 80, DisplayIndex = 16 },
+    new() { FieldName = nameof(TallyExcelRowDto.Rate), Caption = "Rate", Visible = true, Width = 90, DisplayIndex = 17 },
+    new() { FieldName = nameof(TallyExcelRowDto.Amount), Caption = "Amount", Visible = true, Width = 120, DisplayIndex = 18 },
+
+    new() { FieldName = nameof(TallyExcelRowDto.SGST), Caption = "SGST", Visible = true, Width = 90, DisplayIndex = 19 },
+    new() { FieldName = nameof(TallyExcelRowDto.SGST_Ac), Caption = "SGST A/c", Visible = true, Width = 120, DisplayIndex = 20 },
+    new() { FieldName = nameof(TallyExcelRowDto.CGST), Caption = "CGST", Visible = true, Width = 90, DisplayIndex = 21 },
+    new() { FieldName = nameof(TallyExcelRowDto.CGST_Ac), Caption = "CGST A/c", Visible = true, Width = 120, DisplayIndex = 22 },
+    new() { FieldName = nameof(TallyExcelRowDto.IGST), Caption = "IGST", Visible = true, Width = 90, DisplayIndex = 23 },
+    new() { FieldName = nameof(TallyExcelRowDto.IGST_Ac), Caption = "IGST A/c", Visible = true, Width = 120, DisplayIndex = 24 },
+
+    new() { FieldName = nameof(TallyExcelRowDto.TaxabilityType), Caption = "Taxability Type", Visible = true, Width = 150, DisplayIndex = 25 },
+    new() { FieldName = nameof(TallyExcelRowDto.Roundoff), Caption = "Roundoff", Visible = true, Width = 100, DisplayIndex = 26 },
+    new() { FieldName = nameof(TallyExcelRowDto.Remarks), Caption = "Remarks", Visible = true, Width = 200, DisplayIndex = 27 }
+      };
+        currentLayout = allColumns.ToList();
+    }
+
+    // private async Task LoadVoucherTypes()
+    // {
+    //     try
+    //     {
+    //         voucherTypes = (await VoucherService.GetAllAsync()).Where(v =>
+    //     !string.IsNullOrWhiteSpace(v.VoucherGroup) &&
+    //     (
+    //         v.VoucherGroup.Trim().Equals("SALES", StringComparison.OrdinalIgnoreCase) ||
+    //         v.VoucherGroup.Trim().Equals("CREDIT NOTE", StringComparison.OrdinalIgnoreCase) ||
+    //         v.VoucherGroup.Trim().Equals("DEBIT NOTE", StringComparison.OrdinalIgnoreCase) ||
+    //         v.VoucherGroup.Trim().Equals("PURCHASE", StringComparison.OrdinalIgnoreCase)
+    //     ))
+    // .ToList(); 
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         ToastService.Error($"Failed to load voucher types: {ex.Message}");
+    //     }
+    // }
+
+    private async Task LoadAllBills()
+    {
+        try
+        {
+            LoadingService.Show("Loading invoices...");
+            allBills = (await BillService.GetAllAsync())
+                .Where(b => b.BillYearId == YearStatechangeService.SelectedYearId)
+                .ToList();
+            billList = allBills;
+
+            ServiceList = await ServiceService.GetAllAsync();
+
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Failed to load bills: {ex.Message}");
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+
+    private async Task OnSearch()
+    {
+        billList = allBills;
+
+        // Apply date filter
+        if (FromDate.HasValue)
+        {
+            billList = billList.Where(b => b.BillDate.Date >= FromDate.Value.Date).ToList();
+        }
+
+        if (ToDate.HasValue)
+        {
+            billList = billList.Where(b => b.BillDate.Date <= ToDate.Value.Date).ToList();
+        }
+
+        // Apply voucher type filter
+        if (SelectedVoucherType.HasValue)
+        {
+            billList = billList.Where(b => b.BillVoucherId == SelectedVoucherType.Value).ToList();
+        }
+
+        if (billList.Count == 0)
+        {
+            ToastService.Warning("No invoices found matching the criteria.");
+        }
+        else
+        {
+            ToastService.Success($"Found {billList.Count} invoice(s).");
+        }
+        BuildTallyRows();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OnReset()
+    {
+        FromDate = null;
+        ToDate = null;
+        SelectedVoucherType = null;
+        billList = allBills;
+        ToastService.Info("Filters reset.");
+        await InvokeAsync(StateHasChanged);
+    }
+
+    // Layout Management Methods
+    private string GetColumnWidth(string fieldName)
+    {
+        var col = currentLayout.FirstOrDefault(x => x.FieldName == fieldName);
+        return $"{col?.Width ?? 100}px";
+    }
+
+    private bool GetColumnVisibility(string fieldName)
+    {
+        var col = currentLayout.FirstOrDefault(x => x.FieldName == fieldName);
+        return col?.Visible ?? true;
+    }
+
+    private async Task LoadAvailableLayouts()
+    {
+        availableLayouts = await GridLayoutService.GetLayoutsByVoucherTypeAsync(VOUCHER_TYPE);
+    }
+
+    private async Task LoadDefaultLayout()
+    {
+        var defaultLayout = await GridLayoutService.GetDefaultLayoutAsync(VOUCHER_TYPE);
+        if (defaultLayout != null)
+        {
+            selectedLayoutId = defaultLayout.GridLayoutId;
+            await ApplyLayout(defaultLayout);
+        }
+    }
+
+    private async Task OnLayoutSelectedAsync(int? layoutId)
+    {
+        selectedLayoutId = layoutId;
+        if (layoutId.HasValue)
+        {
+            var layout = await GridLayoutService.GetByIdAsync(layoutId.Value);
+            if (layout != null) await ApplyLayout(layout);
+        }
+        else
+        {
+            InitializeColumns();
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task ApplyLayout(GridLayoutDto layout)
+    {
+        if (!string.IsNullOrEmpty(layout.GridLayoutData))
+        {
+            var savedLayout = GridLayoutService.DeserializeColumnLayout(layout.GridLayoutData);
+            if (savedLayout != null && savedLayout.Any())
+            {
+                currentLayout = savedLayout.ToList();
+                foreach (var saved in savedLayout)
+                {
+                    var existing = allColumns.FirstOrDefault(x => x.FieldName == saved.FieldName);
+                    if (existing != null)
+                    {
+                        existing.Visible = saved.Visible;
+                        existing.Width = saved.Width;
+                        existing.DisplayIndex = saved.DisplayIndex;
+                    }
+                }
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+    }
+
+    private void ShowSaveLayoutDialog()
+    {
+        if (selectedLayoutId.HasValue)
+        {
+            var layout = availableLayouts.FirstOrDefault(x => x.GridLayoutId == selectedLayoutId.Value);
+            if (layout != null)
+            {
+                newLayoutName = layout.GridLayoutName ?? "";
+                isDefaultLayout = layout.GridLayoutDefault;
+                isEditMode = true;
+                dialogTitle = "Update Grid Layout";
+                showLayoutDialog = true;
+                return;
+            }
+        }
+        ShowNewLayoutDialog();
+    }
+
+    private void ShowNewLayoutDialog()
+    {
+        newLayoutName = "";
+        isDefaultLayout = false;
+        isEditMode = false;
+        dialogTitle = "Create New Grid Layout";
+        showLayoutDialog = true;
+    }
+
+    private async Task SaveCurrentLayout()
+    {
+        if (string.IsNullOrWhiteSpace(newLayoutName))
+        {
+            ToastService.Warning("Please enter a layout name.");
+            return;
+        }
+
+        LoadingService.Show("Saving layout...");
+        try
+        {
+            foreach (var col in allColumns)
+            {
+                var current = currentLayout.FirstOrDefault(c => c.FieldName == col.FieldName);
+                if (current != null)
+                {
+                    current.Visible = col.Visible;
+                    current.Width = col.Width;
+                }
+            }
+
+            var configJson = GridLayoutService.SerializeColumnLayout(currentLayout);
+            bool success;
+
+            if (isEditMode && selectedLayoutId.HasValue)
+            {
+                success = await GridLayoutService.UpdateAsync(selectedLayoutId.Value, new SaveGridLayoutRequest
+                {
+                    GridLayoutName = newLayoutName,
+                    GridLayoutVoucherType = VOUCHER_TYPE,
+                    GridLayoutData = configJson,
+                    GridLayoutDefault = isDefaultLayout
+                });
+            }
+            else
+            {
+                success = await GridLayoutService.CreateAsync(new SaveGridLayoutRequest
+                {
+                    GridLayoutName = newLayoutName,
+                    GridLayoutVoucherType = VOUCHER_TYPE,
+                    GridLayoutData = configJson,
+                    GridLayoutDefault = isDefaultLayout
+                });
+            }
+
+            if (success)
+            {
+                ToastService.Success($"Layout {(isEditMode ? "updated" : "created")} successfully!");
+                await LoadAvailableLayouts();
+                CloseLayoutDialog();
+            }
+            else
+            {
+                ToastService.Error("Failed to save layout.");
+            }
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+
+    private async Task DeleteCurrentLayout()
+    {
+        if (!selectedLayoutId.HasValue) return;
+
+        LoadingService.Show("Deleting layout...");
+        try
+        {
+            var success = await GridLayoutService.DeleteAsync(selectedLayoutId.Value);
+            if (success)
+            {
+                ToastService.Success("Layout deleted successfully!");
+                selectedLayoutId = null;
+                InitializeColumns();
+                await LoadAvailableLayouts();
+            }
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+
+    private void CloseLayoutDialog()
+    {
+        showLayoutDialog = false;
+        newLayoutName = "";
+        isDefaultLayout = false;
+        isEditMode = false;
+    }
+
+    const string LayoutKey = "InvoiceRegisterLayout";
+    
+    async Task OnLayoutAutoSaving(GridPersistentLayoutEventArgs e)
+    {
+        try
+        {
+            var json = JsonSerializer.Serialize(e.Layout);
+            await JS.InvokeVoidAsync("localStorage.setItem", LayoutKey, json);
+        }
+        catch { }
+    }
+
+    async Task OnLayoutAutoLoading(GridPersistentLayoutEventArgs e)
+    {
+        try
+        {
+            var json = await JS.InvokeAsync<string>("localStorage.getItem", LayoutKey);
+            if (!string.IsNullOrEmpty(json))
+            {
+                e.Layout = JsonSerializer.Deserialize<GridPersistentLayout>(json);
+            }
+        }
+        catch { }
+    }
+}

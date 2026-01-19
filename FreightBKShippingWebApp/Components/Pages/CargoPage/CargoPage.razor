@@ -703,22 +703,23 @@
         {
             LoadingService.Show("Deleting...");
             int successCount = 0, failCount = 0;
-
+            List<string> errorMessages = new();
         foreach (var cargo in selectedList)
         {
             var result = await CargoService.DeleteAsync(cargo.CargoId);
 
-            if (result)
+            if (result.Success)
                 successCount++;
             else
                 failCount++;
+                errorMessages.Add(result.Error);
         }
 
         if (successCount > 0)
             ToastService.Success($"{successCount} Cargo(s) Deleted Successfully.");
 
-        if (failCount > 0)
-            ToastService.Error($"{failCount} Cargo(s) Failed To Delete.");
+         if (failCount > 0)
+                ToastService.Error($"{failCount} Cargo(s) failed.\nDetails: {string.Join("\n", errorMessages.Distinct())}");
 
         await LoadCargosAsync();
         }

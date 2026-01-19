@@ -510,7 +510,7 @@
 
                                 @if (revenueData != null && revenueData.Any())
                                 {
-                                    <DxChart Data="@revenueData" Width="100%" Height="480px">
+                                    <DxChart Data="@revenueData.OrderBy(x => x.MonthOrder)" Width="100%" Height="480px">
                                         <DxChartLegend Visible="false" />
 
                                         <!-- Use MonthName for X-axis display -->
@@ -771,15 +771,16 @@
     .ToList()
     ?? new();
             jobTypeData = result.JobTypeChart;
-            revenueData = result.RevenueChart;
-            if (result != null && result.RevenueChart != null)
+            revenueData = result.MonthlyRevenue;
+            if (result != null && result.MonthlyRevenue != null)
             {
-                revenueData = result.RevenueChart.Select(r => new MonthlyRevenueDto
+                revenueData = result.MonthlyRevenue.Select(r => new MonthlyRevenueDto
                 {
                     Month = r.Month,
                     MonthName = CultureInfo.CurrentCulture
-                        .DateTimeFormat.GetAbbreviatedMonthName(r.Month),
-                    Amount = r.Amount
+        .DateTimeFormat.GetAbbreviatedMonthName(r.Month),
+                    Amount = r.Amount,
+                    MonthOrder = r.Month >= 4 ? r.Month - 3 : r.Month + 9
                 }).ToList();
             }
         }

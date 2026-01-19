@@ -173,7 +173,7 @@
 
         <DxGridDataColumn FieldName="JobDate"
                           Caption="Job Date"
-                          DisplayFormat="d"
+                          DisplayFormat="dd/MM/yyyy"
                           Visible="@GetColumnVisibility("JobDate")"
                           Width="@GetColumnWidth("JobDate")" />
 
@@ -194,7 +194,7 @@
 
         <DxGridDataColumn FieldName="JobBlDate"
                           Caption="BE Date"
-                          DisplayFormat="d"
+                          DisplayFormat="dd/MM/yyyy"
                           Visible="@GetColumnVisibility("JobBlDate")"
                           Width="@GetColumnWidth("JobBlDate")" />
 
@@ -868,7 +868,7 @@
             // Save job
             var created = await JobService.CreateAsync(job);
 
-            if (created)
+            if (created.Success)
             {
                 ToastService.Success("Job imported successfully!");
                 await LoadJobsAsync();

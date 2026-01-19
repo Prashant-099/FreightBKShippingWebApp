@@ -322,18 +322,18 @@ verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body"
         "COMPOSITION",
         "UNREGISTERED"
     };
-    private List<string> mastergroup = new()
-    {
-        "BANK",
-        "CASH",
-        "PUMP",
-        "CUSTOMER",
-        "SUPPLIER",
-        "TRANSPORTER",
-        "DRIVER",
-        "ACCOUNTS",
-        "PARTY"
-    };
+    // private List<string> mastergroup = new()
+    // {
+    //     "BANK",
+    //     "CASH",
+    //     "PUMP",
+    //     "CUSTOMER",
+    //     "SUPPLIER",
+    //     "TRANSPORTER",
+    //     "DRIVER",
+    //     "ACCOUNTS",
+    //     "PARTY"
+    // };
 
     private List<string> taxTypes = new()
     {
@@ -349,7 +349,7 @@ verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body"
     {
         if (account == null || account.AccountId <= 0)
         {
-        EditModel = new Account();
+            EditModel = new Account { AccountTypeId = account?.AccountTypeId ?? 0 };
             Title = "Add Account";
         }
         else
