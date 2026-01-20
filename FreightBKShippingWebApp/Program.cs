@@ -46,6 +46,12 @@ builder.Services.AddOutputCache();
 builder.Services.AddScoped<ApiClient>();
 builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<BranchService>(sp =>
+{
+    var http = sp.GetRequiredService<HttpClient>();
+    var api = sp.GetRequiredService<ApiClient>();
+    return new BranchService(http, api);
+});
 builder.Services.AddScoped<CompanyService>();
 builder.Services.AddScoped<LoadingService>();
 builder.Services.AddScoped<ToasteService>();

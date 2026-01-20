@@ -862,7 +862,11 @@ DefaultFileName="@PendingFileName"
         isDefaultLayout = false;
         isEditMode = false;
     }
+
+
     // ✅ FIXED: Proper selection change handler with immediate state update
+
+
     private async Task OnSelectedBillsChanged(IReadOnlyList<object> newSelection)
     {
         SelectedBills = newSelection ?? new List<object>();
@@ -998,7 +1002,7 @@ DefaultFileName="@PendingFileName"
         }
     }
 
-    private void OnCreateNew(ToolbarItemClickEventArgs e)
+    private async Task OnCreateNew(ToolbarItemClickEventArgs e)
     {
         popup.Show(new Bill
             {

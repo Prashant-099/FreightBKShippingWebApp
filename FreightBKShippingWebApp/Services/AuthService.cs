@@ -1,15 +1,17 @@
-﻿using Microsoft.AspNetCore.Components;
+﻿using DevExpress.PivotGrid.PivotTable;
+using FreightBKShippingWebApp.Authentication;
+using FreightBKShippingWebApp.Model;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
+using Microsoft.AspNetCore.Localization;
 using System.Globalization;
+using System.IdentityModel.Tokens.Jwt;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using Microsoft.AspNetCore.Localization;
-using FreightBKShippingWebApp.Authentication;
-using FreightBKShippingWebApp.Model;
-using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using static FreightBKShippingWebApp.Services.BaseService;
 namespace FreightBKShippingWebApp.Services
 {
     public class AuthService
@@ -19,6 +21,7 @@ namespace FreightBKShippingWebApp.Services
         private readonly ProtectedLocalStorage _localStorage;
         private readonly NavigationManager _navigationManager;
         private readonly AuthenticationStateProvider _authStateProvider;
+        private readonly BranchService _branchService;
         private readonly IBranchContext _branchContext;
 
         public AuthService(
@@ -26,16 +29,15 @@ namespace FreightBKShippingWebApp.Services
             NavigationManager navigationManager,
             AuthenticationStateProvider authStateProvider,
             ApiClient apiClient,
-            IBranchContext branchContext)
+            IBranchContext branchContext,BranchService branchService)
         {
              _localStorage = localStorage;
             _navigationManager = navigationManager;
             _authStateProvider = authStateProvider;
             _api = apiClient;
+            _branchService = branchService;
             _branchContext = branchContext;
         }
-
-
 
 
         public async Task<LoginResponseModel?> LoginAsync(LoginModel model)
@@ -72,6 +74,13 @@ namespace FreightBKShippingWebApp.Services
 
                 // ================= TOKEN INFO =================
                 var userId = BaseService.JwtHelper.GetUserIdFromToken(result.Token);
+                var branches = await _branchService.GetBranchesByUserIdAsync(userId);
+                _branchContext.SetUserBranches(branches);
+
+                if (branches.Any())
+                {
+                    _branchContext.SetBranch(branches.First().BranchId);
+                }
                 var companyId = BaseService.JwtHelper.GetCompanyIdFromToken(result.Token);
 
                 await _localStorage.SetAsync("loggedInUserId", userId);
@@ -95,6 +104,71 @@ namespace FreightBKShippingWebApp.Services
                 return null;
             }
         }
+
+        //public async Task<LoginResponseModel?> LoginAsync(LoginModel model)
+        //{
+        //    try
+        //    {
+        //        if (model == null ||
+        //            string.IsNullOrWhiteSpace(model.UserEmail) ||
+        //            string.IsNullOrWhiteSpace(model.UserPassword))
+        //        {
+        //            return null;
+        //        }
+
+        //        // 1️⃣ LOGIN
+        //        var result = await _api.PostAsync<LoginResponseModel, LoginModel>(
+        //            "api/Auth/login", model);
+
+        //        if (result == null || string.IsNullOrWhiteSpace(result.Token))
+        //            return null;
+
+        //        // 2️⃣ SAVE FULL SESSION FIRST 🔥🔥
+        //        await _localStorage.SetAsync("sessionState", result);
+
+        //        // 3️⃣ MARK AUTHENTICATED
+        //        await ((CustomAuthStateProvider)_authStateProvider)
+        //            .MarkUserAsAuthenticated(result);
+
+        //        // ⬆️ yahin se ApiClient token read kar sakta hai
+
+        //        // 4️⃣ TOKEN INFO
+        //        var userId = JwtHelper.GetUserIdFromToken(result.Token);
+        //        var companyId = JwtHelper.GetCompanyIdFromToken(result.Token);
+
+        //        await _localStorage.SetAsync("loggedInUserId", userId);
+        //        await _localStorage.SetAsync("loggedInCompanyId", companyId);
+
+        //        // 5️⃣ NOW SAFE: secured APIs
+        //        var branches = await _branchService.GetBranchesByUserIdAsync(userId);
+        //        _branchContext.SetUserBranches(branches);
+
+        //        if (branches.Any())
+        //        {
+        //            var branchId = branches.First().BranchId;
+
+        //            _branchContext.SetBranch(branchId);
+        //            result.ActiveBranchId = branchId;
+
+        //            await _localStorage.SetAsync("activeBranchId", branchId);
+
+        //            // update session with branch
+        //            await _localStorage.SetAsync("sessionState", result);
+        //        }
+
+        //        // 6️⃣ REDIRECT
+        //        _navigationManager.NavigateTo("/", true);
+
+
+        //        return result;
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Console.WriteLine($"🔥 LoginAsync Error: {ex}");
+        //        return null;
+        //    }
+        //}
+
 
         private int ResolveActiveBranch(LoginResponseModel result)
         {

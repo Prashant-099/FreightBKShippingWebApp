@@ -180,7 +180,7 @@
         background-color: #f5f8fb;
         min-height: 48px;
     }
-
+    /* ===================================================== */
     .net-amount-box {
         background-color: #e3fcef;
         border-radius: 8px;
@@ -198,6 +198,86 @@
         text-align: right;
     }
 
+    /* ===== RIGHT SUMMARY CONTAINER ===== */
+    .right-stack {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 6px;
+        width: 100%;
+    }
+
+    /* ===== EACH ROW (DESKTOP) ===== */
+    .right-row {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 10px;
+        width: auto;
+    }
+
+        /* Label */
+        .right-row label {
+            white-space: nowrap;
+        }
+
+    /* ===== SPIN EDIT COMMON ===== */
+    .right-spin {
+        min-width: 160px;
+    }
+
+        .right-spin .dx-texteditor-input {
+            text-align: right !important;
+        }
+
+    /* ===== ROUND OFF ===== */
+    .roundoff-amt {
+        min-width: 140px;
+    }
+
+    /* ===== TOTAL AMOUNT (DESKTOP LOOK) ===== */
+    .total-amt {
+        min-width: 220px;
+        font-weight: 700;
+        font-size: 1.15rem;
+        background-color: #e9fef0 !important;
+        border: 3px solid #28a745 !important;
+        border-radius: 6px;
+    }
+
+    /* ========================= */
+    /* 📱 MOBILE VIEW OVERRIDE */
+    /* ========================= */
+    @@media (max-width: 768px) {
+        .right-stack
+
+    {
+        align-items: stretch;
+        width: 100%;
+    }
+
+    .right-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 4px;
+    }
+
+        .right-row label {
+            text-align: left;
+            font-weight: 600;
+        }
+
+    .right-spin,
+    .roundoff-amt,
+    .total-amt {
+        width: 100% !important;
+        min-width: 100% !important;
+    }
+
+    }
+
+
+    /* ======================================== */
     .jobdetails {
         margin-top: 6px;
     }
@@ -266,9 +346,9 @@
          ShowCloseButton="true" 
          HeaderText="@Title" 
          CloseOnOutsideClick="false" 
-         MaxWidth="1400"
-         Width="95vw"  
-         MaxHeight="90vh" 
+         MaxWidth="1400"    
+         Width="82vw"  
+         MaxHeight="95vh" 
          horizontalAlignment="HorizontalAlignment.Center"
          verticalAlignment="VerticalAlignment.Center" 
          BodyCssClass="my-popup-body" 
@@ -337,10 +417,11 @@
 
                                     </div>
                                 </DxFormLayoutItem>
+
                                 <DxFormLayoutItem Caption="Job No" ColSpanMd="3">
                                     <div style="position: relative; display: inline-block; width: 100%;">
                     <DxButton Click="@(() => ShowJobPopup("JobNo"))"
-                                  IconCssClass="bi bi-pencil-fill"
+                                  IconCssClass="bi bi-pencil-square"
                               CssClass="custom-plus-button" />
                                     <DxComboBox Data="@FilteredJobList"
                                     TextFieldName="JobNo"
@@ -535,7 +616,7 @@
                                     ColumnResizing="Grid_ColumnResizing"
                                     PageSize="10"
                                     CssClass="fixed-height-grid mobile-grid" >
-
+@* 
                                             <ToolbarTemplate Context="gridToolbarContext">
                                                 <DxToolbar>
 
@@ -558,7 +639,7 @@
                                                                    @*  <DxButton RenderStyle="ButtonRenderStyle.Success"
                                                                     @onclick="ShowServicePopup" CssClass="service-plus-button">
                                                                         <i class="bi bi-plus"></i>
-                                                                    </DxButton> *@
+                                                                    </DxButton> 
                                                                 </div>
                                                             </Template>
                                                         </DxToolbarItem>
@@ -569,7 +650,7 @@
                                                         <DxToolbarItem Text="" RenderStyle="ButtonRenderStyle.Primary" IconCssClass="bi bi-list-columns" Click="ColumnChooserButton_Click" />
                                                         <DxToolbarItem Type="Spacer" />
                                                         <DxToolbarItem Text="" IconCssClass="bi bi-plus" CssClass="service-plus-button" Click="@ShowServicePopup" /> *@
-                                                            <DxToolbarItem BeginGroup="true" IconCssClass="bi bi-gear-wide-connected" >
+                                                           @*  <DxToolbarItem BeginGroup="true" IconCssClass="bi bi-gear-wide-connected" >
                                                                 <Template Context="Cyx">
 
                                                                     <DxComboBox Data="@availableGridLayouts"
@@ -609,7 +690,7 @@
                                                                     }
 
                                                                 </Items>
-                                                            </DxToolbarItem>
+                                                            </DxToolbarItem> 
 
 
 
@@ -617,7 +698,7 @@
 
                                                         </Items>
                                                     </DxToolbar>
-                                            </ToolbarTemplate>
+                                            </ToolbarTemplate> *@
 
                                             <Columns>
 
@@ -634,6 +715,10 @@
                                             <DxButton IconCssClass="bi bi-arrow-clockwise"
                                                       RenderStyle="ButtonRenderStyle.Link"
                                                       Click="Revert_Click" />
+                                            <DxButton RenderStyle="ButtonRenderStyle.Link"
+                                                      IconCssClass="bi bi-three-dots"
+                                                      SizeMode="SizeMode.Medium"
+                                                   />
                                                     </HeaderCaptionTemplate>
 
                                                     <CellEditTemplate>
@@ -1191,18 +1276,13 @@
                         </DxFormLayout>
 
                              <DxFormLayout>
+       
+                                                <DxFormLayoutItem Caption="Remarks" ColSpanMd="6" >
 
-            
-                                                <DxFormLayoutItem Caption="Remarks" ColSpanMd="4">
-
-                                                    <DxMemo @bind-Text="EditModel.BillRemarks" />
+                                                    <DxMemo @bind-Text="EditModel.BillRemarks" Rows="3"/>
                                                 </DxFormLayoutItem>
 
-
-
-
-
-                                                <DxFormLayoutItem Caption="Is Round Off" ColSpanMd="4">
+                                             @*    <DxFormLayoutItem Caption="Is Round Off" ColSpanMd="4"  >
                                                     <div class="d-flex gap-1">
                                                         <DxCheckBox Checked="@EditModel.BillIsRoundOff"
                                                         CheckedChanged="@((bool isChecked) => ApplyRoundOff(isChecked))" CheckedExpression="() => EditModel.BillIsRoundOff"/>
@@ -1222,16 +1302,37 @@
                                                     ReadOnly="true"
                                                     CssClass="net-amount-field"
                                                     ShowSpinButtons="false" />
-                                                </DxFormLayoutItem>
+                                                </DxFormLayoutItem> *@
 
-            
+                <!-- RIGHT: One Row Container -->
+                <DxFormLayoutItem CssClass="d-flex justify-content-end align-items-center">
+                    <div class="right-stack">
 
+                        <div class="right-row">
+                            <label class="fw-semibold">Is Round Off</label>
+                            <DxCheckBox Checked="@EditModel.BillIsRoundOff"
+                                        CheckedChanged="@((bool isChecked) => ApplyRoundOff(isChecked))"
+                                        CheckedExpression="() => EditModel.BillIsRoundOff" />
+                            <DxSpinEdit @bind-Value="EditModel.BillRoundAmt"
+                                        ReadOnly="true"
+                                        DisplayFormat="N4"
+                                        ShowSpinButtons="false"
+                                        CssClass="right-spin roundoff-amt" />
+                        </div>
 
+                        <div class="right-row">
+                            <label class="fw-semibold">Total Amount</label>
+                            <DxSpinEdit @bind-Value="EditModel.BillNetAmount"
+                                        ReadOnly="true"
+                                        DisplayFormat="N3"
+                                        ShowSpinButtons="false"
+                                        CssClass="right-spin total-amt" />
+                        </div>
 
+                    </div>
+                </DxFormLayoutItem>
 
-
-       
-
+          
                              </DxFormLayout>
 
         
@@ -1273,6 +1374,7 @@
 
             <!-- RIGHT SIDE -->
             <div class="footer-right">
+
                 <DxButton Text="Save & Print"
                           RenderStyle="ButtonRenderStyle.Warning"
                           Click="@(() => _isPrint = true)"
@@ -1296,9 +1398,11 @@
                           RenderStyle="ButtonRenderStyle.Danger"
                           Click="Hide"
                           IconCssClass="bi bi-x-circle" />
+
             </div>
 
         </div>
+
     </FooterContentTemplate>  
 
 

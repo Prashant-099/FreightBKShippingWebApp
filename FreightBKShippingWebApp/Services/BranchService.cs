@@ -1,35 +1,45 @@
-﻿
-using FreightBKShippingWebApp.Model;
+﻿using FreightBKShippingWebApp.Model;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 
 namespace FreightBKShippingWebApp.Services
 {
-    public class BranchService
+    public class BranchService : BaseService
     {
         private readonly ApiClient _api;
-         
 
-        public BranchService(ApiClient api )
+        public BranchService(HttpClient http, ApiClient api) : base(http)
         {
             _api = api;
-            
         }
 
+        // Get all branches
         public async Task<List<Branch>> GetAllAsync()
         {
             try
             {
                 var response = await _api.GetFromJsonAsync<List<Branch>>("api/Branches?page=1&pageSize=1000");
-                return response ?? new();
+                return response ?? new List<Branch>();
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Error loading branches: {ex.Message}");
-                return new();
+                return new List<Branch>();
             }
-           
-           
         }
 
+        // Get branches by UserId
+        public async Task<List<Branch>> GetBranchesByUserIdAsync(string userId)
+        {
+            return await _api.GetFromJsonAsync<List<Branch>>(
+                $"api/UserBranches/byuser/{userId}"
+            ) ?? new List<Branch>();
+        }
+
+        // Get branches for the current user from JWT token
+      
+
+        // Get branch by ID
         public async Task<Branch?> GetByIdAsync(int id)
         {
             try
@@ -41,56 +51,48 @@ namespace FreightBKShippingWebApp.Services
                 Console.WriteLine($"❌ Error fetching branch {id}: {ex.Message}");
                 return null;
             }
-           
-           
         }
 
+        // Create branch
         public async Task<bool> CreateAsync(Branch branch)
         {
             try
             {
-                var result = await _api.PostAsync<bool, Branch>("api/Branches", branch);
-                return result;
+                return await _api.PostAsync<bool, Branch>("api/Branches", branch);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Error creating branch: {ex.Message}");
                 return false;
             }
-           
-           
         }
 
+        // Update branch
         public async Task<bool> UpdateAsync(Branch branch)
         {
             try
             {
-                var result = await _api.PutAsync<bool, Branch>($"api/Branches/{branch.BranchId}", branch);
-                return result;
+                return await _api.PutAsync<bool, Branch>($"api/Branches/{branch.BranchId}", branch);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Error updating branch: {ex.Message}");
                 return false;
             }
-           
-           
         }
 
+        // Delete branch
         public async Task<bool> DeleteAsync(int branchId)
         {
             try
             {
-                var result = await _api.DeleteAsync<bool>($"api/Branches/{branchId}");
-                return result;
+                return await _api.DeleteAsync<bool>($"api/Branches/{branchId}");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Error deleting branch: {ex.Message}");
                 return false;
             }
-           
-            
         }
     }
 }
