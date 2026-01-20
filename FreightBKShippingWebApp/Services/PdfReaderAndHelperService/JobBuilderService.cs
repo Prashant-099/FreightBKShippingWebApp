@@ -266,15 +266,17 @@ public class JobBuilderService
     private readonly JobDataCreationService _dataService;
     private readonly DataCleanupService _cleanupService;
     private readonly ILogger<JobBuilderService> _logger;
-
+    private readonly IBranchContext _BranchContext;
     public JobBuilderService(
         JobDataCreationService dataService,
         DataCleanupService cleanupService,
+        IBranchContext Branchcontext,
         ILogger<JobBuilderService> logger)
     {
         _dataService = dataService;
         _cleanupService = cleanupService;
         _logger = logger;
+        _BranchContext = Branchcontext;
     }
 
     public async Task<Job> BuildJobFromExtractedDataAsync(
@@ -297,7 +299,8 @@ public class JobBuilderService
         {
             JobType = jobType,
             JobDate = DateTime.Now,
-            JobYearId = yearId?.ToString()
+            JobYearId = yearId?.ToString(),
+            JobBranchId= _BranchContext.BranchId,
         };
 
         try

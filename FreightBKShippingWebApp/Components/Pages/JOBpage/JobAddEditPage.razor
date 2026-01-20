@@ -1781,32 +1781,33 @@ MinWidth="200"
     private List<Branch> branchList = new();
     private List<Status> statuslist = new();
 
-            public void Show(Job model)
-            {
-                IsEdit = model.JobId > 0;
-                EditModel = model;
-                if (model == null || model.JobId == 0) // New job
-                {
-                    EditModel = new Job
+    public void Show(Job model)
+    {
+        IsEdit = model.JobId > 0;
+        EditModel = model;
+        if (model == null || model.JobId == 0) // New job
+        {
+            EditModel = new Job
                     {
                         JobBranchId = BranchContext.BranchId, 
                         JobDate = DateTime.Now
                     };
-                }
-                else
-                {
-                    EditModel = model; // Existing job, edit mode
-                }
-                Visible = true;
-                var defaultBranch = statuslist.FirstOrDefault();
-                EditModel.JobActive = true;
-                // only set default if JobStatus is null or 0
-                if (EditModel.JobStatus == null || EditModel.JobStatus == 0)
-                {
-                    EditModel.JobStatus = defaultBranch?.StatusId ?? 0;
+        }
+        else
+        {
+            EditModel = model; // Existing job, edit mode
+        }
+        Visible = true;
+        var defaultBranch = statuslist.FirstOrDefault();
+        EditModel.JobActive = true;
+        // only set default if JobStatus is null or 0
+        if (EditModel.JobStatus == null || EditModel.JobStatus == 0)
+        {
+            EditModel.JobStatus = defaultBranch?.StatusId ?? 0;
 
-                }
-                StateHasChanged();
+        }
+        LoadVoucherAndGenerateJobNo(BranchContext.BranchId);
+        StateHasChanged();
             }
 
     private async Task OnBranchChanged(int? branchId)
@@ -1885,7 +1886,6 @@ MinWidth="200"
                                 ToastService.Error("Error: " + ex.Message);
                             }
 
-
       }
 
     private async Task OnvoucherChanged()
@@ -1928,7 +1928,7 @@ MinWidth="200"
         if (EditModel != null)
         {
             EditModel.JobBranchId = BranchContext.BranchId;
-            await LoadVoucherAndGenerateJobNo(BranchContext.BranchId);
+            // await LoadVoucherAndGenerateJobNo(BranchContext.BranchId);
             StateHasChanged();
         }
     }
@@ -1942,7 +1942,7 @@ MinWidth="200"
 
             statuslist = await StatusService.GetAllAsync();
 
-            branchList = await BranchService.GetAllAsync();
+            branchList = await BranchService.GetBranchesForCurrentUserAsync();
             cargos = await CargoService.GetAllAsync();
             vessels = await VesselService.GetAllAsync();
             countryList = await CountryService.GetAllAsync();
