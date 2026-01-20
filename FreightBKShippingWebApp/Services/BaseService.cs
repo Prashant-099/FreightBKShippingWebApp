@@ -6,10 +6,17 @@ namespace FreightBKShippingWebApp.Services
     public abstract class BaseService
     {
         protected readonly HttpClient _http;
+        protected readonly ITokenProvider _tokenProvider;
 
-        public BaseService(HttpClient http)
+        protected BaseService(HttpClient http, ITokenProvider tokenProvider)
         {
             _http = http;
+            _tokenProvider = tokenProvider;
+        }
+
+        protected async Task<string?> GetTokenAsync()
+        {
+            return await _tokenProvider.GetTokenAsync();
         }
 
 

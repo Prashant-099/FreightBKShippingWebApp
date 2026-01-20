@@ -74,7 +74,7 @@ namespace FreightBKShippingWebApp.Services
 
                 // ================= TOKEN INFO =================
                 var userId = BaseService.JwtHelper.GetUserIdFromToken(result.Token);
-                var branches = await _branchService.GetBranchesByUserIdAsync(userId);
+                var branches = await _branchService.GetBranchesForCurrentUserAsync();
                 _branchContext.SetUserBranches(branches);
 
                 if (branches.Any())

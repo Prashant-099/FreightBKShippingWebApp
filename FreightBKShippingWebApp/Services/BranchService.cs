@@ -8,11 +8,13 @@ namespace FreightBKShippingWebApp.Services
     {
         private readonly ApiClient _api;
 
-        public BranchService(HttpClient http, ApiClient api) : base(http)
+        public BranchService(
+           HttpClient http,
+           ApiClient api,
+           ITokenProvider tokenProvider) : base(http, tokenProvider)
         {
             _api = api;
         }
-
         // Get all branches
         public async Task<List<Branch>> GetAllAsync()
         {
@@ -29,15 +31,23 @@ namespace FreightBKShippingWebApp.Services
         }
 
         // Get branches by UserId
-        public async Task<List<Branch>> GetBranchesByUserIdAsync(string userId)
+        public async Task<List<Branch>> GetBranchesForCurrentUserAsync()
         {
+            var token = await GetTokenAsync();
+            if (string.IsNullOrWhiteSpace(token))
+                return new();
+
+            var userId = JwtHelper.GetUserIdFromToken(token);
+            if (string.IsNullOrWhiteSpace(userId))
+                return new();
+
             return await _api.GetFromJsonAsync<List<Branch>>(
-                $"api/UserBranches/byuser/{userId}"
-            ) ?? new List<Branch>();
+                $"api/Branches/byuser/{userId}"
+            ) ?? new();
         }
 
         // Get branches for the current user from JWT token
-      
+
 
         // Get branch by ID
         public async Task<Branch?> GetByIdAsync(int id)
