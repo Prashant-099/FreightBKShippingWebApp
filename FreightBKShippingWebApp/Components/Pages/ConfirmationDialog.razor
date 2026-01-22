@@ -3,20 +3,31 @@
 
 @if (isVisible)
 {
-    <div class="modal-backdrop fade show"></div>
-    <div class="modal d-block" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-body text-center">
-                    <p>@Message</p>
-                    <div class="d-flex justify-content-center gap-3">
-                        <button class="btn btn-danger" @onclick="Confirm">Yes</button>
-                        <button class="btn btn-outline-secondary" @onclick="Cancel">No</button>
-                    </div>
+    <DxPopup @bind-Visible="isVisible"
+            ShowHeader="false"
+             ShowCloseButton="false"
+             CloseOnOutsideClick="false"
+             MaxWidth="300"
+             HorizontalAlignment="HorizontalAlignment.Center"
+             VerticalAlignment="VerticalAlignment.Center">
+
+        <BodyContentTemplate>
+            <div class="text-center">
+                <p class="">@Message</p>
+
+                <div class="d-flex justify-content-center gap-3">
+                    <DxButton Text="Yes"
+                              RenderStyle="ButtonRenderStyle.Danger"
+                              Click="Confirm" />
+
+                    <DxButton Text="No"
+                              RenderStyle="ButtonRenderStyle.Secondary"
+                              Click="Cancel" />
                 </div>
             </div>
-        </div>
-    </div>
+        </BodyContentTemplate>
+
+    </DxPopup>
 }
 
 @code {
@@ -51,31 +62,7 @@
     }
 }
 <style>
-      .modal-backdrop {
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          background-color: rgba(0,0,0,0.5);
-          z-index: 1040;
-      }
-
-      .modal {
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          display: flex !important;
-          align-items: center;
-          justify-content: center;
-          z-index: 1050;
-      }
-
-      .modal-content {
-          width: 100%;
-          max-width: 400px;
-      }
-
+      .p {
+          padding: 0px;
+    }
 </style>
