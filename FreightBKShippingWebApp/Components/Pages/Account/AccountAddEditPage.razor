@@ -374,7 +374,7 @@ verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body"
         groupList = await AccountGroupService.GetAllAsync();   // API से load
         typeList = await AccountTypeService.GetAllAsync(); 
         states = await StateService.GetStatesAsync();
-        await LoadEinvConfigAsync();
+        
     }
 
     private async Task HandleValidSubmit()
@@ -432,6 +432,7 @@ verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body"
     //
     private EinvConfig? einvConfig;
     private List<State> states = new();
+
     private async Task LoadEinvConfigAsync()
     {
         try
@@ -452,6 +453,8 @@ verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body"
 
     private async Task FetchGstinDetailsAsync()
     {
+      
+        // await LoadEinvConfigAsync();
         var gstin = EditModel.AccountGstNo;
         var configs = await EinvConfigService.GetAllAsync();
         var einvConfig = configs.FirstOrDefault();

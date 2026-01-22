@@ -46,12 +46,7 @@ builder.Services.AddOutputCache();
 builder.Services.AddScoped<ApiClient>();
 builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
 builder.Services.AddScoped<AuthService>();
-builder.Services.AddScoped<BranchService>(sp =>
-{
-    var http = sp.GetRequiredService<HttpClient>();
-    var api = sp.GetRequiredService<ApiClient>();
-    return new BranchService(http, api);
-});
+builder.Services.AddScoped<BranchService>();
 builder.Services.AddScoped<CompanyService>();
 builder.Services.AddScoped<LoadingService>();
 builder.Services.AddScoped<ToasteService>();
@@ -60,7 +55,6 @@ builder.Services.AddScoped<YearStatechangeService>();
 builder.Services.AddScoped<ConfirmationDialogService>();
 builder.Services.AddScoped<StateService>();
 builder.Services.AddScoped<CountryService>();
-builder.Services.AddScoped<BranchService>();
 builder.Services.AddScoped<CurrencyService>();
 builder.Services.AddScoped<VoucherService>();
 builder.Services.AddScoped<UserRoleService>();
@@ -109,6 +103,7 @@ builder.Services.AddScoped<BillUploadService>();
 //
 builder.Services.AddScoped<AuthTokenService>();
 builder.Services.AddScoped<IBranchContext, BranchContext>();
+builder.Services.AddScoped<ITokenProvider, TokenProvider>();
 
 //builder.Services.AddHttpClient<ApiClient>(client =>
 //{

@@ -245,5 +245,7 @@ namespace FreightBKShippingWebApp.Authentication
             await localStorage.SetAsync("sessionState", newSession);
             Console.WriteLine("✅ Session updated with new tokens");
         }
+
+
     }
 }

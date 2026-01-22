@@ -43,6 +43,7 @@ namespace FreightBKShippingWebApp.Services
         }
 
         // ✅ Global validation function
+
         public bool IsDateWithinSelectedYear(DateTime? date)
         {
             var year = Years.FirstOrDefault(y => y.YearId == SelectedYearId);

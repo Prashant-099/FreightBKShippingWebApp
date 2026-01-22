@@ -7,16 +7,19 @@ namespace FreightBKShippingWebApp.Services.PdfReaderAndHelperService
     {
         private readonly JobDataCreationService _dataService;
         private readonly DataCleanupService _cleanupService;
+        private readonly IBranchContext _branchContext;
         private readonly ILogger<ExportJobBuilderService> _logger;
 
         public ExportJobBuilderService(
             JobDataCreationService dataService,
             DataCleanupService cleanupService,
+            IBranchContext branchContext,
             ILogger<ExportJobBuilderService> logger)
         {
             _dataService = dataService;
             _cleanupService = cleanupService;
             _logger = logger;
+            _branchContext = branchContext;
         }
 
         public async Task<Job> BuildExportJobAsync(
@@ -33,7 +36,8 @@ namespace FreightBKShippingWebApp.Services.PdfReaderAndHelperService
             {
                 JobType = "EXPORT",
                 JobDate = DateTime.Now,
-                JobYearId = yearId?.ToString()
+                JobYearId = yearId?.ToString(),
+                JobBranchId= _branchContext.BranchId,
             };
 
             try

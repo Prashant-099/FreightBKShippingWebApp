@@ -16,7 +16,7 @@
        @*  <ValidationSummary /> *@
         <DxFormLayout>
 
-            <DxFormLayoutItem Caption="Notify Name" ColSpanMd="8">
+            <DxFormLayoutItem Caption="Name" ColSpanMd="8">
                 <ChildContent>
                         <DxTextBox @bind-Text="EditModel.NotifyName"ShowValidationIcon="true" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
                 </ChildContent>
@@ -129,7 +129,7 @@
     [Parameter] public EventCallback OnSaved { get; set; }
     private EditContext? editContext;
     private bool Visible { get; set; }
-    private string Title { get; set; } = "Add/Edit Notify";
+    private string Title { get; set; } = "Add/Edit Miscellaneous";
     private Notify EditModel { get; set; } = new();
     private List<State> stateList = new();
     private List<Country> CountryList = new();
@@ -164,12 +164,12 @@
         if (notify.NotifyId>0)
         {
             EditModel = notify;
-            Title = "Edit Notify";
+            Title = "Edit Miscellaneous";
         }
         else
         {
             EditModel = new Notify { NotifyStatus = true, NotifyType = notify?.NotifyType ?? string.Empty };
-            Title = "Add Notify";
+            Title = "Add Miscellaneous";
         }
         // Create EditContext when showing the form
         editContext = new EditContext(EditModel);
@@ -183,7 +183,7 @@
 
     private async Task HandleValidSubmit()
     {
-        LoadingService.Show("Saving notify...");
+        LoadingService.Show("Saving Miscellaneous...");
 
         try
         {
@@ -195,10 +195,10 @@
                 result = await NotifyService.CreateAsync(EditModel);
 
                 if (result != null)
-                    ToastService.Success("Notify created successfully!");
+                    ToastService.Success("Miscellaneous created successfully!");
                 else
                 {
-                    ToastService.Error("Failed to create notify!");
+                    ToastService.Error("Failed to create Miscellaneous!");
                     return;
                 }
             }
@@ -208,10 +208,10 @@
                 result = await NotifyService.UpdateAsync(EditModel);
 
                 if (result != null)
-                    ToastService.Success("Notify updated successfully!");
+                    ToastService.Success("Miscellaneous updated successfully!");
                 else
                 {
-                    ToastService.Error("Failed to update notify!");
+                    ToastService.Error("Failed to update Miscellaneous!");
                     return;
                 }
             }
@@ -221,7 +221,7 @@
         }
         catch (Exception ex)
         {
-            ToastService.Error($"❌ Error saving notify: {ex.Message}");
+            ToastService.Error($"❌ Error saving Miscellaneous: {ex.Message}");
         }
         finally
         {
