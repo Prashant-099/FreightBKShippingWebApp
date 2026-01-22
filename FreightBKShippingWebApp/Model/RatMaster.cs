@@ -42,6 +42,8 @@ namespace FreightBKShippingWebApp.Model{
 
         [Column("ratemaster_updated")]
         public DateTime? RateMasterUpdated { get; set; }
+        [Column("ratemaster_companyid")]
+        public int RateMasterCompanyId { get; set; }
 
         [ValidateNever]
         [ForeignKey(nameof(RateMasterPartyId))]

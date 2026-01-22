@@ -1,9 +1,11 @@
 ﻿using DevExpress.PivotGrid.PivotTable;
+
 using FreightBKShippingWebApp.Authentication;
 using FreightBKShippingWebApp.Model;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
+
 using Microsoft.AspNetCore.Localization;
 using System.Globalization;
 using System.IdentityModel.Tokens.Jwt;
@@ -12,6 +14,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Security.Claims;
 using static FreightBKShippingWebApp.Services.BaseService;
+
 namespace FreightBKShippingWebApp.Services
 {
     public class AuthService
