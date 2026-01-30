@@ -99,8 +99,8 @@
         </DxGridCommandColumn>
 
         <DxGridDataColumn FieldName="JobStatus" Caption="Status" TextAlignment="GridTextAlignment.Right" MinWidth="100"
-                          Visible="@GetColumnVisibility("JobStatus")"
-                          Width="@GetColumnWidth("JobStatus")">
+                          Visible="@(layoutManager?.GetColumnVisibility("JobStatus") ?? true)"
+                          Width="@(layoutManager?.GetColumnWidth("JobStatus") ?? "120px")">
             <CellDisplayTemplate Context="cellContext">
                 @{
                     var statusId = (int?)cellContext.Value;
@@ -214,128 +214,7 @@
     </Columns>
 </DxGrid>
 
-        <div class="modal-dialog modal-lg" @onclick:stopPropagation="true">
-            <div class="modal-content">
-
-                <!-- Header -->
-                <div class="modal-header">
-                    <h5 class="modal-title">@dialogTitle</h5>
-                    <button type="button"
-                            class="btn-close"
-                            @onclick="CloseLayoutDialog"
-                            aria-label="Close">
-                    </button>
-                </div>
-
-                <!-- Body -->
-                <div class="modal-body">
-
-                    <!-- Layout Name -->
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Layout Name:</label>
-                        <input type="text"
-                               class="form-control"
-                               @bind="newLayoutName"
-                               @bind:event="oninput"
-                               placeholder="Enter layout name..."
-                               maxlength="100" />
-                    </div>
-
-                    <!-- Default Layout Checkbox -->
-                    <div class="mb-3">
-                        <div class="form-check">
-                            <input class="form-check-input"
-                                   type="checkbox"
-                                   @bind="isDefaultLayout"
-                                   id="defaultLayoutCheck" />
-
-                            <label class="form-check-label" for="defaultLayoutCheck">
-                                Set as Default Layout
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- Column Configuration -->
-                    <div class="mt-3">
-                        <label class="form-label fw-bold mb-2">Column Configuration:</label>
-
-                        <div class="table-responsive"
-                             style="max-height: 400px; overflow-y: auto;">
-
-                            <table class="table table-sm table-bordered">
-                                <thead class="table-light sticky-top">
-                                    <tr>
-                                        <th style="width: 50px;">Visible</th>
-                                        <th style="width: 200px;">Column Name</th>
-                                        <th style="width: 150px;">Width (px)</th>
-                                    </tr>
-                                </thead>
-
-                                <tbody>
-                                    @foreach (var col in allColumns)
-                                    {
-                                        <tr>
-                                            <td class="text-center">
-                                                <input class="form-check-input"
-                                                       type="checkbox"
-                                                       @bind="col.Visible"
-                                                       id="col_@col.FieldName" />
-                                            </td>
-
-                                            <td>
-                                                <label class="mb-0" for="col_@col.FieldName">
-                                                    @col.Caption
-                                                </label>
-                                            </td>
-
-                                            <td>
-                                                <input type="number"
-                                                       class="form-control form-control-sm"
-                                                       @bind="col.Width"
-                                                       @bind:event="oninput"
-                                                       min="50"
-                                                       max="500"
-                                                       step="10"
-                                                       placeholder="Width" />
-                                            </td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-
-                        </div>
-                    </div>
-
-                    <!-- Info Note -->
-                    <div class="alert alert-info mt-3">
-                        <i class="bi bi-info-circle me-2"></i>
-                        <strong>Note:</strong>
-                        Adjust column widths here manually. The widths will be saved and applied when you load this layout.
-                    </div>
-
-                </div>
-
-                <!-- Footer -->
-                <div class="modal-footer">
-                    <button type="button"
-                            class="btn btn-secondary"
-                            @onclick="CloseLayoutDialog">
-                        Cancel
-                    </button>
-
-                    <button type="button"
-                            class="btn btn-primary"
-                            @onclick="SaveCurrentLayout">
-                        <i class="bi bi-floppy me-1"></i>
-                        @(isEditMode ? "Update" : "Create") Layout
-                    </button>
-                </div>
-
-            </div>
-        </div>
-
-    </div>
-}
+      
 <JobAddEditPage @ref="popup" OnSaved="LoadJobsAsync" JobType="@JobType" />
 
 <ConfirmationDialog />
