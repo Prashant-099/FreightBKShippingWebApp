@@ -1,4 +1,5 @@
 ﻿@page "/jobimport"
+@using FreightBKShippingWebApp.Components.Pages.PurchasePage
 @using FreightBKShippingWebApp.Components.Pages.TestPage
 @using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Services
@@ -26,7 +27,7 @@
     }
 </style>
 
-<!-- Grid Component -->
+    <!-- Grid Component -->
 <DxGrid TItem="Job"
         Data="@jobList"
         @ref="MyGrid"
@@ -87,7 +88,7 @@
                 <DxButton RenderStyle="ButtonRenderStyle.Link"
                           IconCssClass="bi bi-file-earmark-diff-fill"
                           SizeMode="SizeMode.Medium"
-                          Click="@(() => OpenPopup((Job)cellContext.DataItem))" />
+                              Click="@(() => OpenAddContainerPopup((Job)cellContext.DataItem))" />
 
                     <DxButton RenderStyle="ButtonRenderStyle.Link"
                               IconCssClass="bi bi-three-dots"
@@ -98,8 +99,8 @@
         </DxGridCommandColumn>
 
         <DxGridDataColumn FieldName="JobStatus" Caption="Status" TextAlignment="GridTextAlignment.Right" MinWidth="100"
-                          Width="@(layoutManager?.GetColumnWidth("JobStatus") ?? "100px")"
-                          Visible="@(layoutManager?.GetColumnVisibility("JobStatus") ?? true)">
+                          Visible="@GetColumnVisibility("JobStatus")"
+                          Width="@GetColumnWidth("JobStatus")">
             <CellDisplayTemplate Context="cellContext">
                 @{
                     var statusId = (int?)cellContext.Value;
@@ -213,7 +214,130 @@
     </Columns>
 </DxGrid>
 
+        <div class="modal-dialog modal-lg" @onclick:stopPropagation="true">
+            <div class="modal-content">
+
+                <!-- Header -->
+                <div class="modal-header">
+                    <h5 class="modal-title">@dialogTitle</h5>
+                    <button type="button"
+                            class="btn-close"
+                            @onclick="CloseLayoutDialog"
+                            aria-label="Close">
+                    </button>
+                </div>
+
+                <!-- Body -->
+                <div class="modal-body">
+
+                    <!-- Layout Name -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Layout Name:</label>
+                        <input type="text"
+                               class="form-control"
+                               @bind="newLayoutName"
+                               @bind:event="oninput"
+                               placeholder="Enter layout name..."
+                               maxlength="100" />
+                    </div>
+
+                    <!-- Default Layout Checkbox -->
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input"
+                                   type="checkbox"
+                                   @bind="isDefaultLayout"
+                                   id="defaultLayoutCheck" />
+
+                            <label class="form-check-label" for="defaultLayoutCheck">
+                                Set as Default Layout
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Column Configuration -->
+                    <div class="mt-3">
+                        <label class="form-label fw-bold mb-2">Column Configuration:</label>
+
+                        <div class="table-responsive"
+                             style="max-height: 400px; overflow-y: auto;">
+
+                            <table class="table table-sm table-bordered">
+                                <thead class="table-light sticky-top">
+                                    <tr>
+                                        <th style="width: 50px;">Visible</th>
+                                        <th style="width: 200px;">Column Name</th>
+                                        <th style="width: 150px;">Width (px)</th>
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+                                    @foreach (var col in allColumns)
+                                    {
+                                        <tr>
+                                            <td class="text-center">
+                                                <input class="form-check-input"
+                                                       type="checkbox"
+                                                       @bind="col.Visible"
+                                                       id="col_@col.FieldName" />
+                                            </td>
+
+                                            <td>
+                                                <label class="mb-0" for="col_@col.FieldName">
+                                                    @col.Caption
+                                                </label>
+                                            </td>
+
+                                            <td>
+                                                <input type="number"
+                                                       class="form-control form-control-sm"
+                                                       @bind="col.Width"
+                                                       @bind:event="oninput"
+                                                       min="50"
+                                                       max="500"
+                                                       step="10"
+                                                       placeholder="Width" />
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+
+                        </div>
+                    </div>
+
+                    <!-- Info Note -->
+                    <div class="alert alert-info mt-3">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>Note:</strong>
+                        Adjust column widths here manually. The widths will be saved and applied when you load this layout.
+                    </div>
+
+                </div>
+
+                <!-- Footer -->
+                <div class="modal-footer">
+                    <button type="button"
+                            class="btn btn-secondary"
+                            @onclick="CloseLayoutDialog">
+                        Cancel
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-primary"
+                            @onclick="SaveCurrentLayout">
+                        <i class="bi bi-floppy me-1"></i>
+                        @(isEditMode ? "Update" : "Create") Layout
+                    </button>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+}
 <JobAddEditPage @ref="popup" OnSaved="LoadJobsAsync" JobType="@JobType" />
+
 <ConfirmationDialog />
 
 <!-- ✅ REUSABLE PDF IMPORT MODAL -->
@@ -229,7 +353,10 @@
                 SuccessCardClass="border-success" />
 
 <AddContainerJob @ref="addContainerJob"></AddContainerJob>
+
 <FreightBKShippingWebApp.Components.Pages.TestPage.BillAddEditPage2 @ref="billAddEditPage" />
+
+<FreightBKShippingWebApp.Components.Pages.PurchasePage.PurchaseAddEditPage @ref="purchasaddedit"></FreightBKShippingWebApp.Components.Pages.PurchasePage.PurchaseAddEditPage>
 
 <DxContextMenu @ref="voucherMenu" ItemClick="@OnMenuItemClick">
     <Items>
@@ -299,17 +426,59 @@
     private Job selectedJob;
 
     private List<Voucher> VoucherList = new();
+    // void OnMenuItemClick(ContextMenuItemClickEventArgs args)
+    // {
+
+    //     var id = int.Parse(args.ItemInfo.Name);
+    //     var selectedVoucher = VoucherList.FirstOrDefault(v => v.VoucherId == id);
+
+    //     if (selectedVoucher != null)
+    //     {
+    //         OpenBilleditPopup(selectedJob, selectedVoucher);
+    //     }
+    // }
+
     void OnMenuItemClick(ContextMenuItemClickEventArgs args)
     {
-
         var id = int.Parse(args.ItemInfo.Name);
         var selectedVoucher = VoucherList.FirstOrDefault(v => v.VoucherId == id);
 
-        if (selectedVoucher != null)
+        if (selectedVoucher == null)
+            return;
+
+        // 👇 YAHI MAIN LOGIC HAI
+        if (selectedVoucher.VoucherName
+                .Equals("Purchase", StringComparison.OrdinalIgnoreCase))
         {
+            // 👉 Purchase hai → Purchase popup
+            Openpurchaseadddedit(selectedJob, selectedVoucher);
+        }
+        else
+        {
+            // 👉 baki sab → normal bill popup
             OpenBilleditPopup(selectedJob, selectedVoucher);
         }
     }
+
+    //===================================================================================
+    
+    PurchaseAddEditPage purchasaddedit;
+    async Task Openpurchaseadddedit(Job job, Voucher voucher)
+    {
+        var bill = new Bill
+        {
+            BillJobId = job.JobId,
+            BillJobNo = job.JobNo,
+            BillJobType = job.JobType,
+            BillPartyId = job.JobPartyId ?? 0,
+            BillBranchId = job.JobBranchId ?? 0,
+            BillVoucherId = voucher.VoucherId
+        };
+
+        purchasaddedit.Show(bill);
+    }
+
+    //===================================================================================
     BillAddEditPage2 billAddEditPage;
     async Task OpenBilleditPopup(Job job, Voucher voucher)
     {
@@ -327,9 +496,11 @@
     }
 
     AddContainerJob addContainerJob;
-    void OpenPopup(Job job)
+    Job job = new();
+    void OpenAddContainerPopup(Job selectedJob)
     {
-        addContainerJob?.Show(job);
+        job = selectedJob;
+        addContainerJob?.OpenPopup(selectedJob);
     }
     // ./
     private List<Job> jobList = new();
