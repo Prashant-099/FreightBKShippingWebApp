@@ -1,0 +1,352 @@
+﻿@page "/Receipt"
+@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Models
+@using FreightBKShippingWebApp.Services
+@using DevExpress.Blazor
+@using Microsoft.AspNetCore.Components.Authorization
+@inject JournalService JournalService
+@inject ToasteService ToastService
+@inject LoadingService LoadingService
+@inject NavigationManager NavigationManager
+@inject ConfirmationDialogService ConfirmDialogService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>Receipts</PageTitle>
+<style>
+    .grid-size {
+        max-height: 570px;
+    }
+
+
+  
+</style>
+    
+           <DxGrid @ref="MyGrid"
+        TItem="Journal"
+        Data="@ReceiptList"
+        KeyFieldName="JournalId"
+        ShowSearchBox="true"
+        ShowFilterRow="true"
+        PageSize="100"
+        AllowSort="false"
+        ShowGroupPanel="true"
+        FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always"
+        FocusedRowEnabled="true"
+        SelectionMode="GridSelectionMode.Multiple"
+        SelectedDataItems="@SelectedReceipts"
+        SelectedDataItemsChanged="OnSelectionChanged"
+        ColumnResizeMode="GridColumnResizeMode.NextColumn"
+        CssClass="grid-size"
+        AllowSelectRowByClick="true">
+
+    <ToolbarTemplate>
+        <DxToolbar>
+            <TitleTemplate Context="tlt">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-cash-coin me-2 py-2"></i>
+                    <span class="fs-5">Receipts</span>
+                </div>
+            </TitleTemplate>
+
+            <Items>
+                <DxToolbarItem Text="Add"
+                               IconCssClass="bi bi-plus-circle"
+                               Click="OnAdd" />
+
+                <DxToolbarItem Text="Edit"
+                               IconCssClass="bi bi-pencil-square"
+                               Click="OnEdit" />
+
+                <DxToolbarItem Text="Delete"
+                               IconCssClass="bi bi-trash"
+                               Click="OnDelete" />
+
+                @if (IsAdmin)
+                {
+                    <DxToolbarItem Text="@GetLockText()"
+                                   IconCssClass="@GetLockIcon()"
+                                   Click="OnToggleLock" />
+                }
+
+                <DxToolbarItem Text="Refresh"
+                               IconCssClass="bi bi-arrow-clockwise"
+                               Click="@(async (_) => await LoadReceipts())" />
+            </Items>
+        </DxToolbar>
+    </ToolbarTemplate>
+                <Columns>
+                    <DxGridSelectionColumn Width="40" />
+        <DxGridDataColumn FieldName="JournalLockedByUsername" 
+            Width="@(layoutManager?.GetColumnWidth("JournalLockedByUsername") ?? "120px")">
+            <HeaderCaptionTemplate>
+
+                Locked By
+
+                <DxButton RenderStyle="ButtonRenderStyle.Link"
+                          IconCssClass="bi bi-three-dots"
+                          SizeMode="SizeMode.Small"
+                          Click="ShowLayoutPopup" />
+
+            </HeaderCaptionTemplate>
+            <CellDisplayTemplate>
+                @{
+                    var j = context.DataItem as Journal;
+
+
+                    if (!string.IsNullOrEmpty(j?.JournalLockedByUsername))
+                    {
+                        <span class="badge bg-warning text-dark">
+                            <i class="bi bi-lock-fill"></i>
+                            @j.JournalLockedByUsername
+                        </span>
+                    }
+                    else
+                    {
+                        <span class="text-muted">—</span>
+                    }
+                }
+            </CellDisplayTemplate>
+        </DxGridDataColumn>
+        <DxGridDataColumn FieldName="VoucherName" Caption="Voucher Type" Width="@(layoutManager?.GetColumnWidth("VoucherName") ?? "140px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("VoucherName") ?? true)" />
+
+        <DxGridDataColumn FieldName="JournalNoStr" Caption="Receipt No" Width="@(layoutManager?.GetColumnWidth("JournalNoStr") ?? "130px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("JournalNoStr") ?? true)" />
+
+        <DxGridDataColumn FieldName="JournalDate" Caption="Date" DisplayFormat="dd/MM/yyyy" Width="@(layoutManager?.GetColumnWidth("JournalDate") ?? "120px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("JournalDate") ?? true)" />
+
+        <DxGridDataColumn FieldName="PartyName" Caption="Customer" Width="@(layoutManager?.GetColumnWidth("PartyName") ?? "180px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("PartyName") ?? true)" />
+
+        <DxGridDataColumn FieldName="AccountName" Caption="Cash / Bank" Width="@(layoutManager?.GetColumnWidth("AccountName") ?? "160px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("AccountName") ?? true)" />
+
+        <DxGridDataColumn FieldName="JournalAmount" Caption="Received Amount" Width="@(layoutManager?.GetColumnWidth("JournalAmount") ?? "140px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("JournalAmount") ?? true)" />
+
+        <DxGridDataColumn FieldName="JournalTotalDiscount" Caption="Discount" Width="@(layoutManager?.GetColumnWidth("JournalTotalDiscount") ?? "120px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("JournalTotalDiscount") ?? true)" />
+
+        <DxGridDataColumn FieldName="JournalTotalShort" Caption="Shortage" Width="@(layoutManager?.GetColumnWidth("JournalTotalShort") ?? "120px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("JournalTotalShort") ?? true)" />
+
+        <DxGridDataColumn FieldName="JournalTotalTds" Caption="TDS" Width="@(layoutManager?.GetColumnWidth("JournalTotalTds") ?? "120px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("JournalTotalTds") ?? true)" />
+
+        <DxGridDataColumn FieldName="JournalOnAccount" Caption="On Account" Width="@(layoutManager?.GetColumnWidth("JournalOnAccount") ?? "130px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("JournalOnAccount") ?? true)" />
+
+        <DxGridDataColumn FieldName="JournalTotal" Caption="Total" Width="@(layoutManager?.GetColumnWidth("JournalTotal") ?? "130px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("JournalTotal") ?? true)" />
+
+        <DxGridDataColumn FieldName="JournalChqNo" Caption="Chq. No" Width="@(layoutManager?.GetColumnWidth("JournalChqNo") ?? "120px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("JournalChqNo") ?? true)" />
+
+        <DxGridDataColumn FieldName="JournalChqDate" Caption="Chq Date" DisplayFormat="dd/MM/yyyy" Width="@(layoutManager?.GetColumnWidth("JournalChqDate") ?? "120px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("JournalChqDate") ?? true)" />
+
+        <DxGridDataColumn FieldName="JournalRemarks" Caption="Remarks" Width="@(layoutManager?.GetColumnWidth("JournalRemarks") ?? "200px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("JournalRemarks") ?? true)" />
+
+      
+                </Columns>
+            </DxGrid>
+
+                
+   
+
+<ReceiptAddEditPage @ref="Popup" OnSaved="LoadReceipts" />
+<ConfirmationDialog />
+
+<GridLayoutpPopup @ref="layoutManager"
+                  VoucherType="Receipt"
+                  Columns="@allColumns"
+                  OnLayoutChanged="HandleLayoutChanged" />
+
+@code {
+    private IGrid? MyGrid;
+    private ReceiptAddEditPage? Popup;
+
+    private List<Journal> ReceiptList = new();
+    private IReadOnlyList<object> SelectedReceipts = new List<object>();
+
+    private bool IsAdmin;
+    private string CurrentUserId = string.Empty;
+
+    // Grid Layout Manager Reference
+    private GridLayoutpPopup? layoutManager;
+    private List<GridColumnLayout> allColumns = [];
+    private async void ShowLayoutPopup()
+    {
+        await InvokeAsync(() =>
+        {
+            layoutManager?.ShowPopup();
+        });
+    }
+    private async Task HandleLayoutChanged(List<GridColumnLayout> updatedLayout)
+    {
+        allColumns = updatedLayout;
+        // Force the grid to re-render with new layout
+        await InvokeAsync(StateHasChanged);
+    }
+    private void InitializeColumns()
+    {
+        allColumns = new List<GridColumnLayout>
+{
+    new() { FieldName = "JournalLockedByUsername", Caption = "Lockby", Visible = true, Width = 120, DisplayIndex = 0 },
+
+    new() { FieldName = "VoucherName", Caption = "Voucher Type", Visible = true, Width = 140, DisplayIndex = 1 },
+
+    new() { FieldName = "JournalNoStr", Caption = "Receipt No", Visible = true, Width = 130, DisplayIndex = 2 },
+
+    new() { FieldName = "JournalDate", Caption = "Date", Visible = true, Width = 120, DisplayIndex = 3 },
+
+    new() { FieldName = "PartyName", Caption = "Customer", Visible = true, Width = 180, DisplayIndex = 4 },
+
+    new() { FieldName = "AccountName", Caption = "Cash / Bank", Visible = true, Width = 160, DisplayIndex = 5 },
+
+    new() { FieldName = "JournalAmount", Caption = "Received Amount", Visible = true, Width = 140, DisplayIndex = 6 },
+
+    new() { FieldName = "JournalTotalDiscount", Caption = "Discount", Visible = true, Width = 120, DisplayIndex = 7 },
+
+    new() { FieldName = "JournalTotalShort", Caption = "Shortage", Visible = true, Width = 120, DisplayIndex = 8 },
+
+    new() { FieldName = "JournalTotalTds", Caption = "TDS", Visible = true, Width = 120, DisplayIndex = 9 },
+
+    new() { FieldName = "JournalOnAccount", Caption = "On Account", Visible = true, Width = 130, DisplayIndex = 10 },
+
+    new() { FieldName = "JournalTotal", Caption = "Total", Visible = true, Width = 130, DisplayIndex = 11 },
+
+    new() { FieldName = "JournalChqNo", Caption = "Chq. No", Visible = true, Width = 120, DisplayIndex = 12 },
+
+    new() { FieldName = "JournalChqDate", Caption = "Chq Date", Visible = true, Width = 120, DisplayIndex = 13 },
+
+    new() { FieldName = "JournalRemarks", Caption = "Remarks", Visible = true, Width = 200, DisplayIndex = 14 }
+};
+
+    }
+    protected override async Task OnInitializedAsync()
+    {
+        await CheckRole();
+        await LoadReceipts();
+        InitializeColumns();
+    }
+
+    private async Task LoadReceipts()
+    {
+        try
+        {
+            LoadingService.Show();
+            ReceiptList = (await JournalService.GetAllAsync())
+                .Where(j => j.JournalMasterType == "RECEIPT")
+                .OrderByDescending(j => j.JournalDate)
+                .ToList();
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+
+    private void OnAdd(ToolbarItemClickEventArgs e)
+        => Popup?.Show(new Journal { JournalDate = DateTime.Now });
+
+    private void OnEdit(ToolbarItemClickEventArgs e)
+    {
+        var journal = MyGrid?.GetFocusedDataItem() as Journal;
+        if (journal == null)
+        {
+            ToastService.Warning("Select a receipt to edit.");
+            return;
+        }
+
+        if (!string.IsNullOrEmpty(journal.JournalLockedBy))
+        {
+            ToastService.Error("This receipt is locked.");
+            return;
+        }
+
+        Popup?.Show(journal);
+    }
+
+    private async Task OnDelete(ToolbarItemClickEventArgs e)
+    {
+        if (SelectedReceipts == null || !SelectedReceipts.Any())
+        {
+            ToastService.Warning("Select receipt(s) to delete.");
+            return;
+        }
+
+        var selectedList = SelectedReceipts.Cast<Journal>().ToList();
+
+        var confirm = await ConfirmDialogService.ShowAsync(
+            $"Are you sure you want to delete {selectedList.Count} selected receipt(s)?");
+
+        if (!confirm)
+        {
+            MyGrid?.ClearSelection(); // ✅ Clear on cancel
+            return;
+        }
+
+        try
+        {
+            LoadingService.Show("Deleting...");
+            int successCount = 0, failCount = 0;
+
+            foreach (var journal in selectedList)
+            {
+                var result = await JournalService.DeleteAsync(journal.JournalId);
+                if (result.Success) successCount++;
+                else
+                {
+                    failCount++;
+                    ToastService.Error(result.Error);
+                }
+            }
+
+            if (successCount > 0)
+                ToastService.Success($"{successCount} Receipt(s) Deleted Successfully.");
+
+            await LoadReceipts();
+        }
+        finally
+        {
+            LoadingService.Hide();
+            MyGrid?.ClearSelection(); // ✅ Always clear (success/fail)
+        }
+    }
+
+
+    private async Task OnToggleLock(ToolbarItemClickEventArgs e)
+    {
+        foreach (var j in SelectedReceipts.Cast<Journal>())
+            await JournalService.ToggleLockAsync(j.JournalId);
+
+        await LoadReceipts();
+        MyGrid?.ClearSelection();
+    }
+
+    private async Task OnSelectionChanged(IReadOnlyList<object> items)
+   { SelectedReceipts = items?? new List<object>();
+        SelectedReceipts = items ?? new List<object>();
+        await InvokeAsync(StateHasChanged);
+   }
+    private string GetLockText()
+        => SelectedReceipts.Any(j => string.IsNullOrEmpty(((Journal)j).JournalLockedBy))
+            ? "Lock"
+            : "Unlock";
+
+    private string GetLockIcon()
+        => SelectedReceipts.Any(j => string.IsNullOrEmpty(((Journal)j).JournalLockedBy))
+            ? "bi bi-lock"
+            : "bi bi-unlock";
+
+    private async Task CheckRole()
+    {
+        var state = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = state.User;
+        IsAdmin = user.IsInRole("Admin");
+        CurrentUserId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "";
+    }
+}

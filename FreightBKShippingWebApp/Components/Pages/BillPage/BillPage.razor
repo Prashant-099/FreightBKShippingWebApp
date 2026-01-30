@@ -1,7 +1,9 @@
 ﻿@page "/bill"
 @using FreightBKShippingWebApp.Components.Pages.Eiinvoice_IRN_
+@using FreightBKShippingWebApp.Components.Pages.ReceiptPage
 @using FreightBKShippingWebApp.Components.Pages.Wp_mail_Configpagess
 @using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Models
 @using FreightBKShippingWebApp.Services
 @using FreightBKShippingWebApp.Components.Pages
 @using FreightBKShippingWebApp.Components.Pages.TestPage
@@ -23,11 +25,7 @@
     }
 
 
-    /* ComboBox Styling */
-    .layout-combobox {
-        border-radius: 6px;
-        width: 185px;
-    }
+ 
 </style>
 <DxGrid @ref="MyGrid"
 TItem="Bill"
@@ -113,12 +111,37 @@ SelectedDataItemsChanged="OnSelectedBillsChanged"
         <DxGridSelectionColumn Width="30"
                                FixedPosition="GridColumnFixedPosition.Left" />
 
+        <DxGridCommandColumn CancelButtonVisible="false" Name="Action"
+                             DeleteButtonVisible="false"
+                             EditButtonVisible="false"
+                             SaveButtonVisible="false"
+                             NewButtonVisible="false" Width="120">
+
+            <HeaderCaptionTemplate>
+                Actions
+                <DxButton RenderStyle="ButtonRenderStyle.Link"
+                          IconCssClass="bi bi-three-dots"
+                          SizeMode="SizeMode.Small"
+                          Click="ShowLayoutPopup" />
+
+            </HeaderCaptionTemplate>
+            <CellDisplayTemplate Context="cellContext">
+                <div style="display: flex; align-items: center;">
+                    <DxButton RenderStyle="ButtonRenderStyle.Link"
+                              IconCssClass="bi bi-file-earmark-diff-fill"
+                              SizeMode="SizeMode.Medium"
+                              Click="@(() => OnReceiptAdd((Bill)cellContext.DataItem))" />
+
+                   
+                </div>
+            </CellDisplayTemplate>
+        </DxGridCommandColumn>
         <DxGridDataColumn FieldName="BillId"
                           Caption="ID"
                           Width="@(layoutManager?.GetColumnWidth("BillId") ?? "80px")"
                           Visible="@(layoutManager?.GetColumnVisibility("BillId") ?? true)" />
 
-        <DxGridDataColumn FieldName="BillLockedByUsername"
+        <DxGridDataColumn FieldName="BillLockedByUsername" Caption=" Locked By"
                           Width="@(layoutManager?.GetColumnWidth("BillLockedByUsername") ?? "140px")"
                           Visible="@(layoutManager?.GetColumnVisibility("BillLockedByUsername") ?? true)">
             <CellDisplayTemplate>
@@ -137,16 +160,7 @@ SelectedDataItemsChanged="OnSelectedBillsChanged"
                     }
                 }
             </CellDisplayTemplate>
-            <HeaderCaptionTemplate >
-              
-                Locked By
-
-                    <DxButton RenderStyle="ButtonRenderStyle.Link"
-                              IconCssClass="bi bi-three-dots"
-                              SizeMode="SizeMode.Small"
-                              Click="ShowLayoutPopup" />
-               
-            </HeaderCaptionTemplate>
+           
         </DxGridDataColumn>
 
         <DxGridDataColumn FieldName="BillAckNo"
@@ -288,6 +302,8 @@ DefaultFileName="@PendingFileName"
                   Columns="@allColumns"
                   OnLayoutChanged="HandleLayoutChanged" />
 
+
+<ReceiptAddEditPage @ref="Popup" OnSaved="LoadBillsAsync" />
 <ConfirmationDialog />
 
 <script>
@@ -333,7 +349,36 @@ DefaultFileName="@PendingFileName"
      };
         
     }
+    private ReceiptAddEditPage? Popup;
+    private void OnReceiptAdd(Bill bill)
+    {
+        if (bill == null)
+            return;
 
+        if (string.Equals(bill.BillType, "SALES", StringComparison.OrdinalIgnoreCase))
+           {
+            if (bill.Bill_due_amt <= 0)
+            {
+                ToastService.Warning(" Invoices is Already Settaled.");
+                    return;
+            }
+           
+                    Popup?.Show(new Journal
+                    {
+                        JournalDate = DateTime.Now,
+                        JournalPartyId = bill.BillPartyId,
+                        JournalBillId = bill.BillId
+                    }, bill.BillId);
+               
+            
+
+           }
+
+               else
+              {
+            ToastService.Warning("It is  Not Sale Invoices.");
+              }
+    }
 
     // Grid Layout Manager Reference
     private GridLayoutpPopup? layoutManager;

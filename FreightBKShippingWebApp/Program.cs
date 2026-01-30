@@ -100,6 +100,8 @@ builder.Services.AddScoped<SendWpMailService>();
 builder.Services.AddScoped<WpMailConfigService>();
 builder.Services.AddScoped<Sentwpcerti>();
 builder.Services.AddScoped<BillUploadService>();
+builder.Services.AddScoped<JournalService>();
+
 //
 builder.Services.AddScoped<AuthTokenService>();
 builder.Services.AddScoped<IBranchContext, BranchContext>();
@@ -114,14 +116,14 @@ builder.Services.AddScoped<ITokenProvider, TokenProvider>();
 //{
 //    client.BaseAddress = new Uri("https://localhost:5003/");
 //});
-//builder.Services.AddHttpClient<ApiClient>(client =>
-//{
-//    client.BaseAddress = new Uri("https://localhost:5003/");
-//});
 builder.Services.AddHttpClient<ApiClient>(client =>
 {
-    client.BaseAddress = new Uri("https://apihost.freightbook.in/");
+    client.BaseAddress = new Uri("https://localhost:5003/");
 });
+//builder.Services.AddHttpClient<ApiClient>(client =>
+//{
+//    client.BaseAddress = new Uri("https://apihost.freightbook.in/");
+//});
 builder.Services.AddLocalization();
 builder.Services.AddControllers();
 var app = builder.Build();

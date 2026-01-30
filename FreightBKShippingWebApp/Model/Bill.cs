@@ -424,6 +424,9 @@ namespace FreightBKShippingWebApp.Model
         [Column("bill_tcs_amt")]
         public double BillTcsAmt { get; set; }
 
+        [Column("bill_due_amt")]
+        public double Bill_due_amt { get; set; }
+
         // Navigation properties
         [InverseProperty(nameof(BillDetail.Bill))]
         public ICollection<BillDetail>? BillDetails { get; set; }
