@@ -1,34 +1,35 @@
 ﻿@page "/audit-logs"
-
 @using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Services
 @inject AuditLogService AuditLogService
 @inject LoadingService LoadingService
-@inject GridLayoutService GridLayoutService
 @inject ToasteService ToastService
 @inject YearStatechangeService YearStatechangeService
+
 <style>
     .grid-size {
         max-height: 600px;
     }
 
-   
+    .grid-container {
+        position: relative;
+    }
 </style>
 
-<DxGrid TItem="AuditLog"
-        Data="@auditLogs"
-        @ref="MyGrid"
-        KeyFieldName="AuditLogsId"
-        ShowSearchBox="true"
-        PageSize="10"
-        PageSizeSelectorVisible="true"
-        ShowGroupPanel="true"
-        FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always"
-        FocusedRowEnabled="true"
-        ColumnResizeMode="GridColumnResizeMode.NextColumn"
-        CssClass="grid-size">
-
-    <!-- 🔹 Toolbar -->
+<div class="grid-container">
+    <DxGrid TItem="AuditLog"
+            Data="@auditLogs"
+            @ref="MyGrid"
+            KeyFieldName="AuditLogsId"
+            ShowSearchBox="true"
+            PageSize="10"
+            PageSizeSelectorVisible="true"
+            ShowGroupPanel="true"
+            FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always"
+            FocusedRowEnabled="true"
+            ColumnResizeMode="GridColumnResizeMode.Disabled"
+            CssClass="grid-size">
+    
     <ToolbarTemplate>
         <DxToolbar>
             <TitleTemplate Context="titl">
@@ -37,66 +38,117 @@
                     <span class="fs-5">User Activity</span>
                 </div>
             </TitleTemplate>
-
             <Items>
                 <DxToolbarItem Text="Refresh"
                                IconCssClass="bi bi-arrow-clockwise"
                                Click="@(async (_) => await LoadAuditLogsAsync())" />
 
-                
+                <DxToolbarItem Alignment="ToolbarItemAlignment.Right"
+                               RenderStyle="ButtonRenderStyle.Secondary"
+                               IconCssClass="bi bi-gear-wide-connected"
+                               Click="ShowLayoutPopup" />
             </Items>
         </DxToolbar>
     </ToolbarTemplate>
-
-    <!-- 🔹 Columns -->
+    
     <Columns>
-        <DxGridDataColumn FieldName="DateTime"
-                          Caption="Date & Time"
-                          DisplayFormat="dd/MM/yyyy HH:mm"/>
+            <DxGridDataColumn FieldName="DateTime"
+                              Caption="Date & Time"
+                              DisplayFormat="dd/MM/yyyy HH:mm"
+                              Visible="@(layoutManager?.GetColumnVisibility("DateTime") ?? true)"
+                              Width="@(layoutManager?.GetColumnWidth("DateTime") ?? "150px")" />
 
+        
         <DxGridDataColumn FieldName="BranchName"
-                          Caption="Branch"/>
-
+                          Caption="Branch"
+                          Visible="@(layoutManager?.GetColumnVisibility("BranchName") ?? true)"
+                          Width="@(layoutManager?.GetColumnWidth("BranchName") ?? "120px")" />
+        
         <DxGridDataColumn FieldName="TableName"
-                          Caption="Name"/>
-
-
+                          Caption="Name"
+                          Visible="@(layoutManager?.GetColumnVisibility("TableName") ?? true)"
+                          Width="@(layoutManager?.GetColumnWidth("TableName") ?? "150px")" />
+        
         <DxGridDataColumn FieldName="VoucherType"
-                          Caption="Voucher"/>
-
+                          Caption="Voucher"
+                          Visible="@(layoutManager?.GetColumnVisibility("VoucherType") ?? true)"
+                          Width="@(layoutManager?.GetColumnWidth("VoucherType") ?? "120px")" />
+        
         <DxGridDataColumn FieldName="Operations"
-                          Caption="Operation"/>
-
+                          Caption="Operation"
+                          Visible="@(layoutManager?.GetColumnVisibility("Operations") ?? true)"
+                          Width="@(layoutManager?.GetColumnWidth("Operations") ?? "120px")" />
+        
         <DxGridDataColumn FieldName="Amount"
                           Caption="Amount"
-                          DisplayFormat="N2" />
-
+                          DisplayFormat="N2"
+                          Visible="@(layoutManager?.GetColumnVisibility("Amount") ?? true)"
+                          Width="@(layoutManager?.GetColumnWidth("Amount") ?? "120px")" />
+        
         <DxGridDataColumn FieldName="Remarks"
-                          Caption="Remarks"/>
-
+                          Caption="Remarks"
+                          Visible="@(layoutManager?.GetColumnVisibility("Remarks") ?? true)"
+                          Width="@(layoutManager?.GetColumnWidth("Remarks") ?? "200px")" />
+        
         <DxGridDataColumn FieldName="CreatedBy"
-                          Caption="User"/>
-
-      
-
-       
+                          Caption="User"
+                          Visible="@(layoutManager?.GetColumnVisibility("CreatedBy") ?? true)"
+                          Width="@(layoutManager?.GetColumnWidth("CreatedBy") ?? "120px")" />
     </Columns>
-
 </DxGrid>
+    <GridLayoutpPopup @ref="layoutManager"
+                      VoucherType="AuditLog"
+                      Columns="@gridColumns"
+                      OnLayoutChanged="HandleLayoutChanged" />
+</div>
 
 @code {
+    private async void ShowLayoutPopup()
+    {
+        await InvokeAsync(() =>
+        {
+            layoutManager?.ShowPopup();
+        });
+    }
 
-    DxGrid MyGrid;
-
+    private DxGrid? MyGrid;
     private List<AuditLog> auditLogs = new();
 
+    // Grid Layout Manager Reference
+    private GridLayoutpPopup? layoutManager;
 
-
+    // Define columns for the layout manager
+    private List<GridColumnLayout> gridColumns = new();
 
     protected override async Task OnInitializedAsync()
     {
+        InitializeGridColumns();
         await LoadAuditLogsAsync();
-       
+    }
+
+    private void InitializeGridColumns()
+    {
+        gridColumns = new List<GridColumnLayout>
+        {
+            new() { FieldName = "DateTime", Caption = "Date & Time", Visible = true, Width = 150, DisplayIndex = 0 },
+            new() { FieldName = "BranchName", Caption = "Branch", Visible = true, Width = 120, DisplayIndex = 1 },
+            new() { FieldName = "TableName", Caption = "Name", Visible = true, Width = 150, DisplayIndex = 2 },
+            new() { FieldName = "VoucherType", Caption = "Voucher", Visible = true, Width = 120, DisplayIndex = 3 },
+            new() { FieldName = "Operations", Caption = "Operation", Visible = true, Width = 120, DisplayIndex = 4 },
+            new() { FieldName = "Amount", Caption = "Amount", Visible = true, Width = 120, DisplayIndex = 5 },
+            new() { FieldName = "Remarks", Caption = "Remarks", Visible = true, Width = 200, DisplayIndex = 6 },
+            new() { FieldName = "CreatedBy", Caption = "User", Visible = true, Width = 120, DisplayIndex = 7 }
+        };
+    }
+
+    // ✅ FIXED: This callback now properly triggers UI update
+    private async Task HandleLayoutChanged(List<GridColumnLayout> updatedLayout)
+    {
+        gridColumns  = updatedLayout;
+        // Force the grid to re-render with new layout
+        await InvokeAsync(StateHasChanged);
+        
+     
     }
 
     private async Task LoadAuditLogsAsync()
@@ -104,7 +156,7 @@
         LoadingService.Show();
         try
         {
-           var  CurrentYearId = YearStatechangeService.SelectedYearId;
+            var CurrentYearId = YearStatechangeService.SelectedYearId;
             auditLogs = (await AuditLogService.GetLatestAsync())
                 .Where(a => a.YearId == CurrentYearId)
                 .ToList();
@@ -118,8 +170,4 @@
             LoadingService.Hide();
         }
     }
-
-  
-
-  
 }
