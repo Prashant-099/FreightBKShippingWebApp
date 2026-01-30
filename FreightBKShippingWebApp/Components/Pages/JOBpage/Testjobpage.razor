@@ -1,4 +1,5 @@
 ﻿@page "/jobimport"
+@using FreightBKShippingWebApp.Components.Pages.PurchasePage
 @using FreightBKShippingWebApp.Components.Pages.TestPage
 @using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Services
@@ -26,7 +27,7 @@
     }
 </style>
 
-<!-- Grid Component -->
+    <!-- Grid Component -->
 <DxGrid TItem="Job"
         Data="@jobList"
         @ref="MyGrid"
@@ -121,7 +122,7 @@
                 <DxButton RenderStyle="ButtonRenderStyle.Link"
                           IconCssClass="bi bi-file-earmark-diff-fill"
                           SizeMode="SizeMode.Medium"
-                          Click="@(() => OpenPopup((Job)cellContext.DataItem))" />
+                              Click="@(() => OpenAddContainerPopup((Job)cellContext.DataItem))" />
 
                     <DxButton RenderStyle="ButtonRenderStyle.Link"
                               IconCssClass="bi bi-three-dots"
@@ -133,7 +134,7 @@
 
         <DxGridDataColumn FieldName="JobStatus" Caption="Status" TextAlignment="GridTextAlignment.Right" MinWidth="100"
                           Visible="@GetColumnVisibility("JobStatus")"
-                          Width="@GetColumnWidth("JobStatus")">
+                          Width="@GetColumnWidth("JobStatus")" >
             <CellDisplayTemplate Context="cellContext">
                 @{
                     var statusId = (int?)cellContext.Value;
@@ -367,7 +368,9 @@
 
     </div>
 }
+
 <JobAddEditPage @ref="popup" OnSaved="LoadJobsAsync" JobType="@JobType" />
+
 <ConfirmationDialog />
 
 <!-- ✅ REUSABLE PDF IMPORT MODAL -->
@@ -383,7 +386,10 @@
                 SuccessCardClass="border-success" />
 
 <AddContainerJob @ref="addContainerJob"></AddContainerJob>
+
 <FreightBKShippingWebApp.Components.Pages.TestPage.BillAddEditPage2 @ref="billAddEditPage" />
+
+<FreightBKShippingWebApp.Components.Pages.PurchasePage.PurchaseAddEditPage @ref="purchasaddedit"></FreightBKShippingWebApp.Components.Pages.PurchasePage.PurchaseAddEditPage>
 
 <DxContextMenu @ref="voucherMenu" ItemClick="@OnMenuItemClick">
     <Items>
@@ -407,17 +413,59 @@
     private Job selectedJob;
 
     private List<Voucher> VoucherList = new();
+    // void OnMenuItemClick(ContextMenuItemClickEventArgs args)
+    // {
+
+    //     var id = int.Parse(args.ItemInfo.Name);
+    //     var selectedVoucher = VoucherList.FirstOrDefault(v => v.VoucherId == id);
+
+    //     if (selectedVoucher != null)
+    //     {
+    //         OpenBilleditPopup(selectedJob, selectedVoucher);
+    //     }
+    // }
+
     void OnMenuItemClick(ContextMenuItemClickEventArgs args)
     {
-
         var id = int.Parse(args.ItemInfo.Name);
         var selectedVoucher = VoucherList.FirstOrDefault(v => v.VoucherId == id);
 
-        if (selectedVoucher != null)
+        if (selectedVoucher == null)
+            return;
+
+        // 👇 YAHI MAIN LOGIC HAI
+        if (selectedVoucher.VoucherName
+                .Equals("Purchase", StringComparison.OrdinalIgnoreCase))
         {
+            // 👉 Purchase hai → Purchase popup
+            Openpurchaseadddedit(selectedJob, selectedVoucher);
+        }
+        else
+        {
+            // 👉 baki sab → normal bill popup
             OpenBilleditPopup(selectedJob, selectedVoucher);
         }
     }
+
+    //===================================================================================
+    
+    PurchaseAddEditPage purchasaddedit;
+    async Task Openpurchaseadddedit(Job job, Voucher voucher)
+    {
+        var bill = new Bill
+        {
+            BillJobId = job.JobId,
+            BillJobNo = job.JobNo,
+            BillJobType = job.JobType,
+            BillPartyId = job.JobPartyId ?? 0,
+            BillBranchId = job.JobBranchId ?? 0,
+            BillVoucherId = voucher.VoucherId
+        };
+
+        purchasaddedit.Show(bill);
+    }
+
+    //===================================================================================
     BillAddEditPage2 billAddEditPage;
     async Task OpenBilleditPopup(Job job, Voucher voucher)
     {
@@ -435,9 +483,11 @@
     }
 
     AddContainerJob addContainerJob;
-    void OpenPopup(Job job)
+    Job job = new();
+    void OpenAddContainerPopup(Job selectedJob)
     {
-        addContainerJob?.Show(job);
+        job = selectedJob;
+        addContainerJob?.OpenPopup(selectedJob);
     }
     // ./
     private List<Job> jobList = new();

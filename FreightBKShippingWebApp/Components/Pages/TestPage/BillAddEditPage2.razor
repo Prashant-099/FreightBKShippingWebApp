@@ -385,13 +385,13 @@
 
                                 <DxFormLayoutItem Caption="Bill No" ColSpanMd="3">
                                     <ChildContent Context="ctx">
-                        <DxTextBox @bind-Text="EditModel.BillNo" ReadOnly="BillnoVisible" />
+                                <DxTextBox @bind-Text="EditModel.BillNo" ReadOnly="BillnoVisible" />
                                     </ChildContent>
                                 </DxFormLayoutItem>
                                 <DxFormLayoutItem Caption="Bill Date" ColSpanMd="3">
                                     <ChildContent Context="ctx">
                                             <DxDateEdit @bind-Date="EditModel.BillDate" ShowValidationIcon="true" Format="dd-MM-yyyy" />
-                        <ValidationMessage For="@(() => EditModel.BillDate)" />
+                                             <ValidationMessage For="@(() => EditModel.BillDate)" />
                                     </ChildContent>
                                 </DxFormLayoutItem>
                                 <DxFormLayoutItem Caption="Bill Due Date" ColSpanMd="3">
@@ -597,7 +597,7 @@
                                         </DxGrid>
                                         </div> *@
 
-                        <div class="bill-grid-wrapper">
+                         <div class="bill-grid-wrapper">
                             <DxGrid Data="@BillDetails.OrderBy(x => x.BillDetailSno)"
                                     TItem="BillDetail"
                                     @ref="DetailGrid"
@@ -616,90 +616,6 @@
                                     ColumnResizing="Grid_ColumnResizing"
                                     PageSize="10"
                                     CssClass="fixed-height-grid mobile-grid" >
-@* 
-                                            <ToolbarTemplate Context="gridToolbarContext">
-                                                <DxToolbar>
-
-                                                    <Items>
-                                                        <DxToolbarItem BeginGroup="true">
-                                                            <Template Context="groupActions">
-                                                                <div class="d-flex align-items-center gap-2">
-                                                                   @*  <DxButton RenderStyle="ButtonRenderStyle.Success"
-                                                                    @onclick="New_Click">
-                                                                        <i class="bi bi-plus"></i>
-                                                                    </DxButton>
-                                                                    <DxButton RenderStyle="ButtonRenderStyle.Danger"
-                                                                    @onclick="Revert_Click">
-                                                                        <i class="bi bi-trash"></i>
-                                                                    </DxButton> *@
-                                                                   @* <DxButton RenderStyle="ButtonRenderStyle.Primary"
-                                                                    @onclick="ColumnChooserButton_Click">
-                                                                        <i class="bi bi-list-columns"></i>
-                                                                    </DxButton> *@
-                                                                   @*  <DxButton RenderStyle="ButtonRenderStyle.Success"
-                                                                    @onclick="ShowServicePopup" CssClass="service-plus-button">
-                                                                        <i class="bi bi-plus"></i>
-                                                                    </DxButton> 
-                                                                </div>
-                                                            </Template>
-                                                        </DxToolbarItem>
-                                                        @*  <DxToolbarItem Text="" IconCssClass="bi bi-plus" RenderStyle="ButtonRenderStyle.Success" Click="New_Click" />
-                                                        <DxToolbarItem Type="Spacer" />
-                                                        <DxToolbarItem Text="" IconCssClass="bi bi-trash" RenderStyle="ButtonRenderStyle.Danger" Click="Revert_Click" />
-                                                        <DxToolbarItem Type="Spacer" />
-                                                        <DxToolbarItem Text="" RenderStyle="ButtonRenderStyle.Primary" IconCssClass="bi bi-list-columns" Click="ColumnChooserButton_Click" />
-                                                        <DxToolbarItem Type="Spacer" />
-                                                        <DxToolbarItem Text="" IconCssClass="bi bi-plus" CssClass="service-plus-button" Click="@ShowServicePopup" /> *@
-                                                           @*  <DxToolbarItem BeginGroup="true" IconCssClass="bi bi-gear-wide-connected" >
-                                                                <Template Context="Cyx">
-
-                                                                    <DxComboBox Data="@availableGridLayouts"
-                                                                                Value="@selectedGridLayoutId"
-                                                                                ValueExpression="@(() => selectedGridLayoutId)"
-                                                                                ValueChanged="@((int? value) => OnGridLayoutSelectedAsync(value))"
-                                                                                ValueFieldName="GridLayoutId"
-                                                                                TextFieldName="GridLayoutName"
-                                                                                NullText="Default View"
-                                                                                ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
-                                                                                CssClass="layout-combobox" />
-
-                                                                </Template>
-
-                                                            </DxToolbarItem>
-                                                            <DxToolbarItem BeginGroup="true" Context="cfdr"
-                                                                           RenderStyleMode="ToolbarItemRenderStyleMode.Contained"
-                                                                           RenderStyle="ButtonRenderStyle.Secondary"
-                                                                           IconCssClass="bi bi-gear-wide-connected">
-                                                                <Items>
-                                                                    <DxToolbarItem Text="Save Current Layout"
-                                                                                   RenderStyle="ButtonRenderStyle.Primary"
-                                                                                   IconCssClass="bi bi-floppy"
-                                                                                   Click="ShowSaveGridLayoutDialog" />
-
-                                                                    <DxToolbarItem Text="Create New Layout"
-                                                                                   RenderStyle="ButtonRenderStyle.Success"
-                                                                                   IconCssClass="bi bi-plus-square"
-                                                                                   Click="ShowNewGridLayoutDialog" />
-
-                                                                    @if (selectedGridLayoutId.HasValue)
-                                                                    {
-                                                                        <DxToolbarItem Text="Delete Current Layout"
-                                                                                       RenderStyle="ButtonRenderStyle.Danger"
-                                                                                       IconCssClass="bi bi-trash"
-                                                                                       Click="DeleteCurrentGridLayout" />
-                                                                    }
-
-                                                                </Items>
-                                                            </DxToolbarItem> 
-
-
-
-
-
-                                                        </Items>
-                                                    </DxToolbar>
-                                            </ToolbarTemplate> *@
-
                                             <Columns>
 
                                                 <!-- Action Buttons Column -->
@@ -708,64 +624,41 @@
                                                  SaveButtonVisible="false" NewButtonVisible="false" Visible="@GetGridColumnVisibility("Actions")" >
 
                                                     <HeaderCaptionTemplate>
-                                            <DxButton IconCssClass="bi bi-plus-circle-dotted"
-                                                      RenderStyle="ButtonRenderStyle.Link"
-                                                      Click="New_Click" />
 
-                                            <DxButton IconCssClass="bi bi-arrow-clockwise"
-                                                      RenderStyle="ButtonRenderStyle.Link"
-                                                      Click="Revert_Click" />
-                                            <DxButton RenderStyle="ButtonRenderStyle.Link"
-                                                      IconCssClass="bi bi-three-dots"
-                                                      SizeMode="SizeMode.Medium"
-                                                   />
+                                                            <DxButton IconCssClass="bi bi-plus-circle-dotted"
+                                                                      RenderStyle="ButtonRenderStyle.Link"
+                                                                      Click="New_Click" />
+
+                                                            <DxButton IconCssClass="bi bi-arrow-clockwise"
+                                                                      RenderStyle="ButtonRenderStyle.Link"
+                                                                      Click="Revert_Click" />
+
+                                                            <DxButton RenderStyle="ButtonRenderStyle.Link"
+                                                                      IconCssClass="bi bi-three-dots"
+                                                                      SizeMode="SizeMode.Medium"/>
+
                                                     </HeaderCaptionTemplate>
 
                                                     <CellEditTemplate>
                                                          @{
                                                             var rowIndex = BillDetails.FindIndex(x => x.BillDetailSno == ((BillDetail)context.DataItem).BillDetailSno);
                                                         }
-                                                      @*   <div class="btn-group btn-group-sm"> *@
-                                                           @*  <button type="button"
-                                                            class="btn btn-danger btn-sm btn-action"
-                                                            @onclick="@(() => DeleteDataItem(context.DataItem))"
-                                                            title="Remove Row">
-                                                                <i class="bi bi-x"></i>
-                                                            </button> *@
-
-
-                                                <DxButton Enabled="false"
+                                                        <DxButton Enabled="false"
                                                          
-                                                          CssClass="grid-disabled-button"
-                                                          IconCssClass="bi bi-trash"
-                                                          RenderStyle="ButtonRenderStyle.Link" />
+                                                                  CssClass="grid-disabled-button"
+                                                                  IconCssClass="bi bi-trash"
+                                                                  RenderStyle="ButtonRenderStyle.Link" />
 
-                                            <DxButton IconCssClass="bi bi-plus-lg"
-                                                      RenderStyle="ButtonRenderStyle.Link"
-                                                      Click="ShowServicePopup" />
+                                                        <DxButton IconCssClass="bi bi-plus-lg"
+                                                          RenderStyle="ButtonRenderStyle.Link"
+                                                          Click="ShowServicePopup" />
                                                        @*  </div> *@
                                                     </CellEditTemplate>
 
                                                     <CellDisplayTemplate>
                                                         @{
                                                             var rowIndex = BillDetails.FindIndex(x => x.BillDetailSno == ((BillDetail)context.DataItem).BillDetailSno);
-                                                        }
-                                                        @* <div class="btn-group btn-group-sm"> *@
-                                                            @* <button type="button"
-                                                                        class="btn btn-success btn-sm btn-action"
-                                                                        @onclick="() => AddRowAfter(rowIndex)"
-                                                                        title="Add Row">
-                                                                    <i class="bi bi-plus"></i>
-                                                                </button> *@
-
-                                                            @* <button type="button"
-                                                            class="btn btn-danger btn-sm btn-action"
-                                                            @onclick="@(() => DeleteDataItem(context.DataItem))"
-                                                            title="Remove Row">
-                                                                <i class="bi bi-x"></i>
-                                                            </button> *@
-
-
+                                                        }        
                                                 <DxButton IconCssClass="bi bi-trash"
                                                           CssClass="grid-delete-btn"
                                                           RenderStyle="ButtonRenderStyle.Link"
@@ -775,14 +668,7 @@
                                                       RenderStyle="ButtonRenderStyle.Link"
                                                       Click="ShowServicePopup" />
 
-                                           
-                                                            @* <button type="button"
-                                                                        class="btn btn-info btn-sm btn-action"
-                                                                        @onclick="() => SearchProduct(rowIndex)"
-                                                                        title="Search Product">
-                                                                    <i class="bi bi-search"></i>
-                                                                </button> *@
-                                                       @*  </div> *@
+                                                
                                                     </CellDisplayTemplate>
                                                     <!-- Is RCM Applicable -->
 
@@ -796,8 +682,10 @@
                                                 </DxGridDataColumn>
 
                                                 
-                                                <DxGridDataColumn TextAlignment="GridTextAlignment.Left" FieldName="BillDetailProductId" Caption="Service Name" Width="@GetGridColumnWidth("BillDetailProductId")" Visible="@GetGridColumnVisibility("BillDetailProductId")" >
-                                        <!-- ✅ CellDisplayTemplate - NO CASTING -->
+                                       <DxGridDataColumn TextAlignment="GridTextAlignment.Left" FieldName="BillDetailProductId" Caption="Service Name" Width="@GetGridColumnWidth("BillDetailProductId")" Visible="@GetGridColumnVisibility("BillDetailProductId")" >
+                                      
+                                           
+                                           <!-- ✅ CellDisplayTemplate - NO CASTING -->
                                         <CellDisplayTemplate>
                                             @{
                                                 var serviceId = (int)context.Value;
@@ -806,75 +694,25 @@
                                             <span>@(selectedService?.ServiceName ?? "")</span>
                                         </CellDisplayTemplate>
 
+                                      
                                         <!-- ✅ CellEditTemplate -->
-                                        <CellEditTemplate Context="editcontext">
-                                            @{
-                                                var service = (BillDetail)editcontext.EditModel;
-                                            }
-                                            <DxComboBox Data="@ServiceList"
-                                                        TValue="int"
-                                                        TData="Service"
-                                                        Value="@service.BillDetailProductId"
-                                                        ValueExpression="@(() => service.BillDetailProductId)"
-                                                        TextFieldName="ServiceName"
-                                                        ValueFieldName="ServiceId"
-                                                        NullText="Select a Service"
-                                                        AllowUserInput="true"
-                                                        SearchFilterCondition="ListSearchFilterCondition.Contains" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
-                                                        ValueChanged="@(newServiceId => OnServiceSelected(newServiceId, service))" />
-                                        </CellEditTemplate>
-                                                    @* <EditSettings>
-                                                        <DxComboBoxSettings Data="@ServiceList" NullText="Select a Service" 
-                                                                            TextFieldName="ServiceName"
-                                                                            ValueFieldName="ServiceId"
-                                                                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
-                                                                            
-                                                        SearchMode="ListSearchMode.AutoSearch"
-                                                        SearchFilterCondition="ListSearchFilterCondition.Contains" />
-                                                    </EditSettings> *@
-                                        @* <EditSettings> added by dhruv new
-                                            <DxComboBox Data="@ServiceList" NullText="Select a Service" TData="Service" TValue="int"
-                                                        TextFieldName="ServiceName"
-                                                        ValueFieldName="ServiceId"
-                                                        ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
-                                                        SearchMode="ListSearchMode.AutoSearch"
-                                                        SearchFilterCondition="ListSearchFilterCondition.Contains" />
-                                        </EditSettings> *@
-                                                    @*   <EditSettings>
-                                                        <DxComboBoxSettings />
-                                                    </EditSettings> *@
-
-
-                                                  @*     <CellEditTemplate Context="cell">
-                                                        @{
-                                                            var item = (BillDetail)cell.DataItem;
-                                                        }
-                                                        <DxComboBox TData="Service" TValue="int"
-                                                                    Data="@ServiceList"
-                                                                    TextFieldName="ServiceName"
-                                                                    ValueFieldName="ServiceId"
-                                                                    Width="100%"
-                                                                    SearchMode="ListSearchMode.AutoSearch"
-                                                                    SearchFilterCondition="ListSearchFilterCondition.StartsWith"
-                                                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
-                                                                    Value="@item.BillDetailProductId"
-                                                                    ValueExpression="@( () =>item.BillDetailProductId )"
-                                                                    ValueChanged="@((int newVal) => OnServiceSelected(newVal, item ))" />
-                                                    </CellEditTemplate>
-                     *@
-                                                    <!-- Toolbar / Layout selector combo: make ValueChanged use discard assignment -->
-                                                    @* 
-                                                    Data="@VoucherList"
-                                                    TextFieldName="VoucherName"
-                                                    ValueFieldName="VoucherId"
-                                                    AllowUserInput="true"
-                                                    NullText="-- Select Account --"
-                                                    Value="@EditModel.BillVoucherId"
-                                                    ValueChanged="@((int voucherId) => OnvoucherChanged(EditModel, voucherId))"
-                                                    ValueExpression="@( () => EditModel.BillVoucherId )"
-                                                    SearchMode="ListSearchMode.AutoSearch"
-                                                    SearchFilterCondition="ListSearchFilterCondition.StartsWith"
-                                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />*@
+                                            <CellEditTemplate Context="editcontext">
+                                                @{
+                                                    var service = (BillDetail)editcontext.EditModel;
+                                                }
+                                                <DxComboBox Data="@ServiceList"
+                                                            TValue="int"
+                                                            TData="Service"
+                                                            Value="@service.BillDetailProductId"
+                                                            ValueExpression="@(() => service.BillDetailProductId)"
+                                                            TextFieldName="ServiceName"
+                                                            ValueFieldName="ServiceId"
+                                                            NullText="Select a Service"
+                                                            AllowUserInput="true"
+                                                            SearchFilterCondition="ListSearchFilterCondition.Contains" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                                            ValueChanged="@(newServiceId => OnServiceSelected(newServiceId, service))" />
+                                            </CellEditTemplate>
+                                                    
 
 
                                                 </DxGridDataColumn>
@@ -2852,7 +2690,6 @@
     }
 
     void Grid_EditModelSaving(GridEditModelSavingEventArgs e)
-
     {
         var editableDetail = (BillDetail)e.EditModel;
         var detail = (BillDetail)e.DataItem;

@@ -1,34 +1,897 @@
-﻿@using FreightBKShippingWebApp.Model
+﻿@page "/dxa"
+@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Services
+@inject ToasteService ToastService
+@* <DxButton Text="Show Menu" Click="@OpenPopup" /> *@
+<style>
+    .responsive-popup .dx-popup-content {
+        max-height: 75vh;
+        overflow: hidden;
+    }
 
-<DxPopup @bind-Visible="IsVisible"
-         Width="500px"
-         HeaderText="Job Details"
-         ShowCloseButton="true">
+    .popup-content-wrapper {
+        height: calc(95vh - 60px);
+        overflow-y: auto;
+        padding: 15px;
+    }
 
-        @if (JobData != null)
-        {
-            <p><b>Job ID:</b> @JobData.JobId</p>
-            <p><b>Branch:</b> @JobData.BranchName</p>
-            <p><b>Branch:</b> @JobData.JobNo</p>
-        }
+    .job-info-section {
+        background: #f8f9fa;
+        padding: 10px;
+        border-radius: 5px;
+        margin-bottom: 15px;
+    }
 
+    .responsive-popup .dx-formlayout-group {
+        margin-bottom: 10px;
+    }
+
+    .responsive-popup .dx-button {
+        margin: 2px;
+    }   
+
+
+
+    .fixed-header-popup .dx-popup-content {
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        height: 95vh;
+    }
+
+    .fixed-job-info {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: #f8f9fa;
+        border-bottom: 2px solid #dee2e6;
+        padding: 15px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .job-info-value {
+        font-weight: 600;
+        color: #495057;
+        padding: 5px 10px;
+        background: white;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        min-height: 32px;
+        display: flex;
+        align-items: center;
+    }
+
+    .scrollable-content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 15px;
+        height: calc(85vh - 120px); /* Adjust based on fixed header height */
+    }
+
+    .fixed-header-popup .dx-formlayout-group {
+        margin-bottom: 20px;
+    }
+
+    /* Optional: Make the fixed header more compact on smaller screens */
+    @@media (max-width: 768px) {
+        .fixed-job-info
+
+    {
+        padding: 10px;
+    }
+
+    .job-info-value {
+        font-size: 14px;
+        padding: 3px 8px;
+        min-height: 28px;
+    }
+
+    }
+</style>
+
+<DxPopup @bind-Visible="popupVisible"
+         HeaderText="Navigation Menu"
+        
+         MaxWidth="1450px"
+         MaxHeight="95vh"
+         Scrollable="true"
+         CssClass="responsive-popup"
+         ShowFooter="false">
+
+    <BodyContentTemplate Context="addcontainerpoup">
+              <div class="fixed-job-info">
+        <DxFormLayout>
+
+            <DxFormLayoutItem Caption="Job Type" ColSpanMd="2" CaptionPosition="CaptionPosition.Vertical">
+                @* <DxTextBox @bind-Text="job.JobType"></DxTextBox> *@
+                <Template>
+                    @job.JobType
+                </Template>
+            </DxFormLayoutItem>
+            <DxFormLayoutItem Caption="Job No" ColSpanMd="2" CaptionPosition="CaptionPosition.Vertical">
+                @* <DxTextBox @bind-Text="job.JobNo"></DxTextBox> *@
+                <Template>
+                    @job.JobNo
+                </Template>
+            </DxFormLayoutItem>
+            <DxFormLayoutItem Caption="Job Date" ColSpanMd="2" CaptionPosition="CaptionPosition.Vertical">
+                @* <DxDateEdit @bind-Date="job.JobDate"
+                            DisplayFormat="dd-MM-yyyy" /> *@
+                <Template>
+                    @job.JobDate.ToString("dd-MM-yyyy")
+                </Template>
+            </DxFormLayoutItem>
+            <DxFormLayoutItem Caption="Client Name" ColSpanMd="4" CaptionPosition="CaptionPosition.Vertical">
+                @* <DxTextBox @bind-Text="job.Partyname"></DxTextBox> *@
+                <Template>
+                    @job.Partyname
+                </Template>
+            </DxFormLayoutItem>
+            <DxFormLayoutItem Caption="No of Container" ColSpanMd="2" CaptionPosition="CaptionPosition.Vertical">
+                @* <DxTextBox @bind-Text="job.JobContainer20Ft"></DxTextBox> *@
+                <Template>
+                    @job.JobContainer20Ft
+                </Template>
+            </DxFormLayoutItem>
+            </DxFormLayout>
+        </div>
+             <div class="scrollable-content">
+<DxFormLayout>
+            <DxFormLayoutGroup Caption="Non-Transport"
+                               AnimationType="LayoutAnimationType.Slide"
+                               ExpandButtonDisplayMode="GroupExpandButtonDisplayMode.Start"
+                               Expanded="nonTransportExpanded"
+                               ExpandedChanged="OnNonTransportExpandedChanged"
+                               Context="ctxg1">
+
+                <!-- Grid -->
+                <DxFormLayoutItem ColSpanMd="12">
+                    <DxGrid Data="@Rows"
+                            TItem="Lr"
+                            @ref="Grid"
+                            KeyFieldName="SrNo"
+                            EditMode="GridEditMode.EditCell"
+                            EditOnKeyPress="true"
+                            ShowAddNewButton="false"
+                            EditModelSaving="Grid_EditModelSaving"
+                            CustomizeEditModel="Grid_CustomizeEditModel"
+                            AllowSort="false"
+                            ShowFilterRow="false"
+                            ShowGroupPanel="false"
+                            PageSize="5" ColumnResizeMode="GridColumnResizeMode.ColumnsContainer">
+
+                                            <Columns>
+
+                                                <!-- Action Buttons Column -->
+                                     <DxGridCommandColumn Width="90px" EditButtonVisible="false" FixedPosition="GridColumnFixedPosition.Left"
+                                                         CancelButtonVisible="false" 
+                                                 SaveButtonVisible="false" NewButtonVisible="false"  >
+
+                                                    <HeaderCaptionTemplate Context="dendercaptioncontext">
+
+                                                            <DxButton IconCssClass="bi bi-plus-circle-dotted"
+                                                                      RenderStyle="ButtonRenderStyle.Link"
+                                                                      Click="New_Click" style="padding:2px"/>
+
+                                                            <DxButton IconCssClass="bi bi-arrow-clockwise"
+                                                                      RenderStyle="ButtonRenderStyle.Link"
+                                              Click="Revert_Click" style="padding:2px" />
+
+                                                            <DxButton RenderStyle="ButtonRenderStyle.Link"
+                                                                      IconCssClass="bi bi-three-dots"
+                                              SizeMode="SizeMode.Medium" style="padding:2px" />
+
+                                                    </HeaderCaptionTemplate>
+
+                                <CellEditTemplate Context="editContext">
+                                                         @{
+                                        var rowIndex = Rows.FindIndex(x => x.LrNo == ((Lr)editContext.DataItem).LrNo);
+                                                        }
+                                                 
+
+
+                                                        <DxButton Enabled="false"
+                                                         
+                                                                  CssClass="grid-disabled-button"
+                                                                  IconCssClass="bi bi-trash"
+                                                                  RenderStyle="ButtonRenderStyle.Link" />
+
+                                                        @* <DxButton IconCssClass="bi bi-plus-lg"
+                                                          RenderStyle="ButtonRenderStyle.Link"
+                                                          Click="ShowServicePopup" /> *@
+                                                       @*  </div> *@
+                                                    </CellEditTemplate>
+
+                                <CellDisplayTemplate Context="displayContext" >
+                                                   @{
+                                                          var rowIndex = Rows.FindIndex(x => x.LrNo == ((Lr)displayContext.DataItem).LrNo);
+                                                   }        
+                                                <DxButton IconCssClass="bi bi-trash"
+                                                          CssClass="grid-delete-btn"
+                                                          RenderStyle="ButtonRenderStyle.Link"
+                                              Click="@(() => DeleteDataItem(displayContext.DataItem))" />
+
+                                          @*   <DxButton IconCssClass="bi bi-plus-lg"
+                                                      RenderStyle="ButtonRenderStyle.Link"
+                                                      Click="ShowServicePopup" /> *@
+
+                                           
+                                                
+                                                    </CellDisplayTemplate>
+                                                    <!-- Is RCM Applicable -->
+
+
+                                                </DxGridCommandColumn>
+                                                    <DxGridDataColumn FieldName="SrNo"
+                                                                      Caption="Sr No"
+                                              Width="40px" FixedPosition="GridColumnFixedPosition.Left">
+                                                        <EditSettings>
+                                                            <DxSpinEditSettings 
+                                                               ShowSpinButtons="false" />
+                                                        </EditSettings>
+                                                    </DxGridDataColumn>
+
+                            <DxGridDataColumn FieldName="LrContainer1"
+                                              Caption="Container No" />
+
+                                                    <!-- LR Date -->
+                            <DxGridDataColumn FieldName="LrNtDate"
+                                                                      Caption="Date"
+                                                                      DisplayFormat="dd-MM-yyyy" />
+                                                    <!-- Vehicle -->
+                            <DxGridDataColumn FieldName="LrNtRfidSeal"
+                                              Caption="Rfid Seal" />
+
+                                                    <!-- From / To -->
+                            <DxGridDataColumn FieldName="LrNtQty"
+                                              Caption="Qty" />
+
+                            <DxGridDataColumn FieldName="LrNtInvNo"
+                                              Caption="Invoice No">
+                                <EditSettings>
+                                    <DxSpinEditSettings ShowSpinButtons="false" />
+                                </EditSettings>
+                            </DxGridDataColumn>
+
+                                                    <!-- Weight info -->
+                            <DxGridDataColumn FieldName="LrNtNetWt"
+                                              Caption="Net Wt">
+                                <EditSettings>
+                                    <DxSpinEditSettings ShowSpinButtons="false" />
+                                </EditSettings>
+                            </DxGridDataColumn>
+
+                            <DxGridDataColumn FieldName="LrNtUnit"
+                                                                      Caption="Net Unit" >
+                                <EditSettings>
+                                    <DxSpinEditSettings ShowSpinButtons="false" />
+                                </EditSettings>
+                            </DxGridDataColumn>
+
+                            <DxGridDataColumn FieldName="LrNtCbm"
+                                              Caption="CBM">
+                                <EditSettings>
+                                    <DxSpinEditSettings ShowSpinButtons="false" />
+                                </EditSettings>
+                            </DxGridDataColumn>
+                            <DxGridDataColumn FieldName="LrNtVehicleNo"
+                                              Caption="Vehicle No" Visible=false/>
+                            <DxGridDataColumn FieldName="LrNtTransporter"
+                                              Caption="Transporter" Visible=false />
+
+                            <DxGridDataColumn FieldName="LrNtGateOutDt"
+                                              Caption="Gate Out Dt" />
+                            <DxGridDataColumn FieldName="LrNtGateInDt"
+                                              Caption="Gate In Dt" />
+                            <DxGridDataColumn FieldName="LrNtDischargeDt"
+                                              Caption="Discharge Dt" />
+
+                                                    <!-- Billing -->
+                            <DxGridDataColumn FieldName="LrNtShipingBillNo"
+                                              Caption="Shiping BillNo" />
+
+                            <DxGridDataColumn FieldName="LrNtPickupDt"
+                                              Caption="Pickup Dt" />
+
+                                                    <!-- Payment Type -->
+                            <DxGridDataColumn FieldName="LrNtPickupLoc"
+                                              Caption="Pickup Location" />
+
+                                                    <!-- Remarks -->
+                                                    <DxGridDataColumn FieldName="LrRemarks"
+                                                                      Caption="Remarks" />
+                                                </Columns>
+                                          </DxGrid>
+                </DxFormLayoutItem>
+
+
+
+
+
+
+
+
+
+
+
+                <!-- Footer Buttons -->
+                <DxFormLayoutItem ColSpanMd="12">
+                    <div class="d-flex justify-content-between mt-3">
+                        <div>
+                            @* <DxButton Text="Refresh"
+                                      IconCssClass="dx-icon-refresh"
+                                     /> *@
+                            <DxButton Text="Import"
+                                      IconCssClass="dx-icon-upload"
+                                      CssClass="ms-2" />
+                            <DxButton Text="Download Format"
+                                      IconCssClass="dx-icon-download"
+                                      CssClass="ms-2" />
+                        </div>
+
+                        <div>
+                            <DxButton Text="Save"
+                                      IconCssClass="dx-icon-save"
+                                      RenderStyle="ButtonRenderStyle.Primary"
+                                      Click="SaveNT_Click" />   
+
+                            <DxButton Text="Close"
+                                      IconCssClass="dx-icon-close"
+                                      CssClass="ms-2"
+                                      RenderStyle="ButtonRenderStyle.Secondary"
+                                      Click="@(() => popupVisible = false)" />
+
+                        </div>
+                    </div>
+                </DxFormLayoutItem>
+
+            </DxFormLayoutGroup>
+
+
+            <DxFormLayoutGroup Caption="Details"
+                               AnimationType="LayoutAnimationType.Slide"
+                               ExpandButtonDisplayMode="GroupExpandButtonDisplayMode.Start"
+                               Expanded="detailsExpanded"
+                               ExpandedChanged="OnDetailsExpandedChanged" ColSpanMd="12">
+                    <!-- Basic LR Info -->
+                    <DxFormLayoutItem Caption="Challan/LR No" ColSpanMd="3">
+                        <DxTextBox @bind-Text="EditModel.LrNoStr" />
+                    </DxFormLayoutItem>
+
+                    <DxFormLayoutItem Caption="LR Date" ColSpanMd="3">
+                        <DxDateEdit @bind-Date="EditModel.LrNtDate" DisplayFormat="dd-MM-yyyy" />
+                    </DxFormLayoutItem>
+                    <DxFormLayoutItem Caption="Vehicle No" ColSpanMd="3">
+                        <DxTextBox @bind-Text="EditModel.LrNtVehicleNo" />
+                    </DxFormLayoutItem>
+                    <DxFormLayoutItem Caption="Payment Type" ColSpanMd="3">
+                        <DxTextBox @bind-Text="EditModel.LrPaymentType" />
+                    </DxFormLayoutItem>
+
+
+                 <DxFormLayoutGroup ColSpanMd="10" Decoration="FormLayoutGroupDecoration.None">
+
+                    <DxFormLayoutItem Caption="Bill To Party" ColSpanMd="6">
+                        <DxTextBox @bind-value="EditModel.LrPartyAccountId" />
+                    </DxFormLayoutItem>
+
+                     <DxFormLayoutItem Caption="From" ColSpanMd="3">
+                         @* <DxComboBox  /> *@
+                     </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="To" ColSpanMd="3">
+                            @* <DxComboBox  /> *@
+                        </DxFormLayoutItem>
+                    <DxFormLayoutItem Caption="Party Address" ColSpanMd="6">
+                        <DxTextBox @bind-value="EditModel.LrPartyAccountId" />
+                    </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="Product" ColSpanMd="3">
+                            @* <DxComboBox  /> *@
+                        </DxFormLayoutItem>
+
+                        <DxFormLayoutItem Caption="Pickup Location" ColSpanMd="3">
+                            <DxTextBox @bind-Text="EditModel.LrNtPickupLoc" />
+                        </DxFormLayoutItem>
+                    <DxFormLayoutItem Caption="Consignor" ColSpanMd="6">
+                        <DxTextBox @bind-value="EditModel.LrPartyAccountId" />
+                    </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="Gross Wt" ColSpanMd="3">
+                            <DxSpinEdit @bind-Value="EditModel.LrGrossWt" DisplayFormat="n2" />
+                        </DxFormLayoutItem>
+
+                        <DxFormLayoutItem Caption="Tare Wt" ColSpanMd="3">
+                            <DxSpinEdit @bind-Value="EditModel.LrTareWt" DisplayFormat="n2" />
+                        </DxFormLayoutItem>
+
+                       
+                 
+                    
+                    <DxFormLayoutItem Caption="Consignor Address" ColSpanMd="6">
+                        <DxTextBox @bind-value="EditModel.LrPartyAccountId" />
+                    </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="Load Wt" ColSpanMd="3">
+                            <DxSpinEdit @bind-Value="EditModel.LrLoadWt" DisplayFormat="n2" />
+                        </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="Charge Wt" ColSpanMd="3">
+                            <DxSpinEdit @bind-Value="EditModel.LrChargeQty" DisplayFormat="n2" />
+                        </DxFormLayoutItem>
+                       
+                    <DxFormLayoutItem Caption="Consignee" ColSpanMd="6">
+                        <DxTextBox @bind-value="EditModel.LrPartyAccountId" />
+                    </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="Custom 1" ColSpanMd="3">
+                            <DxTextBox @bind-Text="EditModel.LrCustom1" />
+                        </DxFormLayoutItem>
+
+                        <DxFormLayoutItem Caption="Custom 2" ColSpanMd="3">
+                            <DxTextBox @bind-Text="EditModel.LrCustom2" />
+                        </DxFormLayoutItem>
+
+                        @* <DxFormLayoutItem ColSpanMd="6"></DxFormLayoutItem> *@
+                    <DxFormLayoutItem Caption="Consignee Address" ColSpanMd="6">
+                        <DxTextBox @bind-value="EditModel.LrPartyAccountId" />
+                    </DxFormLayoutItem>
+
+                        <DxFormLayoutItem Caption="Custom 3" ColSpanMd="3">
+                            <DxTextBox @bind-Text="EditModel.LrCustom3" />
+                        </DxFormLayoutItem>
+
+                        <DxFormLayoutItem Caption="Custom 4" ColSpanMd="3">
+                            <DxTextBox @bind-Text="EditModel.LrCustom4" />
+                        </DxFormLayoutItem>
+            
+              
+                <!-- Weight & Quantity -->
+            
+               
+
+                <!-- Invoice & Shipping Details -->
+               
+
+              
+
+        
+
+                @* <DxFormLayoutItem Caption="Advance" ColSpanMd="4">
+                    <DxSpinEdit @bind-Value="EditModel.LrAdvanceBill" DisplayFormat="n2" />
+                </DxFormLayoutItem>
+
+                <DxFormLayoutItem Caption="Payment Type" ColSpanMd="4">
+                    <DxComboBox Data="@PaymentTypes"
+                                @bind-Value="EditModel.LrPaymentType"
+                                ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                </DxFormLayoutItem>
+
+                <DxFormLayoutItem Caption="Ref By" ColSpanMd="4">
+                    <DxTextBox @bind-Text="EditModel.LrRefBy" />
+                </DxFormLayoutItem> *@
+
+             
+                <!-- Custom Fields -->
+
+                
+
+           
+
+                    </DxFormLayoutGroup>
+                    <DxFormLayoutGroup ColSpanMd="2" Decoration="FormLayoutGroupDecoration.None">
+                        <DxFormLayoutItem Caption="Inv No" ColSpanMd="12">
+                            <DxTextBox @bind-Text="EditModel.LrNtInvNo" />
+                        </DxFormLayoutItem>
+                        @* <DxFormLayoutItem Caption="Inv Date" ColSpanMd="6">
+                    <DxDateEdit @bind-Date="EditModel.LrDate" />
+                </DxFormLayoutItem>
+                    <DxFormLayoutItem Caption="Inv Value" ColSpanMd="4">
+                        <DxSpinEdit @bind-Value="EditModel.value" DisplayFormat="n2" />
+                    </DxFormLayoutItem> *@
+                        @* <DxFormLayoutItem Caption="E-Way Bill No" ColSpanMd="4">
+                        <DxSpinEdit @bind-Value="EditModel" DisplayFormat="n2" />
+                    </DxFormLayoutItem> *@
+                        <DxFormLayoutItem Caption="E-Way Date" ColSpanMd="12">
+                            <DxDateEdit @bind-Date="EditModel.LrDate" />
+                        </DxFormLayoutItem>
+                        @* <DxFormLayoutItem Caption="GP/BE No" ColSpanMd="6">
+                        <DxTextBox @bind-Text="EditModel" />
+                    </DxFormLayoutItem> *@
+                        <!-- Pickup & Location Details -->
+                        <DxFormLayoutItem Caption="Pickup Date" ColSpanMd="12">
+                            <DxDateEdit @bind-Date="EditModel.LrNtPickupDt" DisplayFormat="dd-MM-yyyy" />
+                        </DxFormLayoutItem>
+                        @* <DxFormLayoutItem Caption="report Date" ColSpanMd="6">
+                    <DxDateEdit @bind-Date="EditModel." DisplayFormat="dd-MM-yyyy" />
+                </DxFormLayoutItem>
+                <DxFormLayoutItem Caption="Unload Date" ColSpanMd="6">
+                    <DxDateEdit @bind-Date="EditModel.un" DisplayFormat="dd-MM-yyyy" />
+                </DxFormLayoutItem>
+                <DxFormLayoutItem Caption="POD Rec. Date" ColSpanMd="6">
+                    <DxDateEdit @bind-Date="EditModel.un" DisplayFormat="dd-MM-yyyy" />
+                </DxFormLayoutItem>
+                    <DxFormLayoutItem Caption="Delivery Add" ColSpanMd="6">
+                        <DxTextBox @bind-Text="EditModel" />
+                    </DxFormLayoutItem> *@
+                    </DxFormLayoutGroup>
+                @* <!-- Remarks -->
+                <DxFormLayoutItem Caption="Remarks" ColSpanMd="12">
+                    <DxMemo @bind-Text="EditModel.LrRemarks" Rows="3" />
+                </DxFormLayoutItem> *@
+
+                <DxFormLayoutItem ColSpanMd="12">
+                    <div class="d-flex justify-content-end mt-3 gap-2">
+                        <DxButton Text="Save Details"
+                                  IconCssClass="dx-icon-save"
+                                  RenderStyle="ButtonRenderStyle.Primary"
+                                  Click="Save_Click" />
+
+                        <DxButton Text="Cancel"
+                                  IconCssClass="dx-icon-close"
+                                  RenderStyle="ButtonRenderStyle.Secondary"
+                                  Click="CancelDetails_Click" />
+
+                        <DxButton Text="Clear Form"
+                                  IconCssClass="dx-icon-clear"
+                                  RenderStyle="ButtonRenderStyle.Light"
+                                  Click="ClearDetails_Click" />
+                    </div>
+                </DxFormLayoutItem>
+            </DxFormLayoutGroup>
+
+        </DxFormLayout>
+   </div>
+    
+    </BodyContentTemplate>
 
 </DxPopup>
 
 @code {
-    bool IsVisible;
+    bool popupVisible = false;
+    Job job = new();
+    DxGrid Grid;
 
-    Job? JobData;
+    List<Lr> Rows = new();
+    private Lr EditModel { get; set; } = new();
+    private Dictionary<Lr, DataChange> UnsavedChanges { get; } = new();
+    private bool BatchItemsEnabled => UnsavedChanges.Count > 0 || (Grid?.IsEditing() ?? false);
+    record DataChange(DataChangeType Type, HashSet<string> ChangedFields);
+    bool nonTransportExpanded = true;   // Non-Transport open by default
+    bool detailsExpanded = false;
+    enum DataChangeType { Modification, Addition, Delete }
 
-    public void Show(Job job)
+    Lr SelectedRow;
+    private int? nextSNo = 1;
+
+    public async Task OpenPopup(Job selected)
     {
-        JobData = job;
-        IsVisible = true;
-        StateHasChanged();
+        job = selected;
+        popupVisible = true;
+        // nonTransportExpanded = true;
+        // detailsExpanded = false;
+        InitializeInvoiceDetails();
+
+        await InvokeAsync(StateHasChanged);
     }
 
-    public void Close()
+
+    void Grid_CustomizeElement(GridCustomizeElementEventArgs ea)
     {
-        IsVisible = false;
+       
+    }
+
+    void Grid_CustomizeEditModel(GridCustomizeEditModelEventArgs e)
+    {
+        EditModel = e.DataItem as Lr;
+    }
+
+
+    void Grid_EditModelSaving(GridEditModelSavingEventArgs e)
+    {
+        // var edited = (Lr)e.EditModel;
+        // var original = Rows.First(x => x.SrNo == edited.SrNo);
+
+        // Copy edited values back
+        // original.LrDate = edited.LrDate;
+        // original.LrVehicleId = edited.LrVehicleId;
+        // original.LrFromLocationId = edited.LrFromLocationId;
+        // original.LrToLocationId = edited.LrToLocationId;
+        // original.LrGrossWt = edited.LrGrossWt;
+        // original.LrLoadWt = edited.LrLoadWt;
+        // original.LrUnloadWt = edited.LrUnloadWt;
+        // original.LrRateBill = edited.LrRateBill;
+        // original.LrNetFreightBill = edited.LrNetFreightBill;
+        // original.LrPaymentType = edited.LrPaymentType;
+        // original.LrRemarks = edited.LrRemarks;
+
+        e.CopyChangesToDataItem();
+
+
+        // e.Cancel = true; prevent auto replace
+    }
+
+    private async Task SaveNT_Click()
+    {
+        // Agar edit mode chal raha hai to pehle usko cancel karo
+        if (Grid.IsEditing())
+            await Grid.CancelEditAsync();
+
+        // Filter rows that have any meaningful value filled
+        var validRows = Rows.Where(r =>
+            !string.IsNullOrWhiteSpace(r.LrContainer1) ||
+            r.LrNtDate != null ||
+            !string.IsNullOrWhiteSpace(r.LrNtRfidSeal) ||
+            (r.LrNtQty > 0) ||
+            !string.IsNullOrWhiteSpace(r.LrNtInvNo) ||
+            (r.LrNtNetWt > 0) ||
+            !string.IsNullOrWhiteSpace(r.LrNtUnit) ||
+            !string.IsNullOrWhiteSpace(r.LrRemarks)
+        ).ToList();
+
+        // Agar koi valid row nahi hai to warning do
+        if (!validRows.Any())
+        {
+            Console.WriteLine("No valid data to save.");
+            return;
+        }
+
+        try
+        {
+            foreach (var row in validRows)
+            {
+                // Required/Default field values set karo (agar nahi set hai to)
+                if (row.LrCompanyId == 0)
+                    row.LrCompanyId = 1;
+
+                if (row.LrAddedByUserId == 0)
+                    row.LrAddedByUserId = 1;
+
+                if (row.LrVoucherId == 0)
+                    row.LrVoucherId = job.JobId;
+
+                if (row.LrPartyAccountId == 0)
+                    row.LrPartyAccountId = 1;
+
+                if (row.LrSupplierAccountId == 0)
+                    row.LrSupplierAccountId = 1;
+
+                // Created/Updated timestamps
+                if (row.LrId == 0)
+                    row.LrCreated = DateTime.UtcNow;
+
+                row.LrUpdated = DateTime.UtcNow;
+            }
+
+            // API call ya service call to save rows
+            // await LrService.SaveAsync(validRows);
+
+            Console.WriteLine($"Saved {validRows.Count} valid rows out of {Rows.Count} total.");
+
+            // Optional: success message popup / toast
+            // await ShowToast("Data saved successfully!");
+
+            // Popup close if required
+            // popupVisible = false;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error while saving: {ex.Message}");
+            // Toast for error
+            // await ShowToast("Error saving data.");
+        }
+    }
+
+
+    private async Task New_Click()
+    {
+        if (Grid.IsEditing())
+            await Grid.CancelEditAsync();
+
+        int nextSrNo = Rows.Any() ? Rows.Max(x => x.SrNo) + 1 : 1;
+
+        Rows.Add(new Lr { SrNo = nextSrNo });
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+
+
+    async Task Revert_Click()
+    {
+        await Grid.CancelEditAsync();
+        // await ClearUnsavedChangesAsync();
+        InitializeInvoiceDetails();
+    }
+
+    private void InitializeInvoiceDetails()
+    {
+        Rows = Enumerable.Range(1, 5)
+            .Select(i => new Lr { SrNo = i })
+            .ToList();
+    }
+
+
+
+    async Task DeleteDataItem(object dataItem)
+    {
+        var detail = (Lr)dataItem;
+        Rows.Remove(detail);
+
+        // Re-assign SrNo sequentially
+        int i = 1;
+        foreach (var row in Rows)
+            row.SrNo = i++;
+
+        nextSNo = i;
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    // Payment type options
+    List<string> PaymentTypes = new() { "To Pay", "Paid", "To be Billed" };
+
+    // Updated Save_Click method with all new fields
+    private async Task Save_Click()
+    {
+        if (Grid.IsEditing())
+            await Grid.CancelEditAsync();
+
+        // Filter rows that have meaningful data
+        var validRows = Rows
+            .Where(r => r.LrVehicleId > 0 ||
+                       r.LrFromLocationId > 0 ||
+                       r.LrToLocationId > 0 ||
+                       r.LrDate.HasValue ||
+                       r.LrNtDate.HasValue ||
+                       (r.LrGrossWt ?? 0) > 0 ||
+                       r.LrLoadWt > 0 ||
+                       r.LrUnloadWt > 0 ||
+                       r.LrRateBill > 0 ||
+                       r.LrNetFreightBill > 0 ||
+                       !string.IsNullOrWhiteSpace(r.LrPaymentType) ||
+                       !string.IsNullOrWhiteSpace(r.LrRemarks) ||
+                       !string.IsNullOrWhiteSpace(r.LrNoStr) ||
+                       !string.IsNullOrWhiteSpace(r.LrContainer1) ||
+                       !string.IsNullOrWhiteSpace(r.LrContainer2) ||
+                       !string.IsNullOrWhiteSpace(r.LrNtSize) ||
+                       !string.IsNullOrWhiteSpace(r.LrNtSealNo) ||
+                       !string.IsNullOrWhiteSpace(r.LrNtInvNo) ||
+                       !string.IsNullOrWhiteSpace(r.LrNtVehicleNo) ||
+                       (r.LrNtQty ?? 0) > 0)
+            .ToList();
+
+        if (!validRows.Any())
+        {
+            Console.WriteLine("No data to save");
+            return;
+        }
+
+        try
+        {
+            // Set required fields for valid rows
+            foreach (var row in validRows)
+            {
+                if (row.LrCompanyId == 0) row.LrCompanyId = 1;
+                if (row.LrAddedByUserId == 0) row.LrAddedByUserId = 1;
+                if (row.LrVoucherId == 0) row.LrVoucherId = job.JobId;
+                if (row.LrPartyAccountId == 0) row.LrPartyAccountId = 1;
+                if (row.LrSupplierAccountId == 0) row.LrSupplierAccountId = 1;
+
+                if (row.LrId == 0)
+                {
+                    row.LrCreated = DateTime.UtcNow;
+                }
+                row.LrUpdated = DateTime.UtcNow;
+            }
+
+            // await LrService.SaveAsync(validRows);
+            Console.WriteLine($"Saved {validRows.Count} rows out of {Rows.Count} total rows");
+
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error saving data: {ex.Message}");
+        }
+    }
+
+    private async Task CancelDetails_Click()
+    {
+        // Reset to original values or clear
+        EditModel = new Lr();
+
+        // Optional: Show confirmation dialog before canceling
+        // var result = await ShowConfirmDialog("Are you sure you want to cancel? All changes will be lost.");
+        // if (result) EditModel = new Lr();
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ClearDetails_Click()
+    {
+        // Clear all form fields
+        EditModel = new Lr();
+        await InvokeAsync(StateHasChanged);
+
+        Console.WriteLine("Form cleared");
+    }
+
+    private void OnNonTransportExpandedChanged(bool expanded)
+    {
+        nonTransportExpanded = expanded;
+        if (expanded)
+            detailsExpanded = false; // Close Details when Non-Transport opens
+    }
+
+    private void OnDetailsExpandedChanged(bool expanded)
+    {
+        detailsExpanded = expanded;
+        if (expanded)
+            nonTransportExpanded = false; // Close Non-Transport when Details opens
     }
 }
+
+@*     <DxAccordion ExpandMode="AccordionExpandMode.SingleOrNone" Style="width: 100%; height: 100%;">
+            <Items>
+                <DxAccordionItem Text="Section 1" Expanded="true">
+                    <Items>
+                        <DxAccordionItem Text="Child A" />
+                        <DxAccordionItem Text="Child B" />
+                    </Items>
+                </DxAccordionItem>
+                <DxAccordionItem Text="Section 1" Expanded="false">
+                    <Items>
+                        <DxAccordionItem Text="Child A" />
+                        <DxAccordionItem Text="Child B" />
+                    </Items>
+                </DxAccordionItem>
+                <DxAccordionItem Text="Section 1" Expanded="false">
+                    <Items>
+                        <DxAccordionItem Text="Child A" />
+                        <DxAccordionItem Text="Child B" />
+                    </Items>
+                </DxAccordionItem>
+                <DxAccordionItem Text="Section 1" Expanded="false">
+                    <Items>
+                        <DxAccordionItem Text="Child A" />
+                        <DxAccordionItem Text="Child B" />
+                    </Items>
+                </DxAccordionItem>
+
+                    <DxAccordionItem Text="Section 2" Name="show">
+                        <ContentTemplate Context="accCtx">
+                            <DxFormLayout>
+
+                                <DxFormLayoutItem Caption="Job No" ColSpanMd="2">
+                                    <ChildContent Context="c1">
+                                        <DxTextBox @bind-Text="job.JobNo" NullText="Enter Job No" />
+                                    </ChildContent>
+                                </DxFormLayoutItem>
+
+                                <DxFormLayoutItem Caption="Job No2" ColSpanMd="2">
+                                    <ChildContent Context="c2">
+                                        <DxTextBox @bind-Text="job.JobNo" NullText="Enter Job No" />
+                                    </ChildContent>
+                                </DxFormLayoutItem>
+
+                                <DxFormLayoutItem Caption="Job No3" ColSpanMd="2">
+                                    <ChildContent Context="c3">
+                                        <DxTextBox @bind-Text="job.JobNo" NullText="Enter Job No" />
+                                    </ChildContent>
+                                </DxFormLayoutItem>
+
+                                <DxFormLayoutItem Caption="Job No4" ColSpanMd="2">
+                                    <ChildContent Context="c4">
+                                        <DxTextBox @bind-Text="job.JobNo" NullText="Enter Job No" />
+                                    </ChildContent>
+                                </DxFormLayoutItem>
+
+                                <DxFormLayoutItem Caption="Job No5" ColSpanMd="2">
+                                    <ChildContent Context="c5">
+                                        <DxTextBox @bind-Text="job.JobNo" NullText="Enter Job No" />
+                                    </ChildContent>
+                                </DxFormLayoutItem>
+
+                            </DxFormLayout>
+                        </ContentTemplate>
+                    </DxAccordionItem>
+
+
+                
+
+            </Items>
+        </DxAccordion> *@

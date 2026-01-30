@@ -9,6 +9,7 @@ namespace FreightBKShippingWebApp.Authentication
     public class CustomAuthStateProvider(ProtectedLocalStorage localStorage) : AuthenticationStateProvider
     {
         private readonly JwtSecurityTokenHandler _tokenHandler = new();
+
         public async override Task<AuthenticationState> GetAuthenticationStateAsync()
         {
             try
