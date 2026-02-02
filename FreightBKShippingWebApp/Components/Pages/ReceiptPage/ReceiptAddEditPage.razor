@@ -402,7 +402,7 @@
 
 @code {
     [Parameter] public EventCallback OnSaved { get; set; }
-     [Parameter] public int specificBillId  { get; set; }
+    [Parameter] public int specificBillId  { get; set; }
 
     private bool Visible { get; set; }
     private string Title { get; set; } = "Receipt Entry";
@@ -601,8 +601,8 @@
 
         if (EditModel.JournalId > 0)
         {
-             SelectedCustomer = CustomerList.FirstOrDefault(a => a.AccountId == EditModel.JournalPartyId);
-        ShowBillSettlementGrid = SelectedCustomer?.AccountMethod?.Equals("BILL TO BILL", StringComparison.OrdinalIgnoreCase) == true;
+            SelectedCustomer = CustomerList.FirstOrDefault(a => a.AccountId == EditModel.JournalPartyId);
+            ShowBillSettlementGrid = SelectedCustomer?.AccountMethod?.Equals("BILL TO BILL", StringComparison.OrdinalIgnoreCase) == true;
 
             Title = "Edit Receipt";
             await LoadJournalDetails();
@@ -620,7 +620,7 @@
             }
             else{ShowBillSettlementGrid = false;}
             Title = "Add Receipt";
-            
+
         }
 
         //ShowBillSettlementGrid = false;
@@ -671,14 +671,32 @@
             PendingBills.Clear();
         }
 
-        // ✅ Reset all amounts when customer changes
-        EditModel.JournalAmount = 0;
-        EditModel.JournalTotal = 0;
-        EditModel.JournalTotalTds = 0;
-        EditModel.JournalTotalDiscount = 0;
-        EditModel.JournalTotalShort = 0;
-        EditModel.JournalOnAccount = 0;
-
+        if (specificBillId == null)
+        {
+            // ✅ Reset all amounts when customer changes
+            EditModel.JournalAmount =  0;
+            EditModel.JournalTotal = 0;
+            EditModel.JournalTotalTds = 0;
+            EditModel.JournalTotalDiscount = 0;
+            EditModel.JournalTotalShort = 0;
+            EditModel.JournalOnAccount = 0;
+        }
+        else
+        {
+          
+           
+            if (ShowBillSettlementGrid)
+            {
+                
+                
+                EditModel.JournalOnAccount = (float)EditModel.JournalAmount;
+                 EditModel.JournalTotal=0;
+            }
+            else{
+                 EditModel.JournalTotal = EditModel.JournalAmount;
+                 EditModel.JournalOnAccount = (float) EditModel.JournalAmount;
+            }
+        }
         StateHasChanged();
     }
 

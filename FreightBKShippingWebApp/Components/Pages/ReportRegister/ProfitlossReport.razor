@@ -1,27 +1,30 @@
-﻿@page "/invoiceregister"
+﻿@page "/jobprofitloss"
 @using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Services
 @using System.Text.Json
+@inject JobService JobService
 @inject BillService BillService
 @inject ToasteService ToastService
 @inject LoadingService LoadingService
 @inject YearStatechangeService YearStatechangeService
 @inject GridLayoutService GridLayoutService
-@inject VoucherService VoucherService
 @inject IJSRuntime JS
 
 <style>
     .grid-size {
         max-height: 570px;
     }
+
     .layout-combobox {
         border-radius: 6px;
         width: 185px;
     }
+
     .toolbar-title {
         display: flex;
         align-items: center;
     }
+
     /* Print section ko hide rakho normally */
     .print-only-section {
         display: none;
@@ -45,7 +48,7 @@
             width: 100%;
             display: block !important;
         }
-        
+
         @@page {
             size: A4 landscape;
             margin: 1cm;
@@ -57,13 +60,13 @@
         width: 100%;
         border-collapse: collapse;
         margin-top: 20px;
-        font-size: 12px;
+        font-size: 11px;
     }
 
         .print-table th,
         .print-table td {
             border: 1px solid #000;
-            padding: 8px;
+            padding: 6px;
             text-align: left;
         }
 
@@ -90,13 +93,24 @@
         margin-bottom: 15px;
         font-size: 14px;
     }
+
+    /* Profit/Loss color indicators */
+    .profit-cell {
+        color: green;
+        font-weight: bold;
+    }
+
+    .loss-cell {
+        color: red;
+        font-weight: bold;
+    }
 </style>
 
 <div class="px-3 py-3">
-    <DxGrid TItem="Bill"
-            Data="@billList"
+    <DxGrid TItem="JobProfitLoss"
+            Data="@profitLossList"
             @ref="MyGrid"
-            KeyFieldName="BillId"
+            KeyFieldName="JobId"
             ShowSearchBox="true"
             PageSize="100"
             PageSizeSelectorVisible="false"
@@ -105,9 +119,9 @@
             FocusedRowEnabled="true"
             ColumnResizeMode="GridColumnResizeMode.NextColumn"
             CssClass="grid-size"
-            AllowColumnReorder="true"
-            LayoutAutoSaving="OnLayoutAutoSaving"
-            LayoutAutoLoading="OnLayoutAutoLoading">
+            RowDoubleClick="OnRowDoubleClick"
+            AllowSelectRowByClick="true"
+            AllowColumnReorder="true">
 
         <ToolbarTemplate Context="gridContext">
             <DxToolbar>
@@ -115,11 +129,12 @@
                 <DxToolbarItem Alignment="ToolbarItemAlignment.Left">
                     <Template Context="t">
                         <div class="toolbar-title">
-                            <i class="bi bi-file-earmark-spreadsheet me-2"></i>
-                            <span class="fs-5">Invoice Register</span>
+                            <i class="bi bi-graph-up me-2"></i>
+                            <span class="fs-5">Job-wise Profit & Loss</span>
                         </div>
                     </Template>
                 </DxToolbarItem>
+
                 <DxToolbarItem Text="Filter"
                                IconCssClass="bi bi-funnel-fill"
                                Click="OpenDateFilter"
@@ -140,72 +155,6 @@
                                        Click="PrintGridPage" />
                     </Items>
                 </DxToolbarItem>
-
-
-
-                @*  <!-- Voucher Type Filter -->
-                <DxToolbarItem BeginGroup="true"
-                               Alignment="ToolbarItemAlignment.Right"
-                               AdaptivePriority="3">
-                    <Template Context="t">
-                        <DxComboBox Data="@voucherTypes" TData="Voucher" TValue="int?"
-                                    @bind-Value="SelectedVoucherType"
-                                    NullText="All Vouchers"
-                                    TextFieldName="VoucherName"
-                                    ValueFieldName="VoucherId"
-                                    AllowUserInput="true"
-                                    SearchMode="ListSearchMode.AutoSearch"
-                                    SearchFilterCondition="ListSearchFilterCondition.Contains"
-                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
-                    </Template>
-                </DxToolbarItem>
-
-                <!-- From Date -->
-                <DxToolbarItem BeginGroup="true"
-                               AdaptivePriority="2"
-                               Alignment="ToolbarItemAlignment.Right">
-                    <Template Context="t">
-                        <DxDateEdit @bind-Date="FromDate"
-                                    NullText="From Date"
-                                    DisplayFormat="dd/MM/yyyy"
-                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
-                    </Template>
-                </DxToolbarItem>
-
-                <!-- To Date -->
-                <DxToolbarItem BeginGroup="true"
-                               AdaptivePriority="2"
-                               Alignment="ToolbarItemAlignment.Right">
-                    <Template Context="t">
-                        <DxDateEdit @bind-Date="ToDate"
-                                    NullText="To Date"
-                                    DisplayFormat="dd/MM/yyyy"
-                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
-                    </Template>
-                </DxToolbarItem>
-
-                <!-- Search Button -->
-                <DxToolbarItem Alignment="ToolbarItemAlignment.Right"
-                               BeginGroup="true"
-                               AdaptivePriority="1">
-                    <Template Context="t">
-                        <DxButton Text="Search"
-                                  IconCssClass="bi bi-search"
-                                  RenderStyle="ButtonRenderStyle.Primary"
-                                  Click="OnSearch" />
-                    </Template>
-                </DxToolbarItem>
-
-                <!-- Reset Button -->
-                <DxToolbarItem Alignment="ToolbarItemAlignment.Right"
-                               AdaptivePriority="1">
-                    <Template Context="t">
-                        <DxButton Text="Reset"
-                                  IconCssClass="bi bi-arrow-counterclockwise"
-                                  RenderStyle="ButtonRenderStyle.Secondary"
-                                  Click="OnReset" />
-                    </Template>
-                </DxToolbarItem> *@
 
                 <!-- Layout Selector -->
                 <DxToolbarItem IconCssClass="bi bi-gear-wide-connected"
@@ -242,7 +191,6 @@
                                        IconCssClass="bi bi-plus-square"
                                        Click="ShowNewLayoutDialog" />
 
-
                         @if (selectedLayoutId.HasValue)
                         {
                             <DxToolbarItem Text="Delete Current Layout"
@@ -256,95 +204,123 @@
         </ToolbarTemplate>
 
         <Columns>
-            <DxGridDataColumn FieldName="BillId"
+            <DxGridDataColumn FieldName="JobId"
                               Caption="ID"
-                              Visible="@GetColumnVisibility("BillId")"
-                              Width="@GetColumnWidth("BillId")"
+                              Visible="@GetColumnVisibility("JobId")"
+                              Width="@GetColumnWidth("JobId")"
                               SortIndex="0"
                               SortOrder="GridColumnSortOrder.Descending" />
 
-            <DxGridDataColumn FieldName="branchname"
+            <DxGridDataColumn FieldName="BranchName"
                               Caption="Branch"
-                              Visible="@GetColumnVisibility("branchname")"
-                              Width="@GetColumnWidth("branchname")" />
+                              Visible="@GetColumnVisibility("BranchName")"
+                              Width="@GetColumnWidth("BranchName")" />
 
-            <DxGridDataColumn FieldName="BillNo"
-                              Caption="Invoice No"
-                              Visible="@GetColumnVisibility("BillNo")"
-                              Width="@GetColumnWidth("BillNo")" />
-
-            <DxGridDataColumn FieldName="BillDate"
-                              Caption="Invoice Date"
-                              DisplayFormat="dd/MM/yyyy"
-                              Visible="@GetColumnVisibility("BillDate")"
-                              Width="@GetColumnWidth("BillDate")" />
-
-            <DxGridDataColumn FieldName="Vouchname"
-                              Caption="Voucher Type"
-                              Visible="@GetColumnVisibility("Vouchname")"
-                              Width="@GetColumnWidth("Vouchname")" />
-
-            <DxGridDataColumn FieldName="partyname"
-                              Caption="Customer"
-                              Visible="@GetColumnVisibility("partyname")"
-                              Width="@GetColumnWidth("partyname")" />
-
-            <DxGridDataColumn FieldName="BillJobNo"
+            <DxGridDataColumn FieldName="JobNo"
                               Caption="Job No"
-                              Visible="@GetColumnVisibility("BillJobNo")"
-                              Width="@GetColumnWidth("BillJobNo")" />
+                              Visible="@GetColumnVisibility("JobNo")"
+                              Width="@GetColumnWidth("JobNo")" />
 
-            <DxGridDataColumn FieldName="BillJobType"
+            <DxGridDataColumn FieldName="JobDate"
+                              Caption="Job Date"
+                              DisplayFormat="dd/MM/yyyy"
+                              Visible="@GetColumnVisibility("JobDate")"
+                              Width="@GetColumnWidth("JobDate")" />
+
+            <DxGridDataColumn FieldName="JobType"
                               Caption="Job Type"
-                              Visible="@GetColumnVisibility("BillJobType")"
-                              Width="@GetColumnWidth("BillJobType")" />
+                              Visible="@GetColumnVisibility("JobType")"
+                              Width="@GetColumnWidth("JobType")" />
 
-            <DxGridDataColumn FieldName="BillTotal"
-                              Caption="Basic Amount"
+            <DxGridDataColumn FieldName="PartyName"
+                              Caption="Customer"
+                              Visible="@GetColumnVisibility("PartyName")"
+                              Width="@GetColumnWidth("PartyName")" />
+
+            <DxGridDataColumn FieldName="JobBlNo"
+                              Caption="BL/BE No"
+                              Visible="@GetColumnVisibility("JobBlNo")"
+                              Width="@GetColumnWidth("JobBlNo")" />
+
+            <DxGridDataColumn FieldName="TotalRevenue"
+                              Caption="Total Revenue"
                               DisplayFormat="N2"
-                              Visible="@GetColumnVisibility("BillTotal")"
-                              Width="@GetColumnWidth("BillTotal")" />
+                              Visible="@GetColumnVisibility("TotalRevenue")"
+                              Width="@GetColumnWidth("TotalRevenue")" />
 
-            <DxGridDataColumn FieldName="BillNetAmount"
-                              Caption="Total Amount"
+            <DxGridDataColumn FieldName="TotalExpense"
+                              Caption="Total Expense"
                               DisplayFormat="N2"
-                              Visible="@GetColumnVisibility("BillNetAmount")"
-                              Width="@GetColumnWidth("BillNetAmount")" />
+                              Visible="@GetColumnVisibility("TotalExpense")"
+                              Width="@GetColumnWidth("TotalExpense")" />
 
-            <DxGridDataColumn FieldName="BillGstNo"
-                              Caption="GST No"
-                              Visible="@GetColumnVisibility("BillGstNo")"
-                              Width="@GetColumnWidth("BillGstNo")" />
+            <DxGridDataColumn FieldName="ProfitLoss"
+                              Caption="Profit / Loss"
+                              DisplayFormat="N2"
+                              Visible="@GetColumnVisibility("ProfitLoss")"
+                              Width="@GetColumnWidth("ProfitLoss")">
+                <CellDisplayTemplate Context="cellContext">
+                    @{
+                        var profitLoss = (decimal)cellContext.Value;
+                        var cssClass = profitLoss >= 0 ? "profit-cell" : "loss-cell";
+                    }
+                    <span class="@cssClass">@profitLoss.ToString("N2")</span>
+                </CellDisplayTemplate>
+            </DxGridDataColumn>
 
-            <DxGridDataColumn FieldName="posname"
-                              Caption="Place of Supply"
-                              Visible="@GetColumnVisibility("posname")"
-                              Width="@GetColumnWidth("posname")" />
+            <DxGridDataColumn FieldName="ProfitMargin"
+                              Caption="Profit Margin %"
+                              DisplayFormat="N2"
+                              Visible="@GetColumnVisibility("ProfitMargin")"
+                              Width="@GetColumnWidth("ProfitMargin")">
+                <CellDisplayTemplate Context="cellContext">
+                    @{
+                        var margin = (decimal)cellContext.Value;
+                        var cssClass = margin >= 0 ? "profit-cell" : "loss-cell";
+                    }
+                    <span class="@cssClass">@margin.ToString("N2")%</span>
+                </CellDisplayTemplate>
+            </DxGridDataColumn>
 
-            <DxGridDataColumn FieldName="BillStatus"
-                              Caption="Status"
-                              Visible="@GetColumnVisibility("BillStatus")"
-                              Width="@GetColumnWidth("BillStatus")" />
+            <DxGridDataColumn FieldName="SalesInvoiceCount"
+                              Caption="Sales Count"
+                              Visible="@GetColumnVisibility("SalesInvoiceCount")"
+                              Width="@GetColumnWidth("SalesInvoiceCount")" />
+
+            <DxGridDataColumn FieldName="PurchaseInvoiceCount"
+                              Caption="Purchase Count"
+                              Visible="@GetColumnVisibility("PurchaseInvoiceCount")"
+                              Width="@GetColumnWidth("PurchaseInvoiceCount")" />
         </Columns>
 
         <TotalSummary>
-            <DxGridSummaryItem SummaryType="GridSummaryItemType.Count" FieldName="BillId" />
-            <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum" 
-                               FieldName="BillTotal" 
-                               DisplayFormat="Total: {0:N2}" />
-            <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum" 
-                               FieldName="BillNetAmount" 
-                               DisplayFormat="Net Total: {0:N2}" />
+            <DxGridSummaryItem SummaryType="GridSummaryItemType.Count" FieldName="JobId" />
+            <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum"
+                               FieldName="TotalRevenue"
+                               DisplayFormat="Total Revenue: {0:N2}" />
+            <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum"
+                               FieldName="TotalExpense"
+                               DisplayFormat="Total Expense: {0:N2}" />
+            <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum"
+                               FieldName="ProfitLoss"
+                               DisplayFormat="Total Profit/Loss: {0:N2}" />
         </TotalSummary>
     </DxGrid>
 </div>
+
 <!-- PRINT ONLY SECTION -->
-<div class="print-only-section" id="printInvoiceSection">
+<div class="print-only-section" id="printProfitLossSection">
     <div class="print-header">
-        <h2>Invoice Register</h2>
+        <h2>Job-wise Profit & Loss Report</h2>
         <div class="print-info">
             <strong>From:</strong> @FromDate?.ToString("dd/MM/yyyy") &nbsp;&nbsp;
             <strong>To:</strong> @ToDate?.ToString("dd/MM/yyyy") &nbsp;&nbsp;
+            @if (!string.IsNullOrEmpty(SelectedJobType))
+            {
+                <strong>Job Type:</strong> 
+                @SelectedJobType
+               
+            }
             <strong>Print Date:</strong> @DateTime.Now.ToString("dd/MM/yyyy hh:mm tt")
         </div>
     </div>
@@ -352,65 +328,63 @@
     <table class="print-table">
         <thead>
             <tr>
-            
                 <th>Branch</th>
-                <th>Invoice No</th>
-                <th>Invoice Date</th>
-                <th>Voucher Type</th>
-                <th>Customer</th>
                 <th>Job No</th>
+                <th>Job Date</th>
                 <th>Job Type</th>
-                <th>Basic Amount</th>
-                <th>Total Amount</th>
-                <th>GST No</th>
-                <th>Place of Supply</th>
-              
+                <th>Customer</th>
+                <th>BL/BE No</th>
+                <th>Revenue</th>
+                <th>Expense</th>
+                <th>Profit/Loss</th>
+                <th>Margin %</th>
             </tr>
         </thead>
 
         <tbody>
-            @if (billList != null && billList.Any())
+            @if (profitLossList != null && profitLossList.Any())
             {
-                @foreach (var bill in billList)
+                @foreach (var item in profitLossList)
                 {
-                    
-
                     <tr>
-                       
-                        <td>@bill.branchname</td>
-                        <td>@bill.BillNo</td>
-                        <td>@bill.BillDate.ToString("dd/MM/yyyy")</td>
-                        <td>@bill.Vouchname</td>
-                        <td>@bill.partyname</td>
-                        <td>@bill.BillJobNo</td>
-                        <td>@bill.BillJobType</td>
-                        <td>@bill.BillTotal.ToString("N2")</td>
-                        <td>@bill.BillNetAmount.ToString("N2")</td>
-                        <td>@bill.BillGstNo</td>
-                        <td>@bill.posname</td>
-                        
+                        <td>@item.BranchName</td>
+                        <td>@item.JobNo</td>
+                        <td>@item.JobDate.ToString("dd/MM/yyyy")</td>
+                        <td>@item.JobType</td>
+                        <td>@item.PartyName</td>
+                        <td>@item.JobBlNo</td>
+                        <td>@item.TotalRevenue.ToString("N2")</td>
+                        <td>@item.TotalExpense.ToString("N2")</td>
+                        <td style="@(item.ProfitLoss >= 0 ? "color:green" : "color:red")">
+                            @item.ProfitLoss.ToString("N2")
+                        </td>
+                        <td style="@(item.ProfitMargin >= 0 ? "color:green" : "color:red")">
+                            @item.ProfitMargin.ToString("N2")%
+                        </td>
                     </tr>
                 }
             }
             else
             {
                 <tr>
-                    <td colspan="13" style="text-align:center">No records available</td>
+                    <td colspan="10" style="text-align:center">No records available</td>
                 </tr>
             }
         </tbody>
 
         <tfoot>
             <tr>
-                <td colspan="7"><strong>Total Invoices:</strong></td>
-                <td><strong>@billList?.Sum(b => b.BillTotal).ToString("N2")</strong></td>
-                <td><strong>@billList?.Sum(b => b.BillNetAmount).ToString("N2")</strong></td>
-                <td colspan="3"></td>
+                <td colspan="6"><strong>Total:</strong></td>
+                <td><strong>@profitLossList?.Sum(p => p.TotalRevenue).ToString("N2")</strong></td>
+                <td><strong>@profitLossList?.Sum(p => p.TotalExpense).ToString("N2")</strong></td>
+                <td style="@(profitLossList?.Sum(p => p.ProfitLoss) >= 0 ? "color:green" : "color:red")">
+                    <strong>@profitLossList?.Sum(p => p.ProfitLoss).ToString("N2")</strong>
+                </td>
+                <td></td>
             </tr>
         </tfoot>
     </table>
 </div>
-
 
 <!-- Layout Dialog -->
 @if (showLayoutDialog)
@@ -539,24 +513,100 @@
         </div>
     </div>
 }
-<DateFilterPage @ref="dateFilterPopup" ShowVoucherTypeFilter="true" OnFilterApplied="HandleFilterApplied" />
-@code {
+@if (showInvoicePopup && selectedJob != null)
+{
+    <div class="modal fade show d-block"
+         style="background-color:rgba(0,0,0,0.5); z-index:1050;">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
 
-    
+                <!-- Header -->
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        Job Invoices – @selectedJob.JobNo
+                    </h5>
+                    <button class="btn-close"
+                            @onclick="CloseInvoicePopup"></button>
+                </div>
+
+                <!-- Body -->
+                <div class="modal-body">
+
+                    <!-- SALES -->
+                    <h6 class="text-success mb-2">Sales Invoices</h6>
+                    <DxGrid Data="@selectedSalesBills"
+                            PageSize="5"
+                            ShowSearchBox="true">
+                        <Columns>
+                            <DxGridDataColumn FieldName="BillNo" Caption="Invoice No" />
+                            <DxGridDataColumn FieldName="BillDate" Caption="Date" DisplayFormat="dd/MM/yyyy" />
+                            <DxGridDataColumn FieldName="BillNetAmount" Caption="Amount" DisplayFormat="N2" />
+                        </Columns>
+                    </DxGrid>
+
+                    <hr />
+
+                    <!-- PURCHASE -->
+                    <h6 class="text-danger mb-2">Purchase Invoices</h6>
+                    <DxGrid Data="@selectedPurchaseBills"
+                            PageSize="5"
+                            ShowSearchBox="true">
+                        <Columns>
+                            <DxGridDataColumn FieldName="BillNo" Caption="Invoice No" />
+                            <DxGridDataColumn FieldName="BillDate" Caption="Date" DisplayFormat="dd/MM/yyyy" />
+                            <DxGridDataColumn FieldName="BillNetAmount" Caption="Amount" DisplayFormat="N2" />
+                        </Columns>
+                    </DxGrid>
+
+                </div>
+
+                <!-- Footer -->
+                <div class="modal-footer">
+                    <button class="btn btn-secondary"
+                            @onclick="CloseInvoicePopup">
+                        Close
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+}
+
+<DateFilterPage @ref="dateFilterPopup" ShowJobTypeFilter="true" OnFilterApplied="HandleFilterApplied" />
+
+@code {
+    // Job Profit Loss Model
+    public class JobProfitLoss
+    {
+        public int JobId { get; set; }
+        public string BranchName { get; set; }
+        public string JobNo { get; set; }
+        public DateTime JobDate { get; set; }
+        public string JobType { get; set; }
+        public string PartyName { get; set; }
+        public string JobBlNo { get; set; }
+        public decimal TotalRevenue { get; set; }
+        public decimal TotalExpense { get; set; }
+        public decimal ProfitLoss { get; set; }
+        public decimal ProfitMargin { get; set; }
+        public int SalesInvoiceCount { get; set; }
+        public int PurchaseInvoiceCount { get; set; }
+    }
+
     private async Task ExportXlsx()
     {
-
-        if (billList == null || !billList.Any())
+        if (profitLossList == null || !profitLossList.Any())
         {
-            ToastService.Warning("No data to print.");
+            ToastService.Warning("No data to export.");
             return;
         }
-        await MyGrid.ExportToXlsxAsync("JobRegister.xlsx");
+        await MyGrid.ExportToXlsxAsync("JobProfitLoss.xlsx");
     }
-    // ✅ PRINT - Using JavaScript to print specific section
+
     private async Task PrintGridPage()
     {
-        if (billList == null || !billList.Any())
+        if (profitLossList == null || !profitLossList.Any())
         {
             ToastService.Warning("No data to print.");
             return;
@@ -572,16 +622,23 @@
         }
     }
 
-
     private IGrid MyGrid;
-    private List<Bill> billList = new();
+    private List<JobProfitLoss> profitLossList = new();
+    private List<JobProfitLoss> allProfitLoss = new();
+    private List<Job> allJobs = new();
     private List<Bill> allBills = new();
-    private List<Voucher> voucherTypes = new();
-    
+
+    //row doubleclick data
+    private bool showInvoicePopup;
+    private JobProfitLoss? selectedJob;
+
+    private List<Bill> selectedSalesBills = new();
+    private List<Bill> selectedPurchaseBills = new();
+
     // Filter properties
     private DateTime? FromDate;
     private DateTime? ToDate;
-    private int? SelectedVoucherType;
+    private string SelectedJobType;
 
     // Grid Layout Management
     private List<GridLayoutDto> availableLayouts = [];
@@ -591,85 +648,105 @@
     private string dialogTitle = "";
     private bool isEditMode = false;
     private bool isDefaultLayout = false;
-    private const string VOUCHER_TYPE = "InvoiceRegister";
+    private const string VOUCHER_TYPE = "JobProfitLoss";
     private List<GridColumnLayout> allColumns = [];
     private List<GridColumnLayout> currentLayout = [];
     private DateFilterPage dateFilterPopup;
+   
+    private void OnRowDoubleClick(GridRowClickEventArgs e)
+    {
+        if (e.VisibleIndex < 0)
+            return;
+
+        var job = (JobProfitLoss)e.Grid.GetDataItem(e.VisibleIndex);
+
+        if (job == null)
+            return;
+
+        selectedJob = job;
+
+        selectedSalesBills = allBills
+            .Where(b => b.BillJobId == selectedJob.JobId &&
+                        b.BillType.Equals("SALES", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        selectedPurchaseBills = allBills
+            .Where(b => b.BillJobId == selectedJob.JobId &&
+                        b.BillType.Equals("PURCHASE", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        showInvoicePopup = true;
+    }
+    private void CloseInvoicePopup()
+    {
+        showInvoicePopup = false;
+        selectedSalesBills.Clear();
+        selectedPurchaseBills.Clear();
+    }
+
     private void OpenDateFilter()
     {
-        dateFilterPopup.Show(FromDate, ToDate, null,SelectedVoucherType,null);
+        dateFilterPopup.Show(FromDate, ToDate, SelectedJobType, null,null);
     }
+
     private async Task HandleFilterApplied((DateTime? FromDate, DateTime? ToDate, string? JobType, int? SelectedVoucherType, string? OutstandingType) f)
     {
         FromDate = f.FromDate;
         ToDate = f.ToDate;
-        SelectedVoucherType = f.SelectedVoucherType;
+        SelectedJobType = f.JobType;
         OnSearch();
-
     }
+
     protected override async Task OnInitializedAsync()
     {
         InitializeColumns();
         await LoadAvailableLayouts();
         await LoadDefaultLayout();
-        // await LoadVoucherTypes();
-        await LoadAllBills();
+        await LoadAllData();
     }
 
     private void InitializeColumns()
     {
         allColumns = new List<GridColumnLayout>
         {
-            new() { FieldName = "BillId", Caption = "ID", Visible = false, Width = 80, DisplayIndex = 0 },
-            new() { FieldName = "branchname", Caption = "Branch", Visible = true, Width = 120, DisplayIndex = 1 },
-            new() { FieldName = "BillNo", Caption = "Invoice No", Visible = true, Width = 150, DisplayIndex = 2 },
-            new() { FieldName = "BillDate", Caption = "Invoice Date", Visible = true, Width = 130, DisplayIndex = 3 },
-            new() { FieldName = "Vouchname", Caption = "Voucher Type", Visible = true, Width = 150, DisplayIndex = 4 },
-            new() { FieldName = "partyname", Caption = "Customer", Visible = true, Width = 200, DisplayIndex = 5 },
-            new() { FieldName = "BillJobNo", Caption = "Job No", Visible = true, Width = 120, DisplayIndex = 6 },
-            new() { FieldName = "BillJobType", Caption = "Job Type", Visible = true, Width = 120, DisplayIndex = 7 },
-            new() { FieldName = "BillTotal", Caption = "Basic Amount", Visible = true, Width = 130, DisplayIndex = 8 },
-            new() { FieldName = "BillNetAmount", Caption = "Total Amount", Visible = true, Width = 140, DisplayIndex = 9 },
-            new() { FieldName = "BillGstNo", Caption = "GST No", Visible = true, Width = 150, DisplayIndex = 10 },
-            new() { FieldName = "posname", Caption = "Place of Supply", Visible = true, Width = 160, DisplayIndex = 11 },
-            new() { FieldName = "BillStatus", Caption = "Status", Visible = true, Width = 100, DisplayIndex = 12 }
+            new() { FieldName = "JobId", Caption = "ID", Visible = false, Width = 80, DisplayIndex = 0 },
+            new() { FieldName = "BranchName", Caption = "Branch", Visible = true, Width = 120, DisplayIndex = 1 },
+            new() { FieldName = "JobNo", Caption = "Job No", Visible = true, Width = 130, DisplayIndex = 2 },
+            new() { FieldName = "JobDate", Caption = "Job Date", Visible = true, Width = 120, DisplayIndex = 3 },
+            new() { FieldName = "JobType", Caption = "Job Type", Visible = true, Width = 100, DisplayIndex = 4 },
+            new() { FieldName = "PartyName", Caption = "Customer", Visible = true, Width = 200, DisplayIndex = 5 },
+            new() { FieldName = "JobBlNo", Caption = "BL/BE No", Visible = true, Width = 130, DisplayIndex = 6 },
+            new() { FieldName = "TotalRevenue", Caption = "Total Revenue", Visible = true, Width = 140, DisplayIndex = 7 },
+            new() { FieldName = "TotalExpense", Caption = "Total Expense", Visible = true, Width = 140, DisplayIndex = 8 },
+            new() { FieldName = "ProfitLoss", Caption = "Profit / Loss", Visible = true, Width = 140, DisplayIndex = 9 },
+            new() { FieldName = "ProfitMargin", Caption = "Profit Margin %", Visible = true, Width = 140, DisplayIndex = 10 },
+            new() { FieldName = "SalesInvoiceCount", Caption = "Sales Count", Visible = true, Width = 110, DisplayIndex = 11 },
+            new() { FieldName = "PurchaseInvoiceCount", Caption = "Purchase Count", Visible = true, Width = 130, DisplayIndex = 12 }
         };
         currentLayout = allColumns.ToList();
     }
 
-    // private async Task LoadVoucherTypes()
-    // {
-    //     try
-    //     {
-    //         voucherTypes = (await VoucherService.GetAllAsync()).Where(v =>
-    //     !string.IsNullOrWhiteSpace(v.VoucherGroup) &&
-    //     (
-    //         v.VoucherGroup.Trim().Equals("SALES", StringComparison.OrdinalIgnoreCase) ||
-    //         v.VoucherGroup.Trim().Equals("CREDIT NOTE", StringComparison.OrdinalIgnoreCase) ||
-    //         v.VoucherGroup.Trim().Equals("DEBIT NOTE", StringComparison.OrdinalIgnoreCase) ||
-    //         v.VoucherGroup.Trim().Equals("PURCHASE", StringComparison.OrdinalIgnoreCase)
-    //     ))
-    // .ToList(); 
-    //     }
-    //     catch (Exception ex)
-    //     {
-    //         ToastService.Error($"Failed to load voucher types: {ex.Message}");
-    //     }
-    // }
-
-    private async Task LoadAllBills()
+    private async Task LoadAllData()
     {
         try
         {
-            LoadingService.Show("Loading invoices...");
+            LoadingService.Show("Loading profit & loss data...");
+
+            // Load all jobs and bills
+            allJobs = (await JobService.GetAllAsync())
+                .Where(j => j.JobYearId == YearStatechangeService.SelectedYearId.ToString())
+                .ToList();
+
             allBills = (await BillService.GetAllAsync())
                 .Where(b => b.BillYearId == YearStatechangeService.SelectedYearId)
                 .ToList();
-            billList = allBills;
+
+            // Calculate profit/loss for each job
+            CalculateProfitLoss();
         }
         catch (Exception ex)
         {
-            ToastService.Error($"Failed to load bills: {ex.Message}");
+            ToastService.Error($"Failed to load data: {ex.Message}");
         }
         finally
         {
@@ -677,46 +754,81 @@
         }
     }
 
+    private void CalculateProfitLoss()
+    {
+        allProfitLoss = allJobs.Select(job =>
+        {
+            // Get all bills for this job
+            var jobBills = allBills.Where(b => b.BillJobId == job.JobId).ToList();
+
+            // Calculate revenue (SALES bills)
+            var salesBills = jobBills.Where(b => 
+                string.Equals(b.BillType, "SALES", StringComparison.OrdinalIgnoreCase)).ToList();
+            var totalRevenue = salesBills.Sum(b => b.BillNetAmount);
+
+            // Calculate expense (PURCHASE bills)
+            var purchaseBills = jobBills.Where(b => 
+                string.Equals(b.BillType, "PURCHASE", StringComparison.OrdinalIgnoreCase)).ToList();
+            var totalExpense = purchaseBills.Sum(b => b.BillNetAmount);
+
+            // Calculate profit/loss
+            var profitLoss = totalRevenue - totalExpense;
+
+            // Calculate profit margin %
+            var profitMargin = totalRevenue > 0 ? (profitLoss / totalRevenue) * 100 : 0;
+
+            return new JobProfitLoss
+            {
+                JobId = job.JobId,
+                BranchName = job.BranchName ?? "",
+                JobNo = job.JobNo ?? "",
+                JobDate = job.JobDate,
+                JobType = job.JobType ?? "",
+                PartyName = job.Partyname ?? "",
+                JobBlNo = job.JobBlNo ?? "",
+                TotalRevenue = (decimal)totalRevenue,
+                TotalExpense = (decimal)totalExpense,
+                ProfitLoss = (decimal)profitLoss,
+                ProfitMargin = (decimal)profitMargin,
+                SalesInvoiceCount = salesBills.Count,
+                PurchaseInvoiceCount = purchaseBills.Count
+            };
+        }).ToList();
+
+        profitLossList = allProfitLoss;
+    }
+
     private async Task OnSearch()
     {
-        billList = allBills;
+        profitLossList = allProfitLoss;
 
         // Apply date filter
         if (FromDate.HasValue)
         {
-            billList = billList.Where(b => b.BillDate.Date >= FromDate.Value.Date).ToList();
+            profitLossList = profitLossList.Where(p => p.JobDate.Date >= FromDate.Value.Date).ToList();
         }
 
         if (ToDate.HasValue)
         {
-            billList = billList.Where(b => b.BillDate.Date <= ToDate.Value.Date).ToList();
+            profitLossList = profitLossList.Where(p => p.JobDate.Date <= ToDate.Value.Date).ToList();
         }
 
-        // Apply voucher type filter
-        if (SelectedVoucherType.HasValue)
+        // Apply job type filter
+        if (!string.IsNullOrEmpty(SelectedJobType))
         {
-            billList = billList.Where(b => b.BillVoucherId == SelectedVoucherType.Value).ToList();
+            profitLossList = profitLossList.Where(p => 
+                p.JobType.Equals(SelectedJobType, StringComparison.OrdinalIgnoreCase)).ToList();
         }
 
-        if (billList.Count == 0)
+        if (profitLossList.Count == 0)
         {
-            ToastService.Warning("No invoices found matching the criteria.");
+            ToastService.Warning("No data found matching the criteria.");
         }
         else
         {
-            ToastService.Success($"Found {billList.Count} invoice(s).");
+            ToastService.Success($"Found {profitLossList.Count} job(s).");
         }
 
-        await InvokeAsync(StateHasChanged);
-    }
-
-    private async Task OnReset()
-    {
-        FromDate = null;
-        ToDate = null;
-        SelectedVoucherType = null;
-        billList = allBills;
-        ToastService.Info("Filters reset.");
         await InvokeAsync(StateHasChanged);
     }
 
@@ -905,28 +1017,5 @@
         isEditMode = false;
     }
 
-    const string LayoutKey = "InvoiceRegisterLayout";
     
-    async Task OnLayoutAutoSaving(GridPersistentLayoutEventArgs e)
-    {
-        try
-        {
-            var json = JsonSerializer.Serialize(e.Layout);
-            await JS.InvokeVoidAsync("localStorage.setItem", LayoutKey, json);
-        }
-        catch { }
-    }
-
-    async Task OnLayoutAutoLoading(GridPersistentLayoutEventArgs e)
-    {
-        try
-        {
-            var json = await JS.InvokeAsync<string>("localStorage.getItem", LayoutKey);
-            if (!string.IsNullOrEmpty(json))
-            {
-                e.Layout = JsonSerializer.Deserialize<GridPersistentLayout>(json);
-            }
-        }
-        catch { }
-    }
 }

@@ -77,11 +77,23 @@
           
              
             <DxFormLayout>
+                @if (ShowOutstandingTypeFilter)
+                {
+                    <DxFormLayoutItem Caption="Outstanding Type">
+                        <ChildContent Context="ctx">
+                            <DxComboBox Data="@OutstandingTypeslist"
+                                        @bind-Value="EditModel.SelectedOutstandingType"
+                                        NullText="All Types"
+                                        ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                        SizeMode="SizeMode.Small" />
+                        </ChildContent>
+                    </DxFormLayoutItem>
+                }
                 @if (ShowJobTypeFilter)
                 {
                     <DxFormLayoutItem Caption="Job Type">
                         <ChildContent Context="ctx">
-                    <DxComboBox Data="@jobTypeslist"
+                            <DxComboBox Data="@jobTypeslist"
                                 @bind-Value="EditModel.SelectedJobType"
                                 NullText="All Types"
                                 ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
@@ -146,23 +158,26 @@
 @code {
     private EditContext? editContext;
 
-    [Parameter] public EventCallback<(DateTime? FromDate, DateTime? ToDate, string? JobType ,int? Vouchertype)> OnFilterApplied { get; set; }
+    [Parameter] public EventCallback<(DateTime? FromDate, DateTime? ToDate, string? JobType, int? Vouchertype, string? ShowOutstandingTypeFilter)> OnFilterApplied { get; set; }
     [Parameter] public bool ShowJobTypeFilter { get; set; } = false;
     [Parameter] public bool ShowVoucherTypeFilter { get; set; } = false;
+    [Parameter] public bool ShowOutstandingTypeFilter { get; set; } = false;
     private bool Visible { get; set; }
     private string Title { get; set; } = "Filter by Date Range";
     private DateFilterModel EditModel { get; set; } = new();
     private string ErrorMessage { get; set; } = string.Empty;
     private List<string> jobTypeslist = new() { "IMPORT", "EXPORT" };
+    private List<string> OutstandingTypeslist = new() { "RECEIVABLE", "PAYABLE" };
     private List<Voucher> voucherTypes = new();
-    public void Show(DateTime? fromDate, DateTime? toDate , string? SelectedJobType ,int? vouchertype)
+    public void Show(DateTime? fromDate, DateTime? toDate , string? SelectedJobType ,int? vouchertype, string? outstandingType)
     {
         EditModel = new DateFilterModel
         {
             FromDate = fromDate,
             ToDate = toDate,
             SelectedJobType = SelectedJobType,
-            SelectedVoucherType = vouchertype
+            SelectedVoucherType = vouchertype,
+            SelectedOutstandingType = outstandingType
         };
 
         editContext = new EditContext(EditModel);
@@ -210,7 +225,7 @@
         // Invoke callback
         if (OnFilterApplied.HasDelegate)
         {
-            await OnFilterApplied.InvokeAsync((EditModel.FromDate, EditModel.ToDate, EditModel.SelectedJobType, EditModel.SelectedVoucherType));
+            await OnFilterApplied.InvokeAsync((EditModel.FromDate, EditModel.ToDate, EditModel.SelectedJobType, EditModel.SelectedVoucherType, EditModel.SelectedOutstandingType));
         }
 
         ToastService.Success("Date filter applied successfully!");
@@ -225,7 +240,7 @@
 
         if (OnFilterApplied.HasDelegate)
         {
-            await OnFilterApplied.InvokeAsync((null, null, null,null));
+            await OnFilterApplied.InvokeAsync((null, null, null,null,null));
         }
 
         ToastService.Info("Date filter cleared.");
@@ -283,5 +298,6 @@
         public DateTime? ToDate { get; set; }
         public string? SelectedJobType { get; set; }
         public int? SelectedVoucherType { get; set; }
+        public string? SelectedOutstandingType { get; set; }
     }
 }
