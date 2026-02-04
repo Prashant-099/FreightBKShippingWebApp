@@ -1,17 +1,14 @@
-﻿using DevExpress.XtraRichEdit.Import.Html;
-using FreightBKShippingWebApp.Model;
+﻿using FreightBKShippingWebApp.Model;
 
 namespace FreightBKShippingWebApp.Services
 {
     public class JobService
     {
         private readonly ApiClient _api;
-         
 
-        public JobService(ApiClient api )
+        public JobService(ApiClient api)
         {
             _api = api;
-            
         }
 
         // Get all jobs
@@ -19,19 +16,17 @@ namespace FreightBKShippingWebApp.Services
         {
             try
             {
-                var response = await _api.GetFromJsonAsync<List<Job>>("api/Job");
-                return response ?? new List<Job>();
+                return await _api.GetFromJsonAsync<List<Job>>("api/Job")
+                       ?? new List<Job>();
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Error loading jobs: {ex.Message}");
                 return new List<Job>();
             }
-           
-            
         }
 
-        // Get a single job by ID
+        // Get job by id
         public async Task<Job?> GetByIdAsync(int id)
         {
             try
@@ -43,59 +38,59 @@ namespace FreightBKShippingWebApp.Services
                 Console.WriteLine($"❌ Error fetching job {id}: {ex.Message}");
                 return null;
             }
-           
-            
         }
 
-        // Create a new job
-        public async Task<(bool Success, string Error)> CreateAsync(Job job)
-         {
+        // Create
+        public async Task<(bool Success, string? Error)> CreateAsync(Job job)
+        {
             try
             {
                 var result = await _api.PostAsync<bool, Job>("api/Job", job);
-                return (true, null);
+                return result
+                    ? (true, null)
+                    : (false, "API returned failure while creating job");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Error creating job: {ex.Message}");
                 return (false, ex.Message);
             }
-           
-           
         }
 
-        // Update an existing job
-        public async Task<(bool Success, string Error)> UpdateAsync(Job job)
+        // Update
+        public async Task<(bool Success, string? Error)> UpdateAsync(Job job)
         {
             try
             {
-                var result = await _api.PutAsync<bool, Job>($"api/Job/{job.JobId}", job);
-                return (true, null);
+                var result = await _api.PutAsync<bool, Job>(
+                    $"api/Job/{job.JobId}", job);
+
+                return result
+                    ? (true, null)
+                    : (false, "API returned failure while updating job");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Error updating job: {ex.Message}");
                 return (false, ex.Message);
             }
-           
-            
         }
 
-        // Delete a job by ID
-        public async Task<(bool Success, string Error)> DeleteAsync(int jobId)
+        // Delete
+        public async Task<(bool Success, string? Error)> DeleteAsync(int jobId)
         {
             try
             {
                 var result = await _api.DeleteAsync<bool>($"api/Job/{jobId}");
-                return (true, null);
-            }   
+                return result
+                    ? (true, null)
+                    : (false, "API returned failure while deleting job");
+            }
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Error deleting job {jobId}: {ex.Message}");
                 return (false, ex.Message);
             }
-           
-
         }
     }
 }
