@@ -403,7 +403,7 @@ namespace FreightBKShippingWebApp.Model
 
         [Column("bill_against_billid")]
        
-        public string? BillAgainstBillId { get; set; }
+        public int? BillAgainstBillId { get; set; }
 
         [Column("bill_isrcm")]
         public bool BillIsRcm { get; set; }

@@ -23,7 +23,7 @@
     
            <DxGrid @ref="MyGrid"
         TItem="Journal"
-        Data="@ReceiptList"
+        Data="@PaymentList"
         KeyFieldName="JournalId"
         ShowSearchBox="true"
         ShowFilterRow="true"
@@ -33,7 +33,7 @@
         FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always"
         FocusedRowEnabled="true"
         SelectionMode="GridSelectionMode.Multiple"
-        SelectedDataItems="@SelectedReceipts"
+        SelectedDataItems="@SelectedPayment"
         SelectedDataItemsChanged="OnSelectionChanged"
         ColumnResizeMode="GridColumnResizeMode.NextColumn"
         CssClass="grid-size"
@@ -44,7 +44,7 @@
             <TitleTemplate Context="tlt">
                 <div class="d-flex align-items-center">
                     <i class="bi bi-cash me-2 py-2"></i>
-                    <span class="fs-5">Receipts</span>
+                    <span class="fs-5">Payments</span>
                 </div>
             </TitleTemplate>
 
@@ -110,7 +110,7 @@
         <DxGridDataColumn FieldName="VoucherName" Caption="Voucher Type" Width="@(layoutManager?.GetColumnWidth("VoucherName") ?? "140px")"
                           Visible="@(layoutManager?.GetColumnVisibility("VoucherName") ?? true)" />
 
-        <DxGridDataColumn FieldName="JournalNoStr" Caption="Receipt No" Width="@(layoutManager?.GetColumnWidth("JournalNoStr") ?? "130px")"
+        <DxGridDataColumn FieldName="JournalNoStr" Caption="Payment No" Width="@(layoutManager?.GetColumnWidth("JournalNoStr") ?? "130px")"
                           Visible="@(layoutManager?.GetColumnVisibility("JournalNoStr") ?? true)" />
 
         <DxGridDataColumn FieldName="JournalDate" Caption="Date" DisplayFormat="dd/MM/yyyy" Width="@(layoutManager?.GetColumnWidth("JournalDate") ?? "120px")"
@@ -156,7 +156,7 @@
                 
    
 
-<ReceiptAddEditPage @ref="Popup" OnSaved="LoadReceipts" />
+<PaymentAddEditPage @ref="Popup" OnSaved="LoadReceipts" />
 <ConfirmationDialog />
 
 <GridLayoutpPopup @ref="layoutManager"
@@ -166,10 +166,10 @@
 
 @code {
     private IGrid? MyGrid;
-    private ReceiptAddEditPage? Popup;
+    private PaymentAddEditPage? Popup;
 
-    private List<Journal> ReceiptList = new();
-    private IReadOnlyList<object> SelectedReceipts = new List<object>();
+    private List<Journal> PaymentList = new();
+    private IReadOnlyList<object> SelectedPayment = new List<object>();
 
     private bool IsAdmin;
     private string CurrentUserId = string.Empty;
@@ -198,7 +198,7 @@
 
     new() { FieldName = "VoucherName", Caption = "Voucher Type", Visible = true, Width = 140, DisplayIndex = 1 },
 
-    new() { FieldName = "JournalNoStr", Caption = "Receipt No", Visible = true, Width = 130, DisplayIndex = 2 },
+    new() { FieldName = "JournalNoStr", Caption = "Payment No", Visible = true, Width = 130, DisplayIndex = 2 },
 
     new() { FieldName = "JournalDate", Caption = "Date", Visible = true, Width = 120, DisplayIndex = 3 },
 
@@ -238,8 +238,8 @@
         try
         {
             LoadingService.Show();
-            ReceiptList = (await JournalService.GetAllAsync())
-                .Where(j => j.JournalMasterType == "RECEIPT")
+            PaymentList = (await JournalService.GetAllAsync())
+                .Where(j => j.JournalMasterType == "PAYMENT")
                 .OrderByDescending(j => j.JournalDate)
                 .ToList();
         }
@@ -272,13 +272,13 @@
 
     private async Task OnDelete(ToolbarItemClickEventArgs e)
     {
-        if (SelectedReceipts == null || !SelectedReceipts.Any())
+        if (SelectedPayment == null || !SelectedPayment.Any())
         {
             ToastService.Warning("Select receipt(s) to delete.");
             return;
         }
 
-        var selectedList = SelectedReceipts.Cast<Journal>().ToList();
+        var selectedList = SelectedPayment.Cast<Journal>().ToList();
 
         var confirm = await ConfirmDialogService.ShowAsync(
             $"Are you sure you want to delete {selectedList.Count} selected receipt(s)?");
@@ -320,7 +320,7 @@
 
     private async Task OnToggleLock(ToolbarItemClickEventArgs e)
     {
-        foreach (var j in SelectedReceipts.Cast<Journal>())
+        foreach (var j in SelectedPayment.Cast<Journal>())
             await JournalService.ToggleLockAsync(j.JournalId);
 
         await LoadReceipts();
@@ -328,17 +328,17 @@
     }
 
     private async Task OnSelectionChanged(IReadOnlyList<object> items)
-   { SelectedReceipts = items?? new List<object>();
-        SelectedReceipts = items ?? new List<object>();
+    {
+        SelectedPayment = items ?? new List<object>();
         await InvokeAsync(StateHasChanged);
    }
     private string GetLockText()
-        => SelectedReceipts.Any(j => string.IsNullOrEmpty(((Journal)j).JournalLockedBy))
+        => SelectedPayment.Any(j => string.IsNullOrEmpty(((Journal)j).JournalLockedBy))
             ? "Lock"
             : "Unlock";
 
     private string GetLockIcon()
-        => SelectedReceipts.Any(j => string.IsNullOrEmpty(((Journal)j).JournalLockedBy))
+        => SelectedPayment.Any(j => string.IsNullOrEmpty(((Journal)j).JournalLockedBy))
             ? "bi bi-lock"
             : "bi bi-unlock";
 

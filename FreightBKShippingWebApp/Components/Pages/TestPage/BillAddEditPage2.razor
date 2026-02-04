@@ -394,6 +394,25 @@
                                              <ValidationMessage For="@(() => EditModel.BillDate)" />
                                     </ChildContent>
                                 </DxFormLayoutItem>
+               
+                <DxFormLayoutItem Caption="Bill Against" ColSpanMd="3" Visible="IsCreditnote">
+                    <ChildContent Context="ctx">
+                        <DxComboBox TData="Bill" TValue="int?"
+                                    Data="@billList"
+                                    TextFieldName="BillNo"
+                                    ValueFieldName="BillId"
+                                    AllowUserInput="true"
+                                    NullText="-- Select bill --"
+                                    Value="@EditModel.BillAgainstBillId"
+                                    ValueChanged="@((int? billId) => OnBillAgainstChanged( billId))"
+                                    ValueExpression="@( () => EditModel.BillAgainstBillId )"
+                                   
+                                    SearchMode="ListSearchMode.AutoSearch"
+                                    SearchFilterCondition="ListSearchFilterCondition.StartsWith"
+                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" CssClass="editor-smooth" />
+                    </ChildContent>
+                </DxFormLayoutItem>
+
                                 <DxFormLayoutItem Caption="Bill Due Date" ColSpanMd="3">
                                     <ChildContent Context="ctx">
                                         <DxDateEdit @bind-Date="EditModel.BillDueDate" Format="dd-MM-yyyy" />
@@ -1323,10 +1342,10 @@
         new() { FieldName = "BillDetailSgst", Caption = "SGST", Visible = true, Width = 80, DisplayIndex = 19 }
         // new() { FieldName = "BillDetailTotal", Caption = "Total", Visible = true, Width = 120, DisplayIndex = 20 }
     };
-       
-    }
 
-      // Grid Layout Manager Reference
+    }
+    private List<Bill> billList = new();
+    // Grid Layout Manager Reference
     private GridLayoutpPopup? layoutManager;
     private List<GridColumnLayout> allGridColumns = [];
     private async void ShowLayoutPopup()
@@ -1380,10 +1399,10 @@
         }
         DetailGrid.Reload();
     }
-   
 
-   
-   
+
+
+
 
     private string ConvertNumberToWords(decimal number)
     {
@@ -1441,11 +1460,109 @@
 
         return 100; // default
     }
+    private void OnBillAgainstChanged(int? selectedBillId)
+    {
+        if (!selectedBillId.HasValue)
+        {
+            return;
+        }
 
-  
+        EditModel.BillAgainstBillId = selectedBillId;
+
+        // Find the selected bill from billList
+        var selectedBill = billList.FirstOrDefault(b => b.BillId == selectedBillId);
+        if (selectedBill == null)
+            return;
+
+        // --- Fill Header fields from the selected bill ---
+        EditModel.BillPartyId = selectedBill.BillPartyId;
+        EditModel.BillPlaceOfSupply = selectedBill.BillPlaceOfSupply;
+        EditModel.BillSupplyType = selectedBill.BillSupplyType;
+        EditModel.BillJobType = selectedBill.BillJobType;
+        EditModel.BillJobNo = selectedBill.BillJobNo;
+        EditModel.BillJobId = selectedBill.BillJobId;
+        EditModel.BillShipPartyId = selectedBill.BillShipPartyId;
+        EditModel.BillAddress1 = selectedBill.BillAddress1;
+        EditModel.BillContactNo = selectedBill.BillContactNo;
+        EditModel.BillGstNo = selectedBill.BillGstNo;
+        EditModel.BillPincode = selectedBill.BillPincode;
+        EditModel.BillCity = selectedBill.BillCity;
+        EditModel.BillStateId = selectedBill.BillStateId;
+        EditModel.BillRemarksDefault = selectedBill.BillRemarksDefault;
+        EditModel.BillContainerNo = selectedBill.BillContainerNo;
+        EditModel.BillSbNo = selectedBill.BillSbNo;
+        EditModel.BillSbDate = selectedBill.BillSbDate;
+        EditModel.BillRemarks = selectedBill.BillRemarks;
+        EditModel.BillExchRate = selectedBill.BillExchRate;
+        EditModel.BillDefaultCurrencyId = selectedBill.BillDefaultCurrencyId;
+        EditModel.BillIsRcm = selectedBill.BillIsRcm;
+
+        // --- Clone detail lines from the selected bill (negative amounts for credit note) ---
+        BillDetails.Clear();
+        int sno = 1;
+
+        if (selectedBill.BillDetails != null)
+        {
+            foreach (var detail in selectedBill.BillDetails.OrderBy(d => d.BillDetailSno))
+            {
+                BillDetails.Add(new BillDetail
+                {
+                    BillDetailSno = sno++,
+                    BillDetailId = 0,               // New rows — not saved yet
+                    BillDetailBillId = 0,
+                    BillDetailProductId = detail.BillDetailProductId,
+                    BillDetailHsnCode = detail.BillDetailHsnCode,
+                    BillDetailUnit = detail.BillDetailUnit,
+                    BillDetailUnitId = detail.BillDetailUnitId,
+                    BillDetailRemarks = detail.BillDetailRemarks,
+                    BillDetailRate = detail.BillDetailRate,
+                    BillDetailQty = detail.BillDetailQty,
+                    BillDetailExchRate = detail.BillDetailExchRate,
+                    BillDetailCurrencyId = detail.BillDetailCurrencyId,
+                    BillDetailExtraChrg = detail.BillDetailExtraChrg,
+                    BillDetailAmount = detail.BillDetailAmount,
+                    BillDetailTaxableAmt = detail.BillDetailTaxableAmt,
+                    BillDetailSlabId = detail.BillDetailSlabId,
+                    BillDetailGstPer = detail.BillDetailGstPer,
+                    BillDetailIgstPer = detail.BillDetailIgstPer,
+                    BillDetailIgst = detail.BillDetailIgst,
+                    BillDetailCgstPer = detail.BillDetailCgstPer,
+                    BillDetailCgst = detail.BillDetailCgst,
+                    BillDetailSgstPer = detail.BillDetailSgstPer,
+                    BillDetailSgst = detail.BillDetailSgst,
+                    BillDetailTotal = detail.BillDetailTotal,
+                    BillDetailAccountId = detail.BillDetailAccountId,
+                    BillDetailIgstAcId = detail.BillDetailIgstAcId,
+                    BillDetailCgstAcId = detail.BillDetailCgstAcId,
+                    BillDetailSgstAcId = detail.BillDetailSgstAcId,
+                    BillDetailStatus = true
+                });
+            }
+        }
+
+        // If no details came from the original bill, add empty rows
+        if (BillDetails.Count == 0)
+        {
+            nextSNo = 1;
+            InitializeInvoiceDetails();
+        }
+        else
+        {
+            nextSNo = sno;
+        }
+
+        // Recalculate totals
+        RecalculateNetAmount(EditModel.BillIsRoundOff);
+
+        // Clear unsaved tracking since these are fresh copies
+        UnsavedChanges.Clear();
+
+        StateHasChanged();
+    }
+
     // ======================Enhanced GetGridColumnWidth method - returns string for DevExpress==========================
 
-    
+
     //===========================================
 
 
@@ -1537,7 +1654,7 @@
     protected override async Task OnInitializedAsync()
     {
         InitializeGridColumns();
-      
+
 
         // ✅ Load only what's needed to show the form
         await LoadCriticalDataAsync();
@@ -1852,6 +1969,25 @@
                         BillDetailStatus = true
                     });
             }
+            var voucher = VoucherList.FirstOrDefault(c => c.VoucherId == bill.BillVoucherId);
+            if (voucher.VoucherGroup?.Equals("CREDIT NOTE", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                IsCreditnote = true;
+                var salesVoucherIds = VoucherList
+                       .Where(v => v.VoucherGroup?.Equals("SALES", StringComparison.OrdinalIgnoreCase) == true)
+                       .Select(v => v.VoucherId)
+                       .ToList();
+
+                billList = (await BillService.GetAllAsync())
+                    .Where(b =>
+                        b.BillYearId == YearStatechangeService.SelectedYearId &&
+                        salesVoucherIds.Contains(b.BillVoucherId))
+                    .ToList();
+            }
+            else
+            {
+                IsCreditnote = false;
+            }
             BillnoVisible = true;
             Title = "Edit Bill";
         }
@@ -1864,7 +2000,7 @@
 
             // if (EditModel.BillBranchId == 0)
             //     EditModel.BillBranchId = defaultBranch?.BranchId ?? 0;
-            
+
             // Set default branch from BranchContext
             if (EditModel.BillBranchId == 0)
                 EditModel.BillBranchId = BranchContext.BranchId;
@@ -1883,12 +2019,14 @@
             OnvoucherChanged(EditModel,EditModel.BillVoucherId);
             BillDetails = new List<BillDetail>();
             nextSNo = 1;
+            IsCreditnote = false;
             Title = "Add Bill";
             InitializeInvoiceDetails();
         }
 
         UnsavedChanges.Clear();
 
+        //IsCreditnote = false;
         Visible = true;
         StateHasChanged();
         // _ =GetLocationListAsync();
@@ -1923,7 +2061,7 @@
 
     private void ShowJobPopup(string type)
     {
-       
+
 
 
         if (type == "JobType")
@@ -1965,7 +2103,7 @@
     {
         DetailGrid.ShowColumnChooser();
     }
-
+    private bool IsCreditnote { get; set; }
     private bool Visible { get; set; }
     private string Title { get; set; } = "Add/Edit Bill";
     private Bill EditModel { get; set; } = new();
@@ -2137,7 +2275,7 @@
             .Where(j => j.JobType == selectedType)
             .ToList();
     }
-     private async Task OnBranchChanged(Bill model, int branchId)
+    private async Task OnBranchChanged(Bill model, int branchId)
     {
         model.BillBranchId = branchId;
 
@@ -2188,9 +2326,29 @@
                 StateHasChanged();
             }
             catch (Exception ex)
-            {
+            {   
                 ToastService.Error("Error: " + ex.Message);
             }
+            if (voucher.VoucherGroup?.Equals("CREDIT NOTE", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                IsCreditnote = true;
+                var salesVoucherIds = VoucherList
+                    .Where(v => v.VoucherGroup?.Equals("SALES", StringComparison.OrdinalIgnoreCase) == true)
+                    .Select(v => v.VoucherId)
+                    .ToList();
+
+                billList = (await BillService.GetAllAsync())
+                    .Where(b =>
+                        b.BillYearId == YearStatechangeService.SelectedYearId &&
+                        salesVoucherIds.Contains(b.BillVoucherId))
+                    .ToList();
+            }
+            else
+            {
+
+                IsCreditnote = false;
+            }
+
         }
     }
 

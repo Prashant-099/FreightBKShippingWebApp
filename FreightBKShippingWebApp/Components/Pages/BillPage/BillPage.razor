@@ -16,6 +16,7 @@
 @inject ReportService ReportService
 @inject ReportDataService ReportDataService
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject VoucherService VoucherService
 @inject YearStatechangeService YearStatechangeService
 @inject IJSRuntime JSRuntime
 @inject GridLayoutService GridLayoutService
@@ -629,7 +630,19 @@ DefaultFileName="@PendingFileName"
         try
         {
             LoadingService.Show();
-            billList = (await BillService.GetAllAsync()).Where(j => j.BillYearId == YearStatechangeService.SelectedYearId).ToList();
+            var allowedGroups = new[] { "SALES", "CREDIT NOTE" };
+
+            var voucherIds = (await VoucherService.GetAllAsync())
+                .Where(v => allowedGroups.Contains(v.VoucherGroup))
+                .Select(v => v.VoucherId)
+                .ToList();
+
+            billList = (await BillService.GetAllAsync())
+                .Where(j =>
+                    j.BillYearId == YearStatechangeService.SelectedYearId &&
+                    voucherIds.Contains(j.BillVoucherId))
+                .ToList();
+
             LoadingService.Hide();
             await InvokeAsync(StateHasChanged);
 

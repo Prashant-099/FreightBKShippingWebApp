@@ -1,0 +1,1234 @@
+﻿@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Models
+@using FreightBKShippingWebApp.Services
+@using DevExpress.Blazor
+@inject JournalService JournalService
+@inject BillService BillService
+@inject ToasteService ToastService
+@inject LoadingService LoadingService
+@inject VoucherService VoucherService
+@inject AccountService AccountService
+@inject YearStatechangeService YearStatechangeService
+@inject ConfirmationDialogService ConfirmDialogService
+@inject IBranchContext BranchContext
+@inject BranchService BranchService
+
+<style>
+    .receipt-grid-wrapper {
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .fixed-height-grid {
+        height: 300px;
+        overflow-y: auto;
+    }
+
+    .summary-box {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+       /*  padding: 12px;
+        margin-top: 10px */;
+    }
+
+    .summary-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+
+    .summary-label {
+        font-weight: 600;
+        color: #495057;
+    }
+
+    .summary-value {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #212529;
+    }
+
+    .total-amount {
+        background-color: #e3fcef;
+        padding: 8px;
+        border-radius: 6px;
+        border: 2px solid #28a745;
+    }
+
+    @@media (max-width: 768px) {
+        .fixed-height-grid {
+            height: 220px;
+        }
+    }
+</style>
+
+
+<DxPopup @bind-Visible="Visible"
+         ShowCloseButton="true"
+         HeaderText="@Title"
+         CloseOnOutsideClick="false"
+         MaxWidth="1500"
+         Width="70vw"
+         MaxHeight="90vh"
+         HorizontalAlignment="HorizontalAlignment.Center"
+         VerticalAlignment="VerticalAlignment.Center"
+         ShowFooter="true"
+         Scrollable="true">
+    <BodyContentTemplate Context="bdy">
+        <EditForm Model="@EditModel" OnValidSubmit="HandleValidSubmit" Context="ctsc" id="recpt">
+            <DataAnnotationsValidator />
+            <DxFormLayout>
+                <!-- Header Section -->
+                <DxFormLayoutItem Caption="Voucher" ColSpanMd="5">
+                    <DxComboBox TData="Voucher" TValue="int"
+                                Data="@VoucherList"
+                                TextFieldName="VoucherName"
+                                ValueFieldName="VoucherId"
+                                AllowUserInput="true"
+                                ShowValidationIcon="true"
+                                NullText="-- Select Voucher --"
+                                Value="@EditModel.JournalVoucherId"
+                                ValueChanged="@((int voucherId) => OnVoucherChanged(voucherId))"
+                                ValueExpression="@(() => EditModel.JournalVoucherId)"
+                                SearchMode="ListSearchMode.AutoSearch"
+                                ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                </DxFormLayoutItem>
+
+                <DxFormLayoutItem Caption="Receipt No" ColSpanMd="4">
+                    <DxTextBox @bind-Text="EditModel.JournalNoStr" ReadOnly="true" ShowValidationIcon="true" />
+                </DxFormLayoutItem>
+
+                <DxFormLayoutItem Caption="Date" ColSpanMd="3">
+                    <DxDateEdit @bind-Date="EditModel.JournalDate"
+                                ShowValidationIcon="true"
+                                Format="dd-MM-yyyy" />
+                    <ValidationMessage For="@(() => EditModel.JournalDate)" />
+                </DxFormLayoutItem>
+
+                <DxFormLayoutItem Caption="Customer Name" ColSpanMd="5">
+                    <DxComboBox TData="Account" TValue="int"
+                                Data="@CustomerList"
+                                TextFieldName="AccountName"
+                                ValueFieldName="AccountId"
+                                ShowValidationIcon="true"
+                                AllowUserInput="true"
+                                NullText="-- Select Customer --"
+                                Value="@EditModel.JournalPartyId"
+                                ValueChanged="@((int partyId) => OnPartyChanged(partyId))"
+                                ValueExpression="@(() => EditModel.JournalPartyId)"
+                                SearchMode="ListSearchMode.AutoSearch"
+                                ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                </DxFormLayoutItem>
+
+                <DxFormLayoutItem Caption="Cash/Bank" ColSpanMd="4">
+                    <DxComboBox TData="Account" TValue="int"
+                                Data="@BankAccountList"
+                                TextFieldName="AccountName"
+                                ShowValidationIcon="true"
+                                ValueFieldName="AccountId"
+                                AllowUserInput="true"
+                                NullText="-- Select Bank/Cash --"
+                                @bind-Value="EditModel.JournalAccountId"
+                                SearchMode="ListSearchMode.AutoSearch"
+                                ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                </DxFormLayoutItem>
+
+                <DxFormLayoutItem Caption="Received Amount" ColSpanMd="3">
+                    <DxSpinEdit Value="@EditModel.JournalAmount"
+                                ValueChanged="@((double val) => OnReceivedAmountChanged(val))"
+                                ValueExpression="@(() => EditModel.JournalAmount)"
+                                ShowValidationIcon="true"
+                                ShowSpinButtons="false"
+                                DisplayFormat="N2" />
+                </DxFormLayoutItem>
+            </DxFormLayout>
+
+            @if (ShowBillSettlementGrid)
+            {
+                <!-- Bill Settlement Grid -->
+                <div class="receipt-grid-wrapper mt-3">
+                    <h5 class="mb-2">Settle Against Bills</h5>
+                    <DxGrid Data="@PendingBills"
+                            TItem="BillSettlement"
+                            @ref="ReceiptGrid"
+                            KeyFieldName="BillId"
+                            EditMode="GridEditMode.EditCell"
+                            ShowFilterRow="false"
+                            ShowAddNewButton="false"
+                            EditModelSaving="OnGridSaving"
+                            CustomizeElement="ReceiptGrid_CustomizeElement"
+                            Enabled="@(EditModel.JournalAmount > 0 && PendingBills.Any())"
+                            AllowSort="false"
+                            PageSize="10"
+                            CssClass="fixed-height-grid">
+                        <Columns>
+                            <DxGridCommandColumn Width="60px" CancelButtonVisible="false" FixedPosition="GridColumnFixedPosition.Left"
+                                                 SaveButtonVisible="false" NewButtonVisible="false" TextAlignment="GridTextAlignment.Center">
+                                <HeaderCaptionTemplate>
+                                    <DxButton RenderStyle="ButtonRenderStyle.Link"
+                                              IconCssClass="bi bi-three-dots"
+                                              SizeMode="SizeMode.Small"
+                                              Click="ShowLayoutPopup" />
+                                </HeaderCaptionTemplate>
+                                <CellDisplayTemplate>
+                                    @{
+                                        var bill = (BillSettlement)context.DataItem;
+                                    }
+                                    <DxCheckBox Checked="@bill.IsSelected"
+                                                CheckedChanged="@((bool val) => OnBillSelectionChanged(bill, val))"
+                                                CheckedExpression="@(() => bill.IsSelected)" />
+                                </CellDisplayTemplate>
+                                <CellEditTemplate>
+                                    @{
+                                        var bill = (BillSettlement)context.DataItem;
+                                    }
+                                    <DxCheckBox Checked="@bill.IsSelected"
+                                                CheckedChanged="@((bool val) => OnBillSelectionChanged(bill, val))"
+                                                CheckedExpression="@(() => bill.IsSelected)" />
+                                </CellEditTemplate>
+                            </DxGridCommandColumn>
+
+                            <DxGridDataColumn FieldName="BillNo" Caption="Bill No" ReadOnly="true" 
+                                              Width="@(layoutManager?.GetColumnWidth("BillNo") ?? "150px")"
+                                              Visible="@(layoutManager?.GetColumnVisibility("BillNo") ?? true)" />
+                            <DxGridDataColumn FieldName="BillDate" Caption="Date" ReadOnly="true" DisplayFormat="dd-MM-yyyy" 
+                                              Width="@(layoutManager?.GetColumnWidth("BillDate") ?? "120px")"
+                                              Visible="@(layoutManager?.GetColumnVisibility("BillDate") ?? true)" />
+                            <DxGridDataColumn FieldName="VoucherType" Caption="Type" ReadOnly="true" 
+                                              Width="@(layoutManager?.GetColumnWidth("VoucherType") ?? "150px")"
+                                              Visible="@(layoutManager?.GetColumnVisibility("VoucherType") ?? true)" />
+                            <DxGridDataColumn FieldName="BillTotal" Caption="Bill Total" ReadOnly="true" DisplayFormat="N2" 
+                                              Width="@(layoutManager?.GetColumnWidth("BillTotal") ?? "120px")"
+                                              Visible="@(layoutManager?.GetColumnVisibility("BillTotal") ?? true)" />
+                            <DxGridDataColumn FieldName="DueAmount" Caption="Due Amount" ReadOnly="true" DisplayFormat="N2" 
+                                              Width="@(layoutManager?.GetColumnWidth("DueAmount") ?? "120px")"
+                                              Visible="@(layoutManager?.GetColumnVisibility("DueAmount") ?? true)" />
+
+                            <DxGridDataColumn FieldName="SettledAmount" Caption="Received" 
+                                              Width="@(layoutManager?.GetColumnWidth("SettledAmount") ?? "120px")"
+                                              Visible="@(layoutManager?.GetColumnVisibility("SettledAmount") ?? true)">
+                                <CellEditTemplate Context="ctx">
+                                    @{
+                                        var settlement = (BillSettlement)ctx.EditModel;
+                                    }
+                                    <DxSpinEdit Value="@settlement.SettledAmount"
+                                                ValueChanged="@((double newVal) => OnSettledChanged(newVal, settlement))"
+                                                ValueExpression="@(() => settlement.SettledAmount)"
+                                                ShowSpinButtons="false"
+                                                DisplayFormat="N2" />
+                                </CellEditTemplate>
+                            </DxGridDataColumn>
+
+                            <DxGridDataColumn FieldName="DiscountAmount" Caption="Discount" 
+                                              Width="@(layoutManager?.GetColumnWidth("DiscountAmount") ?? "100px")"
+                                              Visible="@(layoutManager?.GetColumnVisibility("DiscountAmount") ?? true)">
+                                <CellEditTemplate Context="ctx">
+                                    @{
+                                        var settlement = (BillSettlement)ctx.EditModel;
+                                    }
+                                    <DxSpinEdit Value="@settlement.DiscountAmount"
+                                                ValueChanged="@((double newVal) => OnDiscountChanged(newVal, settlement))"
+                                                ValueExpression="@(() => settlement.DiscountAmount)"
+                                                ShowSpinButtons="false"
+                                                DisplayFormat="N2" />
+                                </CellEditTemplate>
+                            </DxGridDataColumn>
+
+                            <DxGridDataColumn FieldName="TdsAmount" Caption="TDS" 
+                                              Width="@(layoutManager?.GetColumnWidth("TdsAmount") ?? "100px")"
+                                              Visible="@(layoutManager?.GetColumnVisibility("TdsAmount") ?? true)">
+                                <CellEditTemplate Context="ctx">
+                                    @{
+                                        var settlement = (BillSettlement)ctx.EditModel;
+                                    }
+                                    <DxSpinEdit Value="@settlement.TdsAmount"
+                                                ValueChanged="@((double newVal) => OnTdsChanged(newVal, settlement))"
+                                                ValueExpression="@(() => settlement.TdsAmount)"
+                                                ShowSpinButtons="false"
+                                                DisplayFormat="N2" />
+                                </CellEditTemplate>
+                            </DxGridDataColumn>
+
+                            <DxGridDataColumn FieldName="ShortageAmount" Caption="Shortage" 
+                                              Width="@(layoutManager?.GetColumnWidth("ShortageAmount") ?? "100px")"
+                                              Visible="@(layoutManager?.GetColumnVisibility("ShortageAmount") ?? true)">
+                                <CellEditTemplate Context="ctx">
+                                    @{
+                                        var settlement = (BillSettlement)ctx.EditModel;
+                                    }
+                                    <DxSpinEdit Value="@settlement.ShortageAmount"
+                                                ValueChanged="@((double newVal) => OnShortageChanged(newVal, settlement))"
+                                                ValueExpression="@(() => settlement.ShortageAmount)"
+                                                ShowSpinButtons="false"
+                                                DisplayFormat="N2" />
+                                </CellEditTemplate>
+                            </DxGridDataColumn>
+
+                            <DxGridDataColumn FieldName="BalanceAmount" Caption="Balance" ReadOnly="true" DisplayFormat="N2" 
+                                              Width="@(layoutManager?.GetColumnWidth("BalanceAmount") ?? "120px")"
+                                              Visible="@(layoutManager?.GetColumnVisibility("BalanceAmount") ?? true)" />
+                        </Columns>
+
+                        <TotalSummary>
+                            <DxGridSummaryItem FieldName="BillTotal" SummaryType="GridSummaryItemType.Sum" DisplayText="Total: {0:N2}" />
+                            <DxGridSummaryItem FieldName="SettledAmount" SummaryType="GridSummaryItemType.Sum" DisplayText="{0:N2}" />
+                             <DxGridSummaryItem FieldName="DiscountAmount" SummaryType="GridSummaryItemType.Sum" DisplayText="{0:N2}" />
+                              <DxGridSummaryItem FieldName="TdsAmount" SummaryType="GridSummaryItemType.Sum" DisplayText="{0:N2}" />
+                               <DxGridSummaryItem FieldName="ShortageAmount" SummaryType="GridSummaryItemType.Sum" DisplayText="{0:N2}" />
+                            <DxGridSummaryItem FieldName="BalanceAmount" SummaryType="GridSummaryItemType.Sum" DisplayText="{0:N2}" />
+                        </TotalSummary>
+                    </DxGrid>
+                </div>
+            }
+
+            <div class="row mt-3">
+                <!-- Remarks: Left (MD-6) -->
+                <div class="col-md-6">
+                    <DxFormLayout>
+                        <DxFormLayoutItem Caption="Remarks" ColSpanMd="12">
+                            <DxMemo @bind-Text="EditModel.JournalRemarks" Rows="3" />
+                        </DxFormLayoutItem>
+                    </DxFormLayout>
+                </div>
+
+                <!-- Summary Box: Right (MD-6) -->
+                <div class="col-md-6">
+                    <div class="summary-box h-100">
+                        @if (ShowBillSettlementGrid)
+                        {
+                            <div class="summary-row">
+                                <span class="summary-label">Settled Amount:</span>
+                                <span class="summary-value">₹ @TotalSettled.ToString("N2")</span>
+                            </div>
+                        }
+
+                        <div class="summary-row">
+                            <span class="summary-label">Discount Amount:</span>
+                            @if (ShowBillSettlementGrid)
+                            {
+                                @* Bill-to-Bill: Read-only (calculated from grid) *@
+                                <span class="summary-value">₹ @EditModel.JournalTotalDiscount.ToString("N2")</span>
+                            }
+                            else
+                            {
+                                @* On Account: Editable *@
+                                <DxSpinEdit Value="@EditModel.JournalTotalDiscount"
+                                            ValueChanged="@((float v) => {
+                                                EditModel.JournalTotalDiscount = v;
+                                                OnSummaryAmountChanged();
+                                            })"
+                                            ValueExpression="@(() => EditModel.JournalTotalDiscount)"
+                                            ShowSpinButtons="false"
+                                            DisplayFormat="N2" />
+                            }
+                        </div>
+
+                        <div class="summary-row">
+                            <span class="summary-label">Shortage Amount:</span>
+                            @if (ShowBillSettlementGrid)
+                            {
+                                <span class="summary-value">₹ @EditModel.JournalTotalShort.ToString("N2")</span>
+                            }
+                            else
+                            {
+                                <DxSpinEdit Value="@EditModel.JournalTotalShort"
+                                            ValueChanged="@((float v) => {
+                                                EditModel.JournalTotalShort = v;
+                                                OnSummaryAmountChanged();
+                                            })"
+                                            ValueExpression="@(() => EditModel.JournalTotalShort)"
+                                            ShowSpinButtons="false"
+                                            DisplayFormat="N2" />
+                            }
+                        </div>
+
+                        <div class="summary-row">
+                            <span class="summary-label">TDS Amount:</span>
+                            @if (ShowBillSettlementGrid)
+                            {
+                                <span class="summary-value">₹ @EditModel.JournalTotalTds.ToString("N2")</span>
+                            }
+                            else
+                            {
+                                <DxSpinEdit Value="@EditModel.JournalTotalTds"
+                                            ValueChanged="@((float v) => {
+                                                EditModel.JournalTotalTds = v;
+                                                OnSummaryAmountChanged();
+                                            })"
+                                            ValueExpression="@(() => EditModel.JournalTotalTds)"
+                                            ShowSpinButtons="false"
+                                            DisplayFormat="N2" />
+                            }
+                        </div>
+
+                        <div class="summary-row">
+                            <span class="summary-label">On Account:</span>
+                            <span class="summary-value">₹ @EditModel.JournalOnAccount.ToString("N2")</span>
+                        </div>
+
+                        <div class="summary-row total-amount mt-2">
+                            <span class="summary-label">Total Amount:</span>
+                            <span class="summary-value">₹ @EditModel.JournalTotal.ToString("N2")</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </EditForm>
+    </BodyContentTemplate>
+
+    <FooterContentTemplate>
+        <div class="d-flex justify-content-end gap-2">
+            <DxButton Text="Save"
+                      RenderStyle="ButtonRenderStyle.Primary"
+                      SubmitFormOnClick="true"
+                      Form="recpt"
+                      Enabled="@(!ShowBillSettlementGrid || PendingBills.Any(b => b.IsSelected))"
+                      IconCssClass="bi bi-save" />
+            <DxButton Text="Cancel"
+                      RenderStyle="ButtonRenderStyle.Danger"
+                      Click="Hide"
+                      IconCssClass="bi bi-x-circle" />
+        </div>
+    </FooterContentTemplate>
+</DxPopup>
+
+<ConfirmationDialog />
+<GridLayoutpPopup @ref="layoutManager"
+                  VoucherType="ReceiptDetails"
+                  Columns="@allColumns"
+                  OnLayoutChanged="HandleLayoutChanged" />
+
+@code {
+    [Parameter] public EventCallback OnSaved { get; set; }
+    [Parameter] public int specificBillId  { get; set; }
+
+    private bool Visible { get; set; }
+    private string Title { get; set; } = "Payment Entry";
+    private Journal EditModel { get; set; } = new();
+    private IGrid ReceiptGrid { get; set; }
+
+    private List<Voucher> VoucherList = new();
+    private List<Account> CustomerList = new();
+    private List<Account> BankAccountList = new();
+    private List<BillSettlement> PendingBills = new();
+
+    private double TotalSettled => PendingBills.Where(b => b.IsSelected).Sum(b => b.SettledAmount);
+    // private double TotalDiscount => PendingBills.Where(b => b.IsSelected).Sum(b => b.DiscountAmount);
+    // private double TotalShortage => PendingBills.Where(b => b.IsSelected).Sum(b => b.ShortageAmount);
+    // private double TotalTds => PendingBills.Where(b => b.IsSelected).Sum(b => b.TdsAmount);
+
+    private bool ShowBillSettlementGrid = false;
+    private Account? SelectedCustomer = null;
+
+    // Grid Layout Manager Reference
+    private GridLayoutpPopup? layoutManager;
+    private List<GridColumnLayout> allColumns = [];
+
+    private async void ShowLayoutPopup()
+    {
+        await InvokeAsync(() =>
+        {
+            layoutManager?.ShowPopup();
+        });
+    }
+
+    private async Task HandleLayoutChanged(List<GridColumnLayout> updatedLayout)
+    {
+        allColumns = updatedLayout;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void InitializeColumns()
+    {
+        allColumns = new List<GridColumnLayout>
+        {
+            new() { FieldName = "BillNo", Caption = "Bill No", Visible = true, Width = 150, DisplayIndex = 0 },
+            new() { FieldName = "BillDate", Caption = "Date", Visible = true, Width = 120, DisplayIndex = 1 },
+            new() { FieldName = "VoucherType", Caption = "Type", Visible = true, Width = 150, DisplayIndex = 2 },
+            new() { FieldName = "BillTotal", Caption = "Bill Total", Visible = true, Width = 120, DisplayIndex = 3 },
+            new() { FieldName = "DueAmount", Caption = "Due Amount", Visible = true, Width = 120, DisplayIndex = 4 },
+            new() { FieldName = "SettledAmount", Caption = "Received", Visible = true, Width = 120, DisplayIndex = 5 },
+            new() { FieldName = "DiscountAmount", Caption = "Discount", Visible = true, Width = 100, DisplayIndex = 6 },
+            new() { FieldName = "TdsAmount", Caption = "TDS", Visible = true, Width = 100, DisplayIndex = 7 },
+            new() { FieldName = "ShortageAmount", Caption = "Shortage", Visible = true, Width = 100, DisplayIndex = 8 },
+            new() { FieldName = "BalanceAmount", Caption = "Balance", Visible = true, Width = 120, DisplayIndex = 9 }
+        };
+    }
+
+    private List<Journal> _allReceiptsCache;
+
+    private async Task<double> GetAlreadySettledAmount(int billId)
+    {
+        _allReceiptsCache ??= await JournalService.GetAllAsync();
+
+        return _allReceiptsCache
+            .Where(j => j.BillRefDetails != null && j.JournalId != EditModel.JournalId)
+            .SelectMany(j => j.BillRefDetails)
+            .Where(d => d.BillRefVchId == billId)
+            .Sum(d => d.BillRefVchAmount + d.BillRefVchDis + d.BillRefVchTds + d.BillRefVchShort);
+    }
+
+    private void OnSummaryAmountChanged()
+    {
+        CalculateTotals();
+        StateHasChanged();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDropdownsAsync();
+        InitializeColumns();
+    }
+
+    enum DataChangeType
+    {
+        Addition,
+        Modification,
+        Delete
+    }
+
+    class GridChangeInfo
+    {
+        public DataChangeType Type { get; set; }
+        public HashSet<string> ChangedFields { get; set; }
+
+        public GridChangeInfo(DataChangeType type, HashSet<string> fields)
+        {
+            Type = type;
+            ChangedFields = fields;
+        }
+    }
+
+    private Dictionary<BillSettlement, GridChangeInfo> ReceiptUnsavedChanges = new();
+
+    void ReceiptGrid_CustomizeElement(GridCustomizeElementEventArgs ea)
+    {
+        if (ea.ElementType != GridElementType.DataCell)
+            return;
+
+        var settlement = (BillSettlement)ReceiptGrid.GetDataItem(ea.VisibleIndex);
+        if (settlement == null) return;
+
+        var column = (IGridDataColumn)ea.Column;
+
+        if (ReceiptUnsavedChanges.TryGetValue(settlement, out var changes))
+        {
+            if (changes.Type == DataChangeType.Addition)
+                ea.CssClass = "grid-new-row";
+            else if (changes.Type == DataChangeType.Delete)
+                ea.CssClass = "grid-deleted-row";
+            else if (changes.ChangedFields.Contains(column.FieldName))
+                ea.CssClass = "grid-modified-cell";
+        }
+    }
+
+    void OnGridSaving(GridEditModelSavingEventArgs e)
+    {
+        var edited = (BillSettlement)e.EditModel;
+        var original = (BillSettlement)e.DataItem;
+
+        var changedFields = ApplyReceiptModifiedFields(edited, original);
+
+        if (changedFields.Count > 0)
+        {
+            if (ReceiptUnsavedChanges.TryGetValue(original, out var info))
+                info.ChangedFields.UnionWith(changedFields);
+            else
+                ReceiptUnsavedChanges.Add(original, new GridChangeInfo(DataChangeType.Modification, changedFields));
+        }
+    }
+
+    private HashSet<string> ApplyReceiptModifiedFields(BillSettlement source, BillSettlement target)
+    {
+        var changed = new HashSet<string>();
+        var props = typeof(BillSettlement).GetProperties();
+
+        foreach (var prop in props)
+        {
+            if (prop.Name == nameof(BillSettlement.BillId)) continue;
+
+            var src = prop.GetValue(source);
+            var trg = prop.GetValue(target);
+
+            if (!Equals(src, trg))
+            {
+                prop.SetValue(target, src);
+                changed.Add(prop.Name);
+            }
+        }
+
+        return changed;
+    }
+
+    private async Task LoadDropdownsAsync()
+    {
+        try
+        {
+            var voucherTask = VoucherService.GetAllAsync();
+            var accountTask = AccountService.GetAllAsync();
+
+            await Task.WhenAll(voucherTask, accountTask);
+
+            VoucherList = voucherTask.Result
+                .Where(v => v.VoucherGroup?.Equals("PAYMENT", StringComparison.OrdinalIgnoreCase) == true)
+                .ToList();
+
+            var allAccounts = accountTask.Result;
+
+            CustomerList = allAccounts.Where(a => a.AccountTypeId == 18).ToList();
+            BankAccountList = allAccounts.Where(a => a.AccountTypeId == 10).ToList();
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Error loading data: {ex.Message}");
+        }
+    }
+
+    public async Task Show(Journal journal = null, int? specificBillId = null)
+    {
+        PendingBills.Clear();
+        _allReceiptsCache = null;
+
+        EditModel = journal ?? new Journal
+            {
+                JournalDate = DateTime.Now,
+                JournalYearId = YearStatechangeService.SelectedYearId,
+                JournalStatus = true,
+                JournalMasterType = "PAYMENT"
+            };
+
+        if (EditModel.JournalId > 0)
+        {
+            SelectedCustomer = CustomerList.FirstOrDefault(a => a.AccountId == EditModel.JournalPartyId);
+            ShowBillSettlementGrid = SelectedCustomer?.AccountMethod?.Equals("BILL TO BILL", StringComparison.OrdinalIgnoreCase) == true;
+
+            Title = "Edit Payment";
+            await LoadJournalDetails();
+        }
+        else
+        {
+            var voucher = VoucherList.FirstOrDefault();
+            if (voucher != null)
+            {
+                await OnVoucherChanged(voucher.VoucherId);
+            }
+            if (journal.JournalPartyId > 0)
+            {
+                await OnPartyChanged(journal?.JournalPartyId ?? 0, specificBillId);
+            }
+            else{ShowBillSettlementGrid = false;}
+            Title = "Add Payment";
+
+        }
+
+        //ShowBillSettlementGrid = false;
+        Visible = true;
+        StateHasChanged();
+    }
+
+    private async Task OnVoucherChanged(int voucherId)
+    {
+        EditModel.JournalVoucherId = voucherId;
+
+        if (EditModel.JournalId == 0)
+        {
+            try
+            {
+                var result = await YearStatechangeService.GeneratebillNoAsync(
+                    voucherId,
+                    YearStatechangeService.SelectedYearId,
+                    BranchContext.BranchId
+                );
+
+                EditModel.JournalNoStr = result.prefix + result.number + result.suffix;
+                EditModel.JournalPrefix = result.prefix;
+                EditModel.JournalPostfix = result.suffix;
+                EditModel.JournalNo = int.Parse(result.number);
+
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                ToastService.Error($"Error generating receipt number: {ex.Message}");
+            }
+        }
+    }
+
+    private async Task OnPartyChanged(int partyId, int? specificBillId = null)
+    {
+        EditModel.JournalPartyId = partyId;
+        SelectedCustomer = CustomerList.FirstOrDefault(a => a.AccountId == partyId);
+        ShowBillSettlementGrid = SelectedCustomer?.AccountMethod?.Equals("BILL TO BILL", StringComparison.OrdinalIgnoreCase) == true;
+
+        if (ShowBillSettlementGrid)
+        {
+            await LoadPendingBills(partyId, specificBillId);
+        }
+        else
+        {
+            PendingBills.Clear();
+        }
+
+        if (specificBillId == null)
+        {
+            // ✅ Reset all amounts when customer changes
+            EditModel.JournalAmount =  0;
+            EditModel.JournalTotal = 0;
+            EditModel.JournalTotalTds = 0;
+            EditModel.JournalTotalDiscount = 0;
+            EditModel.JournalTotalShort = 0;
+            EditModel.JournalOnAccount = 0;
+        }
+        else
+        {
+          
+           
+            if (ShowBillSettlementGrid)
+            {
+                
+                
+                EditModel.JournalOnAccount = (float)EditModel.JournalAmount;
+                 EditModel.JournalTotal=0;
+            }
+            else{
+                 EditModel.JournalTotal = EditModel.JournalAmount;
+                 EditModel.JournalOnAccount = (float) EditModel.JournalAmount;
+            }
+        }
+        StateHasChanged();
+    }
+
+    private async Task LoadPendingBills(int partyId, int? specificBillId = null)
+    {
+        try
+        {
+            LoadingService.Show("Loading pending bills...");
+
+            var allVouchers = await VoucherService.GetAllAsync();
+
+            var PurchaseVoucherIds = allVouchers
+                .Where(v => v.VoucherGroup?.Equals("PURCHASE", StringComparison.OrdinalIgnoreCase) == true)
+                .Select(v => v.VoucherId)
+                .ToList();
+
+            var allBills = await BillService.GetAllAsync();
+
+            var pendingBills = new List<BillSettlement>();
+
+            var billsToProcess = allBills.Where(b =>
+    b.BillPartyId == partyId &&
+    b.BillStatus &&
+    PurchaseVoucherIds.Contains(b.BillVoucherId) &&
+    b.BillYearId == YearStatechangeService.SelectedYearId &&
+    (!specificBillId.HasValue || b.BillId == specificBillId.Value));
+
+            foreach (var b in billsToProcess.Where(b =>
+                         b.BillPartyId == partyId &&
+                         b.BillStatus &&
+                         PurchaseVoucherIds.Contains(b.BillVoucherId) &&
+                         b.BillYearId == YearStatechangeService.SelectedYearId))
+            {
+                var alreadySettled = await GetAlreadySettledAmount(b.BillId);
+                var remainingDue = Math.Max(b.BillNetAmount - alreadySettled, 0);
+
+                if (remainingDue <= 0)
+                    continue;
+
+                pendingBills.Add(new BillSettlement
+                {
+                    BillId = b.BillId,
+                    BillNo = b.BillNo,
+                    BillDate = b.BillDate,
+                    VoucherType = b.Vouchname ?? "Sales",
+                    BillTotal = b.BillNetAmount,
+                    DueAmount = remainingDue,
+                    BalanceAmount = remainingDue,
+                    SettledAmount = 0,
+                    DiscountAmount = 0,
+                    TdsAmount = 0,
+                    ShortageAmount = 0,
+                    IsSelected = false
+                });
+            }
+
+            PendingBills = pendingBills;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Error loading bills: {ex.Message}");
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+
+    private async void OnBillSelectionChanged(BillSettlement bill, bool isSelected)
+    {
+        // bill.IsSelected = isSelected;
+        
+        // if (isSelected)
+        // {
+        //      var actualBill = PendingBills.FirstOrDefault(b => b.BillId == bill.BillId);
+        // if (actualBill == null) return;
+
+        //     var remaining = GetRemainingAmount(bill, b => b.SettledAmount);
+        //     bill.SettledAmount = Math.Min(remaining, bill.DueAmount);
+        // }
+        // else
+        // {
+        //     bill.SettledAmount = 0;
+        //     bill.DiscountAmount = 0;
+        //     bill.TdsAmount = 0;
+        //     bill.ShortageAmount = 0;
+        // }
+
+        // UpdateBillBalance(bill);
+        // CalculateTotals();
+
+        // if (ReceiptGrid != null)
+        // {
+        //     ReceiptGrid.Reload();
+        // }
+        var actualBill = PendingBills.FirstOrDefault(b => b.BillId == bill.BillId);
+    if (actualBill == null)
+        return;
+
+    actualBill.IsSelected = bill.IsSelected = isSelected;
+
+    if (isSelected)
+    {
+        // Reset adjustments first
+        actualBill.DiscountAmount = 0;
+        actualBill.TdsAmount = 0;
+        actualBill.ShortageAmount = 0;
+
+        var remaining = GetRemainingAmount(actualBill, b => b.SettledAmount);
+
+        actualBill.SettledAmount = Math.Min(remaining, actualBill.DueAmount);
+    }
+    else
+    {
+        actualBill.SettledAmount = 0;
+        actualBill.DiscountAmount = 0;
+        actualBill.TdsAmount = 0;
+        actualBill.ShortageAmount = 0;
+    }
+
+    // Sync grid row
+    bill.SettledAmount   = actualBill.SettledAmount;
+    bill.DiscountAmount  = actualBill.DiscountAmount;
+    bill.TdsAmount       = actualBill.TdsAmount;
+    bill.ShortageAmount  = actualBill.ShortageAmount;
+
+    UpdateBillBalance(actualBill);
+    CalculateTotals();
+
+    ReceiptGrid?.Reload();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    // ✅ Fixed AutoSelect logic
+    // private void AutoSelect(BillSettlement bill)
+    // {
+    //     // Auto-select if ANY amount is greater than 0
+    //     bill.IsSelected = bill.SettledAmount > 0 ||
+    //                      bill.TdsAmount > 0 ||
+    //                      bill.ShortageAmount > 0 ||
+    //                      bill.DiscountAmount > 0;
+    // }
+
+   private double GetRemainingAmount(
+    BillSettlement currentBill,
+    Func<BillSettlement, double> excludeCurrentValue)
+{
+    var usedAmount = PendingBills
+        .Where(b => b.IsSelected)
+        .Sum(b =>
+        {
+            if (b == currentBill)
+            {
+                return
+                    b.SettledAmount +
+                    b.DiscountAmount +
+                    b.TdsAmount +
+                    b.ShortageAmount
+                    - excludeCurrentValue(b); // 👈 subtract current field
+            }
+
+            return b.SettledAmount +
+                   b.DiscountAmount +
+                   b.TdsAmount +
+                   b.ShortageAmount;
+        });
+
+    return Math.Max(EditModel.JournalAmount - usedAmount, 0);
+}
+
+
+    private void OnReceivedAmountChanged(double newValue)
+    {
+        EditModel.JournalAmount = newValue;
+
+        if (ShowBillSettlementGrid)
+        {
+            // ✅ Bill-to-Bill: Reset all bill amounts
+            foreach (var bill in PendingBills)
+            {
+                bill.IsSelected = false;
+                bill.SettledAmount = 0;
+                bill.DiscountAmount = 0;
+                bill.TdsAmount = 0;
+                bill.ShortageAmount = 0;
+                bill.BalanceAmount = bill.DueAmount;
+            }
+        }
+
+        // ✅ Reset summary amounts for both modes
+        EditModel.JournalTotalDiscount = 0;
+        EditModel.JournalTotalTds = 0;
+        EditModel.JournalTotalShort = 0;
+
+        CalculateTotals();
+        StateHasChanged();
+    }
+
+    private async  void OnSettledChanged(double newValue, BillSettlement settlement)
+    {
+        if (!settlement.IsSelected)
+            return;
+        var actualBill = PendingBills.FirstOrDefault(b => b.BillId == settlement.BillId);
+        if (actualBill == null) return;
+        var remaining = GetRemainingAmount(actualBill, b => b.SettledAmount);
+        actualBill.SettledAmount = Math.Min(Math.Min(newValue, actualBill.DueAmount), remaining);
+        settlement.SettledAmount = actualBill.SettledAmount;
+        //AutoSelect(settlement);
+        UpdateBillBalance(actualBill);
+        CalculateTotals();
+        if (ReceiptGrid != null)
+        {
+            ReceiptGrid.Reload();
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async  void OnDiscountChanged(double newValue, BillSettlement settlement)
+    {
+        if (!settlement.IsSelected)
+            return;
+        var actualBill = PendingBills.FirstOrDefault(b => b.BillId == settlement.BillId);
+        if (actualBill == null) return;
+
+        var remaining = GetRemainingAmount(actualBill, b => b.DiscountAmount) ;
+
+         var maxDiscount = Math.Min(
+        actualBill.DueAmount - actualBill.SettledAmount - actualBill.TdsAmount - actualBill.ShortageAmount, 
+        remaining
+    );
+    
+    actualBill.DiscountAmount = Math.Min(Math.Max(newValue, 0), maxDiscount);
+        // actualBill.DiscountAmount = Math.Min(newValue, remaining);
+        settlement.DiscountAmount = actualBill.DiscountAmount;
+        //AutoSelect(settlement);
+        UpdateBillBalance(actualBill);
+        CalculateTotals();
+        if (ReceiptGrid != null)
+        {
+            ReceiptGrid.Reload();
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async void OnTdsChanged(double newValue, BillSettlement settlement)
+    {
+        if (!settlement.IsSelected)
+            return;
+             var actualBill = PendingBills.FirstOrDefault(b => b.BillId == settlement.BillId);
+    if (actualBill == null) return;
+        var remaining = GetRemainingAmount(actualBill, b => b.TdsAmount) ;
+        actualBill.TdsAmount = Math.Min(newValue, remaining);
+        settlement.TdsAmount = actualBill.TdsAmount;
+        // AutoSelect(settlement);
+        UpdateBillBalance(actualBill);
+        CalculateTotals();
+        if (ReceiptGrid != null)
+        {
+            ReceiptGrid.Reload();
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task   OnShortageChanged(double newValue, BillSettlement settlement)
+    {
+        if (!settlement.IsSelected)
+            return;
+             var actualBill = PendingBills.FirstOrDefault(b => b.BillId == settlement.BillId);
+    if (actualBill == null) return;
+        var remaining = GetRemainingAmount(actualBill, b => b.ShortageAmount);
+        actualBill.ShortageAmount = Math.Min(newValue, remaining);
+        settlement.ShortageAmount = actualBill.ShortageAmount;
+        //AutoSelect(settlement);
+        UpdateBillBalance(actualBill);
+        CalculateTotals();
+        if (ReceiptGrid != null)
+        {
+            ReceiptGrid.Reload();
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void UpdateBillBalance(BillSettlement settlement)
+    {
+        var balance = settlement.DueAmount -
+                     settlement.SettledAmount -
+                     settlement.DiscountAmount -
+                     settlement.TdsAmount -
+                     settlement.ShortageAmount;
+
+        settlement.BalanceAmount = Math.Max(balance, 0);
+
+
+    }
+
+    private void ClampOnAccountAdjustments()
+    {
+        double maxAllowed = EditModel.JournalAmount;
+        double discount = EditModel.JournalTotalDiscount;
+        double tds = EditModel.JournalTotalTds;
+        double shortage = EditModel.JournalTotalShort;
+        double totalAdjustments = discount + tds + shortage;
+
+        if (totalAdjustments > maxAllowed)
+        {
+            double excess = totalAdjustments - maxAllowed;
+
+            // ✅ Proportional reduction
+            if (maxAllowed > 0)
+            {
+                double factor = maxAllowed / totalAdjustments;
+                EditModel.JournalTotalDiscount = (float)(discount * factor);
+                EditModel.JournalTotalTds = (float)(tds * factor);
+                EditModel.JournalTotalShort = (float)(shortage * factor);
+            }
+            else
+            {
+                // ✅ Zero everything if received amount is 0
+                EditModel.JournalTotalDiscount = 0;
+                EditModel.JournalTotalTds = 0;
+                EditModel.JournalTotalShort = 0;
+            }
+
+            ToastService.Warning("Adjustments exceeded received amount and were scaled down.");
+        }
+    }
+
+    private void CalculateTotals()
+    {
+        if (ShowBillSettlementGrid)
+        {
+            // ✅ Bill-to-Bill Mode: Grid drives the summary
+            var selectedBills = PendingBills.Where(b => b.IsSelected).ToList();
+
+            double totalSettled = selectedBills.Sum(b => b.SettledAmount);
+            double totalDiscount = selectedBills.Sum(b => b.DiscountAmount);
+            double totalTds = selectedBills.Sum(b => b.TdsAmount);
+            double totalShortage = selectedBills.Sum(b => b.ShortageAmount);
+
+            EditModel.JournalTotalDiscount = (float)totalDiscount;
+            EditModel.JournalTotalTds = (float)totalTds;
+            EditModel.JournalTotalShort = (float)totalShortage;
+
+             EditModel.JournalTotal = (float)(totalSettled + totalDiscount + totalTds + totalShortage);
+           // EditModel.JournalTotal = totalSettled + EditModel.JournalTotalDiscount + EditModel.JournalTotalTds + EditModel.JournalTotalShort;
+            EditModel.JournalOnAccount = (float)(EditModel.JournalAmount - EditModel.JournalTotal);
+        }
+        else
+        {
+            // ✅ On Account Mode: Summary boxes are editable
+            ClampOnAccountAdjustments();
+
+            double discount = EditModel.JournalTotalDiscount;
+            double tds = EditModel.JournalTotalTds;
+            double shortage = EditModel.JournalTotalShort;
+
+            EditModel.JournalTotal = EditModel.JournalAmount;
+            EditModel.JournalOnAccount = (float)Math.Max(EditModel.JournalAmount - discount - tds - shortage, 0);
+        }
+    }
+
+    private async Task LoadJournalDetails()
+    {
+        PendingBills.Clear();
+
+        if (EditModel.BillRefDetails != null && EditModel.BillRefDetails.Any())
+        {
+            var allBills = await BillService.GetAllAsync();
+
+            foreach (var refDetail in EditModel.BillRefDetails)
+            {
+                var settlementBill = allBills.FirstOrDefault(b => b.BillId == refDetail.BillRefVchId);
+                if (settlementBill != null)
+                {
+                    var alreadySettled = await GetAlreadySettledAmount(settlementBill.BillId);
+
+                    var currentReceiptTotal =
+                        refDetail.BillRefVchAmount +
+                        refDetail.BillRefVchDis +
+                        refDetail.BillRefVchTds +
+                        refDetail.BillRefVchShort;
+
+                    var due = Math.Max(settlementBill.BillNetAmount - alreadySettled, 0);
+
+                    PendingBills.Add(new BillSettlement
+                    {
+                        BillId = settlementBill.BillId,
+                        BillNo = settlementBill.BillNo,
+                        BillDate = settlementBill.BillDate,
+                        VoucherType = settlementBill.Vouchname ?? "Sales",
+                        BillTotal = settlementBill.BillNetAmount,
+                        DueAmount = due,
+                        SettledAmount = refDetail.BillRefVchAmount,
+                        DiscountAmount = refDetail.BillRefVchDis,
+                        TdsAmount = refDetail.BillRefVchTds,
+                        ShortageAmount = refDetail.BillRefVchShort,
+                        BalanceAmount = refDetail.BillRefVchBalance,
+                        IsSelected = true
+                    });
+                }
+            }
+
+            foreach (var bill in PendingBills)
+            {
+                UpdateBillBalance(bill);
+            }
+           
+            CalculateTotals();
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        try
+        {
+            LoadingService.Show("Saving receipt...");
+
+            if (EditModel.JournalAmount <= 0)
+            {
+                ToastService.Warning("Please enter a valid received amount.");
+                return;
+            }
+
+            if (ShowBillSettlementGrid)
+            {
+                var selectedBills = PendingBills.Where(b => b.IsSelected).ToList();
+
+                if (!selectedBills.Any())
+                {
+                    ToastService.Warning("Please select at least one bill for Bill-to-Bill settlement.");
+                    return;
+                }
+
+                // ✅ Validate each bill
+                foreach (var settlement in selectedBills)
+                {
+                    var totalApplied = settlement.SettledAmount +
+                                      settlement.DiscountAmount +
+                                      settlement.TdsAmount +
+                                      settlement.ShortageAmount;
+
+                    if (totalApplied > settlement.DueAmount)
+                    {
+                        ToastService.Error($"Bill {settlement.BillNo}: Total applied (₹{totalApplied:N2}) exceeds due amount (₹{settlement.DueAmount:N2})");
+                        return;
+                    }
+                }
+
+                CalculateTotals();
+
+                EditModel.BillRefDetails = new List<BillRefDetail>();
+
+                foreach (var settlement in selectedBills)
+                {
+                    EditModel.BillRefDetails.Add(new BillRefDetail
+                    {
+                        BillRefAgainstId = EditModel.JournalId,
+                        BillRefVchType = settlement.VoucherType,
+                        BillRefVchNo = settlement.BillNo,
+                        BillRefVchId = settlement.BillId,
+                        BillRefVchDate = settlement.BillDate,
+                        BillRefVchAmount = settlement.SettledAmount,
+                        BillRefVchDis = (float)settlement.DiscountAmount,
+                        BillRefVchTds = (float)settlement.TdsAmount,
+                        BillRefVchShort = (float)settlement.ShortageAmount,
+                        BillRefVchBalance = (float)settlement.BalanceAmount,
+                        BillRefAccountId = EditModel.JournalAccountId
+                    });
+                }
+            }
+            else
+            {
+                EditModel.BillRefDetails = new List<BillRefDetail>();
+            }
+
+            EditModel.JournalYearId = YearStatechangeService.SelectedYearId;
+            EditModel.JournalMasterType = "PAYMENT";
+
+            bool result;
+            if (EditModel.JournalId == 0)
+            {
+                result = await JournalService.CreateAsync(EditModel);
+                ToastService.Success(result ? "Receipt created successfully!" : "Failed to create receipt!");
+            }
+            else
+            {
+                result = await JournalService.UpdateAsync(EditModel);
+                ToastService.Success(result ? "Receipt updated successfully!" : "Failed to update receipt!");
+            }
+
+            if (result)
+            {
+                Visible = false;
+                await OnSaved.InvokeAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Error saving receipt: {ex.Message}");
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+
+    private void Hide()
+    {
+        Visible = false;
+        PendingBills.Clear();
+        _allReceiptsCache = null;
+    }
+
+    public class BillSettlement
+    {
+        public int BillId { get; set; }
+        public string BillNo { get; set; }
+        public DateTime BillDate { get; set; }
+        public string VoucherType { get; set; }
+        public double BillTotal { get; set; }
+        public double DueAmount { get; set; }
+        public double SettledAmount { get; set; }
+        public double DiscountAmount { get; set; }
+        public double TdsAmount { get; set; }
+        public double ShortageAmount { get; set; }
+        public double BalanceAmount { get; set; }
+        public bool IsSelected { get; set; }
+    }
+}
