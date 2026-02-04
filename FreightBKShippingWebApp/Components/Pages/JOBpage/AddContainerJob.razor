@@ -2,6 +2,8 @@
 @using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Services
 @inject ToasteService ToastService
+@inject ContainerAddServices ContainerAddServices
+@inject JobService JobService
 @* <DxButton Text="Show Menu" Click="@OpenPopup" /> *@
 <style>
     .responsive-popup .dx-popup-content {
@@ -93,7 +95,7 @@
          HeaderText="Navigation Menu"
         
          MaxWidth="1450px"
-         MaxHeight="95vh"
+         MaxHeight="101vh"
          Scrollable="true"
          CssClass="responsive-popup"
          ShowFooter="false">
@@ -135,78 +137,81 @@
             </DxFormLayoutItem>
             </DxFormLayout>
         </div>
-             <div class="scrollable-content">
-<DxFormLayout>
-            <DxFormLayoutGroup Caption="Non-Transport"
-                               AnimationType="LayoutAnimationType.Slide"
-                               ExpandButtonDisplayMode="GroupExpandButtonDisplayMode.Start"
-                               Expanded="nonTransportExpanded"
-                               ExpandedChanged="OnNonTransportExpandedChanged"
-                               Context="ctxg1">
 
-                <!-- Grid -->
-                <DxFormLayoutItem ColSpanMd="12">
-                    <DxGrid Data="@Rows"
+        <div class="scrollable-content">
+            <DxFormLayout>
+
+              @*   @if (job.IsTransportaion== true)
+                { *@
+                    <DxFormLayoutGroup Caption="Transport"
+                    AnimationType="LayoutAnimationType.Slide"
+                    ExpandButtonDisplayMode="GroupExpandButtonDisplayMode.Start"
+                                   Expanded="detailsExpanded"
+                    ExpandedChanged="OnDetailsExpandedChanged"
+                    Context="ctxg2">
+
+                        <!-- Grid -->
+                        <DxFormLayoutItem ColSpanMd="12">
+                            <DxGrid Data="@listofcontainer"
                             TItem="Lr"
-                            @ref="Grid"
+                            @ref="GridTwo"
                             KeyFieldName="SrNo"
                             EditMode="GridEditMode.EditCell"
                             EditOnKeyPress="true"
                             ShowAddNewButton="false"
-                            EditModelSaving="Grid_EditModelSaving"
-                            CustomizeEditModel="Grid_CustomizeEditModel"
+
                             AllowSort="false"
                             ShowFilterRow="false"
                             ShowGroupPanel="false"
                             PageSize="5" ColumnResizeMode="GridColumnResizeMode.ColumnsContainer">
 
-                                            <Columns>
+                                <Columns>
 
-                                                <!-- Action Buttons Column -->
-                                     <DxGridCommandColumn Width="90px" EditButtonVisible="false" FixedPosition="GridColumnFixedPosition.Left"
-                                                         CancelButtonVisible="false" 
-                                                 SaveButtonVisible="false" NewButtonVisible="false"  >
+                                    <!-- Action Buttons Column -->
+                                    <DxGridCommandColumn Width="90px" EditButtonVisible="false" FixedPosition="GridColumnFixedPosition.Left"
+                                    CancelButtonVisible="false" 
+                                    SaveButtonVisible="false" NewButtonVisible="false"  >
 
-                                                    <HeaderCaptionTemplate Context="dendercaptioncontext">
+                                        <HeaderCaptionTemplate Context="dendercaptioncontext">
 
-                                                            <DxButton IconCssClass="bi bi-plus-circle-dotted"
-                                                                      RenderStyle="ButtonRenderStyle.Link"
-                                                                      Click="New_Click" style="padding:2px"/>
+                                            <DxButton IconCssClass="bi bi-plus-circle-dotted"
+                                            RenderStyle="ButtonRenderStyle.Link"
+                                            Click="AddNew" style="padding:2px" />
 
-                                                            <DxButton IconCssClass="bi bi-arrow-clockwise"
-                                                                      RenderStyle="ButtonRenderStyle.Link"
-                                              Click="Revert_Click" style="padding:2px" />
+                                            <DxButton IconCssClass="bi bi-arrow-clockwise"
+                                            RenderStyle="ButtonRenderStyle.Link"
+                                            Click="RevertGridtransport_Click" style="padding:2px" />
 
-                                                            <DxButton RenderStyle="ButtonRenderStyle.Link"
-                                                                      IconCssClass="bi bi-three-dots"
-                                              SizeMode="SizeMode.Medium" style="padding:2px" />
+                                            <DxButton RenderStyle="ButtonRenderStyle.Link"
+                                            IconCssClass="bi bi-three-dots"
+                                            SizeMode="SizeMode.Medium" style="padding:2px" />
 
-                                                    </HeaderCaptionTemplate>
+                                        </HeaderCaptionTemplate>
 
-                                <CellEditTemplate Context="editContext">
-                                                         @{
-                                        var rowIndex = Rows.FindIndex(x => x.LrNo == ((Lr)editContext.DataItem).LrNo);
-                                                        }
-                                                 
+                                        <CellEditTemplate Context="editContext">
+                                            @{
+                                                var rowIndex = Rows.FindIndex(x => x.LrNo == ((Lr)editContext.DataItem).LrNo);
+                                            }
 
 
-                                                        <DxButton Enabled="false"
-                                                         
-                                                                  CssClass="grid-disabled-button"
-                                                                  IconCssClass="bi bi-trash"
-                                                                  RenderStyle="ButtonRenderStyle.Link" />
 
-                                                        @* <DxButton IconCssClass="bi bi-plus-lg"
+                                            <DxButton Enabled="false"
+
+                                            CssClass="grid-disabled-button"
+                                            IconCssClass="bi bi-trash"
+                                            RenderStyle="ButtonRenderStyle.Link" />
+
+                                            @* <DxButton IconCssClass="bi bi-plus-lg"
                                                           RenderStyle="ButtonRenderStyle.Link"
                                                           Click="ShowServicePopup" /> *@
-                                                       @*  </div> *@
-                                                    </CellEditTemplate>
+                                            @*  </div> *@
+                                        </CellEditTemplate>
 
-                                <CellDisplayTemplate Context="displayContext" >
-                                                   @{
-                                                          var rowIndex = Rows.FindIndex(x => x.LrNo == ((Lr)displayContext.DataItem).LrNo);
-                                                   }        
-                                                <DxButton IconCssClass="bi bi-trash"
+                                        <CellDisplayTemplate Context="displayContext" >
+                                            @{
+                                                var rowIndex = Rows.FindIndex(x => x.LrNo == ((Lr)displayContext.DataItem).LrNo);
+                                            }        
+                                            <DxButton IconCssClass="bi bi-trash"
                                                           CssClass="grid-delete-btn"
                                                           RenderStyle="ButtonRenderStyle.Link"
                                               Click="@(() => DeleteDataItem(displayContext.DataItem))" />
@@ -231,89 +236,73 @@
                                                         </EditSettings>
                                                     </DxGridDataColumn>
 
-                            <DxGridDataColumn FieldName="LrContainer1"
-                                              Caption="Container No" />
+                                <DxGridDataColumn FieldName="LrNoStr"
+                                              Caption="LR No" />
 
                                                     <!-- LR Date -->
-                            <DxGridDataColumn FieldName="LrNtDate"
-                                                                      Caption="Date"
+                                <DxGridDataColumn FieldName="LrDate"
+                                                                      Caption="LR Date"
                                                                       DisplayFormat="dd-MM-yyyy" />
                                                     <!-- Vehicle -->
-                            <DxGridDataColumn FieldName="LrNtRfidSeal"
-                                              Caption="Rfid Seal" />
+                                <DxGridDataColumn FieldName="LrNtVehicleNo"
+                                              Caption="Vehicle No" />
 
                                                     <!-- From / To -->
-                            <DxGridDataColumn FieldName="LrNtQty"
-                                              Caption="Qty" />
+                                <DxGridDataColumn FieldName="LrPartyAccountId"
+                                              Caption="Party" />
 
-                            <DxGridDataColumn FieldName="LrNtInvNo"
-                                              Caption="Invoice No">
-                                <EditSettings>
-                                    <DxSpinEditSettings ShowSpinButtons="false" />
-                                </EditSettings>
+                                <DxGridDataColumn FieldName="LrFromLocationId"
+                                              Caption="From">
                             </DxGridDataColumn>
 
                                                     <!-- Weight info -->
-                            <DxGridDataColumn FieldName="LrNtNetWt"
-                                              Caption="Net Wt">
+                                <DxGridDataColumn FieldName="LrToLocationId"
+                                              Caption="To">
                                 <EditSettings>
                                     <DxSpinEditSettings ShowSpinButtons="false" />
                                 </EditSettings>
                             </DxGridDataColumn>
 
-                            <DxGridDataColumn FieldName="LrNtUnit"
-                                                                      Caption="Net Unit" >
+                                <DxGridDataColumn FieldName="LrProductId"
+                                                                      Caption="Product" >
                                 <EditSettings>
                                     <DxSpinEditSettings ShowSpinButtons="false" />
                                 </EditSettings>
                             </DxGridDataColumn>
 
-                            <DxGridDataColumn FieldName="LrNtCbm"
-                                              Caption="CBM">
-                                <EditSettings>
-                                    <DxSpinEditSettings ShowSpinButtons="false" />
-                                </EditSettings>
+                                <DxGridDataColumn FieldName="LrContainer1"
+                                                  Caption="Container1">
+                             
                             </DxGridDataColumn>
-                            <DxGridDataColumn FieldName="LrNtVehicleNo"
-                                              Caption="Vehicle No" Visible=false/>
-                            <DxGridDataColumn FieldName="LrNtTransporter"
-                                              Caption="Transporter" Visible=false />
+                                <DxGridDataColumn FieldName="LrContainer2"
+                                                  Caption="Container2" Visible=false />
+                                <DxGridDataColumn FieldName="LrNtSealNo"
+                                                  Caption="SealNo" Visible=false />
 
-                            <DxGridDataColumn FieldName="LrNtGateOutDt"
-                                              Caption="Gate Out Dt" />
-                            <DxGridDataColumn FieldName="LrNtGateInDt"
-                                              Caption="Gate In Dt" />
-                            <DxGridDataColumn FieldName="LrNtDischargeDt"
-                                              Caption="Discharge Dt" />
+                                <DxGridDataColumn FieldName="LrLoadWt"
+                                                  Caption="Load Wt" />
+                                <DxGridDataColumn FieldName="LrBillRateTruck"
+                                                  Caption="BillRate Truck" />
+                                <DxGridDataColumn FieldName="LrGrossFreightTruck"
+                                                  Caption="GrossFreightTruck" />
 
                                                     <!-- Billing -->
-                            <DxGridDataColumn FieldName="LrNtShipingBillNo"
-                                              Caption="Shiping BillNo" />
+                                <DxGridDataColumn FieldName="LrNtTransporter"
+                                                  Caption="Transporter" />
 
-                            <DxGridDataColumn FieldName="LrNtPickupDt"
-                                              Caption="Pickup Dt" />
+                                <DxGridDataColumn FieldName="LrBillRateTruck"
+                                                  Caption="Rate" />
 
                                                     <!-- Payment Type -->
-                            <DxGridDataColumn FieldName="LrNtPickupLoc"
-                                              Caption="Pickup Location" />
+                                <DxGridDataColumn FieldName="LrConsigneeNotifyId"
+                                                  Caption="Consignee" />
 
                                                     <!-- Remarks -->
-                                                    <DxGridDataColumn FieldName="LrRemarks"
-                                                                      Caption="Remarks" />
+                                <DxGridDataColumn FieldName="LrConsignorNotifyId"
+                                                  Caption="Consignor" />
                                                 </Columns>
                                           </DxGrid>
                 </DxFormLayoutItem>
-
-
-
-
-
-
-
-
-
-
-
                 <!-- Footer Buttons -->
                 <DxFormLayoutItem ColSpanMd="12">
                     <div class="d-flex justify-content-between mt-3">
@@ -330,249 +319,393 @@
                         </div>
 
                         <div>
-                            <DxButton Text="Save"
+                            @* <DxButton Text="Save"
                                       IconCssClass="dx-icon-save"
                                       RenderStyle="ButtonRenderStyle.Primary"
-                                      Click="SaveNT_Click" />   
+                                       />   
 
                             <DxButton Text="Close"
                                       IconCssClass="dx-icon-close"
                                       CssClass="ms-2"
                                       RenderStyle="ButtonRenderStyle.Secondary"
-                                      Click="@(() => popupVisible = false)" />
+                                       /> *@
 
                         </div>
                     </div>
                 </DxFormLayoutItem>
 
-            </DxFormLayoutGroup>
+                    </DxFormLayoutGroup>
+               @*  }
+                else
+                { *@
+                    <DxFormLayoutGroup Caption="Non-Transport"
+                                       AnimationType="LayoutAnimationType.Slide"
+                                       ExpandButtonDisplayMode="GroupExpandButtonDisplayMode.Start"
+                                       Expanded="nonTransportExpanded"
+                                       ExpandedChanged="OnNonTransportExpandedChanged"
+                                       Context="ctxg1">
+
+                        <!-- Grid -->
+                        <DxFormLayoutItem ColSpanMd="12">
+                            <DxGrid Data="@Rows"
+                                    TItem="Lr"
+                                    @ref="Grid"
+                                    KeyFieldName="SrNo"
+                                    EditMode="GridEditMode.EditCell"
+                                    EditOnKeyPress="true"
+                                    ShowAddNewButton="false"
+                                    EditModelSaving="Grid_EditModelSaving"
+                                    CustomizeEditModel="Grid_CustomizeEditModel"
+                                    AllowSort="false"
+                                    ShowFilterRow="false"
+                                    ShowGroupPanel="false"
+                                    PageSize="5" ColumnResizeMode="GridColumnResizeMode.ColumnsContainer">
+
+                                <Columns>
+
+                                    <!-- Action Buttons Column -->
+                                    <DxGridCommandColumn Width="90px" EditButtonVisible="false" FixedPosition="GridColumnFixedPosition.Left"
+                                                         CancelButtonVisible="false"
+                                                         SaveButtonVisible="false" NewButtonVisible="false">
+
+                                        <HeaderCaptionTemplate Context="dendercaptioncontext">
+
+                                            <DxButton IconCssClass="bi bi-plus-circle-dotted"
+                                                      RenderStyle="ButtonRenderStyle.Link"
+                                                      Click="New_Click" style="padding:2px" />
+
+                                            <DxButton IconCssClass="bi bi-arrow-clockwise"
+                                                      RenderStyle="ButtonRenderStyle.Link"
+                                                      Click="Revert_Click" style="padding:2px" />
+
+                                            <DxButton RenderStyle="ButtonRenderStyle.Link"
+                                                      IconCssClass="bi bi-three-dots"
+                                                      SizeMode="SizeMode.Medium" style="padding:2px" />
+
+                                        </HeaderCaptionTemplate>
+
+                                        <CellEditTemplate Context="editContext">
+                                            @{
+                                                var rowIndex = Rows.FindIndex(x => x.LrNo == ((Lr)editContext.DataItem).LrNo);
+                                            }
 
 
-            <DxFormLayoutGroup Caption="Details"
-                               AnimationType="LayoutAnimationType.Slide"
-                               ExpandButtonDisplayMode="GroupExpandButtonDisplayMode.Start"
-                               Expanded="detailsExpanded"
-                               ExpandedChanged="OnDetailsExpandedChanged" ColSpanMd="12">
-                    <!-- Basic LR Info -->
-                    <DxFormLayoutItem Caption="Challan/LR No" ColSpanMd="3">
-                        <DxTextBox @bind-Text="EditModel.LrNoStr" />
-                    </DxFormLayoutItem>
 
-                    <DxFormLayoutItem Caption="LR Date" ColSpanMd="3">
-                        <DxDateEdit @bind-Date="EditModel.LrNtDate" DisplayFormat="dd-MM-yyyy" />
-                    </DxFormLayoutItem>
-                    <DxFormLayoutItem Caption="Vehicle No" ColSpanMd="3">
-                        <DxTextBox @bind-Text="EditModel.LrNtVehicleNo" />
-                    </DxFormLayoutItem>
-                    <DxFormLayoutItem Caption="Payment Type" ColSpanMd="3">
-                        <DxTextBox @bind-Text="EditModel.LrPaymentType" />
-                    </DxFormLayoutItem>
+                                            <DxButton Enabled="false"
+                                                      CssClass="grid-disabled-button"
+                                                      IconCssClass="bi bi-trash"
+                                                      RenderStyle="ButtonRenderStyle.Link" />
+
+                                            @* <DxButton IconCssClass="bi bi-plus-lg"
+                                                          RenderStyle="ButtonRenderStyle.Link"
+                                                          Click="ShowServicePopup" /> *@
+                                            @*  </div> *@
+                                        </CellEditTemplate>
+
+                                        <CellDisplayTemplate Context="displayContext">
+                                            @{
+                                                var rowIndex = Rows.FindIndex(x => x.LrNo == ((Lr)displayContext.DataItem).LrNo);
+                                            }
+                                            <DxButton IconCssClass="bi bi-trash"
+                                                      CssClass="grid-delete-btn"
+                                                      RenderStyle="ButtonRenderStyle.Link"
+                                                      Click="@(() => DeleteDataItem(displayContext.DataItem))" />
+
+                                            @*   <DxButton IconCssClass="bi bi-plus-lg"
+                                                      RenderStyle="ButtonRenderStyle.Link"
+                                                      Click="ShowServicePopup" /> *@
 
 
-                 <DxFormLayoutGroup ColSpanMd="10" Decoration="FormLayoutGroupDecoration.None">
 
-                    <DxFormLayoutItem Caption="Bill To Party" ColSpanMd="6">
-                        <DxTextBox @bind-value="EditModel.LrPartyAccountId" />
-                    </DxFormLayoutItem>
+                                        </CellDisplayTemplate>
+                                        <!-- Is RCM Applicable -->
 
-                     <DxFormLayoutItem Caption="From" ColSpanMd="3">
-                         @* <DxComboBox  /> *@
-                     </DxFormLayoutItem>
-                        <DxFormLayoutItem Caption="To" ColSpanMd="3">
-                            @* <DxComboBox  /> *@
+
+                                    </DxGridCommandColumn>
+                                    <DxGridDataColumn FieldName="SrNo"
+                                                      Caption="Sr No"
+                                                      Width="40px" FixedPosition="GridColumnFixedPosition.Left">
+                                        <EditSettings>
+                                            <DxSpinEditSettings ShowSpinButtons="false" />
+                                        </EditSettings>
+                                    </DxGridDataColumn>
+
+                                    <DxGridDataColumn FieldName="LrContainer1"
+                                                      Caption="Container No" />
+
+                                    <DxGridDataColumn FieldName="LrNtSize" Caption="Size"></DxGridDataColumn>
+
+                                    <!-- LR Date -->
+                                    <DxGridDataColumn FieldName="LrNtDate"
+                                                      Caption="Date"
+                                                      DisplayFormat="dd-MM-yyyy" />
+                                    <!-- Vehicle -->
+                                    <DxGridDataColumn FieldName="LrNtRfidSeal"
+                                                      Caption="Rfid Seal" />
+
+                                    <!-- From / To -->
+                                    <DxGridDataColumn FieldName="LrNtQty"
+                                                      Caption="Qty" />
+
+                                    <DxGridDataColumn FieldName="LrNtInvNo"
+                                                      Caption="Invoice No">
+                                        <EditSettings>
+                                            <DxSpinEditSettings ShowSpinButtons="false" />
+                                        </EditSettings>
+                                    </DxGridDataColumn>
+
+                                    <!-- Weight info -->
+                                    <DxGridDataColumn FieldName="LrNtNetWt"
+                                                      Caption="Net Wt">
+                                        <EditSettings>
+                                            <DxSpinEditSettings ShowSpinButtons="false" />
+                                        </EditSettings>
+                                    </DxGridDataColumn>
+
+                                    <DxGridDataColumn FieldName="LrNtUnit"
+                                                      Caption="Net Unit">
+                                        <EditSettings>
+                                            <DxSpinEditSettings ShowSpinButtons="false" />
+                                        </EditSettings>
+                                    </DxGridDataColumn>
+
+                                    <DxGridDataColumn FieldName="LrNtCbm"
+                                                      Caption="CBM">
+                                        <EditSettings>
+                                            <DxSpinEditSettings ShowSpinButtons="false" />
+                                        </EditSettings>
+                                    </DxGridDataColumn>
+                                    <DxGridDataColumn FieldName="LrNtVehicleNo"
+                                                      Caption="Vehicle No" Visible=false />
+                                    <DxGridDataColumn FieldName="LrNtTransporter"
+                                                      Caption="Transporter" Visible=false />
+
+                                    <DxGridDataColumn FieldName="LrNtGateOutDt"
+                                                      Caption="Gate Out Dt" />
+                                    <DxGridDataColumn FieldName="LrNtGateInDt"
+                                                      Caption="Gate In Dt" />
+                                    <DxGridDataColumn FieldName="LrNtDischargeDt"
+                                                      Caption="Discharge Dt" />
+
+                                    <!-- Billing -->
+                                    <DxGridDataColumn FieldName="LrNtShipingBillNo"
+                                                      Caption="Shiping BillNo" />
+
+                                    <DxGridDataColumn FieldName="LrNtPickupDt"
+                                                      Caption="Pickup Dt" />
+
+                                    <!-- Payment Type -->
+                                    <DxGridDataColumn FieldName="LrNtPickupLoc"
+                                                      Caption="Pickup Location" />
+
+                                    <!-- Remarks -->
+                                    <DxGridDataColumn FieldName="LrRemarks"
+                                                      Caption="Remarks" />
+                                </Columns>
+                            </DxGrid>
                         </DxFormLayoutItem>
-                    <DxFormLayoutItem Caption="Party Address" ColSpanMd="6">
-                        <DxTextBox @bind-value="EditModel.LrPartyAccountId" />
-                    </DxFormLayoutItem>
-                        <DxFormLayoutItem Caption="Product" ColSpanMd="3">
-                            @* <DxComboBox  /> *@
+
+                        <!-- Footer Buttons -->
+                        <DxFormLayoutItem ColSpanMd="12">
+                            <div class="d-flex justify-content-between mt-3">
+                                <div>
+                                    @* <DxButton Text="Refresh"
+                                      IconCssClass="dx-icon-refresh"
+                                     /> *@
+                                    <DxButton Text="Import"
+                                              IconCssClass="dx-icon-upload"
+                                              CssClass="ms-2" />
+                                    <DxButton Text="Download Format"
+                                              IconCssClass="dx-icon-download"
+                                              CssClass="ms-2" />
+                                </div>
+
+                                <div>
+                                    <DxButton Text="Save"
+                                              IconCssClass="dx-icon-save"
+                                              RenderStyle="ButtonRenderStyle.Primary"
+                                              Click="SaveNT_Click" />
+
+                                    <DxButton Text="Close"
+                                              IconCssClass="dx-icon-close"
+                                              CssClass="ms-2"
+                                              RenderStyle="ButtonRenderStyle.Secondary"
+                                              Click="@(() => popupVisible = false)" />
+
+                                </div>
+                            </div>
                         </DxFormLayoutItem>
-
-                        <DxFormLayoutItem Caption="Pickup Location" ColSpanMd="3">
-                            <DxTextBox @bind-Text="EditModel.LrNtPickupLoc" />
-                        </DxFormLayoutItem>
-                    <DxFormLayoutItem Caption="Consignor" ColSpanMd="6">
-                        <DxTextBox @bind-value="EditModel.LrPartyAccountId" />
-                    </DxFormLayoutItem>
-                        <DxFormLayoutItem Caption="Gross Wt" ColSpanMd="3">
-                            <DxSpinEdit @bind-Value="EditModel.LrGrossWt" DisplayFormat="n2" />
-                        </DxFormLayoutItem>
-
-                        <DxFormLayoutItem Caption="Tare Wt" ColSpanMd="3">
-                            <DxSpinEdit @bind-Value="EditModel.LrTareWt" DisplayFormat="n2" />
-                        </DxFormLayoutItem>
-
-                       
-                 
-                    
-                    <DxFormLayoutItem Caption="Consignor Address" ColSpanMd="6">
-                        <DxTextBox @bind-value="EditModel.LrPartyAccountId" />
-                    </DxFormLayoutItem>
-                        <DxFormLayoutItem Caption="Load Wt" ColSpanMd="3">
-                            <DxSpinEdit @bind-Value="EditModel.LrLoadWt" DisplayFormat="n2" />
-                        </DxFormLayoutItem>
-                        <DxFormLayoutItem Caption="Charge Wt" ColSpanMd="3">
-                            <DxSpinEdit @bind-Value="EditModel.LrChargeQty" DisplayFormat="n2" />
-                        </DxFormLayoutItem>
-                       
-                    <DxFormLayoutItem Caption="Consignee" ColSpanMd="6">
-                        <DxTextBox @bind-value="EditModel.LrPartyAccountId" />
-                    </DxFormLayoutItem>
-                        <DxFormLayoutItem Caption="Custom 1" ColSpanMd="3">
-                            <DxTextBox @bind-Text="EditModel.LrCustom1" />
-                        </DxFormLayoutItem>
-
-                        <DxFormLayoutItem Caption="Custom 2" ColSpanMd="3">
-                            <DxTextBox @bind-Text="EditModel.LrCustom2" />
-                        </DxFormLayoutItem>
-
-                        @* <DxFormLayoutItem ColSpanMd="6"></DxFormLayoutItem> *@
-                    <DxFormLayoutItem Caption="Consignee Address" ColSpanMd="6">
-                        <DxTextBox @bind-value="EditModel.LrPartyAccountId" />
-                    </DxFormLayoutItem>
-
-                        <DxFormLayoutItem Caption="Custom 3" ColSpanMd="3">
-                            <DxTextBox @bind-Text="EditModel.LrCustom3" />
-                        </DxFormLayoutItem>
-
-                        <DxFormLayoutItem Caption="Custom 4" ColSpanMd="3">
-                            <DxTextBox @bind-Text="EditModel.LrCustom4" />
-                        </DxFormLayoutItem>
-            
-              
-                <!-- Weight & Quantity -->
-            
-               
-
-                <!-- Invoice & Shipping Details -->
-               
-
-              
-
-        
-
-                @* <DxFormLayoutItem Caption="Advance" ColSpanMd="4">
-                    <DxSpinEdit @bind-Value="EditModel.LrAdvanceBill" DisplayFormat="n2" />
-                </DxFormLayoutItem>
-
-                <DxFormLayoutItem Caption="Payment Type" ColSpanMd="4">
-                    <DxComboBox Data="@PaymentTypes"
-                                @bind-Value="EditModel.LrPaymentType"
-                                ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
-                </DxFormLayoutItem>
-
-                <DxFormLayoutItem Caption="Ref By" ColSpanMd="4">
-                    <DxTextBox @bind-Text="EditModel.LrRefBy" />
-                </DxFormLayoutItem> *@
-
-             
-                <!-- Custom Fields -->
-
-                
-
-           
 
                     </DxFormLayoutGroup>
-                    <DxFormLayoutGroup ColSpanMd="2" Decoration="FormLayoutGroupDecoration.None">
-                        <DxFormLayoutItem Caption="Inv No" ColSpanMd="12">
-                            <DxTextBox @bind-Text="EditModel.LrNtInvNo" />
-                        </DxFormLayoutItem>
-                        @* <DxFormLayoutItem Caption="Inv Date" ColSpanMd="6">
-                    <DxDateEdit @bind-Date="EditModel.LrDate" />
-                </DxFormLayoutItem>
-                    <DxFormLayoutItem Caption="Inv Value" ColSpanMd="4">
-                        <DxSpinEdit @bind-Value="EditModel.value" DisplayFormat="n2" />
-                    </DxFormLayoutItem> *@
-                        @* <DxFormLayoutItem Caption="E-Way Bill No" ColSpanMd="4">
-                        <DxSpinEdit @bind-Value="EditModel" DisplayFormat="n2" />
-                    </DxFormLayoutItem> *@
-                        <DxFormLayoutItem Caption="E-Way Date" ColSpanMd="12">
-                            <DxDateEdit @bind-Date="EditModel.LrDate" />
-                        </DxFormLayoutItem>
-                        @* <DxFormLayoutItem Caption="GP/BE No" ColSpanMd="6">
-                        <DxTextBox @bind-Text="EditModel" />
-                    </DxFormLayoutItem> *@
-                        <!-- Pickup & Location Details -->
-                        <DxFormLayoutItem Caption="Pickup Date" ColSpanMd="12">
-                            <DxDateEdit @bind-Date="EditModel.LrNtPickupDt" DisplayFormat="dd-MM-yyyy" />
-                        </DxFormLayoutItem>
-                        @* <DxFormLayoutItem Caption="report Date" ColSpanMd="6">
-                    <DxDateEdit @bind-Date="EditModel." DisplayFormat="dd-MM-yyyy" />
-                </DxFormLayoutItem>
-                <DxFormLayoutItem Caption="Unload Date" ColSpanMd="6">
-                    <DxDateEdit @bind-Date="EditModel.un" DisplayFormat="dd-MM-yyyy" />
-                </DxFormLayoutItem>
-                <DxFormLayoutItem Caption="POD Rec. Date" ColSpanMd="6">
-                    <DxDateEdit @bind-Date="EditModel.un" DisplayFormat="dd-MM-yyyy" />
-                </DxFormLayoutItem>
-                    <DxFormLayoutItem Caption="Delivery Add" ColSpanMd="6">
-                        <DxTextBox @bind-Text="EditModel" />
-                    </DxFormLayoutItem> *@
-                    </DxFormLayoutGroup>
-                @* <!-- Remarks -->
-                <DxFormLayoutItem Caption="Remarks" ColSpanMd="12">
-                    <DxMemo @bind-Text="EditModel.LrRemarks" Rows="3" />
-                </DxFormLayoutItem> *@
-
-                <DxFormLayoutItem ColSpanMd="12">
-                    <div class="d-flex justify-content-end mt-3 gap-2">
-                        <DxButton Text="Save Details"
-                                  IconCssClass="dx-icon-save"
-                                  RenderStyle="ButtonRenderStyle.Primary"
-                                  Click="Save_Click" />
-
-                        <DxButton Text="Cancel"
-                                  IconCssClass="dx-icon-close"
-                                  RenderStyle="ButtonRenderStyle.Secondary"
-                                  Click="CancelDetails_Click" />
-
-                        <DxButton Text="Clear Form"
-                                  IconCssClass="dx-icon-clear"
-                                  RenderStyle="ButtonRenderStyle.Light"
-                                  Click="ClearDetails_Click" />
-                    </div>
-                </DxFormLayoutItem>
-            </DxFormLayoutGroup>
-
-        </DxFormLayout>
-   </div>
+                @* } *@
+            </DxFormLayout>
+        </div>
     
     </BodyContentTemplate>
 
 </DxPopup>
 
+<Addcontainertransportpopup @ref="addPopup" OnSave="Loaddata" />
+
 @code {
+    Addcontainertransportpopup addPopup;
+
+    List<Lr> listofcontainer = new();
+    public void AddNew()
+    {
+        addPopup.ShowPopup(null, job);
+    }
+
+    public void Edit(Lr selected)
+    {
+
+        addPopup.ShowPopup(selected, job);
+    }
+    async Task RevertGridtransport_Click()
+    {
+        await Grid.CancelEditAsync();
+        // await ClearUnsavedChangesAsync();
+        InitializeInvoiceDetails();
+    }
+
+    async Task Loaddata()
+    {
+        if (job == null || job.JobId == 0)
+            return;
+
+        listofcontainer =
+            await ContainerAddServices.GetByJobIdAsync(job.JobId);
+    }
+
+    // protected override async Task OnInitializedAsync()
+    // {
+    //     await Loaddata();
+    // }
+
+    //========================================
     bool popupVisible = false;
     Job job = new();
     DxGrid Grid;
+    DxGrid GridTwo;
 
     List<Lr> Rows = new();
+    // List<Lr> secondgrid2 = new();
     private Lr EditModel { get; set; } = new();
     private Dictionary<Lr, DataChange> UnsavedChanges { get; } = new();
     private bool BatchItemsEnabled => UnsavedChanges.Count > 0 || (Grid?.IsEditing() ?? false);
     record DataChange(DataChangeType Type, HashSet<string> ChangedFields);
+
     bool nonTransportExpanded = true;   // Non-Transport open by default
     bool detailsExpanded = false;
     enum DataChangeType { Modification, Addition, Delete }
 
     Lr SelectedRow;
     private int? nextSNo = 1;
-
-    public async Task OpenPopup(Job selected)
+    public enum PopupOpenMode
     {
+        Import,
+        Export
+    }
+    PopupOpenMode popupMode;
+    bool suppressExpandEvents;
+
+    public async Task OpenPopup(Job selected,PopupOpenMode PopupMode)
+    {
+
+        if (selected == null || selected.JobId == 0)
+        {
+            ToastService.Error("Job not passed correctly to AddContainer popup");
+            return;
+        }
+        suppressExpandEvents = true;
         job = selected;
+        popupMode = PopupMode;
         popupVisible = true;
-        // nonTransportExpanded = true;
-        // detailsExpanded = false;
+
+
+        bool isTransport = job.IsTransportaion == true;
+
+        if (popupMode == PopupOpenMode.Import)
+        {
+            nonTransportExpanded = true;
+            detailsExpanded = false;
+        }
+        else // Export
+        {
+            detailsExpanded = isTransport;
+            nonTransportExpanded = !isTransport;
+        }
+
+        suppressExpandEvents = false;
+        // 1️⃣ Initialize default 5 rows
         InitializeInvoiceDetails();
+
+        // 2️⃣ Load DB rows for this Job
+        var dbRows = await ContainerAddServices.GetByJobIdAsync(job.JobId)
+                  ?? new List<Lr>();
+
+        // 🔵 IMPORT (Non-Transport)
+        if (popupMode == PopupOpenMode.Import)
+        {
+            Rows = dbRows.OrderBy(x => x.LrId).ToList();
+
+            if (!Rows.Any())
+                InitializeInvoiceDetails();
+        }
+
+        // 🟢 EXPORT (Transport)
+        if (popupMode == PopupOpenMode.Export)
+        {
+            listofcontainer = dbRows.OrderBy(x => x.LrId).ToList();
+        }
+
+        // 3️⃣ Assign SrNo sequentially (1..n) for grid display
+
+        if (popupMode == PopupOpenMode.Import)
+        {
+            int srNo = 1;
+            foreach (var row in Rows)
+            {
+                row.SrNo = srNo++;
+                row.LrJobId = job.JobId;
+                row.LrJobNo ??= job.JobNo;
+                row.LrStatus = 1;
+            }
+
+            if (!Rows.Any())
+            {
+                InitializeInvoiceDetails();
+                srNo = 1;
+                foreach (var row in Rows)
+                {
+                    row.SrNo = srNo++;
+                    row.LrVoucherId = job.JobId;
+                    row.LrJobNo = job.JobNo;
+                    row.LrStatus = 1;
+                }
+            }
+        }
+        else // 🟢 EXPORT
+        {
+            int srNo = 1;
+            foreach (var row in listofcontainer)
+            {
+                row.SrNo = srNo++;
+                row.LrJobId = job.JobId;
+                row.LrJobNo ??= job.JobNo;
+                row.LrStatus = 1;
+            }
+        }
+
 
         await InvokeAsync(StateHasChanged);
     }
 
 
+
     void Grid_CustomizeElement(GridCustomizeElementEventArgs ea)
     {
-       
+
     }
 
     void Grid_CustomizeEditModel(GridCustomizeEditModelEventArgs e)
@@ -580,101 +713,134 @@
         EditModel = e.DataItem as Lr;
     }
 
-
     void Grid_EditModelSaving(GridEditModelSavingEventArgs e)
     {
-        // var edited = (Lr)e.EditModel;
-        // var original = Rows.First(x => x.SrNo == edited.SrNo);
-
-        // Copy edited values back
-        // original.LrDate = edited.LrDate;
-        // original.LrVehicleId = edited.LrVehicleId;
-        // original.LrFromLocationId = edited.LrFromLocationId;
-        // original.LrToLocationId = edited.LrToLocationId;
-        // original.LrGrossWt = edited.LrGrossWt;
-        // original.LrLoadWt = edited.LrLoadWt;
-        // original.LrUnloadWt = edited.LrUnloadWt;
-        // original.LrRateBill = edited.LrRateBill;
-        // original.LrNetFreightBill = edited.LrNetFreightBill;
-        // original.LrPaymentType = edited.LrPaymentType;
-        // original.LrRemarks = edited.LrRemarks;
+        var row = (Lr)e.DataItem;
 
         e.CopyChangesToDataItem();
 
-
-        // e.Cancel = true; prevent auto replace
+        if (!row.IsNew)
+            row.IsDirty = true;
     }
 
     private async Task SaveNT_Click()
     {
-        // Agar edit mode chal raha hai to pehle usko cancel karo
         if (Grid.IsEditing())
             await Grid.CancelEditAsync();
 
-        // Filter rows that have any meaningful value filled
-        var validRows = Rows.Where(r =>
-            !string.IsNullOrWhiteSpace(r.LrContainer1) ||
-            r.LrNtDate != null ||
-            !string.IsNullOrWhiteSpace(r.LrNtRfidSeal) ||
-            (r.LrNtQty > 0) ||
-            !string.IsNullOrWhiteSpace(r.LrNtInvNo) ||
-            (r.LrNtNetWt > 0) ||
-            !string.IsNullOrWhiteSpace(r.LrNtUnit) ||
-            !string.IsNullOrWhiteSpace(r.LrRemarks)
+        // 🗑️ STEP 1: Handle Deleted Rows
+        var deletedRows = Rows
+            .Where(r => r.IsDeleted && r.LrId > 0)
+            .ToList();
+
+        foreach (var row in deletedRows)
+        {
+            await ContainerAddServices.DeleteAsync(row.LrId);
+            Rows.Remove(row); // remove from UI
+        }
+
+        // ✅ STEP 2: Only NEW or MODIFIED rows
+        var rowsToSave = Rows.Where(r =>
+            !r.IsDeleted &&
+            (r.IsNew || r.IsDirty) &&
+            (
+                !string.IsNullOrWhiteSpace(r.LrContainer1) ||
+                r.LrNtDate != null ||
+                !string.IsNullOrWhiteSpace(r.LrNtRfidSeal) ||
+                (r.LrNtQty ?? 0) > 0 ||
+                !string.IsNullOrWhiteSpace(r.LrNtInvNo) ||
+                (r.LrNtNetWt ?? 0) > 0 ||
+                !string.IsNullOrWhiteSpace(r.LrNtUnit) ||
+                !string.IsNullOrWhiteSpace(r.LrRemarks)
+            )
         ).ToList();
 
-        // Agar koi valid row nahi hai to warning do
-        if (!validRows.Any())
+        if (!rowsToSave.Any() && !deletedRows.Any())
         {
-            Console.WriteLine("No valid data to save.");
+            ToastService.Warning("No changes to save");
             return;
         }
 
+        int successCount = 0;
+        int failCount = 0;
+
+        // 🧮 JOB LEVEL COLLECTION
+        var container20 = new List<string>();
+        var container40 = new List<string>();
+
         try
         {
-            foreach (var row in validRows)
+            foreach (var row in rowsToSave)
             {
-                // Required/Default field values set karo (agar nahi set hai to)
-                if (row.LrCompanyId == 0)
-                    row.LrCompanyId = 1;
+                // 🛑 container mandatory
+                if (string.IsNullOrWhiteSpace(row.LrContainer1))
+                {
+                    ToastService.Warning("Container number required");
+                    continue;
+                }
 
-                if (row.LrAddedByUserId == 0)
-                    row.LrAddedByUserId = 1;
+                row.LrJobId = job.JobId;
+                row.LrJobNo = job.JobNo;
+                row.LrVoucherId = job.JobId;
+                row.LrStatus = 1;
 
-                if (row.LrVoucherId == 0)
-                    row.LrVoucherId = job.JobId;
+                row.LrPartyAccountId = row.LrPartyAccountId == 0 ? 1 : row.LrPartyAccountId;
+                row.LrSupplierAccountId = row.LrSupplierAccountId == 0 ? 1 : row.LrSupplierAccountId;
 
-                if (row.LrPartyAccountId == 0)
-                    row.LrPartyAccountId = 1;
+                Lr? result = row.IsNew
+                    ? await ContainerAddServices.CreateAsync(row)
+                    : await ContainerAddServices.UpdateAsync(row);
 
-                if (row.LrSupplierAccountId == 0)
-                    row.LrSupplierAccountId = 1;
-
-                // Created/Updated timestamps
-                if (row.LrId == 0)
-                    row.LrCreated = DateTime.UtcNow;
-
-                row.LrUpdated = DateTime.UtcNow;
+                if (result != null)
+                {
+                    row.LrId = result.LrId;
+                    row.IsNew = false;
+                    row.IsDirty = false;
+                    successCount++;
+                }
+                else
+                {
+                    failCount++;
+                }
             }
 
-            // API call ya service call to save rows
-            // await LrService.SaveAsync(validRows);
+            // ✅ STEP 3: Job Container Summary (only active rows)
+            var activeRows = Rows.Where(r => !r.IsDeleted).ToList();
 
-            Console.WriteLine($"Saved {validRows.Count} valid rows out of {Rows.Count} total.");
+            foreach (var r in activeRows)
+            {
+                if (r.LrNtSize == "20")
+                    container20.Add(r.LrContainer1);
 
-            // Optional: success message popup / toast
-            // await ShowToast("Data saved successfully!");
+                if (r.LrNtSize == "40")
+                    container40.Add(r.LrContainer1);
+            }
 
-            // Popup close if required
-            // popupVisible = false;
+            job.Job20Ft = container20.Any() ? container20.Distinct().Count().ToString() : null;
+            job.Job40Ft = container40.Any() ? container40.Distinct().Count().ToString() : null;
+
+            job.JobContainer20Ft = container20.Any()
+                ? string.Join(", ", container20.Distinct())
+                : null;
+
+            job.JobContainer40Ft = container40.Any()
+                ? string.Join(", ", container40.Distinct())
+                : null;
+
+            await JobService.UpdateAsync(job);
+
+            if (successCount > 0)
+                ToastService.Success($"Saved {successCount} row(s)");
+
+            if (failCount > 0)
+                ToastService.Warning($"{failCount} row(s) failed");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error while saving: {ex.Message}");
-            // Toast for error
-            // await ShowToast("Error saving data.");
+            ToastService.Error($"Error while saving: {ex.Message}");
         }
     }
+
 
 
     private async Task New_Click()
@@ -684,10 +850,21 @@
 
         int nextSrNo = Rows.Any() ? Rows.Max(x => x.SrNo) + 1 : 1;
 
-        Rows.Add(new Lr { SrNo = nextSrNo });
+        var newRow = new Lr
+        {
+            SrNo = nextSrNo,
+            IsNew = true,
+            IsDirty = true,
+            LrVoucherId = job.JobId,
+            LrJobNo = job.JobNo,
+            LrStatus = 1
+        };
+
+        Rows.Add(newRow);
 
         await InvokeAsync(StateHasChanged);
     }
+
 
 
 
@@ -709,18 +886,24 @@
 
     async Task DeleteDataItem(object dataItem)
     {
-        var detail = (Lr)dataItem;
-        Rows.Remove(detail);
+        var row = (Lr)dataItem;
 
-        // Re-assign SrNo sequentially
-        int i = 1;
-        foreach (var row in Rows)
-            row.SrNo = i++;
+        if (Grid.IsEditing())
+            await Grid.CancelEditAsync();
 
-        nextSNo = i;
+        // 🗄️ DB se delete (sirf saved rows)
+        if (row.LrId > 0)
+            await ContainerAddServices.DeleteAsync(row.LrId);
+
+        Rows.Remove(row);
+
+        int sr = 1;
+        foreach (var r in Rows)
+            r.SrNo = sr++;
 
         await InvokeAsync(StateHasChanged);
     }
+
 
     // Payment type options
     List<string> PaymentTypes = new() { "To Pay", "Paid", "To be Billed" };
@@ -767,7 +950,7 @@
             foreach (var row in validRows)
             {
                 if (row.LrCompanyId == 0) row.LrCompanyId = 1;
-                if (row.LrAddedByUserId == 0) row.LrAddedByUserId = 1;
+                // if (row.LrAddedByUserId == 0) row.LrAddedByUserId = 1;
                 if (row.LrVoucherId == 0) row.LrVoucherId = job.JobId;
                 if (row.LrPartyAccountId == 0) row.LrPartyAccountId = 1;
                 if (row.LrSupplierAccountId == 0) row.LrSupplierAccountId = 1;
@@ -812,17 +995,22 @@
 
     private void OnNonTransportExpandedChanged(bool expanded)
     {
+        if (suppressExpandEvents) return;
+
         nonTransportExpanded = expanded;
         if (expanded)
-            detailsExpanded = false; // Close Details when Non-Transport opens
+            detailsExpanded = false;
     }
 
     private void OnDetailsExpandedChanged(bool expanded)
     {
+        if (suppressExpandEvents) return;
+
         detailsExpanded = expanded;
         if (expanded)
-            nonTransportExpanded = false; // Close Non-Transport when Details opens
+            nonTransportExpanded = false;
     }
+
 }
 
 @*     <DxAccordion ExpandMode="AccordionExpandMode.SingleOrNone" Style="width: 100%; height: 100%;">

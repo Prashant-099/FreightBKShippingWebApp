@@ -10,6 +10,7 @@
 @using FreightBKShippingWebApp.Models
 @using FreightBKShippingWebApp.Services
 
+
     @inject JobService JobService
     @inject AccountService AccountService
     @inject VesselService VesselService
@@ -33,7 +34,7 @@
 ShowCloseButton="true"
 HeaderText="@PopupTitle"
 Scrollable="true"
-MaxWidth="999"
+MaxWidth="1099"
 MinWidth="200"
  BodyCssClass="my-popup-body"
          CloseOnOutsideClick="false" horizontalAlignment="HorizontalAlignment.Center"
@@ -74,9 +75,9 @@ MinWidth="200"
                     <ValidationMessage For="@(() => EditModel.JobDate)" />
                 </DxFormLayoutItem>
 
-            <DxFormLayoutItem CaptionCssClass="caption-bold"
+            <DxFormLayoutItem CaptionCssClass="caption-bold" 
             Caption="@($"Import {(JobType == "IMPORT" ? ".be file" : ".sb file")}")"
-            ColSpanMd="6">
+            ColSpanMd="4" CaptionPosition="CaptionPosition.Vertical">
                 <Template>
                     <div class="d-flex align-items-center gap-2">
                         <i class="bi bi-cloud-upload"></i>
@@ -86,9 +87,51 @@ MinWidth="200"
                     </div>
                 </Template>
             </DxFormLayoutItem>
-            
+                @if (JobType == "EXPORT")
+                {
+                    <DxFormLayoutItem Caption="Job Type"
+                                      ColSpanMd="2"
+                                      CaptionPosition="CaptionPosition.Vertical">
+                        <DxComboBox Data="jobsubtypelist"
+                                    TextFieldName="Name"
+                                    ValueFieldName="Name"
+                                    @bind-Value="EditModel.JobSubType"
+                                    NullText="Select Job Sub Type" />
+                    </DxFormLayoutItem>
+                    <DxFormLayoutItem Caption="Shipment Type"
+                                      ColSpanMd="2"
+                                      CaptionPosition="CaptionPosition.Vertical">
+                        <DxComboBox Data="shippingStuffingList"
+                                    TextFieldName="Name"
+                                    ValueFieldName="Name"
+                                    @bind-Value="EditModel.JobShipmentType"
+                                    NullText="Select Job Sub Type" />
+                    </DxFormLayoutItem>
 
-               
+                    <DxFormLayoutItem Caption="Clearing"
+                                      ColSpanMd="1"
+                                      CaptionPosition="CaptionPosition.Vertical">
+                        <DxCheckBox @bind-Checked="EditModel.IsClearing" />
+                    </DxFormLayoutItem>
+
+                    <DxFormLayoutItem Caption="Transport"
+                                      ColSpanMd="1"
+                                      CaptionPosition="CaptionPosition.Vertical">
+                        <DxCheckBox @bind-Checked="EditModel.IsTransportaion" />
+                    </DxFormLayoutItem>
+
+                    <DxFormLayoutItem Caption="Forwarding"
+                                      ColSpanMd="1"
+                                      CaptionPosition="CaptionPosition.Vertical">
+                        <DxCheckBox @bind-Checked="EditModel.IsForwarding" />
+                    </DxFormLayoutItem>
+
+                    <DxFormLayoutItem Caption="Misc."
+                                      ColSpanMd="1"
+                                      CaptionPosition="CaptionPosition.Vertical">
+                        <DxCheckBox @bind-Checked="EditModel.IsMiscService" />
+                    </DxFormLayoutItem>
+                }
             <DxFormLayoutTabPages ScrollMode="TabsScrollMode.Auto">
                 <DxFormLayoutTabPage Caption="Job Info" >
                     <DxFormLayoutGroup Decoration="FormLayoutGroupDecoration.None">
@@ -1765,6 +1808,22 @@ MinWidth="200"
 
     private bool JobnoVisible { get; set; } = true;
     // private List<Account> parties = new();
+
+    record JobSubTypeOption(string Code, string Name);
+
+    List<JobSubTypeOption> jobsubtypelist = new()
+    {
+        new("AIR", "Air Transport"),
+        new("SEA", "Sea Transport")
+    };
+
+    List<string> shippingStuffingList = new()
+{
+    "CFS Stuffing",
+    "Company Stuffing"
+};
+
+
     private List<Account> party = new();
     private List<Vessel> vessels = new();
     private List<Cargo> cargos = new();

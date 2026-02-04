@@ -1,0 +1,419 @@
+﻿@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Services
+@inject ToasteService ToastService
+@inject PayTypeService PayTypeService
+@inject LocationService LocationService
+@inject NotifyService NotifyService
+@inject AccountService AccountService
+@inject ContainerAddServices ContainerAddServices
+
+<DxPopup @bind-Visible="@PopupVisible"
+         HeaderText="LR/Challan Details"
+         Width="90%"
+         Height="90%"
+         CloseOnOutsideClick="false"
+         ShowFooter="true" Scrollable=true> 
+
+    <BodyContentTemplate Context="popupaddcontainerctx">
+        <div class="p-3">
+            <DxFormLayout>
+                @* <DxFormLayoutGroup Caption="Details"
+                                   AnimationType="LayoutAnimationType.Slide"
+                                   ExpandButtonDisplayMode="GroupExpandButtonDisplayMode.Start"
+                                   @bind-Expanded="detailsExpanded"
+                                   ColSpanMd="12"> *@
+                    
+                    <!-- Basic LR Info -->
+                 
+
+                    <DxFormLayoutGroup ColSpanMd="10" Decoration="FormLayoutGroupDecoration.None">
+                        @* //row-1 *@
+                    <DxFormLayoutItem Caption="Challan/LR No" ColSpanMd="4">
+                        <DxTextBox @bind-Text="EditModel.LrNoStr" />
+                    </DxFormLayoutItem>
+
+                    <DxFormLayoutItem Caption="LR Date" ColSpanMd="4">
+                        <DxDateEdit @bind-Date="EditModel.LrNtDate" DisplayFormat="dd-MM-yyyy" />
+                    </DxFormLayoutItem>
+
+                    <DxFormLayoutItem Caption="Payment Mode" ColSpanMd="4">
+                        <DxComboBox Data="@paytypelist"
+                                    TextFieldName="PayTypeName"
+                                    ValueFieldName="PayTypeId"
+                                    @bind-Value="EditModel.LrPaymentType"
+                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" AllowUserInput="true"
+                                    SearchMode="ListSearchMode.AutoSearch"
+                                    SearchFilterCondition="ListSearchFilterCondition.Contains" />
+                    </DxFormLayoutItem>
+@* row-2 *@
+                    <DxFormLayoutItem Caption="Vehicle No" ColSpanMd="4">
+                        <DxTextBox @bind-Text="EditModel.LrNtVehicleNo" />
+                    </DxFormLayoutItem>
+
+                        <DxFormLayoutItem Caption="From" ColSpanMd="4">
+                        <DxComboBox Data="@StationLocationList" ValueFieldName="LocationId" TextFieldName="LocationName"
+                                        @bind-Value="EditModel.LrFromLocationId"
+                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" AllowUserInput="true"
+                                    SearchMode="ListSearchMode.AutoSearch"
+                                    SearchFilterCondition="ListSearchFilterCondition.Contains" />
+                        </DxFormLayoutItem>
+
+                        <DxFormLayoutItem Caption="To" ColSpanMd="4">
+                        <DxComboBox Data="@StationLocationList" ValueFieldName="LocationId" TextFieldName="LocationName"
+                                        @bind-Value="EditModel.LrToLocationId"
+                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" AllowUserInput="true"
+                                    SearchMode="ListSearchMode.AutoSearch"
+                                    SearchFilterCondition="ListSearchFilterCondition.Contains" />
+                        </DxFormLayoutItem>
+@* row3 *@
+                        <DxFormLayoutItem Caption="Bill To Party" ColSpanMd="4">
+                        <DxComboBox Data="@accountpartylist" TextFieldName="AccountName" ValueFieldName="AccountId"
+                                        @bind-Value="EditModel.LrPartyAccountId"
+                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" AllowUserInput="true"
+                                    SearchMode="ListSearchMode.AutoSearch"
+                                    SearchFilterCondition="ListSearchFilterCondition.Contains" />
+                        </DxFormLayoutItem>
+
+                        <DxFormLayoutItem Caption="Pickup Location" ColSpanMd="4">
+                            <DxTextBox @bind-Text="EditModel.LrNtPickupLoc" />
+                        </DxFormLayoutItem>
+
+                        <DxFormLayoutItem Caption="Drop Location" ColSpanMd="4">
+                            <DxTextBox @bind-Text="EditModel.LrNtPickupLoc" />
+                        </DxFormLayoutItem>
+@* row-4 *@
+                        <DxFormLayoutItem Caption="Consignor" ColSpanMd="4">
+                        <DxComboBox Data="notifylist" Value="@EditModel.LrConsignorNotifyId"
+                                    TData="Notify" TValue="int?" 
+                                    ValueChanged="@(id => OnConsignorChanged(id))" 
+                                    ValueFieldName="NotifyId" TextFieldName="NotifyName"
+                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" AllowUserInput="true"
+                                    SearchMode="ListSearchMode.AutoSearch"
+                                    SearchFilterCondition="ListSearchFilterCondition.Contains" />
+                        </DxFormLayoutItem>
+                    <DxFormLayoutItem Caption="Consignee" ColSpanMd="4">
+                        <DxComboBox Data="notifylist" Value="@EditModel.LrConsigneeNotifyId"
+                                    TData="Notify" TValue="int?" 
+                                    ValueChanged="@(id => OnConsigneeChanged(id))"
+                                    ValueFieldName="NotifyId" TextFieldName="NotifyName"
+                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" AllowUserInput="true"
+                                    SearchMode="ListSearchMode.AutoSearch"
+                                    SearchFilterCondition="ListSearchFilterCondition.Contains" />
+                    </DxFormLayoutItem>
+                    <DxFormLayoutItem Caption="Load Wt" ColSpanMd="4">
+                        <DxSpinEdit @bind-Value="EditModel.LrLoadWt"
+                                    DisplayFormat="n2"
+                                    ReadOnly="true" ShowSpinButtons=false />
+                    </DxFormLayoutItem>
+              
+
+@* row-5 *@
+                        <DxFormLayoutItem Caption="Consignor Address" ColSpanMd="4">
+                        <DxMemo @bind-Text="EditModel.LrConsignorNotifyAddress" Rows="3"/>
+                        </DxFormLayoutItem>
+                    <DxFormLayoutItem Caption="Consignee Address" ColSpanMd="4">
+                        <DxMemo @bind-Text="EditModel.LrConsigneeNotifyAddress" Rows="3" />
+                    </DxFormLayoutItem>                     
+
+                    <DxFormLayoutItem Caption="Gross Wt" ColSpanMd="4">
+                        <DxSpinEdit @bind-Value="EditModel.LrGrossWt"
+                                    DisplayFormat="n2" ShowSpinButtons=false />
+                    </DxFormLayoutItem>
+
+                @* row-6 *@
+                    <DxFormLayoutItem Caption="Consignor Gstin" ColSpanMd="4">
+                        <DxTextBox @bind-Text="EditModel.LrConsignorNotifyGst" />
+                    </DxFormLayoutItem>
+                    <DxFormLayoutItem Caption="Consignee Gstin" ColSpanMd="4">
+                        <DxTextBox @bind-Text="EditModel.LrConsignorNotifyGst" />
+                    </DxFormLayoutItem>
+             
+                    <DxFormLayoutItem Caption="Tare Wt" ColSpanMd="4">
+                        <DxSpinEdit @bind-Value="EditModel.LrTareWt"
+                                    DisplayFormat="n2" ShowSpinButtons=false />
+                    </DxFormLayoutItem>
+                  
+
+@* row-7                    *@
+                    <DxFormLayoutItem Caption="Consignor State" ColSpanMd="4">
+                        <DxTextBox @bind-Text="EditModel.LrConsignorNotifyState" />
+                    </DxFormLayoutItem>
+                    <DxFormLayoutItem Caption="Consignee State" ColSpanMd="4">
+                        <DxTextBox @bind-Text="EditModel.LrConsigneeNotifyState" />
+                    </DxFormLayoutItem>
+                    <DxFormLayoutItem Caption="Charge Wt" ColSpanMd="4">
+                        <DxSpinEdit @bind-Value="EditModel.LrChargeQty" DisplayFormat="n2" ShowSpinButtons=false />
+                    </DxFormLayoutItem>
+                    @* row-8         *@
+                    <DxFormLayoutItem Caption="Product" ColSpanMd="4">
+                        <DxComboBox Data="@ProductList"
+                                    @bind-Value="EditModel.LrProductId"
+                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" AllowUserInput="true"
+                                    SearchMode="ListSearchMode.AutoSearch"
+                                    SearchFilterCondition="ListSearchFilterCondition.Contains" />
+                    </DxFormLayoutItem>
+
+                    <DxFormLayoutItem Caption="Cont#1" ColSpanMd="4">
+                        <DxTextBox @bind-Text="EditModel.LrContainer1"></DxTextBox>
+                    </DxFormLayoutItem>
+                    <DxFormLayoutItem Caption="Cont#2" ColSpanMd="4">
+                        <DxTextBox @bind-Text="EditModel.LrContainer2"></DxTextBox>
+
+                    </DxFormLayoutItem>
+                    <DxFormLayoutItem Caption="Custom 1" ColSpanMd="4">
+                        <DxTextBox @bind-Text="EditModel.LrCustom1" />
+                    </DxFormLayoutItem>
+
+                    <DxFormLayoutItem Caption="Custom 2" ColSpanMd="4">
+                        <DxTextBox @bind-Text="EditModel.LrCustom2" />
+                    </DxFormLayoutItem>
+                    <DxFormLayoutItem Caption="Custom 3" ColSpanMd="4">
+                        <DxTextBox @bind-Text="EditModel.LrCustom3" />
+                    </DxFormLayoutItem>
+                    <DxFormLayoutItem Caption="Custom 4" ColSpanMd="4">
+                        <DxTextBox @bind-Text="EditModel.LrCustom4" />
+                    </DxFormLayoutItem>
+     
+                    </DxFormLayoutGroup>
+                @* group-2 right side group-last Colume *@
+                    <DxFormLayoutGroup ColSpanMd="2" Decoration="FormLayoutGroupDecoration.None">
+                        <DxFormLayoutItem Caption="Inv No" ColSpanMd="12">
+                            <DxTextBox @bind-Text="EditModel.LrNtInvNo" />
+                        </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="Inv Value" ColSpanMd="12">
+                            <DxTextBox @bind-Text="EditModel.LrNtInvNo" />
+                        </DxFormLayoutItem>
+
+
+                        <DxFormLayoutItem Caption="Pickup Date" ColSpanMd="12">
+                            <DxDateEdit @bind-Date="EditModel.LrNtPickupDt" DisplayFormat="dd-MM-yyyy" />
+                        </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="Load Date" ColSpanMd="12">
+                            @* <DxDateEdit @bind-Date="EditModel.load" DisplayFormat="dd-MM-yyyy" /> *@
+                        </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="Drop Date" ColSpanMd="12">
+                            @* <DxDateEdit @bind-Date="EditModel.D" DisplayFormat="dd-MM-yyyy" /> *@
+                        </DxFormLayoutItem>
+                        
+                        <DxFormLayoutItem Caption="Unload Date" ColSpanMd="12">
+                            <DxDateEdit @bind-Date="EditModel.LrNtPickupDt" DisplayFormat="dd-MM-yyyy" />
+                        </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="Return Date" ColSpanMd="12">
+                            <DxDateEdit @bind-Date="EditModel.LrNtPickupDt" DisplayFormat="dd-MM-yyyy" />
+                        </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="POD Date" ColSpanMd="12">
+                            <DxDateEdit @bind-Date="EditModel.LrNtPickupDt" DisplayFormat="dd-MM-yyyy" />
+                        </DxFormLayoutItem>
+
+                    </DxFormLayoutGroup>
+                    @* 3rd Group *@
+                <DxFormLayoutGroup Caption="Transporter / Supplier Details" ColSpanMd="12">
+                    
+                    <DxFormLayoutItem Caption="Supplier NAme">
+                        <DxComboBox Data="accountSupplierlist" 
+                            @bind-Value="EditModel.LrSupplierAccountId"
+                            TextFieldName="AccountName" ValueFieldName="AccountId"></DxComboBox>
+                    </DxFormLayoutItem>
+                    <DxFormLayoutItem Caption="Pay Type">
+                        <DxComboBox Data="paytypeList"
+                            @bind-Value="EditModel.LrPaymentType" 
+                        ValueFieldName="PayTypeName"
+                                    TextFieldName="PayTypeName"></DxComboBox>
+                    </DxFormLayoutItem>
+                    <DxFormLayoutItem Caption="Driver">
+                        <DxComboBox Data="DriverList" @bind-Value="EditModel.LrDriverId" 
+                        TextFieldName="AccountName" ValueFieldName="AccountId"></DxComboBox>
+                    </DxFormLayoutItem>
+                    <DxFormLayoutItem Caption="Extra Amt">
+                        @* <DxTextBox @bind-Text="EditModel."></DxTextBox> *@
+                    </DxFormLayoutItem>
+                    <DxFormLayoutItem Caption="Disel"></DxFormLayoutItem>
+                    <DxFormLayoutItem Caption="Remarks">
+                        <DxMemo @bind-Text="EditModel.LrRemarks" Rows="2"></DxMemo>
+                    </DxFormLayoutItem>
+                    <DxFormLayoutItem Caption="Email Id">
+                        @* <DxTextBox @bind-Text="EditModel."></DxTextBox> *@
+                    </DxFormLayoutItem>
+
+                </DxFormLayoutGroup>
+
+                @* </DxFormLayoutGroup> *@
+            </DxFormLayout>
+        </div>
+    </BodyContentTemplate>
+
+    <FooterContentTemplate>
+        <div class="d-flex justify-content-end gap-2 p-2">
+            <DxButton Text="Save"
+                      IconCssClass="dx-icon-save"
+                      RenderStyle="ButtonRenderStyle.Primary"
+                      Click="SaveData" />
+
+            <DxButton Text="Clear"
+                      IconCssClass="dx-icon-clear"
+                      RenderStyle="ButtonRenderStyle.Light"
+                      Click="ClearForm" />
+
+            <DxButton Text="Close"
+                      IconCssClass="dx-icon-close"
+                      RenderStyle="ButtonRenderStyle.Secondary"
+                      Click="ClosePopup" />
+        </div>
+    </FooterContentTemplate>
+
+
+</DxPopup>
+
+@code {
+    [Parameter] public bool PopupVisible { get; set; }
+    [Parameter] public EventCallback<bool> PopupVisibleChanged { get; set; }
+    [Parameter] public EventCallback<Lr> OnSave { get; set; }
+
+    private bool detailsExpanded = true;
+    private Lr EditModel = new Lr();
+
+    // Sample data for dropdowns
+    List<Notify> notifylist = new();
+    List<Account> accountpartylist = new();
+    List<Account> accountSupplierlist = new();
+    List<Account> DriverList = new();
+    List<Location> LocationList = new();
+    List<Location> StationLocationList = new();
+    List<PayType> paytypeList = new();
+
+    private List<string> ProductList = new List<string> { "Electronics", "Textiles", "Machinery", "Food Items" };
+    List<PayType> paytypelist = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        paytypelist = await PayTypeService.GetAllAsync();
+        notifylist = await NotifyService.GetAllAsync();
+        LocationList = await LocationService.GetAllAsync();
+
+        // 🔍 Sirf Station type
+        StationLocationList = LocationList
+            .Where(x => x.LocationType == "Station")
+            .ToList();
+
+        accountpartylist = await AccountService.GetAllAsync();
+        accountSupplierlist = accountpartylist.Where(x => x.AccountTypeId == 14).ToList();
+        DriverList = accountpartylist.Where(x => x.AccountTypeId == 16).ToList();
+        paytypeList = await PayTypeService.GetAllAsync();
+    }
+    protected override void OnInitialized()
+    {
+        InitializeModel();
+    }
+
+    private void OnConsignorChanged(int? notifyId)
+    {
+        EditModel.LrConsignorNotifyId = notifyId;
+
+        var selectedNotify = notifylist
+            .FirstOrDefault(x => x.NotifyId == notifyId);
+
+        EditModel.LrConsignorNotifyAddress =
+            selectedNotify == null
+            ? string.Empty
+            : $"{selectedNotify.NotifyAddress1} {selectedNotify.NotifyAddress2} {selectedNotify.NotifyAddress3}".Trim();
+       
+         EditModel.LrConsigneeNotifyGst = selectedNotify?.GstNo;
+        EditModel.LrConsigneeNotifyState = selectedNotify?.NotifyState;
+    }
+    private void OnConsigneeChanged(int? notifyId)
+    {
+        EditModel.LrConsigneeNotifyId = notifyId;
+
+        var selectedNotify = notifylist
+            .FirstOrDefault(x => x.NotifyId == notifyId);
+
+        EditModel.LrConsigneeNotifyAddress =
+            selectedNotify == null
+                ? string.Empty
+                : $"{selectedNotify.NotifyAddress1} {selectedNotify.NotifyAddress2} {selectedNotify.NotifyAddress3}".Trim();
+
+        // Optional: GST & State auto-fill
+        EditModel.LrConsigneeNotifyGst = selectedNotify?.GstNo;
+        EditModel.LrConsigneeNotifyState = selectedNotify?.NotifyState;
+    }
+
+    private void InitializeModel()
+    {
+        EditModel = new Lr
+        {
+            LrNtDate = DateTime.Now,
+            LrNtPickupDt = DateTime.Now,
+            LrGrossWt = 0,
+            LrTareWt = 0,
+            LrLoadWt = 0,
+            LrChargeQty = 0
+        };
+    }
+
+    private void CalculateLoadWeight()
+    {
+        if (EditModel.LrGrossWt.HasValue && EditModel.LrTareWt.HasValue)
+        {
+            EditModel.LrLoadWt = EditModel.LrGrossWt.Value - EditModel.LrTareWt.Value;
+        }
+    }
+
+    private async Task SaveData()
+    {
+        if (string.IsNullOrWhiteSpace(EditModel.LrNoStr))
+        {
+            ToastService.Warning("LR No required");
+            return;
+        }
+
+        EditModel.LrJobId = job.JobId;
+        EditModel.LrJobNo = job.JobNo;
+        EditModel.LrVoucherId = job.JobId;
+        EditModel.LrStatus = 1;
+
+        var result = EditModel.LrId == 0
+            ? await ContainerAddServices.CreateAsync(EditModel)
+            : await ContainerAddServices.UpdateAsync(EditModel);
+
+        if (result != null)
+        {
+            ToastService.Success("LR saved");
+            await OnSave.InvokeAsync(result); 
+            await ClosePopup();
+        }
+    }
+
+
+
+    private async Task ClearForm()
+    {
+        InitializeModel();
+         ToastService.Info("Form cleared");
+    }
+
+    private async Task ClosePopup()
+    {
+        PopupVisible = false;
+        await PopupVisibleChanged.InvokeAsync(PopupVisible);
+    }
+    private Job job = new();
+
+    public void ShowPopup(Lr model = null, Job currentJob = null)
+    {
+        if (currentJob != null)
+            job = currentJob;    // 🔥 baton received
+
+        EditModel = model ?? new Lr
+        {
+            IsNew = true,
+            LrJobId = job.JobId,
+            LrJobNo = job.JobNo,
+            LrVoucherId = job.JobId,
+            LrStatus = 1
+        };
+
+        PopupVisible = true;
+        StateHasChanged();
+    }
+
+}

@@ -420,6 +420,25 @@ namespace FreightBKShippingWebApp.Model
         [StringLength(200)]
         public string? JobHighseas1Address { get; set; }
 
+        [Column("job_sub_type")]
+        [StringLength(25)]
+        public string? JobSubType { get; set; } 
+
+        [Column("istransportaion")]
+        public bool? IsTransportaion { get; set; }
+
+        [Column("isclearing")]
+        public bool? IsClearing { get; set; }
+
+        [Column("isforwarding")]
+        public bool? IsForwarding { get; set; }
+
+        [Column("ismisc_service")]
+        public bool? IsMiscService { get; set; }
+
+        [Column("job_shipment_type")]
+        [StringLength(30)]
+        public string? JobShipmentType { get; set; }
         //unMapped field in db
         public string? VesselName { get; set; }
         public string? PolName { get; set; }

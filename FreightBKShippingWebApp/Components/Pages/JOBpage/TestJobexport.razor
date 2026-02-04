@@ -4,6 +4,7 @@
 @using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Services
 @using FreightBKShippingWebApp.Services.PdfReaderAndHelperService
+@using static FreightBKShippingWebApp.Components.Pages.JOBpage.AddContainerJob
 
 @inject JobService JobService
 @inject ToasteService ToastService
@@ -88,10 +89,10 @@
             <CellDisplayTemplate Context="cellContext">
 
                   <div style="display: flex; align-items: center;">
-                @* <DxButton RenderStyle="ButtonRenderStyle.Link"
-                          IconCssClass="bi bi-file-earmark-diff-fill"
-                         SizeMode="SizeMode.Medium"
-                          Click="@(() => OpenPopup((Job)cellContext.DataItem))" /> *@
+                    <DxButton RenderStyle="ButtonRenderStyle.Link"
+                              IconCssClass="bi bi-file-earmark-diff-fill"
+                              SizeMode="SizeMode.Medium"
+                              Click="@(() => OpenAddContainerPopup((Job)cellContext.DataItem))" />
                     <!-- Menu Button -->
           
         @*             <DxContextMenu ItemClick="@OnMenuItemClick">
@@ -265,6 +266,14 @@
                   OnLayoutChanged="HandleLayoutChanged" />
 @code {
 
+    AddContainerJob addContainerJob;
+    Job job = new();
+    void OpenAddContainerPopup(Job selectedJob)
+    {
+        job = selectedJob;
+        addContainerJob?.OpenPopup(selectedJob, PopupOpenMode.Export);
+    }
+    //-------------------------------------=
     private void InitializeColumns()
     {
         allColumns = new List<GridColumnLayout>
@@ -346,15 +355,6 @@
         billAddEditPage.Show(bill);
     }
 
-
-    AddContainerJob addContainerJob;
-//    void OpenPopup(Job job)
-// {
-//     if (addContainerJob is null)
-//         return;
-
-//     addContainerJob.Show(job);
-// }
     // ./
     DxGrid MyGrid;
     private List<Job> jobList = new();

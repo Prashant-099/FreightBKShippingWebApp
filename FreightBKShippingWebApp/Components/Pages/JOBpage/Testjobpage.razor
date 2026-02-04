@@ -3,6 +3,7 @@
 @using FreightBKShippingWebApp.Components.Pages.TestPage
 @using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Services
+@using static FreightBKShippingWebApp.Components.Pages.JOBpage.AddContainerJob
 
 @inject JobService JobService
 @inject ToasteService ToastService
@@ -376,11 +377,13 @@
 
     AddContainerJob addContainerJob;
     Job job = new();
+
     void OpenAddContainerPopup(Job selectedJob)
     {
         job = selectedJob;
-        addContainerJob?.OpenPopup(selectedJob);
+        addContainerJob?.OpenPopup(selectedJob, PopupOpenMode.Import);
     }
+
     // ./
     private List<Job> jobList = new();
     // private List<Job> SelectedJobs = new();
