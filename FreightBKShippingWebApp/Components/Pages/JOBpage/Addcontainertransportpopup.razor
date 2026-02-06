@@ -130,7 +130,7 @@
                         <DxTextBox @bind-Text="EditModel.LrConsignorNotifyGst" />
                     </DxFormLayoutItem>
                     <DxFormLayoutItem Caption="Consignee Gstin" ColSpanMd="4">
-                        <DxTextBox @bind-Text="EditModel.LrConsignorNotifyGst" />
+                        <DxTextBox @bind-Text="EditModel.LrConsigneeNotifyGst" />
                     </DxFormLayoutItem>
              
                     <DxFormLayoutItem Caption="Tare Wt" ColSpanMd="4">
@@ -252,7 +252,7 @@
                     </DxFormLayoutItem>
                     <DxFormLayoutItem Caption="Driver">
                         <DxComboBox Data="DriverList" @bind-Value="EditModel.LrDriverId"
-                                    TextFieldName="AccountName" ValueFieldName="AccountId"></DxComboBox>
+                                    TextFieldName="AccountName" ValueFieldName="AccountId" AllowUserInput="true"></DxComboBox>
                     </DxFormLayoutItem>
                     <DxFormLayoutItem Caption="Pay Type" ColSpanMd="2" CaptionPosition="CaptionPosition.Vertical">
                         <DxComboBox Data="paytypeList"
@@ -326,9 +326,9 @@
     }
     private List<SelectItem> PaymethodList = new List<SelectItem>
 {
-    new SelectItem { Text = "To Account", Value = "To Account" },
+    new SelectItem { Text = "To be Billed", Value = "To be Billed" },
     new SelectItem { Text = "To Pay",     Value = "To Pay" },
-    new SelectItem { Text = "Payed",      Value ="Payed" }
+    new SelectItem { Text = "Paid",      Value ="Paid" }
 };
 
     List<PayType> paytypelist = new();
@@ -341,7 +341,7 @@
 
         // 🔍 Sirf Station type
         StationLocationList = LocationList
-            .Where(x => x.LocationType == "Station")
+            .Where(x => string.Equals(x.LocationType, "STATION", StringComparison.OrdinalIgnoreCase))
             .ToList();
 
         accountpartylist = await AccountService.GetAllAsync();
@@ -367,8 +367,8 @@
             ? string.Empty
             : $"{selectedNotify.NotifyAddress1} {selectedNotify.NotifyAddress2} {selectedNotify.NotifyAddress3}".Trim();
        
-         EditModel.LrConsigneeNotifyGst = selectedNotify?.GstNo;
-        EditModel.LrConsigneeNotifyState = selectedNotify?.NotifyState;
+         EditModel.LrConsignorNotifyGst = selectedNotify?.GstNo;
+        EditModel.LrConsignorNotifyState = selectedNotify?.NotifyState;
     }
     private void OnConsigneeChanged(int? notifyId)
     {
