@@ -24,28 +24,23 @@ window.downloadFileFromBytes = function (fileName, base64Data) {
 }
 
 //pdf preview
-window.openPdfPreview = function (base64Data) {
-    if (!base64Data) {
-        console.error("Empty PDF data");
+window.openPdfPreview = async function (dotNetStreamRef) {
+    if (!dotNetStreamRef) {
+        console.error("dotNetStreamRef is null");
         return;
     }
 
-    requestAnimationFrame(() => {
-        const byteCharacters = atob(base64Data);
-        const byteNumbers = new Array(byteCharacters.length);
+    try {
+        const arrayBuffer = await dotNetStreamRef.arrayBuffer();
+        const blob = new Blob([arrayBuffer], { type: "application/pdf" });
+        const url = URL.createObjectURL(blob);
 
-        for (let i = 0; i < byteCharacters.length; i++) {
-            byteNumbers[i] = byteCharacters.charCodeAt(i);
-        }
-
-        const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray], { type: 'application/pdf' });
-        const blobUrl = URL.createObjectURL(blob);
-
-        const win = window.open(blobUrl, '_blank');
-        if (win) win.focus();
-    });
+        window.open(url, "_blank");
+    } catch (err) {
+        console.error("PDF preview failed:", err);
+    }
 };
+
 //pdf preview LANDSCAP
 
 window.generateLandscapePdfBase64 = async function (elementId) {
@@ -99,3 +94,5 @@ window.downloadFile = function (filename, bytesBase64) {
     link.click();
     document.body.removeChild(link);
 }
+
+

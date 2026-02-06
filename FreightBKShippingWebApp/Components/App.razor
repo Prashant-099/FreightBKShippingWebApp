@@ -24,7 +24,8 @@
 <body>
 
     <Routes @rendermode="new InteractiveServerRenderMode(prerender: false)" />
-  
+
+
     <script>
         function closeMobileMenuIfNeeded() {
              if (window.innerWidth < 768) {
@@ -44,7 +45,7 @@
                         link.click();
                     }
 
-
+                    //-----=
                       window.generateLandscapePdfBase64 = async function (elementId) {
                       const element = document.getElementById(elementId);
                       const opt = {
@@ -71,11 +72,40 @@
                             link.click();
                             document.body.removeChild(link);
                         }
+
+                        //sds
+                       // ✔️ Download a file from a .NET stream (PDF)
+        window.downloadPdfFromStream = async function (fileName, dotNetStreamRef) {
+            if (!dotNetStreamRef) {
+                console.error("Stream reference is null");
+                return;
+            }
+
+            try {
+                const arrayBuffer = await dotNetStreamRef.arrayBuffer();
+                const blob = new Blob([arrayBuffer], { type: "application/pdf" });
+
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = fileName ?? "download.pdf";
+
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+
+                URL.revokeObjectURL(url);
+            }
+            catch (err) {
+                console.error("Download failed:", err);
+            }
+        }
+
     </script>
-
-
-    <script src="_framework/blazor.web.js"></script>
     <script src="js/javascriptforall.js"></script>
+    <script src="_framework/blazor.web.js"></script>
+  
+
 </body>
 
 </html>

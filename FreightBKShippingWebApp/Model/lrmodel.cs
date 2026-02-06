@@ -249,7 +249,7 @@ namespace FreightBKShippingWebApp.Model
 
         // ================= Billing / Truck =================
         [Column("lr_billtypebill")]
-        public int? LrBillTypeBill { get; set; }
+        public string? LrBillTypeBill { get; set; }
 
         [Column("lr_billtypetruck")]
         public int? LrBillTypeTruck { get; set; }
@@ -320,6 +320,8 @@ namespace FreightBKShippingWebApp.Model
 
         [Column("lr_unload_date")]
         public string? LrUnloadDate { get; set; }
+        [Column("lr_load_date")]
+        public string? LrloadDate { get; set; }
 
         [Column("lr_unload_time")]
         public string? LrUnloadTime { get; set; }

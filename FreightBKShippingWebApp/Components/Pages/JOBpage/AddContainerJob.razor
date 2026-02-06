@@ -4,6 +4,10 @@
 @inject ToasteService ToastService
 @inject ContainerAddServices ContainerAddServices
 @inject JobService JobService
+@inject LoadingService LoadingService
+@inject ReportDataService ReportDataService
+@inject ReportService ReportService
+ @inject IJSRuntime JS
 @* <DxButton Text="Show Menu" Click="@OpenPopup" /> *@
 <style>
     .responsive-popup .dx-popup-content {
@@ -135,7 +139,17 @@
                     @job.JobContainer20Ft
                 </Template>
             </DxFormLayoutItem>
+                <DxFormLayoutItem ColSpanMd="3" CaptionPosition="CaptionPosition.Vertical">
+                    <DxComboBox Data="ReportDataList"
+                                @bind-Value="SelectedReportId"
+                                TextFieldName="FormatName"
+                                ValueFieldName="ReportDataId"
+                                NullText="Select Report Template..."
+                                ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto">
+                    </DxComboBox>
+                </DxFormLayoutItem>
             </DxFormLayout>
+
         </div>
 
         <div class="scrollable-content">
@@ -159,7 +173,7 @@
                             EditMode="GridEditMode.EditCell"
                             EditOnKeyPress="true"
                             ShowAddNewButton="false"
-                                RowClick="ExportGrid_RowDoubleClick"
+                              RowDoubleClick="ExportGrid_RowDoubleClick"
                             AllowSort="false"
                             ShowFilterRow="false"
                             ShowGroupPanel="false"
@@ -201,6 +215,8 @@
                                             IconCssClass="bi bi-trash"
                                             RenderStyle="ButtonRenderStyle.Link" />
 
+                                  
+
                                             @* <DxButton IconCssClass="bi bi-plus-lg"
                                                           RenderStyle="ButtonRenderStyle.Link"
                                                           Click="ShowServicePopup" /> *@
@@ -215,6 +231,9 @@
                                                           CssClass="grid-delete-btn"
                                                           RenderStyle="ButtonRenderStyle.Link"
                                               Click="@(() => DeleteDataItem(displayContext.DataItem))" />
+                                        <DxButton IconCssClass="bi bi-printer"
+                                                  RenderStyle="ButtonRenderStyle.Link"
+                                                  Click="@(() => PrintPage((Lr)displayContext.DataItem))" />
 
                                           @*   <DxButton IconCssClass="bi bi-plus-lg"
                                                       RenderStyle="ButtonRenderStyle.Link"
@@ -396,9 +415,8 @@
                                                       IconCssClass="bi bi-trash"
                                                       RenderStyle="ButtonRenderStyle.Link" />
 
-                                            @* <DxButton IconCssClass="bi bi-plus-lg"
-                                                          RenderStyle="ButtonRenderStyle.Link"
-                                                          Click="ShowServicePopup" /> *@
+                                     >
+
                                             @*  </div> *@
                                         </CellEditTemplate>
 
@@ -410,6 +428,11 @@
                                                       CssClass="grid-delete-btn"
                                                       RenderStyle="ButtonRenderStyle.Link"
                                                       Click="@(() => DeleteDataItem(displayContext.DataItem))" />
+
+                                        <DxButton IconCssClass="bi bi-printer"
+                                                  RenderStyle="ButtonRenderStyle.Link"
+                                                  Click="@(() => PrintPage((Lr)displayContext.DataItem))" />
+
 
                                             @*   <DxButton IconCssClass="bi bi-plus-lg"
                                                       RenderStyle="ButtonRenderStyle.Link"
@@ -548,6 +571,28 @@
 <Addcontainertransportpopup @ref="addPopup" OnSave="Loaddata" />
 
 @code {
+    private List<ReportData> ReportDataList { get; set; } = new();
+    private int? SelectedReportId { get; set; } = 1;
+ private async Task LoadReportList()
+{
+    try
+    {
+        var allReports = await ReportDataService.GetAllAsync();
+
+        ReportDataList = allReports
+            .Where(r => string.Equals(r.DocType, "lr", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        if (ReportDataList.Any())
+        {
+            SelectedReportId = ReportDataList.First().ReportDataId;
+        }
+    }
+    catch (Exception ex)
+    {
+        ToastService.Error($"Failed to load reports: {ex.Message}");
+    }
+}
 
     Lr selectedExportRow;
 
@@ -564,7 +609,7 @@
     }
 
 
-  
+
     Addcontainertransportpopup addPopup;
 
     List<Lr> listofcontainer = new();
@@ -714,7 +759,7 @@
             }
         }
 
-
+        await LoadReportList();
         await InvokeAsync(StateHasChanged);
     }
 
@@ -1026,6 +1071,98 @@
         detailsExpanded = expanded;
         if (expanded)
             nonTransportExpanded = false;
+    }
+
+    private List<Lr> SelectedLrs = new();
+    private Task ClearSelection()
+    {
+        SelectedLrs.Clear();
+        return Task.CompletedTask;
+    }
+
+
+    async Task PrintPage(Lr lr)
+    {
+        if (lr == null)
+        {
+            ToastService.Warning("LR not found.");
+            return;
+        }
+
+        // ✅ Check if report is selected
+        if (!SelectedReportId.HasValue)
+        {
+            ToastService.Warning("Please select a report template first.");
+            return;
+        }
+
+        LoadingService.Show("Preparing print preview...");
+        try
+        {
+            // ✅ Use selected report ID
+            int reportId = SelectedReportId.Value;
+
+            var layoutBytes = await ReportDataService.GetLayoutBytesAsync(reportId);
+            if (layoutBytes == null || layoutBytes.Length == 0)
+            {
+                ToastService.Error("Report layout not found.");
+                return;
+            }
+
+            var dto = await ContainerAddServices.GetPrintableLrAsync(lr.LrId);
+            if (dto == null)
+            {
+                ToastService.Error("Nothing to print.");
+                return;
+            }
+
+            var lrList = new List<Lr> { lr };
+            var dtoDict = lrList.ToDictionary(x => x, x => (PrintLrFullDto?)dto);
+
+            try
+            {
+                await ReportService.CreateMergedReportAsync(
+                    lrList,
+                    item => dtoDict.ContainsKey(item) ? dtoDict[item] : null,
+                    layoutBytes
+                );
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("CodeDOM"))
+            {
+                ToastService.Error("Report template incompatible. Contact admin.");
+                return;
+            }
+
+            if (ReportService.MergedReport == null)
+            {
+                ToastService.Error("Report generation failed.");
+                return;
+            }
+
+            var report = ReportService.MergedReport;
+
+            if (report.Pages.Count == 0)
+                report.CreateDocument();
+
+            using var pdfStream = new MemoryStream();
+            report.ExportToPdf(pdfStream);
+            pdfStream.Position = 0;
+
+            using var streamRef = new Microsoft.JSInterop.DotNetStreamReference(pdfStream);
+            await JS.InvokeVoidAsync("downloadPdfFromStream", $"LR_{lr.LrNoStr}.pdf", streamRef);
+
+            // ✅ Show which report was used
+            var reportName = ReportDataList.FirstOrDefault(r => r.ReportDataId == reportId)?.FormatName ?? "Report";
+            ToastService.Success($"LR {lr.LrNoStr} printed with {reportName}");
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Print failed: {ex.Message}");
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
     }
 
 }

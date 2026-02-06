@@ -1,4 +1,5 @@
 ﻿using FreightBKShippingWebApp.Model;
+using static System.Net.WebRequestMethods;
 
 namespace FreightBKShippingWebApp.Services
 {
@@ -115,6 +116,12 @@ namespace FreightBKShippingWebApp.Services
                 Console.WriteLine($"❌ Error deleting LR: {ex.Message}");
                 return (false, ex.Message);
             }
+        }
+
+        public async Task<PrintLrFullDto?> GetPrintableLrAsync(int lrId)
+        {
+            return await _api.GetFromJsonAsync<PrintLrFullDto>(
+                $"api/ContainerAdd/print/{lrId}");
         }
     }
 }
