@@ -79,7 +79,7 @@
                         </DxFormLayoutItem>
 
                         <DxFormLayoutItem Caption="Drop Location" ColSpanMd="4">
-                            <DxTextBox @bind-Text="EditModel.LrNtPickupLoc" />
+                            <DxTextBox />
                         </DxFormLayoutItem>
 @* row-4 *@
                         <DxFormLayoutItem Caption="Consignor" ColSpanMd="4">
@@ -103,7 +103,7 @@
                     <DxFormLayoutItem Caption="Load Wt" ColSpanMd="4">
                         <DxSpinEdit @bind-Value="EditModel.LrLoadWt"
                                     DisplayFormat="n2"
-                                    ReadOnly="true" ShowSpinButtons=false />
+                                    ShowSpinButtons=false />
                     </DxFormLayoutItem>
               
 
@@ -215,10 +215,10 @@
                             TextFieldName="AccountName" ValueFieldName="AccountId"></DxComboBox>
                     </DxFormLayoutItem>
                     <DxFormLayoutItem Caption="Pay Type">
-                        <DxComboBox Data="paytypeList"
+                        @* <DxComboBox Data="paytypeList"
                             @bind-Value="EditModel.LrPaymentType" 
                         ValueFieldName="PayTypeName"
-                                    TextFieldName="PayTypeName"></DxComboBox>
+                                    TextFieldName="PayTypeName"></DxComboBox> *@
                     </DxFormLayoutItem>
                     <DxFormLayoutItem Caption="Driver">
                         <DxComboBox Data="DriverList" @bind-Value="EditModel.LrDriverId" 
@@ -401,19 +401,35 @@
     public void ShowPopup(Lr model = null, Job currentJob = null)
     {
         if (currentJob != null)
-            job = currentJob;    // 🔥 baton received
+            job = currentJob;
 
-        EditModel = model ?? new Lr
+        if (model != null)
         {
-            IsNew = true,
-            LrJobId = job.JobId,
-            LrJobNo = job.JobNo,
-            LrVoucherId = job.JobId,
-            LrStatus = 1
-        };
+            // 🟡 Edit existing — direct assign
+            EditModel = model;
+        }
+        else
+        {
+            // 🆕 New entry — create new with defaults
+            EditModel = new Lr
+            {
+                IsNew = true,
+                LrJobId = job.JobId,
+                LrJobNo = job.JobNo,
+                LrVoucherId = job.JobId,
+                LrStatus = 1,
+                LrNtDate = DateTime.Now,
+                LrNtPickupDt = DateTime.Now,
+                LrGrossWt = 0,
+                LrTareWt = 0,
+                LrLoadWt = 0,
+                LrChargeQty = 0
+            };
+        }
 
         PopupVisible = true;
         StateHasChanged();
     }
+
 
 }
