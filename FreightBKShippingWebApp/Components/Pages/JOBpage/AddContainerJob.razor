@@ -4,6 +4,10 @@
 @inject ToasteService ToastService
 @inject ContainerAddServices ContainerAddServices
 @inject JobService JobService
+@inject LoadingService LoadingService
+@inject ReportDataService ReportDataService
+@inject ReportService ReportService
+ @inject IJSRuntime JS
 @* <DxButton Text="Show Menu" Click="@OpenPopup" /> *@
 <style>
     .responsive-popup .dx-popup-content {
@@ -135,7 +139,17 @@
                     @job.JobContainer20Ft
                 </Template>
             </DxFormLayoutItem>
+                <DxFormLayoutItem ColSpanMd="3" CaptionPosition="CaptionPosition.Vertical">
+                    <DxComboBox Data="ReportDataList"
+                                @bind-Value="SelectedReportId"
+                                TextFieldName="FormatName"
+                                ValueFieldName="ReportDataId"
+                                NullText="Select Report Template..."
+                                ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto">
+                    </DxComboBox>
+                </DxFormLayoutItem>
             </DxFormLayout>
+
         </div>
 
         <div class="scrollable-content">
@@ -156,10 +170,10 @@
                             TItem="Lr"
                             @ref="GridTwo"
                             KeyFieldName="SrNo"
-                            EditMode="GridEditMode.EditCell"
+                 
                             EditOnKeyPress="true"
                             ShowAddNewButton="false"
-                                RowClick="ExportGrid_RowDoubleClick"
+                              RowDoubleClick="ExportGrid_RowDoubleClick"
                             AllowSort="false"
                             ShowFilterRow="false"
                             ShowGroupPanel="false"
@@ -201,6 +215,8 @@
                                             IconCssClass="bi bi-trash"
                                             RenderStyle="ButtonRenderStyle.Link" />
 
+                                  
+
                                             @* <DxButton IconCssClass="bi bi-plus-lg"
                                                           RenderStyle="ButtonRenderStyle.Link"
                                                           Click="ShowServicePopup" /> *@
@@ -215,6 +231,9 @@
                                                           CssClass="grid-delete-btn"
                                                           RenderStyle="ButtonRenderStyle.Link"
                                               Click="@(() => DeleteDataItem(displayContext.DataItem))" />
+                                        <DxButton IconCssClass="bi bi-printer"
+                                                  RenderStyle="ButtonRenderStyle.Link"
+                                                  Click="@(() => PrintPage((Lr)displayContext.DataItem))" />
 
                                           @*   <DxButton IconCssClass="bi bi-plus-lg"
                                                       RenderStyle="ButtonRenderStyle.Link"
@@ -348,6 +367,9 @@
                         <!-- Grid -->
                         <DxFormLayoutItem ColSpanMd="12">
                             <DxGrid Data="@Rows"
+                                VirtualScrollingEnabled="true"
+                                VirtualScrollingMode="GridVirtualScrollingMode.Rows"
+                               
                                     TItem="Lr"
                                     @ref="Grid"
                                     KeyFieldName="SrNo"
@@ -396,9 +418,8 @@
                                                       IconCssClass="bi bi-trash"
                                                       RenderStyle="ButtonRenderStyle.Link" />
 
-                                            @* <DxButton IconCssClass="bi bi-plus-lg"
-                                                          RenderStyle="ButtonRenderStyle.Link"
-                                                          Click="ShowServicePopup" /> *@
+                                     >
+
                                             @*  </div> *@
                                         </CellEditTemplate>
 
@@ -410,6 +431,11 @@
                                                       CssClass="grid-delete-btn"
                                                       RenderStyle="ButtonRenderStyle.Link"
                                                       Click="@(() => DeleteDataItem(displayContext.DataItem))" />
+
+                                        <DxButton IconCssClass="bi bi-printer"
+                                                  RenderStyle="ButtonRenderStyle.Link"
+                                                  Click="@(() => PrintPage((Lr)displayContext.DataItem))" />
+
 
                                             @*   <DxButton IconCssClass="bi bi-plus-lg"
                                                       RenderStyle="ButtonRenderStyle.Link"
@@ -548,6 +574,28 @@
 <Addcontainertransportpopup @ref="addPopup" OnSave="Loaddata" />
 
 @code {
+    private List<ReportData> ReportDataList { get; set; } = new();
+    private int? SelectedReportId { get; set; } = 1;
+    private async Task LoadReportList()
+    {
+        try
+        {
+            var allReports = await ReportDataService.GetAllAsync();
+
+            ReportDataList = allReports
+                .Where(r => string.Equals(r.DocType, "lr", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            if (ReportDataList.Any())
+            {
+                SelectedReportId = ReportDataList.First().ReportDataId;
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Failed to load reports: {ex.Message}");
+        }
+    }
 
     Lr selectedExportRow;
 
@@ -564,7 +612,7 @@
     }
 
 
-  
+
     Addcontainertransportpopup addPopup;
 
     List<Lr> listofcontainer = new();
@@ -626,100 +674,107 @@
     PopupOpenMode popupMode;
     bool suppressExpandEvents;
 
-    public async Task OpenPopup(Job selected,PopupOpenMode PopupMode)
+    public async Task OpenPopup(Job selected, PopupOpenMode PopupMode)
     {
-
         if (selected == null || selected.JobId == 0)
         {
             ToastService.Error("Job not passed correctly to AddContainer popup");
             return;
         }
-        suppressExpandEvents = true;
+
         job = selected;
         popupMode = PopupMode;
+
+        // Immediately start loading data but don't await yet
+        var loadDataTask = LoadPopupDataFastAsync();
+
+        // Show popup at once
         popupVisible = true;
 
-
-        bool isTransport = job.IsTransportaion == true;
-
-        if (popupMode == PopupOpenMode.Import)
-        {
-            nonTransportExpanded = true;
-            detailsExpanded = false;
-        }
-        else // Export
-        {
-            detailsExpanded = isTransport;
-            nonTransportExpanded = !isTransport;
-        }
-
+        suppressExpandEvents = true;
+        nonTransportExpanded = PopupMode == PopupOpenMode.Import;
+        detailsExpanded = PopupMode == PopupOpenMode.Export && job.IsTransportaion == true;
         suppressExpandEvents = false;
-        // 1️⃣ Initialize default 5 rows
-        InitializeInvoiceDetails();
 
-        // 2️⃣ Load DB rows for this Job
-        var dbRows = await ContainerAddServices.GetByJobIdAsync(job.JobId)
-                  ?? new List<Lr>();
+        StateHasChanged();   // show popup immediately
 
-        // 🔵 IMPORT (Non-Transport)
-        if (popupMode == PopupOpenMode.Import)
-        {
-            Rows = dbRows.OrderBy(x => x.LrId).ToList();
+        // Now await the data load
+        await loadDataTask;
 
-            if (!Rows.Any())
-                InitializeInvoiceDetails();
-        }
-
-        // 🟢 EXPORT (Transport)
-        if (popupMode == PopupOpenMode.Export)
-        {
-            listofcontainer = dbRows.OrderBy(x => x.LrId).ToList();
-        }
-
-        // 3️⃣ Assign SrNo sequentially (1..n) for grid display
-
-        if (popupMode == PopupOpenMode.Import)
-        {
-            int srNo = 1;
-            foreach (var row in Rows)
-            {
-                row.SrNo = srNo++;
-                row.LrJobId = job.JobId;
-                row.LrJobNo ??= job.JobNo;
-                row.LrStatus = 1;
-            }
-
-            if (!Rows.Any())
-            {
-                InitializeInvoiceDetails();
-                srNo = 1;
-                foreach (var row in Rows)
-                {
-                    row.SrNo = srNo++;
-                    row.LrVoucherId = job.JobId;
-                    row.LrJobNo = job.JobNo;
-                    row.LrStatus = 1;
-                }
-            }
-        }
-        else // 🟢 EXPORT
-        {
-            int srNo = 1;
-            foreach (var row in listofcontainer)
-            {
-                row.SrNo = srNo++;
-                row.LrJobId = job.JobId;
-                row.LrJobNo ??= job.JobNo;
-                row.LrStatus = 1;
-            }
-        }
-
-
-        await InvokeAsync(StateHasChanged);
+        await InvokeAsync(StateHasChanged);  // update grid
     }
 
 
+    private async Task LoadPopupDataFastAsync()
+    {
+        try
+        {
+            var dbRows = await ContainerAddServices.GetByJobIdAsync(job.JobId) ?? new List<Lr>();
 
+            if (popupMode == PopupOpenMode.Import)
+            {
+                // import mode
+                if (dbRows.Count > 0)
+                  await  AssignImportRows(dbRows);
+                else
+                    AssignDefaultImportRows();
+            }
+            else
+            {
+                // export mode
+             await AssignExportRows(dbRows);
+            }
+
+            // load report templates
+            await LoadReportList();
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Popup load failed: {ex.Message}");
+        }
+    }
+
+    private async Task AssignImportRows(List<Lr> dbRows)
+    {
+        if (Rows == null)
+            Rows = new List<Lr>(dbRows.Count);
+        else
+            Rows.Clear();
+
+        int i = 0;
+        foreach (var r in dbRows)
+        {
+            r.SrNo = ++i;
+            r.LrJobId = job.JobId;
+            r.LrJobNo ??= job.JobNo;
+            r.LrStatus = 1;
+            Rows.Add(r);
+        }
+    }
+
+    private void AssignDefaultImportRows()
+    {
+        Rows = new List<Lr>(5);
+        for (int i = 1; i <= 5; i++)
+            Rows.Add(new Lr { SrNo = i });
+    }
+    private async Task AssignExportRows(List<Lr> dbRows)
+    {
+        // Always show db rows (even if empty)
+        listofcontainer = new List<Lr>(dbRows.Count);
+
+        int i = 0;
+        foreach (var r in dbRows.OrderBy(x => x.LrId))
+        {
+            r.SrNo = ++i;
+            r.LrJobId = job.JobId;
+            r.LrJobNo ??= job.JobNo;
+            r.LrStatus = 1;
+            listofcontainer.Add(r);
+        }
+    }
+
+    //==========================
     void Grid_CustomizeElement(GridCustomizeElementEventArgs ea)
     {
 
@@ -1026,6 +1081,98 @@
         detailsExpanded = expanded;
         if (expanded)
             nonTransportExpanded = false;
+    }
+
+    private List<Lr> SelectedLrs = new();
+    private Task ClearSelection()
+    {
+        SelectedLrs.Clear();
+        return Task.CompletedTask;
+    }
+
+
+    async Task PrintPage(Lr lr)
+    {
+        if (lr == null)
+        {
+            ToastService.Warning("LR not found.");
+            return;
+        }
+
+        // ✅ Check if report is selected
+        if (!SelectedReportId.HasValue)
+        {
+            ToastService.Warning("Please select a report template first.");
+            return;
+        }
+
+        LoadingService.Show("Preparing print preview...");
+        try
+        {
+            // ✅ Use selected report ID
+            int reportId = SelectedReportId.Value;
+
+            var layoutBytes = await ReportDataService.GetLayoutBytesAsync(reportId);
+            if (layoutBytes == null || layoutBytes.Length == 0)
+            {
+                ToastService.Error("Report layout not found.");
+                return;
+            }
+
+            var dto = await ContainerAddServices.GetPrintableLrAsync(lr.LrId);
+            if (dto == null)
+            {
+                ToastService.Error("Nothing to print.");
+                return;
+            }
+
+            var lrList = new List<Lr> { lr };
+            var dtoDict = lrList.ToDictionary(x => x, x => (PrintLrFullDto?)dto);
+
+            try
+            {
+                await ReportService.CreateMergedReportAsync(
+                    lrList,
+                    item => dtoDict.ContainsKey(item) ? dtoDict[item] : null,
+                    layoutBytes
+                );
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("CodeDOM"))
+            {
+                ToastService.Error("Report template incompatible. Contact admin.");
+                return;
+            }
+
+            if (ReportService.MergedReport == null)
+            {
+                ToastService.Error("Report generation failed.");
+                return;
+            }
+
+            var report = ReportService.MergedReport;
+
+            if (report.Pages.Count == 0)
+                report.CreateDocument();
+
+            using var pdfStream = new MemoryStream();
+            report.ExportToPdf(pdfStream);
+            pdfStream.Position = 0;
+
+            using var streamRef = new Microsoft.JSInterop.DotNetStreamReference(pdfStream);
+            await JS.InvokeVoidAsync("downloadPdfFromStream", $"LR_{lr.LrNoStr}.pdf", streamRef);
+
+            // ✅ Show which report was used
+            var reportName = ReportDataList.FirstOrDefault(r => r.ReportDataId == reportId)?.FormatName ?? "Report";
+            ToastService.Success($"LR {lr.LrNoStr} printed with {reportName}");
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Print failed: {ex.Message}");
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
     }
 
 }

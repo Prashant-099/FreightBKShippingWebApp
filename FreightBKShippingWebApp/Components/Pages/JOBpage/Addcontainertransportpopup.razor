@@ -6,7 +6,8 @@
 @inject NotifyService NotifyService
 @inject AccountService AccountService
 @inject ContainerAddServices ContainerAddServices
-
+@inject CargoService CargoService
+@inject ReportDataService ReportDataService
 <DxPopup @bind-Visible="@PopupVisible"
          HeaderText="LR/Challan Details"
          Width="90%"
@@ -15,7 +16,7 @@
          ShowFooter="true" Scrollable=true> 
 
     <BodyContentTemplate Context="popupaddcontainerctx">
-        <div class="p-3">
+        <div class="p-3"> <p>Enter Date like this </p>
             <DxFormLayout>
                 @* <DxFormLayoutGroup Caption="Details"
                                    AnimationType="LayoutAnimationType.Slide"
@@ -33,17 +34,21 @@
                     </DxFormLayoutItem>
 
                     <DxFormLayoutItem Caption="LR Date" ColSpanMd="4">
-                        <DxDateEdit @bind-Date="EditModel.LrNtDate" DisplayFormat="dd-MM-yyyy" />
+                        @* <DxDateEdit @bind-Date="EditModel.LrNtDate" DisplayFormat="dd-MM-yyyy" /> *@
+                        <DxMaskedInput @bind-Value="EditModel.LrDate"
+                                       Mask="dd/MM/yyyy"
+                                       MaskMode="@MaskMode.DateTime" InputCssClass="editor-focus-green">
+                            <DxDateTimeMaskProperties CaretMode="@MaskCaretMode.Advancing" />
+                        </DxMaskedInput>
                     </DxFormLayoutItem>
 
                     <DxFormLayoutItem Caption="Payment Mode" ColSpanMd="4">
-                        <DxComboBox Data="@paytypelist"
-                                    TextFieldName="PayTypeName"
-                                    ValueFieldName="PayTypeId"
-                                    @bind-Value="EditModel.LrPaymentType"
-                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" AllowUserInput="true"
+                        <DxComboBox Data="@PaymethodList"                              
+                                    @bind-Value="EditModel.LrBillTypeBill" TextFieldName="Text"
+                                    ValueFieldName="Value"
+                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" AllowUserInput="false"
                                     SearchMode="ListSearchMode.AutoSearch"
-                                    SearchFilterCondition="ListSearchFilterCondition.Contains" />
+                                    SearchFilterCondition="ListSearchFilterCondition.Contains" NullText="Select Payment Mode" />
                     </DxFormLayoutItem>
 @* row-2 *@
                     <DxFormLayoutItem Caption="Vehicle No" ColSpanMd="4">
@@ -125,7 +130,7 @@
                         <DxTextBox @bind-Text="EditModel.LrConsignorNotifyGst" />
                     </DxFormLayoutItem>
                     <DxFormLayoutItem Caption="Consignee Gstin" ColSpanMd="4">
-                        <DxTextBox @bind-Text="EditModel.LrConsignorNotifyGst" />
+                        <DxTextBox @bind-Text="EditModel.LrConsigneeNotifyGst" />
                     </DxFormLayoutItem>
              
                     <DxFormLayoutItem Caption="Tare Wt" ColSpanMd="4">
@@ -147,6 +152,8 @@
                     @* row-8         *@
                     <DxFormLayoutItem Caption="Product" ColSpanMd="4">
                         <DxComboBox Data="@ProductList"
+                                    TextFieldName="CargoName"
+                                    ValueFieldName="CargoId"
                                     @bind-Value="EditModel.LrProductId"
                                     ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" AllowUserInput="true"
                                     SearchMode="ListSearchMode.AutoSearch"
@@ -186,54 +193,84 @@
 
 
                         <DxFormLayoutItem Caption="Pickup Date" ColSpanMd="12">
-                            <DxDateEdit @bind-Date="EditModel.LrNtPickupDt" DisplayFormat="dd-MM-yyyy" />
+                            @* <DxDateEdit @bind-Date="EditModel.LrPickupDate" DisplayFormat="dd-MM-yyyy" /> *@
+                        <DxMaskedInput @bind-Value="EditModel.LrPickupDate"
+                                       Mask="dd/MM/yyyy"
+                                       MaskMode="@MaskMode.DateTime" InputCssClass="editor-focus-green">
+                            <DxDateTimeMaskProperties CaretMode="@MaskCaretMode.Advancing" />
+                        </DxMaskedInput>
                         </DxFormLayoutItem>
                         <DxFormLayoutItem Caption="Load Date" ColSpanMd="12">
-                            @* <DxDateEdit @bind-Date="EditModel.load" DisplayFormat="dd-MM-yyyy" /> *@
+                            @* <DxDateEdit @bind-Date="EditModel.LrloadDate" DisplayFormat="dd-MM-yyyy" /> *@
+                        <DxMaskedInput @bind-Value="EditModel.LrloadDate"
+                                       Mask="dd/MM/yyyy"
+                                       MaskMode="@MaskMode.DateTime" InputCssClass="editor-focus-green">
+                            <DxDateTimeMaskProperties CaretMode="@MaskCaretMode.Advancing" />
+                        </DxMaskedInput>
                         </DxFormLayoutItem>
                         <DxFormLayoutItem Caption="Drop Date" ColSpanMd="12">
-                            @* <DxDateEdit @bind-Date="EditModel.D" DisplayFormat="dd-MM-yyyy" /> *@
+                            @* <DxDateEdit @bind-Date="" DisplayFormat="dd-MM-yyyy" /> *@
+                        <DxMaskedInput @bind-Value="EditModel.LrReportDate"
+                                       Mask="dd/MM/yyyy"
+                                       MaskMode="@MaskMode.DateTime" InputCssClass="editor-focus-green">
+                            <DxDateTimeMaskProperties CaretMode="@MaskCaretMode.Advancing" />
+                        </DxMaskedInput>
                         </DxFormLayoutItem>
                         
                         <DxFormLayoutItem Caption="Unload Date" ColSpanMd="12">
-                            <DxDateEdit @bind-Date="EditModel.LrNtPickupDt" DisplayFormat="dd-MM-yyyy" />
+                            @* <DxDateEdit @bind-Date="" DisplayFormat="dd-MM-yyyy" /> *@
+                        <DxMaskedInput @bind-Value="EditModel.LrUnloadDate"
+                                       Mask="dd/MM/yyyy"
+                                       MaskMode="@MaskMode.DateTime" InputCssClass="editor-focus-green">
+                            <DxDateTimeMaskProperties CaretMode="@MaskCaretMode.Advancing" />
+                        </DxMaskedInput>
                         </DxFormLayoutItem>
                         <DxFormLayoutItem Caption="Return Date" ColSpanMd="12">
-                            <DxDateEdit @bind-Date="EditModel.LrNtPickupDt" DisplayFormat="dd-MM-yyyy" />
+                            @* <DxDateEdit @bind-Date="" DisplayFormat="dd-MM-yyyy" /> *@
+                        <DxMaskedInput @bind-Value="EditModel.LrReturnDate"
+                                       Mask="dd/MM/yyyy"
+                                       MaskMode="@MaskMode.DateTime" InputCssClass="editor-focus-green">
+                            <DxDateTimeMaskProperties CaretMode="@MaskCaretMode.Advancing" />
+                        </DxMaskedInput>
                         </DxFormLayoutItem>
                         <DxFormLayoutItem Caption="POD Date" ColSpanMd="12">
-                            <DxDateEdit @bind-Date="EditModel.LrNtPickupDt" DisplayFormat="dd-MM-yyyy" />
+                            @* <DxDateEdit @bind-Date="EditModel.LrPodDate" DisplayFormat="dd-MM-yyyy" /> *@
+                        <DxMaskedInput @bind-Value="EditModel.LrPodDate"
+                                       Mask="dd/MM/yyyy"
+                                       MaskMode="@MaskMode.DateTime" InputCssClass="editor-focus-green">
+                            <DxDateTimeMaskProperties CaretMode="@MaskCaretMode.Advancing" />
+                        </DxMaskedInput>
                         </DxFormLayoutItem>
-
                     </DxFormLayoutGroup>
                     @* 3rd Group *@
                 <DxFormLayoutGroup Caption="Transporter / Supplier Details" ColSpanMd="12">
                     
-                    <DxFormLayoutItem Caption="Supplier NAme">
+                    <DxFormLayoutItem Caption="Supplier Name">
                         <DxComboBox Data="accountSupplierlist" 
                             @bind-Value="EditModel.LrSupplierAccountId"
                             TextFieldName="AccountName" ValueFieldName="AccountId"></DxComboBox>
                     </DxFormLayoutItem>
-                    <DxFormLayoutItem Caption="Pay Type">
-                        @* <DxComboBox Data="paytypeList"
+                    <DxFormLayoutItem Caption="Driver">
+                        <DxComboBox Data="DriverList" @bind-Value="EditModel.LrDriverId"
+                                    TextFieldName="AccountName" ValueFieldName="AccountId" AllowUserInput="true"></DxComboBox>
+                    </DxFormLayoutItem>
+                    <DxFormLayoutItem Caption="Pay Type" ColSpanMd="2" CaptionPosition="CaptionPosition.Vertical">
+                        <DxComboBox Data="paytypeList"
                             @bind-Value="EditModel.LrPaymentType" 
                         ValueFieldName="PayTypeName"
-                                    TextFieldName="PayTypeName"></DxComboBox> *@
+                                    TextFieldName="PayTypeName"></DxComboBox>
                     </DxFormLayoutItem>
-                    <DxFormLayoutItem Caption="Driver">
-                        <DxComboBox Data="DriverList" @bind-Value="EditModel.LrDriverId" 
-                        TextFieldName="AccountName" ValueFieldName="AccountId"></DxComboBox>
+                  
+                    <DxFormLayoutItem Caption="Extra Amt" ColSpanMd="2" CaptionPosition="CaptionPosition.Vertical">
+                        <DxSpinEdit @bind-Value="EditModel.LrBhattaExtra" ShowSpinButtons="false"></DxSpinEdit>
                     </DxFormLayoutItem>
-                    <DxFormLayoutItem Caption="Extra Amt">
-                        @* <DxTextBox @bind-Text="EditModel."></DxTextBox> *@
+                    <DxFormLayoutItem Caption="Disel" ColSpanMd="2" CaptionPosition="CaptionPosition.Vertical">
+                        <DxSpinEdit @bind-Value="EditModel.LrAllowDieselQty" ShowSpinButtons="false"></DxSpinEdit>
                     </DxFormLayoutItem>
-                    <DxFormLayoutItem Caption="Disel"></DxFormLayoutItem>
-                    <DxFormLayoutItem Caption="Remarks">
+                    <DxFormLayoutItem Caption="Remarks" CaptionPosition="CaptionPosition.Vertical">
                         <DxMemo @bind-Text="EditModel.LrRemarks" Rows="2"></DxMemo>
                     </DxFormLayoutItem>
-                    <DxFormLayoutItem Caption="Email Id">
-                        @* <DxTextBox @bind-Text="EditModel."></DxTextBox> *@
-                    </DxFormLayoutItem>
+                  
 
                 </DxFormLayoutGroup>
 
@@ -281,7 +318,19 @@
     List<Location> StationLocationList = new();
     List<PayType> paytypeList = new();
 
-    private List<string> ProductList = new List<string> { "Electronics", "Textiles", "Machinery", "Food Items" };
+    private List<Cargo> ProductList = new();
+    public class SelectItem
+    {
+        public string Text { get; set; }
+        public string Value { get; set; }
+    }
+    private List<SelectItem> PaymethodList = new List<SelectItem>
+{
+    new SelectItem { Text = "To be Billed", Value = "To be Billed" },
+    new SelectItem { Text = "To Pay",     Value = "To Pay" },
+    new SelectItem { Text = "Paid",      Value ="Paid" }
+};
+
     List<PayType> paytypelist = new();
 
     protected override async Task OnInitializedAsync()
@@ -292,13 +341,14 @@
 
         // 🔍 Sirf Station type
         StationLocationList = LocationList
-            .Where(x => x.LocationType == "Station")
+            .Where(x => string.Equals(x.LocationType, "STATION", StringComparison.OrdinalIgnoreCase))
             .ToList();
 
         accountpartylist = await AccountService.GetAllAsync();
         accountSupplierlist = accountpartylist.Where(x => x.AccountTypeId == 14).ToList();
         DriverList = accountpartylist.Where(x => x.AccountTypeId == 16).ToList();
         paytypeList = await PayTypeService.GetAllAsync();
+        ProductList = await CargoService.GetAllAsync();
     }
     protected override void OnInitialized()
     {
@@ -317,8 +367,8 @@
             ? string.Empty
             : $"{selectedNotify.NotifyAddress1} {selectedNotify.NotifyAddress2} {selectedNotify.NotifyAddress3}".Trim();
        
-         EditModel.LrConsigneeNotifyGst = selectedNotify?.GstNo;
-        EditModel.LrConsigneeNotifyState = selectedNotify?.NotifyState;
+         EditModel.LrConsignorNotifyGst = selectedNotify?.GstNo;
+        EditModel.LrConsignorNotifyState = selectedNotify?.NotifyState;
     }
     private void OnConsigneeChanged(int? notifyId)
     {
