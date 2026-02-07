@@ -9,6 +9,7 @@
 @using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Models
 @using FreightBKShippingWebApp.Services
+@using static FreightBKShippingWebApp.Components.Pages.FileUploadpopup
 
 
     @inject JobService JobService
@@ -28,7 +29,8 @@
 @inject BranchService BranchService
 @inject StatusService StatusService
 @inject VoucherService VoucherService
-
+@inject FileUploadService FileUploadService
+@inject IJSRuntime JS
 
 <DxPopup @bind-Visible="Visible"
 ShowCloseButton="true"
@@ -674,24 +676,40 @@ MinWidth="200"
                         </DxFormLayoutGroup>
                     </DxFormLayoutTabPage>
 
-               @*  <DxFormLayoutTabPage Caption="Upload Docs">
-                    <DxFormLayoutItem Caption="Upload Files" ColSpanMd="4">
-                        <div class="upload-wrapper">
-                            <DxUpload Name="jobFiles"
-                                      AllowMultiFileUpload="true"
-                                      SelectedFilesChanged="OnSelectedFilesChanged"
-                                      MaxFileSize="15000000"
-                                      ShowFileList="true"
-                                      CssClass="upload-component" />
-                            <div class="info-text">
-                                Upload "Multiple Files",Max Size 15 MB.
-                            </div>
-                        </div>
-                    </DxFormLayoutItem>
-                    <DxFormLayoutItem ColSpanMd="12">
-                        <DxUpload Name="jobFiles" AllowMultiFileUpload="true" ></DxUpload>
-                    </DxFormLayoutItem>
-                </DxFormLayoutTabPage> *@
+                <DxFormLayoutTabPage Caption="Upload Docs">
+                        <DxButton Text="Upload Documents"
+                                  RenderStyle="ButtonRenderStyle.Primary"
+                                  Click="ShowUploadPopup" />
+
+                        @if (UploadedDocs.Any())
+                        {
+                            <DxGrid Data="@UploadedDocs"
+                                    ShowBorders="true"
+                                    CssClass="mt-3" >
+
+                                <Columns>
+                                    <DxGridDataColumn FieldName="FileName" Caption="Document" />
+                                    <DxGridDataColumn FieldName="FileSize" Caption="Size (KB)" Width="120px" />
+
+                                    <DxGridDataColumn Caption="Actions" Width="150px">
+                                        <CellDisplayTemplate Context="doc">
+                                            <DxButton IconCssClass="bi bi-eye"
+                                                      RenderStyle="ButtonRenderStyle.Secondary"
+                                                      Size="Size.Small"
+                                                      Click="@(() => PreviewDoc((UploadedFileInfo)doc.DataItem))" />
+
+                                            <DxButton IconCssClass="bi bi-trash text-danger"
+                                                      RenderStyle="ButtonRenderStyle.Danger"
+                                                      Size="Size.Small"
+                                                      CssClass="ms-2"
+                                                      Click="@(() => DeleteFile((UploadedFileInfo)doc.DataItem))" />
+                                        </CellDisplayTemplate>
+                                    </DxGridDataColumn>
+                                </Columns>
+
+                            </DxGrid>
+                        }
+                    </DxFormLayoutTabPage>
 
             </DxFormLayoutTabPages>
  
@@ -714,8 +732,69 @@ MinWidth="200"
 <CurrencyAddEditPage @ref="popupcurrency" OnSaved="LoadCurrenciesAsync" />
 <StatusAddEditPage @ref="popupStatus" OnSaved="LoadStatusAsync" />
 
+<FileUploadpopup @bind-IsVisible="IsUploadPopupVisible"
+                     DefaultCategory="SelectedCategory"
+                     DefaultSubCategory="SelectedSubCategory"
+                     DefaultReferenceId="SelectedReferenceId"
+                     OnFilesUploaded="HandleUploadedDocs" />
+
+
 
 @code {
+    // FileUploadpopup FileUploadpopup;
+    private bool IsUploadPopupVisible;
+    private string SelectedCategory = "bill";
+    private string? SelectedSubCategory;
+    private string? SelectedReferenceId;
+    // 🔵 ADDED: Preview popup state (ONLY IN POPUP)
+    private bool IsPreviewVisible = false;
+    private UploadedFileInfo? PreviewFile;
+
+    private async Task ShowUploadPopup()
+    {
+        // Validate required fields
+        if (string.IsNullOrEmpty(EditModel.JobType))
+        {
+            ToastService.Error("Please select a Job Type (Sub Category) before uploading.");
+            return;
+        }
+
+        if (EditModel.JobId == 0)
+        {
+            ToastService.Error("Job ID is missing. Cannot upload files.");
+            return;
+        }
+
+        // All good → set defaults
+        SelectedCategory = "job";
+        SelectedSubCategory = EditModel.JobType; // "import" or "export"
+        SelectedReferenceId = EditModel.JobId.ToString();
+
+        IsUploadPopupVisible = true;
+    }
+
+
+    private List<FileUploadpopup.UploadedFileInfo> UploadedDocs = new();
+
+    private Task HandleUploadedDocs(List<FileUploadpopup.UploadedFileInfo> files)
+    {
+        UploadedDocs = files.ToList(); // update the grid
+        StateHasChanged(); // ensure UI refresh
+        return Task.CompletedTask;
+    }
+
+    private async Task DeleteFile(UploadedFileInfo file)
+    {
+        
+    }
+
+
+    private void PreviewDoc(UploadedFileInfo doc)
+    {
+        PreviewFile = doc;
+        IsPreviewVisible = true;
+    }
+
     // + butoon for currency
     private CurrencyAddEditPage popupcurrency;
 
