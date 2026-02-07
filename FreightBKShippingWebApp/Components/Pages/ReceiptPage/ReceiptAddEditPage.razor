@@ -730,8 +730,9 @@
                          salesVoucherIds.Contains(b.BillVoucherId) &&
                          b.BillYearId == YearStatechangeService.SelectedYearId))
             {
-                var alreadySettled = await GetAlreadySettledAmount(b.BillId);
-                var remainingDue = Math.Max(b.BillNetAmount - alreadySettled, 0);
+              //  var alreadySettled = await GetAlreadySettledAmount(b.BillId);
+              var alreadySettled = b.Bill_due_amt;
+                var remainingDue = Math.Max(alreadySettled, 0);
 
                 if (remainingDue <= 0)
                     continue;
@@ -1084,7 +1085,7 @@
                         refDetail.BillRefVchTds +
                         refDetail.BillRefVchShort;
 
-                    var due = Math.Max(settlementBill.BillNetAmount - alreadySettled, 0);
+                  //  var due = Math.Max(settlementBill.BillNetAmount - alreadySettled, 0);
 
                     PendingBills.Add(new BillSettlement
                     {
@@ -1093,7 +1094,7 @@
                         BillDate = settlementBill.BillDate,
                         VoucherType = settlementBill.Vouchname ?? "Sales",
                         BillTotal = settlementBill.BillNetAmount,
-                        DueAmount = due,
+                        DueAmount = settlementBill.Bill_due_amt,
                         SettledAmount = refDetail.BillRefVchAmount,
                         DiscountAmount = refDetail.BillRefVchDis,
                         TdsAmount = refDetail.BillRefVchTds,
