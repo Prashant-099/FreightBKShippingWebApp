@@ -462,7 +462,7 @@
                                     @bind-Value="EditModel.BillSupplyType"
                                     TextFieldName="Text"
                                     ValueFieldName="Value"
-                                                    ShowValidationIcon="true"
+                                    ShowValidationIcon="true"
                                     ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
                                     AllowUserInput="true"
                                     SearchMode="ListSearchMode.AutoSearch" SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
@@ -498,6 +498,7 @@
                                     ValueExpression="@(() => EditModel.BillPartyId)"
                                         AllowUserInput="false"
                                         NullText="-- Select Account --"
+                                    ReadOnly="@IsPartyLocked"
                                         SearchMode="ListSearchMode.AutoSearch"
                                         SearchFilterCondition="ListSearchFilterCondition.StartsWith" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
 
@@ -630,9 +631,9 @@
                                     TItem="BillDetail"
                                     @ref="DetailGrid"
                                     KeyFieldName="BillDetailSno"
-                                    EditMode="GridEditMode.EditCell"
+                                    EditMode="@(IsPartyLocked ? GridEditMode.EditRow : GridEditMode.EditCell)"
                                     EditOnKeyPress="true"
-                                    ShowAddNewButton="false"
+                                    ShowAddNewButton="@(!IsPartyLocked)"
                                     EditModelSaving="Grid_EditModelSaving"
                                     CustomizeElement="Grid_CustomizeElement"
                                     CustomizeEditModel="Grid_CustomizeEditModel"
@@ -687,11 +688,13 @@
                                                             var rowIndex = BillDetails.FindIndex(x => x.BillDetailSno == ((BillDetail)context.DataItem).BillDetailSno);
                                                         }        
                                                 <DxButton IconCssClass="bi bi-trash"
+                                                Enabled="@(!IsPartyLocked)"
                                                           CssClass="grid-delete-btn"
                                                           RenderStyle="ButtonRenderStyle.Link"
                                                           Click="@(() => DeleteDataItem(context.DataItem))" />
 
                                             <DxButton IconCssClass="bi bi-plus-lg"
+                                                      Enabled="@(!IsPartyLocked)"
                                                       RenderStyle="ButtonRenderStyle.Link"
                                                       Click="ShowServicePopup" />
 
@@ -1497,6 +1500,8 @@
         EditModel.BillDefaultCurrencyId = selectedBill.BillDefaultCurrencyId;
         EditModel.BillIsRcm = selectedBill.BillIsRcm;
 
+       EditModel.BillAgainstBillNo =selectedBill.BillNo;
+        EditModel.BillAgainstBillDate = selectedBill.BillDate.ToString();
         // --- Clone detail lines from the selected bill (negative amounts for credit note) ---
         BillDetails.Clear();
         int sno = 1;
@@ -1919,6 +1924,8 @@
     // ============================================
     // 📝 Show Method (Remains mostly the same)
     // ============================================
+    bool IsPartyLocked = false;
+
     public async void Show(Bill bill)
     {
         // ✅ Show loading only if critical data not loaded
@@ -1988,6 +1995,21 @@
             {
                 IsCreditnote = false;
             }
+            billList = (await BillService.GetAllAsync())
+                    .Where(b =>
+                        b.BillYearId == YearStatechangeService.SelectedYearId
+                        )
+                    .ToList();
+
+
+            bool hasCreditNote =
+       billList != null &&
+       billList.Any(b =>
+           b.BillAgainstBillId == bill.BillId &&
+           b.BillType?.Equals("CREDIT NOTE", StringComparison.OrdinalIgnoreCase) == true);
+
+            IsPartyLocked =  hasCreditNote;
+
             BillnoVisible = true;
             Title = "Edit Bill";
         }
@@ -2022,6 +2044,7 @@
             IsCreditnote = false;
             Title = "Add Bill";
             InitializeInvoiceDetails();
+            IsPartyLocked = false;
         }
 
         UnsavedChanges.Clear();
@@ -3204,6 +3227,44 @@
         LoadingService.Show();
         try
         {
+            if (EditModel.BillAgainstBillId > 0)
+            {
+                var salesBill = billList
+                    .FirstOrDefault(b => b.BillId == EditModel.BillAgainstBillId);
+
+                if (salesBill == null)
+                    return;
+
+                decimal salesAmount = Convert.ToDecimal(salesBill.BillNetAmount);
+                decimal currentEditAmount = Convert.ToDecimal(EditModel.BillNetAmount);
+
+                decimal otherCreditNotesTotal = billList
+                    .Where(b =>
+                        b.BillAgainstBillId == salesBill.BillId &&
+                        b.BillType?.Equals("CREDIT NOTE", StringComparison.OrdinalIgnoreCase) == true &&
+                        b.BillId != EditModel.BillId)
+                    .Sum(b => Convert.ToDecimal(b.BillNetAmount));
+
+                decimal maxAllowedCreditNote =
+                    salesAmount - otherCreditNotesTotal;
+
+                if (currentEditAmount > maxAllowedCreditNote)
+                {
+                    ToastService.Error(
+                        $"Credit Note cannot exceed available amount ({maxAllowedCreditNote:N2})"
+                    );
+                    return;
+                }
+
+            }
+
+
+
+
+
+
+
+
             // --- STEP 1: Apply Unsaved Changes ---
             foreach (var unsavedChange in UnsavedChanges)
             {
