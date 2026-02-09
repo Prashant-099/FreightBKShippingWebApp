@@ -5,6 +5,7 @@ using FreightBKShippingWebApp.Services;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.ResponseCompression;
 using FreightBKShippingWebApp.Services.PdfReaderAndHelperService;
+using Microsoft.AspNetCore.DataProtection;
 
 using DevExpress.Drawing.Internal;
 
@@ -13,6 +14,10 @@ DXDrawingEngine.ForceSkia();
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(
+        Path.Combine(builder.Environment.ContentRootPath, "DataProtectionKeys")))
+    .SetApplicationName("FreightBKShippingWebApp");
 
 builder.Services.AddDevExpressBlazor(options => {
     options.BootstrapVersion = DevExpress.Blazor.BootstrapVersion.v5;
@@ -100,7 +105,7 @@ builder.Services.AddScoped<ChatwayService>();
 builder.Services.AddScoped<SendWpMailService>();
 builder.Services.AddScoped<WpMailConfigService>();
 builder.Services.AddScoped<Sentwpcerti>();
-builder.Services.AddScoped<BillUploadService>();
+builder.Services.AddScoped<FileUploadService>();
 builder.Services.AddScoped<JournalService>();
 
 //

@@ -13,6 +13,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using static FreightBKShippingWebApp.Services.BaseService;
 
 namespace FreightBKShippingWebApp.Services
@@ -223,35 +224,51 @@ namespace FreightBKShippingWebApp.Services
         //    return result.Value;
         //}
 
-
-        public async Task<bool> SelectBranchAsync(int branchId)
+public async Task<bool> SelectBranchAsync(int branchId)
+    {
+        try
         {
-            var session = (await _localStorage.GetAsync<LoginResponseModel>("sessionState")).Value;
-            if (session == null) return false;
+            var result = await _localStorage.GetAsync<LoginResponseModel>("sessionState");
 
+            if (!result.Success || result.Value == null)
+                return false;
+
+            var session = result.Value;
             session.ActiveBranchId = branchId;
-            await _localStorage.SetAsync("sessionState", session);
 
+            await _localStorage.SetAsync("sessionState", session);
             return true;
         }
+        catch (CryptographicException)
+        {
+            // 🔥 Corrupted or old encrypted payload
+            await _localStorage.DeleteAsync("sessionState");
+            return false;
+        }
+        catch
+        {
+            // 🧯 Any other unexpected issue
+            return false;
+        }
+    }
 
-        //public async Task<bool> SelectBranchAsync(int branchId)
-        //{
-        //    var session = (await _localStorage.GetAsync<LoginResponseModel>("sessionState")).Value;
-        //    if (session == null) return false;
+    //public async Task<bool> SelectBranchAsync(int branchId)
+    //{
+    //    var session = (await _localStorage.GetAsync<LoginResponseModel>("sessionState")).Value;
+    //    if (session == null) return false;
 
-        //    var dto = new { UserId = session, BranchId = branchId };
+    //    var dto = new { UserId = session, BranchId = branchId };
 
-        //    var result = await _api.PostAsync<object, object>("api/Auth/select-branch", dto);
+    //    var result = await _api.PostAsync<object, object>("api/Auth/select-branch", dto);
 
-        //    // update local storage with selected branch
-        //    session.ActiveBranchId = branchId;
-        //    await _localStorage.SetAsync("sessionState", session);
+    //    // update local storage with selected branch
+    //    session.ActiveBranchId = branchId;
+    //    await _localStorage.SetAsync("sessionState", session);
 
-        //    return true;
-        //}
+    //    return true;
+    //}
 
-        public async Task LogoutAsync()
+    public async Task LogoutAsync()
         {
             //await _localStorage.DeleteAsync("sessionState");
             //await ((CustomAuthStateProvider)_authStateProvider).MarkUserAsLoggedOut();

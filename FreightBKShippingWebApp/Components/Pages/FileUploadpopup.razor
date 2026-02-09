@@ -1,0 +1,406 @@
+﻿@using FreightBKShippingWebApp.Services
+@using Microsoft.AspNetCore.Components.Forms
+@inject FileUploadService FileUploadService
+@inject ToasteService ToasteService
+@inject IJSRuntime JS
+
+<DxPopup @bind-Visible="IsVisible"
+         HeaderText="Upload Documents"
+         Width="720px"
+         CloseOnOutsideClick="false"
+         ShowCloseButton="true"
+         CloseOnEscape="false">
+
+    <BodyContentTemplate>
+        <div class="p-3">
+
+            <!-- Category / SubCategory -->
+            <div class="row mb-3">
+                @* <div class="col-md-4">
+                    <label class="form-label fw-bold">Category *</label>
+                    <DxComboBox Data="@Categories"
+                                @bind-Value="SelectedCategory"
+                                AllowUserInput="true"
+                                CssClass="w-100" />
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label fw-bold">Sub Category</label>
+                    <DxTextBox @bind-Text="SubCategory" CssClass="w-100" />
+                </div> *@
+            </div>
+
+            <!-- File Upload -->
+            <div class="mb-3">
+                <label class="form-label fw-bold">Select Files</label>
+                <InputFile OnChange="OnInputFileChange"
+                           multiple
+                           accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx,.txt,.csv"
+                           class="form-control" />
+                <small class="text-muted">Max file size: 10 MB</small>
+            </div>
+
+            <!-- Selected Files -->
+            @if (SelectedFiles.Any())
+            {
+                <div class="mb-3">
+                    <label class="fw-bold">Selected Files (@SelectedFiles.Count)</label>
+
+                    <div class="list-group mt-2">
+                        @foreach (var file in SelectedFiles)
+                        {
+                            <div class="list-group-item d-flex justify-content-between">
+                                <span>
+                                    @file.Name
+                                    <small class="text-muted">(@FormatFileSize(file.Size))</small>
+                                </span>
+
+                                <button class="btn btn-sm btn-outline-danger"
+                                        type="button"
+                                        @onclick="() => RemoveSelectedFile(file)">
+                                    <i class="bi bi-x"></i>
+                                </button>
+                            </div>
+                        }
+                    </div>
+
+                    <DxButton Text="@($"Upload {SelectedFiles.Count} File(s)")"
+                              CssClass="mt-2"
+                              RenderStyle="ButtonRenderStyle.Primary"
+                              Click="UploadFilesAsync"
+                              Enabled="@(!IsUploading && !string.IsNullOrEmpty(SelectedCategory))" />
+                </div>
+            }
+
+            <!-- 🔵 UPDATED: Uploaded Files WITH PREVIEW BUTTON -->
+            @if (UploadedFiles.Any())
+            {
+                <div class="mt-3">
+                    <label class="fw-bold text-success">
+                        Uploaded Files (@UploadedFiles.Count)
+                    </label>
+
+                    <DxGrid Data="@UploadedFiles"
+                            ShowBorders="true"
+                            CssClass="mt-2">
+
+                        <Columns>
+                            <DxGridDataColumn FieldName="FileName" Caption="Document" />
+
+                            <DxGridDataColumn Caption="Size" Width="120px">
+                                <CellDisplayTemplate Context="c">
+                                    @FormatFileSize(((UploadedFileInfo)c.DataItem).FileSize)
+                                </CellDisplayTemplate>
+                            </DxGridDataColumn>
+
+                            <DxGridDataColumn Caption="Actions" Width="180px">
+                                <CellDisplayTemplate Context="c">
+                                    @{
+                                        var file = (UploadedFileInfo)c.DataItem;
+                                    }
+
+                                    <!-- 🔵 ADDED: Preview button -->
+                                    <DxButton IconCssClass="bi bi-eye"
+                                              Size="Size.Small"
+                                              RenderStyle="ButtonRenderStyle.Secondary"
+                                              Click="@(async () => await OpenPreview(file))" />
+
+
+                                    <!-- existing delete button -->
+                                    <DxButton IconCssClass="bi bi-trash"
+                                              CssClass="ms-2"
+                                              Size="Size.Small"
+                                              RenderStyle="ButtonRenderStyle.Danger"
+                                              Click="@(async () => await DeleteDocumentAsync(file.DocumentId))" />
+
+                                </CellDisplayTemplate>
+                            </DxGridDataColumn> 
+                        </Columns>
+
+                    </DxGrid>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(ErrorMessage))
+            {
+                <div class="alert alert-danger mt-3">
+                    @ErrorMessage
+                </div>
+            }
+
+            @if (IsUploading)
+            {
+                <div class="alert alert-info mt-3">
+                    Uploading files... (@UploadProgress / @SelectedFiles.Count)
+                </div>
+            }
+
+        </div>
+    </BodyContentTemplate>
+
+    <FooterContentTemplate>
+        <DxButton Text="Close"
+                  RenderStyle="ButtonRenderStyle.Secondary"
+                  Click="ClosePopup" />
+    </FooterContentTemplate>
+</DxPopup>
+
+<!-- 🔵 ADDED: PREVIEW POPUP -->
+<DxPopup @bind-Visible="IsPreviewVisible"
+         HeaderText="Document Preview"
+         Width="900px"
+         Height="650px" 
+         ShowCloseButton="true"
+         CloseOnOutsideClick="true">
+
+    <BodyContentTemplate>
+        @if (PreviewFile != null)
+        {
+            <!-- iframe works for PDF, images, txt -->
+            @if (!string.IsNullOrEmpty(PreviewSasUrl))
+            {
+                <iframe src="@PreviewSasUrl"
+                        style="width:100%; height:100%; border:none;">
+                </iframe>
+            }
+
+
+        }
+    </BodyContentTemplate>
+
+</DxPopup>
+
+@code {
+
+    // ================= EXISTING PARAMETERS =================
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public EventCallback<bool> IsVisibleChanged { get; set; }
+    [Parameter] public EventCallback<List<UploadedFileInfo>> OnFilesUploaded { get; set; }
+
+    [Parameter] public string? DefaultCategory { get; set; }
+    [Parameter] public string? DefaultSubCategory { get; set; }
+    [Parameter] public string? DefaultReferenceId { get; set; }
+
+    private string? SelectedCategory;
+    private string? SubCategory;
+    private string? ReferenceId;
+
+    private string? ErrorMessage;
+    private bool IsUploading = false;
+    private int UploadProgress = 0;
+
+    private const long MaxFileSize = 10 * 1024 * 1024;
+    private string? PreviewSasUrl;
+
+    private readonly List<string> AllowedExtensions = new()
+    {
+        ".pdf",".jpg",".jpeg",".png",".doc",".docx",".xls",".xlsx",".txt",".csv"
+    };
+
+
+    private List<UploadedFileInfo> UploadedFiles = new();
+    private List<IBrowserFile> SelectedFiles = new();
+
+    // 🔵 ADDED: Preview popup state
+    private bool IsPreviewVisible = false;
+    private UploadedFileInfo? PreviewFile;
+
+
+
+
+    private void OnInputFileChange(InputFileChangeEventArgs e)
+    {
+        ErrorMessage = null;
+        var files = e.GetMultipleFiles(10);
+
+        foreach (var file in files)
+        {
+            if (file.Size > MaxFileSize) continue;
+
+            var ext = Path.GetExtension(file.Name).ToLower();
+            if (!AllowedExtensions.Contains(ext)) continue;
+
+            if (!SelectedFiles.Any(f => f.Name == file.Name))
+                SelectedFiles.Add(file);
+        }
+    }
+
+        private void RemoveSelectedFile(IBrowserFile file)
+        => SelectedFiles.Remove(file);
+
+    private async Task UploadFilesAsync()
+    {
+        IsUploading = true;
+        UploadProgress = 0;
+
+        foreach (var file in SelectedFiles.ToList())
+        {
+            using var ms = new MemoryStream();
+            await file.OpenReadStream(MaxFileSize).CopyToAsync(ms);
+
+            var result = await FileUploadService.UploadFileAsync(
+                ms.ToArray(),
+                file.Name,
+                SelectedCategory!,
+                SubCategory,
+                ReferenceId);
+
+            if (result?.Success == true)
+            {
+                UploadedFiles.Add(new UploadedFileInfo
+                {
+                    DocumentId = result.DocumentId,
+                    FileName = result.FileName,
+                    Url = result.Url,
+                    FileSize = result.FileSize,
+                    Category = result.Category!
+                });
+
+                UploadProgress++;
+            }
+        }
+
+        SelectedFiles.Clear();
+        IsUploading = false;
+
+        // Send uploaded files to parent page
+        await OnFilesUploaded.InvokeAsync(UploadedFiles);
+
+        // Show success toast
+        ToasteService.Success("Files uploaded successfully");
+
+        // 🔵 Close the popup automatically
+        IsVisible = false;
+        await IsVisibleChanged.InvokeAsync(false);
+    }
+
+
+    // 🔵 ADDED: Preview open logic
+    public async Task OpenPreview(UploadedFileInfo file)
+    {
+        PreviewFile = file;
+
+        PreviewSasUrl =
+            await FileUploadService.GetSasUrlAsync(file.DocumentId, 10);
+
+        if (string.IsNullOrEmpty(PreviewSasUrl))
+        {
+            ToasteService.Error("Unable to generate preview link");
+            return;
+        }
+
+        IsPreviewVisible = true;
+    }
+
+    public async Task DeleteDocumentAsync(long documentId)
+    {
+        var success = await FileUploadService.DeleteDocumentAsync(documentId);
+        if (!success) return;
+
+        UploadedFiles.RemoveAll(x => x.DocumentId == documentId);
+
+        await OnFilesUploaded.InvokeAsync(UploadedFiles);
+        await InvokeAsync(StateHasChanged);
+    }
+
+
+    private async Task ClosePopup()
+    {
+        UploadedFiles.Clear();
+        SelectedFiles.Clear();
+        await IsVisibleChanged.InvokeAsync(false);
+    }
+
+    private string FormatFileSize(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB" };
+        double len = bytes;
+        int order = 0;
+
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len /= 1024;
+        }
+
+        return $"{len:0.##} {sizes[order]}";
+    }
+
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (IsVisible)
+        {
+            if (string.IsNullOrEmpty(DefaultCategory) || string.IsNullOrEmpty(DefaultReferenceId))
+            {
+                ErrorMessage = "Cannot upload files: Category or Reference ID is missing.";
+                IsVisible = false;
+                return;
+            }
+
+            // Set defaults from parent parameters
+            SelectedCategory = DefaultCategory;
+            SubCategory = DefaultSubCategory;
+            ReferenceId = DefaultReferenceId;
+
+            ErrorMessage = null;
+            SelectedFiles.Clear();
+            UploadProgress = 0;
+
+            // 🔵 Fetch already uploaded files for this ReferenceId
+            if (!string.IsNullOrEmpty(ReferenceId))
+            {
+                var docs = await FileUploadService.GetDocumentsAsync(SelectedCategory, ReferenceId);
+
+                // Map DocumentDto to UploadedFileInfo
+                UploadedFiles = docs.Select(d => new UploadedFileInfo
+                {
+                    DocumentId = d.DocumentId,
+                    FileName = d.OriginalFileName,
+                    Url = string.Empty, 
+                    FileSize = d.FileSizeBytes,
+                    Category = d.Category
+                }).ToList();
+
+            }
+        }
+    }
+
+    public async Task LoadDocumentsAsync()
+    {
+        if (string.IsNullOrEmpty(SelectedCategory) || string.IsNullOrEmpty(ReferenceId))
+            return;
+
+        var docs = await FileUploadService.GetDocumentsAsync(SelectedCategory, ReferenceId);
+
+        UploadedFiles = docs.Select(d => new UploadedFileInfo
+        {
+            DocumentId = d.DocumentId,
+            FileName = d.OriginalFileName,
+            Url = d.BlobUrl,
+            FileSize = d.FileSizeBytes,
+            Category = d.Category
+        }).ToList();
+
+        await InvokeAsync(StateHasChanged);
+    }
+    public void PreviewDocument(UploadedFileInfo file)
+    {
+        PreviewFile = file;
+        IsPreviewVisible = true;
+        StateHasChanged();
+    }
+
+    public class UploadedFileInfo
+    {
+        public long DocumentId { get; set; }
+        public string FileName { get; set; } = "";
+        public string Url { get; set; } = "";
+        public long FileSize { get; set; }
+        public string Category { get; set; } = "";
+    }
+
+
+
+
+}

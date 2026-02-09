@@ -14,20 +14,20 @@ namespace FreightBKShippingWebApp.Services
         private readonly ReportService _reportService;
         private readonly BillService _billService;
         private readonly BranchService _branchService;
-        private readonly BillUploadService BillUploadService;
+        private readonly FileUploadService FileUploadService;
         // Added branch service
 
         public Sentwpcerti(ReportDataService reportDataService,
                            ReportService reportService,
                            BillService billService,
                            BranchService branchService,
-                           BillUploadService billUploadService) // Inject branch service
+                           FileUploadService fileUploadService) // Inject branch service
         {
             _reportDataService = reportDataService;
             _reportService = reportService;
             _billService = billService;
             _branchService = branchService;
-            BillUploadService = billUploadService;
+            FileUploadService = fileUploadService;
         }
 
         public async Task<(byte[] PdfBytes, string FileName, string BlobUrl)>
@@ -102,10 +102,21 @@ namespace FreightBKShippingWebApp.Services
 
             // --- Upload to blob if needed ---
             string? blobUrl = null;
+
             if (uploadOnAzure)
             {
-                var billlId = firstCert.BillId.ToString();
-                blobUrl = await BillUploadService.UploadBillPdfAsync(pdfBytes, fileName, billlId, safeCertType);
+                var billId = firstCert.BillId.ToString();
+
+                var uploadResult = await FileUploadService.UploadFileAsync(
+                    pdfBytes,
+                    fileName,
+                    category: "bill",          // or safeCertType if that’s your category
+                    subCategory: safeCertType, // optional
+                    referenceId: billId
+                );
+
+                if (uploadResult?.Success == true)
+                    blobUrl = uploadResult.Url;
             }
 
             return (pdfBytes, fileName, blobUrl ?? string.Empty);
