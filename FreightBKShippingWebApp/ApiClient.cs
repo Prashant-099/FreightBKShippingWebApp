@@ -470,7 +470,22 @@ namespace FreightBKShippingWebApp
                 if (!response.IsSuccessStatusCode)
                 {
                     //Console.WriteLine($"❌ API Error: {res.StatusCode}");
+                    //throw new Exception(content);
+                    using var doc = JsonDocument.Parse(content);
+
+                    if (doc.RootElement.ValueKind == JsonValueKind.Object)
+                    {
+                        if (doc.RootElement.TryGetProperty("message", out var msg)
+                            && msg.ValueKind == JsonValueKind.String)
+                            throw new Exception(msg.GetString());
+
+                        if (doc.RootElement.TryGetProperty("Message", out var Msg)
+                            && Msg.ValueKind == JsonValueKind.String)
+                            throw new Exception(Msg.GetString());
+                    }
+
                     throw new Exception(content);
+
                 }
                 if (response.IsSuccessStatusCode)
                 {
@@ -496,7 +511,8 @@ namespace FreightBKShippingWebApp
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Error in PUT: {ex.Message}");
-            }
+                throw ;
+            }       
 
             return default;
         }

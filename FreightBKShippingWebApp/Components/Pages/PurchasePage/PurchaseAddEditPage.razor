@@ -369,6 +369,7 @@ width:fit-content;
                                         ValueFieldName="VoucherId"
                                         AllowUserInput="true"
                                         ShowValidationIcon="true"
+                                    ReadOnly="@IsPartyLocked"
                                         NullText="-- Select Account --"
                                         Value="@EditModel.BillVoucherId"
                                         ValueChanged="@((int voucherId) => OnvoucherChanged(EditModel, voucherId))"
@@ -390,6 +391,22 @@ width:fit-content;
                         <ValidationMessage For="@(() => EditModel.BillDate)" />
                                     </ChildContent>
                                 </DxFormLayoutItem>
+                <DxFormLayoutItem Caption="Bill Against" ColSpanMd="3" Visible="IsCreditnote">
+                    <ChildContent Context="ctx">
+                        <DxComboBox TData="Bill" TValue="int?"
+                                    Data="@billList"
+                                    TextFieldName="BillNo"
+                                    ValueFieldName="BillId"
+                                    AllowUserInput="true"
+                                    NullText="-- Select bill --"
+                                    Value="@EditModel.BillAgainstBillId"
+                                    ValueChanged="@((int? billId) => OnBillAgainstChanged( billId))"
+                                    ValueExpression="@( () => EditModel.BillAgainstBillId )"
+                                    SearchMode="ListSearchMode.AutoSearch"
+                                    SearchFilterCondition="ListSearchFilterCondition.StartsWith"
+                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" CssClass="editor-smooth" />
+                    </ChildContent>
+                </DxFormLayoutItem>
                                 <DxFormLayoutItem Caption="Bill Due Date" ColSpanMd="3">
                                     <ChildContent Context="ctx">
                                         <DxDateEdit @bind-Date="EditModel.BillDueDate" Format="dd-MM-yyyy" />
@@ -472,6 +489,7 @@ width:fit-content;
                                     ValueExpression="@(() => EditModel.BillPartyId)"
                                         AllowUserInput="false"
                                         NullText="-- Select Account --"
+                                    ReadOnly="@IsPartyLocked"
                                         SearchMode="ListSearchMode.AutoSearch"
                                         SearchFilterCondition="ListSearchFilterCondition.StartsWith" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
 
@@ -609,7 +627,7 @@ width:fit-content;
                                     TItem="BillDetail"
                                     @ref="DetailGrid"
                                     KeyFieldName="BillDetailSno"
-                                    EditMode="GridEditMode.EditCell"
+                                    EditMode="@(IsPartyLocked ? GridEditMode.EditRow : GridEditMode.EditCell)"
                                     EditOnKeyPress="true"
                                     ShowAddNewButton="false"
                                     EditModelSaving="Grid_EditModelSaving"
@@ -717,10 +735,12 @@ width:fit-content;
                                         <HeaderCaptionTemplate>
                                             <DxButton IconCssClass="bi bi-plus-circle-dotted"
                                                       RenderStyle="ButtonRenderStyle.Link"
+                                                       Enabled="@(!IsPartyLocked)"
                                                       Click="New_Click" />
 
                                             <DxButton IconCssClass="bi bi-arrow-clockwise"
                                                       RenderStyle="ButtonRenderStyle.Link"
+                                                      Enabled="@(!IsPartyLocked)"
                                                       Click="Revert_Click" />
                                             <DxButton RenderStyle="ButtonRenderStyle.Link"
                                                       IconCssClass="bi bi-three-dots"
@@ -741,13 +761,16 @@ width:fit-content;
                                                             </button> *@
 
 
-                                            <DxButton Enabled="false"
+                                            <DxButton 
                                                       CssClass="grid-disabled-button"
                                                       IconCssClass="bi bi-trash"
-                                                      RenderStyle="ButtonRenderStyle.Link" />
+                                                      RenderStyle="ButtonRenderStyle.Link"
+                                                       Enabled="@(!IsPartyLocked)"
+                                                      Click="@(() => DeleteDataItem(context.DataItem))" />
 
                                             <DxButton IconCssClass="bi bi-plus-lg"
                                                       RenderStyle="ButtonRenderStyle.Link"
+                                                      Enabled="@(!IsPartyLocked)"
                                                       Click="ShowServicePopup" />
                                             @*  </div> *@
                                         </CellEditTemplate>
@@ -1327,6 +1350,7 @@ width:fit-content;
     };
 
     }
+    private List<Bill> billList = new();
     // Grid Layout Manager Reference
     private GridLayoutpPopup? layoutManager;
     private List<GridColumnLayout> allGridColumns = [];
@@ -1438,7 +1462,107 @@ width:fit-content;
 
         return 100; // default
     }
+    private void OnBillAgainstChanged(int? selectedBillId)
+    {
+        if (!selectedBillId.HasValue)
+        {
+            return;
+        }
 
+        EditModel.BillAgainstBillId = selectedBillId;
+
+        // Find the selected bill from billList
+        var selectedBill = billList.FirstOrDefault(b => b.BillId == selectedBillId);
+        if (selectedBill == null)
+            return;
+
+        // --- Fill Header fields from the selected bill ---
+        EditModel.BillPartyId = selectedBill.BillPartyId;
+        EditModel.BillPlaceOfSupply = selectedBill.BillPlaceOfSupply;
+        EditModel.BillSupplyType = selectedBill.BillSupplyType;
+        EditModel.BillJobType = selectedBill.BillJobType;
+        EditModel.BillJobNo = selectedBill.BillJobNo;
+        EditModel.BillJobId = selectedBill.BillJobId;
+        EditModel.BillShipPartyId = selectedBill.BillShipPartyId;
+        EditModel.BillAddress1 = selectedBill.BillAddress1;
+        EditModel.BillContactNo = selectedBill.BillContactNo;
+        EditModel.BillGstNo = selectedBill.BillGstNo;
+        EditModel.BillPincode = selectedBill.BillPincode;
+        EditModel.BillCity = selectedBill.BillCity;
+        EditModel.BillStateId = selectedBill.BillStateId;
+        EditModel.BillRemarksDefault = selectedBill.BillRemarksDefault;
+        EditModel.BillContainerNo = selectedBill.BillContainerNo;
+        EditModel.BillSbNo = selectedBill.BillSbNo;
+        EditModel.BillSbDate = selectedBill.BillSbDate;
+        EditModel.BillRemarks = selectedBill.BillRemarks;
+        EditModel.BillExchRate = selectedBill.BillExchRate;
+        EditModel.BillDefaultCurrencyId = selectedBill.BillDefaultCurrencyId;
+        EditModel.BillIsRcm = selectedBill.BillIsRcm;
+
+        EditModel.BillAgainstBillNo = selectedBill.BillNo;
+        EditModel.BillAgainstBillDate = selectedBill.BillDate.ToString();
+        // --- Clone detail lines from the selected bill (negative amounts for credit note) ---
+        BillDetails.Clear();
+        int sno = 1;
+
+        if (selectedBill.BillDetails != null)
+        {
+            foreach (var detail in selectedBill.BillDetails.OrderBy(d => d.BillDetailSno))
+            {
+                BillDetails.Add(new BillDetail
+                {
+                    BillDetailSno = sno++,
+                    BillDetailId = 0,               // New rows — not saved yet
+                    BillDetailBillId = 0,
+                    BillDetailProductId = detail.BillDetailProductId,
+                    BillDetailHsnCode = detail.BillDetailHsnCode,
+                    BillDetailUnit = detail.BillDetailUnit,
+                    BillDetailUnitId = detail.BillDetailUnitId,
+                    BillDetailRemarks = detail.BillDetailRemarks,
+                    BillDetailRate = detail.BillDetailRate,
+                    BillDetailQty = detail.BillDetailQty,
+                    BillDetailExchRate = detail.BillDetailExchRate,
+                    BillDetailCurrencyId = detail.BillDetailCurrencyId,
+                    BillDetailExtraChrg = detail.BillDetailExtraChrg,
+                    BillDetailAmount = detail.BillDetailAmount,
+                    BillDetailTaxableAmt = detail.BillDetailTaxableAmt,
+                    BillDetailSlabId = detail.BillDetailSlabId,
+                    BillDetailGstPer = detail.BillDetailGstPer,
+                    BillDetailIgstPer = detail.BillDetailIgstPer,
+                    BillDetailIgst = detail.BillDetailIgst,
+                    BillDetailCgstPer = detail.BillDetailCgstPer,
+                    BillDetailCgst = detail.BillDetailCgst,
+                    BillDetailSgstPer = detail.BillDetailSgstPer,
+                    BillDetailSgst = detail.BillDetailSgst,
+                    BillDetailTotal = detail.BillDetailTotal,
+                    BillDetailAccountId = detail.BillDetailAccountId,
+                    BillDetailIgstAcId = detail.BillDetailIgstAcId,
+                    BillDetailCgstAcId = detail.BillDetailCgstAcId,
+                    BillDetailSgstAcId = detail.BillDetailSgstAcId,
+                    BillDetailStatus = true
+                });
+            }
+        }
+
+        // If no details came from the original bill, add empty rows
+        if (BillDetails.Count == 0)
+        {
+            nextSNo = 1;
+            InitializeInvoiceDetails();
+        }
+        else
+        {
+            nextSNo = sno;
+        }
+
+        // Recalculate totals
+        RecalculateNetAmount(EditModel.BillIsRoundOff);
+
+        // Clear unsaved tracking since these are fresh copies
+        UnsavedChanges.Clear();
+
+        StateHasChanged();
+    }
     
 
     private AccountAddEditPage Accountpopup;
@@ -1746,8 +1870,15 @@ width:fit-content;
     // ============================================
     // 📝 Show Method (Remains mostly the same)
     // ============================================
+
+    bool IsPartyLocked = false;
+     private bool IsCreditnote { get; set; }
+
     public async void Show(Bill bill)
     {
+
+        EditModel = new Bill();
+        BillDetails = new List<BillDetail>();
         // ✅ Show loading only if critical data not loaded
         if (!isCriticalDataLoaded)
         {
@@ -1760,9 +1891,11 @@ width:fit-content;
         // editContext = new EditContext(EditModel);
         if (bill?.BillId > 0)
         {
+           
+
             EditModel = bill;
             OnJobTypeChanged(EditModel.BillJobType);
-
+            BillDetails = new List<BillDetail>();
             BillDetails = bill.BillDetails?
                 .Select(d => CloneBillDetail(d))
                 .OrderBy(d => d.BillDetailId)
@@ -1796,6 +1929,56 @@ width:fit-content;
                         BillDetailStatus = true
                     });
             }
+
+ var voucher = VoucherList.FirstOrDefault(c => c.VoucherId == bill.BillVoucherId);
+            if (voucher.VoucherGroup?.Equals("DEBIT NOTE", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                IsCreditnote = true;
+                var VoucherIds = VoucherList
+                       .Where(v => v.VoucherGroup?.Equals("PURCHASE", StringComparison.OrdinalIgnoreCase) == true)
+                       .Select(v => v.VoucherId)
+                       .ToList();
+
+                billList = (await BillService.GetAllAsync())
+             .Where(b =>
+                 b.BillYearId == YearStatechangeService.SelectedYearId
+               )
+             .ToList();
+
+              
+
+                billList = (billList)
+                    .Where(b =>
+                        b.BillYearId == YearStatechangeService.SelectedYearId &&
+                        VoucherIds.Contains(b.BillVoucherId))
+                    .ToList();
+
+               
+
+            }
+            else
+            {
+                IsCreditnote = false;
+                billList = (await BillService.GetAllAsync())
+             .Where(b =>
+                 b.BillYearId == YearStatechangeService.SelectedYearId
+               )
+             .ToList();
+
+                bool hasCreditNote =
+  billList != null &&
+  billList.Any(b =>
+      b.BillAgainstBillId == bill.BillId &&
+      b.BillType?.Equals("DEBIT NOTE", StringComparison.OrdinalIgnoreCase) == true);
+                if (hasCreditNote)
+                {
+                    IsPartyLocked = hasCreditNote;
+                }
+                else
+                {
+                    IsPartyLocked = false;
+                }
+            }
             BillnoVisible = true;
             Title = "Edit Purchase Bill";
         }
@@ -1822,23 +2005,24 @@ width:fit-content;
             EditModel.BillDate = EditModel.BillDate == default ? DateTime.Now : EditModel.BillDate;
             EditModel.BillStatus = true;
 
-            var purchaseVoucherId = (await VoucherService.GetAllAsync())
-          .Where(v => v.VoucherGroup == "PURCHASE")
-          .Select(v => v.VoucherId)
-          .FirstOrDefault();
+          //   var purchaseVoucherId = (await VoucherService.GetAllAsync())
+          // .Where(v => v.VoucherGroup == "PURCHASE")
+          // .Select(v => v.VoucherId)
+          // .FirstOrDefault();
 
-            if (purchaseVoucherId == 0)
-            {
-                ToastService.Warning("Purchase voucher not found.");
-                return;
-            }
-            EditModel.BillVoucherId = purchaseVoucherId;
-            // OnJobDetailsChanged(EditModel.BillJobNo);
-            OnvoucherChanged(EditModel,EditModel.BillVoucherId);
+          //   if (purchaseVoucherId == 0)
+          //   {
+          //       ToastService.Warning("Purchase voucher not found.");
+          //       return;
+          //   }
+          //   EditModel.BillVoucherId = purchaseVoucherId;
+          //   // OnJobDetailsChanged(EditModel.BillJobNo);
+          //   OnvoucherChanged(EditModel,EditModel.BillVoucherId);
             BillDetails = new List<BillDetail>();
             nextSNo = 1;
             Title = "Add Purchase Bill";
             InitializeInvoiceDetails();
+            IsPartyLocked = false;
         }
 
         UnsavedChanges.Clear();
@@ -2148,6 +2332,25 @@ width:fit-content;
             {
                 ToastService.Error("Error: " + ex.Message);
             }
+             if (voucher.VoucherGroup?.Equals("DEBIT NOTE", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                IsCreditnote = true;
+                var salesVoucherIds = VoucherList
+                    .Where(v => v.VoucherGroup?.Equals("PURCHASE", StringComparison.OrdinalIgnoreCase) == true)
+                    .Select(v => v.VoucherId)
+                    .ToList();
+
+                billList = (await BillService.GetAllAsync())
+                    .Where(b =>
+                        b.BillYearId == YearStatechangeService.SelectedYearId &&
+                        salesVoucherIds.Contains(b.BillVoucherId))
+                    .ToList();
+            }
+            else
+            {
+
+                IsCreditnote = false;
+            }
         }
     }
 
@@ -2156,6 +2359,8 @@ width:fit-content;
         Visible = false;
         BillDetails.Clear();
         UnsavedChanges.Clear();
+      
+
     }
 
     private async Task New_Click()
@@ -3003,6 +3208,41 @@ width:fit-content;
         LoadingService.Show();
         try
         {
+
+
+             if (EditModel.BillAgainstBillId > 0)
+            {
+                var salesBill = billList
+                    .FirstOrDefault(b => b.BillId == EditModel.BillAgainstBillId);
+
+                if (salesBill == null)
+                    return;
+
+                decimal salesAmount = Convert.ToDecimal(salesBill.BillNetAmount);
+                decimal currentEditAmount = Convert.ToDecimal(EditModel.BillNetAmount);
+
+                decimal otherCreditNotesTotal = billList
+                    .Where(b =>
+                        b.BillAgainstBillId == salesBill.BillId &&
+                        b.BillType?.Equals("DEBIT NOTE", StringComparison.OrdinalIgnoreCase) == true &&
+                        b.BillId != EditModel.BillId)
+                    .Sum(b => Convert.ToDecimal(b.BillNetAmount));
+
+                decimal maxAllowedCreditNote =
+                    salesAmount - otherCreditNotesTotal;
+
+                if (currentEditAmount > maxAllowedCreditNote)
+                {
+                    ToastService.Error(
+                        $"DEBIT Note cannot exceed available amount ({maxAllowedCreditNote:N2})"
+                    );
+                    return;
+                }
+
+            }
+
+
+
             // --- STEP 1: Apply Unsaved Changes ---
             foreach (var unsavedChange in UnsavedChanges)
             {
@@ -3082,9 +3322,11 @@ width:fit-content;
                     ToastService.Success("Bill updated successfully!");
                 else
                 {
-                    // ToastService.Error(BillService.LastError);
-                    ToastService.Error("Failed to update Bill!");
-
+                    ToastService.Error(
+            string.IsNullOrWhiteSpace(BillService.LastError)
+                ? "Failed to update Bill!"
+                : BillService.LastError
+        );
                     return;
                 }
             }

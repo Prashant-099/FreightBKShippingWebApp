@@ -708,53 +708,82 @@
 
             var allVouchers = await VoucherService.GetAllAsync();
 
+             var allowedGroups = new[] { "SALES", "DEBIT NOTE" };
+
             var salesVoucherIds = allVouchers
-                .Where(v => v.VoucherGroup?.Equals("SALES", StringComparison.OrdinalIgnoreCase) == true)
-                .Select(v => v.VoucherId)
-                .ToList();
+                .Where(v =>
+        v.VoucherGroup != null &&
+        allowedGroups.Contains(v.VoucherGroup, StringComparer.OrdinalIgnoreCase))
+    .Select(v => v.VoucherId)
+    .ToList();
 
             var allBills = await BillService.GetAllAsync();
 
             var pendingBills = new List<BillSettlement>();
 
-            var billsToProcess = allBills.Where(b =>
-    b.BillPartyId == partyId &&
-    b.BillStatus &&
-    salesVoucherIds.Contains(b.BillVoucherId) &&
-    b.BillYearId == YearStatechangeService.SelectedYearId &&
-    (!specificBillId.HasValue || b.BillId == specificBillId.Value));
+    //         var billsToProcess = allBills.Where(b =>
+    // b.BillPartyId == partyId &&
+    // b.BillStatus &&
+    // salesVoucherIds.Contains(b.BillVoucherId) &&
+    // b.BillYearId == YearStatechangeService.SelectedYearId &&
+    // b.Bill_due_amt > 0 && 
+    // (!specificBillId.HasValue || b.BillId == specificBillId.Value));
 
-            foreach (var b in billsToProcess.Where(b =>
-                         b.BillPartyId == partyId &&
-                         b.BillStatus &&
-                         salesVoucherIds.Contains(b.BillVoucherId) &&
-                         b.BillYearId == YearStatechangeService.SelectedYearId))
+    //         foreach (var b in billsToProcess.Where(b =>
+    //                      b.BillPartyId == partyId &&
+    //                      b.BillStatus &&
+    //                      salesVoucherIds.Contains(b.BillVoucherId) &&
+    //                      b.BillYearId == YearStatechangeService.SelectedYearId))
+    //         {
+    //           //  var alreadySettled = await GetAlreadySettledAmount(b.BillId);
+    //           var alreadySettled = b.Bill_due_amt;
+    //             var remainingDue = Math.Max(alreadySettled, 0);
+
+    //             if (remainingDue <= 0)
+    //                 continue;
+
+    //             pendingBills.Add(new BillSettlement
+    //             {
+    //                 BillId = b.BillId,
+    //                 BillNo = b.BillNo,
+    //                 BillDate = b.BillDate,
+    //                 VoucherType = b.Vouchname ?? "Sales",
+    //                 BillTotal = b.BillNetAmount,
+    //                 DueAmount =  b.Bill_due_amt,
+    //                 BalanceAmount = remainingDue,
+    //                 SettledAmount = 0,
+    //                 DiscountAmount = 0,
+    //                 TdsAmount = 0,
+    //                 ShortageAmount = 0,
+    //                 IsSelected = false
+    //             });
+    //         }
+
+    //         PendingBills = pendingBills;
+     PendingBills = allBills
+            .Where(b =>
+                b.BillPartyId == partyId &&
+                b.BillStatus &&
+                salesVoucherIds.Contains(b.BillVoucherId) &&
+                b.BillYearId == YearStatechangeService.SelectedYearId &&
+                b.Bill_due_amt > 0 &&                               // ✅ ONLY DUE > 0
+                (!specificBillId.HasValue || b.BillId == specificBillId.Value))
+            .Select(b => new BillSettlement
             {
-              //  var alreadySettled = await GetAlreadySettledAmount(b.BillId);
-              var alreadySettled = b.Bill_due_amt;
-                var remainingDue = Math.Max(alreadySettled, 0);
-
-                if (remainingDue <= 0)
-                    continue;
-
-                pendingBills.Add(new BillSettlement
-                {
-                    BillId = b.BillId,
-                    BillNo = b.BillNo,
-                    BillDate = b.BillDate,
-                    VoucherType = b.Vouchname ?? "Sales",
-                    BillTotal = b.BillNetAmount,
-                    DueAmount = remainingDue,
-                    BalanceAmount = remainingDue,
-                    SettledAmount = 0,
-                    DiscountAmount = 0,
-                    TdsAmount = 0,
-                    ShortageAmount = 0,
-                    IsSelected = false
-                });
-            }
-
-            PendingBills = pendingBills;
+                BillId = b.BillId,
+                BillNo = b.BillNo,
+                BillDate = b.BillDate,
+                VoucherType = b.Vouchname ?? "Purchase",
+                BillTotal = b.BillNetAmount,
+                DueAmount = b.Bill_due_amt,                          // ✅ direct
+                BalanceAmount = b.Bill_due_amt,
+                SettledAmount = 0,
+                DiscountAmount = 0,
+                TdsAmount = 0,
+                ShortageAmount = 0,
+                IsSelected = false
+            })
+            .ToList();
             StateHasChanged();
         }
         catch (Exception ex)

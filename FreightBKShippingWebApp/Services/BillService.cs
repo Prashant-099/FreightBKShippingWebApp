@@ -88,18 +88,30 @@ namespace FreightBKShippingWebApp.Services
         // ✅ Update existing bill
         public async Task<bool> UpdateAsync(Bill bill)
         {
-            
+
+            //try
+            //{
+            //    var result = await _api.PutAsync<bool, Bill>($"api/Bills/{bill.BillId}", bill);
+            //    return result;
+            //}
+            //catch (Exception ex)
+            //{
+            //    Console.WriteLine($"❌ Error updating bill {bill.BillId}: {ex.Message}");
+            //    return false;
+            //}
             try
             {
+                LastError = null;
                 var result = await _api.PutAsync<bool, Bill>($"api/Bills/{bill.BillId}", bill);
                 return result;
             }
             catch (Exception ex)
             {
+                LastError = ex.Message;   // 👈 store API error
                 Console.WriteLine($"❌ Error updating bill {bill.BillId}: {ex.Message}");
                 return false;
             }
-           
+
         }
 
         // ✅ Delete bill by ID

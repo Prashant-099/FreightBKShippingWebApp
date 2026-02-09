@@ -373,6 +373,7 @@
                                         ValueFieldName="VoucherId"
                                         AllowUserInput="true"
                                         ShowValidationIcon="true"
+                                    ReadOnly="@IsPartyLocked"
                                         NullText="-- Select Account --"
                                         Value="@EditModel.BillVoucherId"
                                         ValueChanged="@((int voucherId) => OnvoucherChanged(EditModel, voucherId))"
@@ -656,10 +657,12 @@
 
                                                             <DxButton IconCssClass="bi bi-plus-circle-dotted"
                                                                       RenderStyle="ButtonRenderStyle.Link"
+                                                      Enabled="@(!IsPartyLocked)"
                                                                       Click="New_Click" />
 
                                             <DxButton IconCssClass="bi bi-arrow-clockwise"
                                                       RenderStyle="ButtonRenderStyle.Link"
+                                                      Enabled="@(!IsPartyLocked)"
                                                       Click="Revert_Click" />
                                             <DxButton RenderStyle="ButtonRenderStyle.Link"
                                                       IconCssClass="bi bi-three-dots"
@@ -679,6 +682,7 @@
 
                                                         <DxButton IconCssClass="bi bi-plus-lg"
                                                           RenderStyle="ButtonRenderStyle.Link"
+                                                      Enabled="@(!IsPartyLocked)"
                                                           Click="ShowServicePopup" />
                                                        @*  </div> *@
                                                     </CellEditTemplate>
@@ -1500,7 +1504,7 @@
         EditModel.BillDefaultCurrencyId = selectedBill.BillDefaultCurrencyId;
         EditModel.BillIsRcm = selectedBill.BillIsRcm;
 
-       EditModel.BillAgainstBillNo =selectedBill.BillNo;
+        EditModel.BillAgainstBillNo =selectedBill.BillNo;
         EditModel.BillAgainstBillDate = selectedBill.BillDate.ToString();
         // --- Clone detail lines from the selected bill (negative amounts for credit note) ---
         BillDetails.Clear();
@@ -1718,8 +1722,9 @@
         try
         {
             // ✅ Load common dropdowns that might be used soon
-            var serviceTask = ServiceService.GetAllAsync();
             var voucherTask = VoucherService.GetAllAsync();
+            var serviceTask = ServiceService.GetAllAsync();
+           
             var currTask = CurrencyService.GetAllAsync();
             var unitTask = UnitService.GetAllAsync();
             var hsnTask = HsnSacService.GetAllAsync();
@@ -1734,17 +1739,18 @@
             );
 
             // Assign results
-            RateMasterList = rateTask.Result;
-            ReportDataList  = reportTask.Result;
-
-            ServiceList = serviceTask.Result;
             VoucherList = voucherTask.Result.Where(v =>
         !string.IsNullOrWhiteSpace(v.VoucherGroup) &&
         (
             v.VoucherGroup.Trim().Equals("SALES", StringComparison.OrdinalIgnoreCase) ||
-            v.VoucherGroup.Trim().Equals("CREDIT NOTE", StringComparison.OrdinalIgnoreCase) 
+            v.VoucherGroup.Trim().Equals("CREDIT NOTE", StringComparison.OrdinalIgnoreCase)
         ))
     .ToList();
+            RateMasterList = rateTask.Result;
+            ReportDataList  = reportTask.Result;
+
+            ServiceList = serviceTask.Result;
+            
             CurrList = currTask.Result;
             UnitList = unitTask.Result;
             HsnList = hsnTask.Result;
@@ -1986,29 +1992,53 @@
                        .ToList();
 
                 billList = (await BillService.GetAllAsync())
+             .Where(b =>
+                 b.BillYearId == YearStatechangeService.SelectedYearId
+               )
+             .ToList();
+
+              
+
+                billList = (billList)
                     .Where(b =>
                         b.BillYearId == YearStatechangeService.SelectedYearId &&
                         salesVoucherIds.Contains(b.BillVoucherId))
                     .ToList();
+
+               
+
             }
             else
             {
                 IsCreditnote = false;
+                billList = (await BillService.GetAllAsync())
+             .Where(b =>
+                 b.BillYearId == YearStatechangeService.SelectedYearId
+               )
+             .ToList();
+
+                bool hasCreditNote =
+  billList != null &&
+  billList.Any(b =>
+      b.BillAgainstBillId == bill.BillId &&
+      b.BillType?.Equals("CREDIT NOTE", StringComparison.OrdinalIgnoreCase) == true);
+                if (hasCreditNote)
+                {
+                    IsPartyLocked = hasCreditNote;
+                }
+                else
+                {
+                    IsPartyLocked = false;
+                }
             }
-            billList = (await BillService.GetAllAsync())
-                    .Where(b =>
-                        b.BillYearId == YearStatechangeService.SelectedYearId
-                        )
-                    .ToList();
+            // billList = (await BillService.GetAllAsync())
+            //         .Where(b =>
+            //             b.BillYearId == YearStatechangeService.SelectedYearId
+            //             )
+            //         .ToList();
 
 
-            bool hasCreditNote =
-       billList != null &&
-       billList.Any(b =>
-           b.BillAgainstBillId == bill.BillId &&
-           b.BillType?.Equals("CREDIT NOTE", StringComparison.OrdinalIgnoreCase) == true);
-
-            IsPartyLocked =  hasCreditNote;
+           
 
             BillnoVisible = true;
             Title = "Edit Bill";
@@ -3345,9 +3375,12 @@
                 else
                 {
                     // ToastService.Error(BillService.LastError);
-                    ToastService.Error("Failed to update Bill!");
-
-                    return;
+                    ToastService.Error(
+         string.IsNullOrWhiteSpace(BillService.LastError)
+             ? "Failed to update Bill!"
+             : BillService.LastError
+     );
+     return;
                 }
             }
            // LoadingService.Hide();
