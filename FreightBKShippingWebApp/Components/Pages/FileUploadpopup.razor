@@ -16,7 +16,7 @@
 
             <!-- Category / SubCategory -->
             <div class="row mb-3">
-                <div class="col-md-4">
+                @* <div class="col-md-4">
                     <label class="form-label fw-bold">Category *</label>
                     <DxComboBox Data="@Categories"
                                 @bind-Value="SelectedCategory"
@@ -27,7 +27,7 @@
                 <div class="col-md-4">
                     <label class="form-label fw-bold">Sub Category</label>
                     <DxTextBox @bind-Text="SubCategory" CssClass="w-100" />
-                </div>
+                </div> *@
             </div>
 
             <!-- File Upload -->
@@ -103,16 +103,18 @@
                                     <DxButton IconCssClass="bi bi-eye"
                                               Size="Size.Small"
                                               RenderStyle="ButtonRenderStyle.Secondary"
-                                              Click="@(() => OpenPreview(file))" />
+                                              Click="@(async () => await OpenPreview(file))" />
+
 
                                     <!-- existing delete button -->
                                     <DxButton IconCssClass="bi bi-trash"
                                               CssClass="ms-2"
                                               Size="Size.Small"
                                               RenderStyle="ButtonRenderStyle.Danger"
-                                              Click="@(() => DeleteFile(file))" />
+                                              Click="@(async () => await DeleteDocumentAsync(file.DocumentId))" />
+
                                 </CellDisplayTemplate>
-                            </DxGridDataColumn>
+                            </DxGridDataColumn> 
                         </Columns>
 
                     </DxGrid>
@@ -155,9 +157,14 @@
         @if (PreviewFile != null)
         {
             <!-- iframe works for PDF, images, txt -->
-            <iframe src="@PreviewFile.Url"
-                    style="width:100%; height:100%; border:none;">
-            </iframe>
+            @if (!string.IsNullOrEmpty(PreviewSasUrl))
+            {
+                <iframe src="@PreviewSasUrl"
+                        style="width:100%; height:100%; border:none;">
+                </iframe>
+            }
+
+
         }
     </BodyContentTemplate>
 
@@ -183,16 +190,13 @@
     private int UploadProgress = 0;
 
     private const long MaxFileSize = 10 * 1024 * 1024;
+    private string? PreviewSasUrl;
 
     private readonly List<string> AllowedExtensions = new()
     {
         ".pdf",".jpg",".jpeg",".png",".doc",".docx",".xls",".xlsx",".txt",".csv"
     };
 
-    private List<string> Categories = new()
-    {
-        "bill","invoice","certificate","job-documents","shipment"
-    };
 
     private List<UploadedFileInfo> UploadedFiles = new();
     private List<IBrowserFile> SelectedFiles = new();
@@ -201,27 +205,7 @@
     private bool IsPreviewVisible = false;
     private UploadedFileInfo? PreviewFile;
 
-    protected override void OnParametersSet()
-    {
-        if (IsVisible)
-        {
-            if (string.IsNullOrEmpty(DefaultCategory) || string.IsNullOrEmpty(DefaultReferenceId))
-            {
-                ErrorMessage = "Cannot upload files: Category or Reference ID is missing.";
-                IsVisible = false;
-                return;
-            }
 
-            SelectedCategory = DefaultCategory;
-            SubCategory = DefaultSubCategory;
-            ReferenceId = DefaultReferenceId;
-
-            ErrorMessage = null;
-            UploadedFiles.Clear();
-            SelectedFiles.Clear();
-            UploadProgress = 0;
-        }
-    }
 
 
     private void OnInputFileChange(InputFileChangeEventArgs e)
@@ -292,24 +276,33 @@
 
 
     // 🔵 ADDED: Preview open logic
-    private void OpenPreview(UploadedFileInfo file)
+    public async Task OpenPreview(UploadedFileInfo file)
     {
         PreviewFile = file;
+
+        PreviewSasUrl =
+            await FileUploadService.GetSasUrlAsync(file.DocumentId, 10);
+
+        if (string.IsNullOrEmpty(PreviewSasUrl))
+        {
+            ToasteService.Error("Unable to generate preview link");
+            return;
+        }
+
         IsPreviewVisible = true;
     }
 
-    private async Task DeleteFile(UploadedFileInfo file)
+    public async Task DeleteDocumentAsync(long documentId)
     {
-        bool ok = await JS.InvokeAsync<bool>("confirm", $"Delete {file.FileName}?");
-        if (!ok) return;
+        var success = await FileUploadService.DeleteDocumentAsync(documentId);
+        if (!success) return;
 
-        var success = await FileUploadService.DeleteDocumentAsync(file.DocumentId);
-        if (success)
-        {
-            UploadedFiles.Remove(file);
-            await OnFilesUploaded.InvokeAsync(UploadedFiles);
-        }
+        UploadedFiles.RemoveAll(x => x.DocumentId == documentId);
+
+        await OnFilesUploaded.InvokeAsync(UploadedFiles);
+        await InvokeAsync(StateHasChanged);
     }
+
 
     private async Task ClosePopup()
     {
@@ -338,6 +331,13 @@
     {
         if (IsVisible)
         {
+            if (string.IsNullOrEmpty(DefaultCategory) || string.IsNullOrEmpty(DefaultReferenceId))
+            {
+                ErrorMessage = "Cannot upload files: Category or Reference ID is missing.";
+                IsVisible = false;
+                return;
+            }
+
             // Set defaults from parent parameters
             SelectedCategory = DefaultCategory;
             SubCategory = DefaultSubCategory;
@@ -355,19 +355,41 @@
                 // Map DocumentDto to UploadedFileInfo
                 UploadedFiles = docs.Select(d => new UploadedFileInfo
                 {
-                    DocumentId = d.DocumentId,          // map Id → DocumentId
-                    FileName = d.OriginalFileName,      // map filename
-                    Url = d.BlobUrl,            // map file URL
-                    FileSize = d.FileSizeBytes,      // map size
-                    Category = d.Category       // map category
+                    DocumentId = d.DocumentId,
+                    FileName = d.OriginalFileName,
+                    Url = string.Empty, 
+                    FileSize = d.FileSizeBytes,
+                    Category = d.Category
                 }).ToList();
+
             }
         }
     }
 
+    public async Task LoadDocumentsAsync()
+    {
+        if (string.IsNullOrEmpty(SelectedCategory) || string.IsNullOrEmpty(ReferenceId))
+            return;
 
+        var docs = await FileUploadService.GetDocumentsAsync(SelectedCategory, ReferenceId);
 
+        UploadedFiles = docs.Select(d => new UploadedFileInfo
+        {
+            DocumentId = d.DocumentId,
+            FileName = d.OriginalFileName,
+            Url = d.BlobUrl,
+            FileSize = d.FileSizeBytes,
+            Category = d.Category
+        }).ToList();
 
+        await InvokeAsync(StateHasChanged);
+    }
+    public void PreviewDocument(UploadedFileInfo file)
+    {
+        PreviewFile = file;
+        IsPreviewVisible = true;
+        StateHasChanged();
+    }
 
     public class UploadedFileInfo
     {

@@ -12,20 +12,20 @@
 @using static FreightBKShippingWebApp.Components.Pages.FileUploadpopup
 
 
-    @inject JobService JobService
-    @inject AccountService AccountService
-    @inject VesselService VesselService
-    @inject CargoService CargoService
-    @inject ToasteService ToastService
-    @inject NotifyService NotifyService
-    @inject LocationService LocationService
-    @inject CountryService CountryService
-    @inject CurrencyService CurrencyService
-    @inject YearStatechangeService YearStatechangeService
-    @inject NavigationManager NavigationManager
-    @inject PdfDetailedExtractorService PdfExtractor
-    @inject JobDataCreationService JobDataCreationService
-    @inject LoadingService LoadingService
+@inject JobService JobService
+@inject AccountService AccountService
+@inject VesselService VesselService
+@inject CargoService CargoService
+@inject ToasteService ToastService
+@inject NotifyService NotifyService
+@inject LocationService LocationService
+@inject CountryService CountryService
+@inject CurrencyService CurrencyService
+@inject YearStatechangeService YearStatechangeService
+@inject NavigationManager NavigationManager
+@inject PdfDetailedExtractorService PdfExtractor
+@inject JobDataCreationService JobDataCreationService
+@inject LoadingService LoadingService
 @inject BranchService BranchService
 @inject StatusService StatusService
 @inject VoucherService VoucherService
@@ -41,13 +41,14 @@ MinWidth="200"
  BodyCssClass="my-popup-body"
          CloseOnOutsideClick="false" horizontalAlignment="HorizontalAlignment.Center"
          verticalAlignment="VerticalAlignment.Center" ShowFooter="true" >
-         <BodyContentTemplate Context="bdy">
-        <EditForm Model="@EditModel" OnValidSubmit="HandleValidSubmit" Context="ctxjobaddedit" id="jobForm">
 
-        <DataAnnotationsValidator />
-       @*  <ValidationSummary /> *@
+    <BodyContentTemplate Context="bdy">
+            <EditForm Model="@EditModel" OnValidSubmit="HandleValidSubmit" Context="ctxjobaddedit" id="jobForm">
 
-        <DxFormLayout>
+            <DataAnnotationsValidator />
+           @*  <ValidationSummary /> *@
+
+            <DxFormLayout>
 
               
                 <DxFormLayoutItem Caption="Branch" ColSpanMd="4" CaptionCssClass="caption-bold">
@@ -676,53 +677,58 @@ MinWidth="200"
                         </DxFormLayoutGroup>
                     </DxFormLayoutTabPage>
 
-                <DxFormLayoutTabPage Caption="Upload Docs">
-                        <DxButton Text="Upload Documents"
-                                  RenderStyle="ButtonRenderStyle.Primary"
-                                  Click="ShowUploadPopup" />
+                    <DxFormLayoutTabPage Caption="Upload Docs">
+                            <DxButton Text="Upload Documents"
+                                      RenderStyle="ButtonRenderStyle.Primary"
+                                      Click="ShowUploadPopup" />
 
-                        @if (UploadedDocs.Any())
-                        {
-                            <DxGrid Data="@UploadedDocs"
-                                    ShowBorders="true"
-                                    CssClass="mt-3" >
+                            @if (UploadedDocs.Any())
+                            {
+                                <DxGrid Data="@UploadedDocs"
+                                        ShowBorders="true"
+                                        CssClass="mt-3" >
 
-                                <Columns>
-                                    <DxGridDataColumn FieldName="FileName" Caption="Document" />
-                                    <DxGridDataColumn FieldName="FileSize" Caption="Size (KB)" Width="120px" />
+                                    <Columns>
+                                        <DxGridDataColumn FieldName="FileName" Caption="Document" />
+                                        <DxGridDataColumn FieldName="FileSize" Caption="Size (KB)" Width="120px" />
 
-                                    <DxGridDataColumn Caption="Actions" Width="150px">
-                                        <CellDisplayTemplate Context="doc">
-                                            <DxButton IconCssClass="bi bi-eye"
-                                                      RenderStyle="ButtonRenderStyle.Secondary"
-                                                      Size="Size.Small"
-                                                      Click="@(() => PreviewDoc((UploadedFileInfo)doc.DataItem))" />
+                                        <DxGridDataColumn Caption="Actions" Width="150px">
+                                            <CellDisplayTemplate Context="doc">
+                                                <DxButton IconCssClass="bi bi-eye"
+                                                          RenderStyle="ButtonRenderStyle.Secondary"
+                                                          Size="Size.Small"
+                                                      Click="@(async () => await PreviewDoc((UploadedFileInfo)doc.DataItem))" />
 
-                                            <DxButton IconCssClass="bi bi-trash text-danger"
-                                                      RenderStyle="ButtonRenderStyle.Danger"
-                                                      Size="Size.Small"
-                                                      CssClass="ms-2"
-                                                      Click="@(() => DeleteFile((UploadedFileInfo)doc.DataItem))" />
-                                        </CellDisplayTemplate>
-                                    </DxGridDataColumn>
-                                </Columns>
+                                                <DxButton IconCssClass="bi bi-trash text-danger"
+                                                          RenderStyle="ButtonRenderStyle.Secondary"
+                                                          Size="Size.Small"
+                                                          CssClass="ms-2"
+                                                      Click="@(() => DeleteDoc((UploadedFileInfo)doc.DataItem))" />
+                                            </CellDisplayTemplate>
+                                        </DxGridDataColumn>
+                                    </Columns>
 
-                            </DxGrid>
-                        }
-                    </DxFormLayoutTabPage>
+                                </DxGrid>
+                            }
+                        </DxFormLayoutTabPage>
 
-            </DxFormLayoutTabPages>
+                </DxFormLayoutTabPages>
  
-        </DxFormLayout>
-    </EditForm>
+            </DxFormLayout>
+        </EditForm>
     </BodyContentTemplate>
     <FooterContentTemplate Context="ftrbrnch">
         <div class="mt-3 text-end">
             <DxButton RenderStyle="ButtonRenderStyle.Primary" Text="Save" SubmitFormOnClick="true" Form="jobForm" />
             <DxButton RenderStyle="ButtonRenderStyle.None" Text="Cancel" Click="Cancel" CssClass="ms-2" />
         </div>
+
     </FooterContentTemplate>
+
+
 </DxPopup>
+
+
 <AccountAddEditPage @ref="popup" OnSaved="LoadAccountsAsync" />
 <VesselAddEditPage @ref="popupVessel" OnSaved="LoadVesselsAsync" />
 <CargoAddEditPage @ref="popupCargo" OnSaved="LoadCargosAsync" />
@@ -732,23 +738,52 @@ MinWidth="200"
 <CurrencyAddEditPage @ref="popupcurrency" OnSaved="LoadCurrenciesAsync" />
 <StatusAddEditPage @ref="popupStatus" OnSaved="LoadStatusAsync" />
 
-<FileUploadpopup @bind-IsVisible="IsUploadPopupVisible"
-                     DefaultCategory="SelectedCategory"
-                     DefaultSubCategory="SelectedSubCategory"
-                     DefaultReferenceId="SelectedReferenceId"
-                     OnFilesUploaded="HandleUploadedDocs" />
+<FileUploadpopup IsVisible="@IsUploadPopupVisible"
+                 @ref="uploadPopup"
+                 IsVisibleChanged="@(v => IsUploadPopupVisible = v)"
+                 DefaultCategory="@SelectedCategory"
+                 DefaultSubCategory="@SelectedSubCategory"
+                 DefaultReferenceId="@SelectedReferenceId"
+                 OnFilesUploaded="HandleUploadedDocs" />
+
 
 
 
 @code {
     // FileUploadpopup FileUploadpopup;
     private bool IsUploadPopupVisible;
-    private string SelectedCategory = "bill";
+    private string? SelectedCategory;
     private string? SelectedSubCategory;
     private string? SelectedReferenceId;
     // 🔵 ADDED: Preview popup state (ONLY IN POPUP)
     private bool IsPreviewVisible = false;
     private UploadedFileInfo? PreviewFile;
+    private FileUploadpopup? uploadPopup;
+
+    // private List<UploadedFileInfo> UploadedDocs = new();
+
+    private async Task LoadDocumentsAsync()
+    {
+
+        Console.WriteLine("LEt Get Documetns");
+        if (EditModel.JobId == 0) return;
+
+        var docs = await FileUploadService.GetDocumentsAsync(
+            "job",
+            EditModel.JobId.ToString()
+        );
+
+        UploadedDocs = docs.Select(d => new UploadedFileInfo
+        {
+            DocumentId = d.DocumentId,
+            FileName = d.OriginalFileName,
+            FileSize = d.FileSizeBytes / 1024, // KB
+            Url = d.BlobUrl,
+            Category = d.Category
+        }).ToList();
+
+        StateHasChanged();
+    }
 
     private async Task ShowUploadPopup()
     {
@@ -771,29 +806,42 @@ MinWidth="200"
         SelectedReferenceId = EditModel.JobId.ToString();
 
         IsUploadPopupVisible = true;
+        await InvokeAsync(StateHasChanged);
     }
 
 
     private List<FileUploadpopup.UploadedFileInfo> UploadedDocs = new();
 
-    private Task HandleUploadedDocs(List<FileUploadpopup.UploadedFileInfo> files)
+    private async Task HandleUploadedDocs(List<FileUploadpopup.UploadedFileInfo> _)
     {
-        UploadedDocs = files.ToList(); // update the grid
-        StateHasChanged(); // ensure UI refresh
-        return Task.CompletedTask;
-    }
-
-    private async Task DeleteFile(UploadedFileInfo file)
-    {
-        
+        await LoadDocumentsAsync();
     }
 
 
-    private void PreviewDoc(UploadedFileInfo doc)
+    private async Task DeleteDoc(UploadedFileInfo file)
     {
-        PreviewFile = doc;
-        IsPreviewVisible = true;
+        bool ok = await JS.InvokeAsync<bool>("confirm", $"Delete {file.FileName}?");
+        if (!ok) return;
+
+        var success = await FileUploadService.DeleteDocumentAsync(file.DocumentId);
+        if (success)
+        {
+            await LoadDocumentsAsync(); // 🔁 reload grid
+        }
     }
+
+
+
+
+    private async Task PreviewDoc(UploadedFileInfo file)
+    {
+        if (uploadPopup != null)
+        {
+            await uploadPopup.OpenPreview(file);
+        }
+    }
+
+
 
     // + butoon for currency
     private CurrencyAddEditPage popupcurrency;
@@ -1920,7 +1968,7 @@ MinWidth="200"
     private List<Branch> branchList = new();
     private List<Status> statuslist = new();
 
-    public void Show(Job model)
+    public async Task Show(Job model)
     {
         IsEdit = model.JobId > 0;
         EditModel = model;
@@ -1931,10 +1979,12 @@ MinWidth="200"
                         JobBranchId = BranchContext.BranchId, 
                         JobDate = DateTime.Now
                     };
+            UploadedDocs.Clear();
         }
         else
         {
             EditModel = model; // Existing job, edit mode
+            await LoadDocumentsAsync();
         }
         Visible = true;
         var defaultBranch = statuslist.FirstOrDefault();
@@ -1945,7 +1995,7 @@ MinWidth="200"
             EditModel.JobStatus = defaultBranch?.StatusId ?? 0;
 
         }
-        LoadVoucherAndGenerateJobNo(BranchContext.BranchId);
+        await LoadVoucherAndGenerateJobNo(BranchContext.BranchId);
         StateHasChanged();
             }
 
@@ -2056,6 +2106,8 @@ MinWidth="200"
             EditModel.JobBranchId = BranchContext.BranchId;
             await LoadVoucherAndGenerateJobNo(BranchContext.BranchId);
         }
+
+  
     }
 
     public void Dispose()

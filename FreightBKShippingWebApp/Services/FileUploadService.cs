@@ -139,7 +139,20 @@ namespace FreightBKShippingWebApp.Services
             var result = await _api.DeleteAsync<DeleteResponse>(url);
             return result?.Success ?? false;
         }
+        // ===================== SAS (PREVIEW / DOWNLOAD) =====================
 
+        public async Task<string?> GetSasUrlAsync(
+            long documentId,
+            int expiresInMinutes = 10)
+        {
+            var url =
+                $"api/FileUpload/sas/{documentId}?expiresInMinutes={expiresInMinutes}";
+
+            var response =
+                await _api.GetFromJsonAsync<SasUrlResponse>(url);
+
+            return response?.SasUrl;
+        }
         // ===================== HELPERS =====================
 
         private string GetContentType(string ext) => ext switch
@@ -158,7 +171,10 @@ namespace FreightBKShippingWebApp.Services
             ".rar" => "application/x-rar-compressed",
             _ => "application/octet-stream"
         };
+
+
     }
+    
 
     // ===================== DTOs =====================
 
@@ -183,7 +199,7 @@ namespace FreightBKShippingWebApp.Services
         public string Category { get; set; }
         public string? SubCategory { get; set; }
         public string OriginalFileName { get; set; }
-        public string BlobUrl { get; set; }
+        public string? BlobUrl { get; set; } // optional, not used for access
         public long FileSizeBytes { get; set; }
         public string ContentType { get; set; }
         public DateTime UploadedAt { get; set; }
@@ -193,4 +209,12 @@ namespace FreightBKShippingWebApp.Services
     {
         public bool Success { get; set; }
     }
+
+    public class SasUrlResponse
+    {
+        public long DocumentId { get; set; }
+        public string SasUrl { get; set; }
+        public DateTime ExpiresAt { get; set; }
+    }
+
 }
