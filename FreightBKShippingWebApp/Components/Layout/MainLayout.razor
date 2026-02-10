@@ -139,8 +139,21 @@
         _branchInitialized = true;
 
         // 🔥 restore from storage / token
-        var storedBranchId = await AuthService.GetSelectedBranchAsync();
+        // var storedBranchId = await AuthService.GetSelectedBranchAsync();
+        int? storedBranchId = null;
+        try
+        {
+            storedBranchId = await AuthService.GetSelectedBranchAsync();
+        }
+        catch (System.Security.Cryptography.CryptographicException ex)
+        {
+            // Log for monitoring
+            Console.WriteLine($"⚠️ Could not decrypt branch: {ex.Message}");
+            storedBranchId = null;
 
+            // Optionally: clear storage if needed
+            
+        }
         if (storedBranchId.HasValue && storedBranchId.Value > 0)
         {
             BranchContext.SetBranch(storedBranchId.Value);
@@ -177,6 +190,7 @@
             NavigationManager.NavigateTo("/login", forceLoad: true);
         }
     }
+
     private async Task Logout()
     {
         if (AuthStateProvider is CustomAuthStateProvider customProvider)

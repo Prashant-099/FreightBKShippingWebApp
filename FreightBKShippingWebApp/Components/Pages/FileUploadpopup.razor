@@ -9,7 +9,7 @@
          Width="720px"
          CloseOnOutsideClick="false"
          ShowCloseButton="true"
-         CloseOnEscape="false">
+         CloseOnEscape="false" ShowFooter=true Closed="ClosePopup">
 
     <BodyContentTemplate>
         <div class="p-3">
@@ -205,9 +205,6 @@
     private bool IsPreviewVisible = false;
     private UploadedFileInfo? PreviewFile;
 
-
-
-
     private void OnInputFileChange(InputFileChangeEventArgs e)
     {
         ErrorMessage = null;
@@ -266,7 +263,7 @@
         // Send uploaded files to parent page
         await OnFilesUploaded.InvokeAsync(UploadedFiles);
 
-        // Show success toast
+        // Show success toast 
         ToasteService.Success("Files uploaded successfully");
 
         // 🔵 Close the popup automatically
@@ -306,11 +303,17 @@
 
     private async Task ClosePopup()
     {
+        // Clear all state
         UploadedFiles.Clear();
         SelectedFiles.Clear();
-        await IsVisibleChanged.InvokeAsync(false);
-    }
+        ErrorMessage = null;
+        IsUploading = false;
+        UploadProgress = 0;
 
+        // Always invoke the callback to notify parent
+        await IsVisibleChanged.InvokeAsync(false);
+        await InvokeAsync(StateHasChanged);
+    }
     private string FormatFileSize(long bytes)
     {
         string[] sizes = { "B", "KB", "MB", "GB" };
