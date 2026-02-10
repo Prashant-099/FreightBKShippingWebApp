@@ -14,10 +14,10 @@ DXDrawingEngine.ForceSkia();
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
-builder.Services.AddDataProtection()
-    .PersistKeysToFileSystem(new DirectoryInfo(
-        Path.Combine(builder.Environment.ContentRootPath, "DataProtectionKeys")))
-    .SetApplicationName("FreightBKShippingWebApp");
+//builder.Services.AddDataProtection()
+//    .PersistKeysToFileSystem(new DirectoryInfo(
+//        Path.Combine(builder.Environment.ContentRootPath, "DataProtectionKeys")))
+//    .SetApplicationName("FreightBKShippingWebApp");
 
 builder.Services.AddDevExpressBlazor(options => {
     options.BootstrapVersion = DevExpress.Blazor.BootstrapVersion.v5;
@@ -116,15 +116,6 @@ builder.Services.AddScoped<ITokenProvider, TokenProvider>();
 //builder.Services.AddHttpClient<ApiClient>(client =>
 //{
 //    client.BaseAddress = new Uri("http://localhost:5003/");
-//});
-
-builder.Services.AddHttpClient<ApiClient>(client =>
-{
-    client.BaseAddress = new Uri("https://localhost:5003/");
-});
-//builder.Services.AddHttpClient<ApiClient>(client =>
-//{
-//    client.BaseAddress = new Uri("https://localhost:5003/");
 //});
 //builder.Services.AddHttpClient<ApiClient>(client =>
 //{
