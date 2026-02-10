@@ -14,6 +14,18 @@ DXDrawingEngine.ForceSkia();
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+///do not change the path connected on the server where the app is hosted, as it is used to store the data protection keys for the application.
+///Changing this path may result in issues with data protection and authentication. If you need to change the path,
+///make sure to update it in both the code and the server configuration to ensure that the application can access the keys properly.
+var keysPath = "/var/lib/freightbkshipping/dataprotection-keys";
+
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(keysPath))
+    .SetApplicationName("FreightBKShippingWebApp")
+    .SetDefaultKeyLifetime(TimeSpan.FromDays(90));
+///end of data protection configuration
+///
+
 //builder.Services.AddDataProtection()
 //    .PersistKeysToFileSystem(new DirectoryInfo(
 //        Path.Combine(builder.Environment.ContentRootPath, "DataProtectionKeys")))

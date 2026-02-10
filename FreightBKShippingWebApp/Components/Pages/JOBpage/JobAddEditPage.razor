@@ -677,7 +677,7 @@ MinWidth="200"
                         </DxFormLayoutGroup>
                     </DxFormLayoutTabPage>
 
-                    <DxFormLayoutTabPage Caption="Upload Docs">
+                    @* <DxFormLayoutTabPage Caption="Upload Docs">
                             <DxButton Text="Upload Documents"
                                       RenderStyle="ButtonRenderStyle.Primary"
                                       Click="ShowUploadPopup" />
@@ -710,7 +710,80 @@ MinWidth="200"
 
                                 </DxGrid>
                             }
-                        </DxFormLayoutTabPage>
+                        </DxFormLayoutTabPage> *@
+                    <DxFormLayoutTabPage Caption="Upload Docs">
+                        <div class="upload-docs-header">
+                            <DxButton Text="Upload Documents"
+                                      IconCssClass="bi bi-upload"
+                                      RenderStyle="ButtonRenderStyle.Primary"
+                                      CssClass="upload-btn"
+                                      Click="ShowUploadPopup" />
+                        </div>
+
+                        @if (UploadedDocs?.Any() == true)
+                        {
+                            <DxGrid Data="@UploadedDocs"
+                                    ShowBorders="true"
+                                    CssClass="docs-grid mt-3"
+                                    PageSize="5"
+                                    ShowFilterRow="true">
+
+                                <Columns>
+                                    <DxGridDataColumn FieldName="FileName"
+                                                      Caption="Document"
+                                                      MinWidth="220" />
+
+                                    <DxGridDataColumn FieldName="FileSize"
+                                                      Caption="Size (KB)"
+                                                      Width="120px"
+                                                      TextAlignment="GridTextAlignment.Right" />
+
+                                    <DxGridDataColumn Caption="Actions"
+                                                      Width="140px"
+                                                      AllowSort="false"
+                                                      AllowFilter="false">
+                                        <CellDisplayTemplate Context="doc">
+                                            <div class="action-buttons">
+                                                <DxButton IconCssClass="bi bi-eye"
+                                                          RenderStyle="ButtonRenderStyle.Secondary"
+                                                          Size="Size.Small"
+                                                          CssClass="icon-btn"
+                                                          Click="@(async () => await PreviewDoc((UploadedFileInfo)doc.DataItem))" />
+
+                                                <DxButton IconCssClass="bi bi-trash"
+                                                          RenderStyle="ButtonRenderStyle.Secondary"
+                                                          Size="Size.Small"
+                                                          CssClass="icon-btn danger"
+                                                          Click="@(() => DeleteDoc((UploadedFileInfo)doc.DataItem))" />
+                                            </div>
+                                        </CellDisplayTemplate>
+                                    </DxGridDataColumn>
+                                    <DxGridDataColumn Caption="Actions" Width="150px">
+                                        <CellDisplayTemplate Context="doc">
+                                            <DxButton IconCssClass="bi bi-eye"
+                                                      RenderStyle="ButtonRenderStyle.Secondary"
+                                                      Size="Size.Small"
+                                                      Click="@(async () => await PreviewDoc((UploadedFileInfo)doc.DataItem))" />
+
+                                            <DxButton IconCssClass="bi bi-trash text-danger"
+                                                      RenderStyle="ButtonRenderStyle.Secondary"
+                                                      Size="Size.Small"
+                                                      CssClass="ms-2"
+                                                      Click="@(() => DeleteDoc((UploadedFileInfo)doc.DataItem))" />
+                                        </CellDisplayTemplate>
+                                    </DxGridDataColumn>
+
+                                </Columns>
+                            </DxGrid>
+                        }
+                        else
+                        {
+                            <div class="empty-docs">
+                                <i class="bi bi-folder-x"></i>
+                                <span>No documents uploaded yet</span>
+                            </div>
+                        }
+                    </DxFormLayoutTabPage>
 
                 </DxFormLayoutTabPages>
  
