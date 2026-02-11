@@ -13,7 +13,7 @@ namespace FreightBKShippingWebApp.Model
         public int JobId { get; set; }
 
         [Column("job_company_id")]
-        public string? JobCompanyId { get; set; }
+        public int? JobCompanyId { get; set; }
 
         [Column("job_addedby_user_id")]
         public string? JobAddedByUserId { get; set; }
