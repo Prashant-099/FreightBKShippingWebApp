@@ -428,7 +428,7 @@ namespace FreightBKShippingWebApp.Model
         public double Bill_due_amt { get; set; }
 
         [Column("bill_quotationid")]
-        public double BillQuatationId { get; set; }
+        public int BillQuatationId { get; set; }
 
         [Column("bill_quotation_no")]
         public string BillQuatationNo { get; set; }
