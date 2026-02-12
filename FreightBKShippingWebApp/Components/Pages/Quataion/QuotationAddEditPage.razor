@@ -961,7 +961,7 @@
             LoadingService.Hide();
         }
 
-        EditModel = quotation ?? new Bill();
+        //EditModel = quotation ?? new Bill();
 
         if (quotation?.BillId > 0)
         {
@@ -1036,6 +1036,7 @@
         Visible = false;
         BillDetails.Clear();
         UnsavedChanges.Clear();
+        StateHasChanged();
     }
 
     private void InitializeQuotationDetails()
@@ -1660,9 +1661,20 @@
                 var changedItem = unsavedChange.Key;
                 var changeType = unsavedChange.Value.Type;
 
-                if (changeType == DataChangeType.Modification)
+                switch (changeType)
                 {
-                    UpdateRowAmounts(changedItem);
+                    case DataChangeType.Addition:
+                        // You can handle additions later in final save
+                        break;
+
+                    case DataChangeType.Delete:
+                        // Simply skip these rows in total calculations
+                        break;
+
+                    case DataChangeType.Modification:
+                        // Update row calculations (GST, totals, etc.)
+                        UpdateRowAmounts(changedItem);
+                        break;
                 }
             }
 
@@ -1675,6 +1687,7 @@
             foreach (var detail in activeDetails)
             {
                 detail.BillDetailSno = sequentialSno++;
+                detail.BillDetailStatus = true;
             }
 
             EditModel.BillAmount = activeDetails.Sum(d => d.BillDetailAmount);
