@@ -184,7 +184,7 @@ namespace FreightBKShippingWebApp.Model
         public string? BillAmountInWord { get; set; }
 
         [Column("bill_jobno")]
-        [Required]
+       
         public string? BillJobNo { get; set; }
 
         [Column("bill_job_type")]
@@ -426,6 +426,13 @@ namespace FreightBKShippingWebApp.Model
 
         [Column("bill_due_amt")]
         public double Bill_due_amt { get; set; }
+
+        [Column("bill_quotationid")]
+        public int BillQuatationId { get; set; }
+
+        [Column("bill_quotation_no")]
+        public string? BillQuatationNo { get; set; }
+
 
         // Navigation properties
         [InverseProperty(nameof(BillDetail.Bill))]

@@ -414,6 +414,25 @@
                     </ChildContent>
                 </DxFormLayoutItem>
 
+                 <DxFormLayoutItem Caption="Quotation" ColSpanMd="3" Visible="Quotationvisible">
+                    <ChildContent Context="ctx">
+                        <DxComboBox TData="Bill" TValue="int?"
+                                    Data="@billList"
+                                    TextFieldName="BillNo"
+                                    ValueFieldName="BillId"
+                                    AllowUserInput="true"
+                                    NullText="-- Select Quotation --"
+                                    Value="@EditModel.BillAgainstBillId"
+                                    ReadOnly="@IsPartyLocked"
+                                    ValueChanged="@((int? billId) => OnBillAgainstChanged( billId))"
+                                    ValueExpression="@( () => EditModel.BillAgainstBillId )"
+                                   
+                                    SearchMode="ListSearchMode.AutoSearch"
+                                    SearchFilterCondition="ListSearchFilterCondition.StartsWith"
+                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" CssClass="editor-smooth" />
+                    </ChildContent>
+                </DxFormLayoutItem>
+
                                 <DxFormLayoutItem Caption="Bill Due Date" ColSpanMd="3">
                                     <ChildContent Context="ctx">
                                         <DxDateEdit @bind-Date="EditModel.BillDueDate" Format="dd-MM-yyyy" />
@@ -1352,6 +1371,7 @@
 
     }
     private List<Bill> billList = new();
+    private List<Bill> QuotationList = new();
     // Grid Layout Manager Reference
     private GridLayoutpPopup? layoutManager;
     private List<GridColumnLayout> allGridColumns = [];
@@ -1502,10 +1522,19 @@
         EditModel.BillRemarks = selectedBill.BillRemarks;
         EditModel.BillExchRate = selectedBill.BillExchRate;
         EditModel.BillDefaultCurrencyId = selectedBill.BillDefaultCurrencyId;
-        EditModel.BillIsRcm = selectedBill.BillIsRcm;
 
-        EditModel.BillAgainstBillNo =selectedBill.BillNo;
-        EditModel.BillAgainstBillDate = selectedBill.BillDate.ToString();
+        EditModel.BillPolId = selectedBill.BillPolId;
+    EditModel.BillPodId = selectedBill.BillPodId;
+    EditModel.BillLineId = selectedBill.BillLineId;
+
+        EditModel.BillIsRcm = selectedBill.BillIsRcm;
+        EditModel.BillIsRoundOff = selectedBill.BillIsRoundOff;
+        if (EditModel.BillIsRoundOff)
+        {
+            ApplyRoundOff(true);
+        }
+        EditModel.BillQuatationNo = selectedBill.BillNo;
+        EditModel.BillQuatationId = selectedBill.BillId;
         // --- Clone detail lines from the selected bill (negative amounts for credit note) ---
         BillDetails.Clear();
         int sno = 1;
@@ -1657,6 +1686,7 @@
     private bool isBackgroundDataLoaded = false;
     private Dictionary<string, bool> lazyLoadedData = new();
 
+    private bool Quotationvisible = false;
     // ============================================
     // 🎯 STAGE 1: Load ONLY Critical Data First
     // ============================================
@@ -1724,7 +1754,7 @@
             // ✅ Load common dropdowns that might be used soon
             var voucherTask = VoucherService.GetAllAsync();
             var serviceTask = ServiceService.GetAllAsync();
-           
+
             var currTask = CurrencyService.GetAllAsync();
             var unitTask = UnitService.GetAllAsync();
             var hsnTask = HsnSacService.GetAllAsync();
@@ -1750,7 +1780,7 @@
             ReportDataList  = reportTask.Result;
 
             ServiceList = serviceTask.Result;
-            
+
             CurrList = currTask.Result;
             UnitList = unitTask.Result;
             HsnList = hsnTask.Result;
@@ -1931,7 +1961,49 @@
     // 📝 Show Method (Remains mostly the same)
     // ============================================
     bool IsPartyLocked = false;
+    // ✅ NEW: Separate method to load billList based on voucher group
+    private async Task LoadBillListBasedOnVoucherType(Voucher voucher)
+    {
+        if (voucher == null) return;
 
+        var allBills = await BillService.GetAllAsync();
+        var currentYearBills = allBills.Where(b => b.BillYearId == YearStatechangeService.SelectedYearId).ToList();
+
+        if (voucher.VoucherGroup?.Equals("CREDIT NOTE", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            // ✅ CREDIT NOTE: Show only SALES bills
+            Quotationvisible = false;
+            IsCreditnote = true;
+
+            var salesVoucherIds = VoucherList
+                .Where(v => v.VoucherGroup?.Equals("SALES", StringComparison.OrdinalIgnoreCase) == true)
+                .Select(v => v.VoucherId)
+                .ToList();
+
+            billList = currentYearBills
+                .Where(b => salesVoucherIds.Contains(b.BillVoucherId) && b.Bill_due_amt>0)
+                .ToList();
+        }
+        else if (voucher.VoucherGroup?.Equals("SALES", StringComparison.OrdinalIgnoreCase) == true)
+        {
+            // ✅ SALES: Show only QUOTATION bills
+            Quotationvisible = true;
+            IsCreditnote = false;
+
+            billList = currentYearBills
+                .Where(b => string.Equals(b.BillType, "QUOTATION", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+        else
+        {
+            // ✅ OTHER VOUCHER TYPES: Clear billList
+            Quotationvisible = false;
+            IsCreditnote = false;
+            billList = new List<Bill>();
+        }
+
+        StateHasChanged();
+    }
     public async void Show(Bill bill)
     {
         // ✅ Show loading only if critical data not loaded
@@ -1983,62 +2055,80 @@
                     });
             }
             var voucher = VoucherList.FirstOrDefault(c => c.VoucherId == bill.BillVoucherId);
-            if (voucher.VoucherGroup?.Equals("CREDIT NOTE", StringComparison.OrdinalIgnoreCase) == true)
+            //           if (voucher.VoucherGroup?.Equals("CREDIT NOTE", StringComparison.OrdinalIgnoreCase) == true)
+            //           {
+            //               Quotationvisible = false;
+            //               IsCreditnote = true;
+            //               var salesVoucherIds = VoucherList
+            //                      .Where(v => v.VoucherGroup?.Equals("SALES", StringComparison.OrdinalIgnoreCase) == true)
+            //                      .Select(v => v.VoucherId)
+            //                      .ToList();
+
+            //               billList = (await BillService.GetAllAsync())
+            //            .Where(b =>
+            //                b.BillYearId == YearStatechangeService.SelectedYearId
+            //              )
+            //            .ToList();
+
+
+
+            //               billList = (billList)
+            //                   .Where(b =>
+            //                       b.BillYearId == YearStatechangeService.SelectedYearId &&
+            //                       salesVoucherIds.Contains(b.BillVoucherId))
+            //                   .ToList();
+
+
+
+            //           }
+            //           else
+            //           {
+            //               Quotationvisible = true;
+            //               IsCreditnote = false;
+            //               billList = (await BillService.GetAllAsync())
+            //            .Where(b =>
+            //                b.BillYearId == YearStatechangeService.SelectedYearId &&
+            //                 string.Equals(b.BillType, "QUOTATION", StringComparison.OrdinalIgnoreCase)
+
+            //              )
+            //            .ToList();
+
+            //               bool hasCreditNote =
+            // billList != null &&
+            // billList.Any(b =>
+            //     b.BillAgainstBillId == bill.BillId &&
+            //     b.BillType?.Equals("CREDIT NOTE", StringComparison.OrdinalIgnoreCase) == true);
+            //               if (hasCreditNote)
+            //               {
+            //                   IsPartyLocked = hasCreditNote;
+            //               }
+            //               else
+            //               {
+            //                   IsPartyLocked = false;
+            //               }
+            //           }
+
+
+            if (voucher != null)
             {
-                IsCreditnote = true;
-                var salesVoucherIds = VoucherList
-                       .Where(v => v.VoucherGroup?.Equals("SALES", StringComparison.OrdinalIgnoreCase) == true)
-                       .Select(v => v.VoucherId)
-                       .ToList();
+                await LoadBillListBasedOnVoucherType(voucher);
+            }
 
-                billList = (await BillService.GetAllAsync())
-             .Where(b =>
-                 b.BillYearId == YearStatechangeService.SelectedYearId
-               )
-             .ToList();
+            // ✅ Check if credit notes exist for this bill (to lock editing)
+            if (voucher?.VoucherGroup?.Equals("SALES", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                var allBills = await BillService.GetAllAsync();
+                bool hasCreditNote = allBills.Any(b =>
+                    b.BillAgainstBillId == bill.BillId &&
+                    b.BillType?.Equals("CREDIT NOTE", StringComparison.OrdinalIgnoreCase) == true);
 
-              
-
-                billList = (billList)
-                    .Where(b =>
-                        b.BillYearId == YearStatechangeService.SelectedYearId &&
-                        salesVoucherIds.Contains(b.BillVoucherId))
-                    .ToList();
-
-               
-
+                IsPartyLocked = hasCreditNote;
             }
             else
             {
-                IsCreditnote = false;
-                billList = (await BillService.GetAllAsync())
-             .Where(b =>
-                 b.BillYearId == YearStatechangeService.SelectedYearId
-               )
-             .ToList();
-
-                bool hasCreditNote =
-  billList != null &&
-  billList.Any(b =>
-      b.BillAgainstBillId == bill.BillId &&
-      b.BillType?.Equals("CREDIT NOTE", StringComparison.OrdinalIgnoreCase) == true);
-                if (hasCreditNote)
-                {
-                    IsPartyLocked = hasCreditNote;
-                }
-                else
-                {
-                    IsPartyLocked = false;
-                }
+                IsPartyLocked = false;
             }
-            // billList = (await BillService.GetAllAsync())
-            //         .Where(b =>
-            //             b.BillYearId == YearStatechangeService.SelectedYearId
-            //             )
-            //         .ToList();
 
-
-           
 
             BillnoVisible = true;
             Title = "Edit Bill";
@@ -2067,11 +2157,14 @@
             EditModel.BillDate = EditModel.BillDate == default ? DateTime.Now : EditModel.BillDate;
             EditModel.BillStatus = true;
 
+
+
             OnJobDetailsChanged(EditModel.BillJobNo);
             OnvoucherChanged(EditModel,EditModel.BillVoucherId);
             BillDetails = new List<BillDetail>();
             nextSNo = 1;
             IsCreditnote = false;
+            Quotationvisible = true;
             Title = "Add Bill";
             InitializeInvoiceDetails();
             IsPartyLocked = false;
@@ -2252,16 +2345,42 @@
         //     editContext.NotifyFieldChanged(editContext.Field(nameof(EditModel.BillJobNo)));
         // }
         var selectedjobdetails = JobList.FirstOrDefault(j => j.JobNo == selectedjobno);
+
+
+        // Find the selected bill from billList
+        if (EditModel.BillAgainstBillId > 0)
+        {
+            var selectedBill = billList
+                .FirstOrDefault(b => b.BillId == EditModel.BillAgainstBillId);
+
+            if (selectedBill != null)
+            {
+                EditModel.BillPartyId = selectedBill.BillPartyId;
+                EditModel.BillPolId = selectedBill.BillPolId;
+                EditModel.BillPodId = selectedBill.BillPodId;
+                EditModel.BillLineId = selectedBill.BillLineId;
+                shippartydetails(EditModel.BillPartyId);
+            }
+        }
+        else
+        {
+            // ✅ Normal Job binding when BillAgainst NOT selected
+            EditModel.BillPartyId = selectedjobdetails.JobPartyId ?? 0;
+            EditModel.BillPolId = selectedjobdetails.JobPolId ?? 0;
+            EditModel.BillPodId = selectedjobdetails.JobPodId ?? 0;
+            EditModel.BillLineId = selectedjobdetails.JobLineId ?? 0;
+        }
         if (selectedjobno != null)
         {
+            
             EditModel.BillJobId = selectedjobdetails.JobId;
-            EditModel.BillPartyId = selectedjobdetails.JobPartyId ?? 0;
+           // EditModel.BillPartyId = selectedjobdetails.JobPartyId ?? 0;
             EditModel.BillSupplyType = "B2B";
             EditModel.BillCargoId = selectedjobdetails.JobCargoId ?? 0;
             EditModel.BillShipPartyId = EditModel.BillPartyId;
             EditModel.BillRemarksDefault = selectedjobdetails.JobGoodsDesc;
             EditModel.BillVesselId = selectedjobdetails.JobVesselId ?? 0;
-            EditModel.BillLineId = selectedjobdetails.JobLineId ?? 0;
+            //EditModel.BillLineId = selectedjobdetails.JobLineId ?? 0;
             EditModel.BillDefaultCurrencyId = selectedjobdetails.JobDefCurrId ?? 0;
             EditModel.BillHblNo = selectedjobdetails.JobHblNo;
             EditModel.BillShipperInvNo = selectedjobdetails.JobShipperInvNo;
@@ -2269,8 +2388,8 @@
             EditModel.BillGrossWt = selectedjobdetails.JobGrossWt ?? 0;
             EditModel.BillNetWt = selectedjobdetails.JobNetWt ?? 0;
             EditModel.BillQty = selectedjobdetails.JobQty ?? 0;
-            EditModel.BillPolId = selectedjobdetails.JobPolId ?? 0;
-            EditModel.BillPodId = selectedjobdetails.JobPodId ?? 0;
+            //EditModel.BillPolId = selectedjobdetails.JobPolId  ?? 0;
+            //EditModel.BillPodId = selectedjobdetails.JobPodId ?? 0;
             EditModel.BillConsigneeId = selectedjobdetails.JobConsigneeId ?? 0;
             EditModel.BillShipperId = selectedjobdetails.JobShipperId ?? 0;
             EditModel.BillExchRate = selectedjobdetails.JobExchRate ?? 0;
@@ -2362,8 +2481,8 @@
             }
         }
 
-        if (string.IsNullOrEmpty(model.BillNo) || model.BillId == 0)
-        {
+        // if (string.IsNullOrEmpty(model.BillNo) || model.BillId == 0)
+        // {
 
 
 
@@ -2382,27 +2501,36 @@
             {   
                 ToastService.Error("Error: " + ex.Message);
             }
-            if (voucher.VoucherGroup?.Equals("CREDIT NOTE", StringComparison.OrdinalIgnoreCase) == true)
-            {
-                IsCreditnote = true;
-                var salesVoucherIds = VoucherList
-                    .Where(v => v.VoucherGroup?.Equals("SALES", StringComparison.OrdinalIgnoreCase) == true)
-                    .Select(v => v.VoucherId)
-                    .ToList();
+            // if (voucher.VoucherGroup?.Equals("CREDIT NOTE", StringComparison.OrdinalIgnoreCase) == true)
+            // {
+            //     IsCreditnote = true;
+            //     var salesVoucherIds = VoucherList
+            //         .Where(v => v.VoucherGroup?.Equals("SALES", StringComparison.OrdinalIgnoreCase) == true)
+            //         .Select(v => v.VoucherId)
+            //         .ToList();
 
-                billList = (await BillService.GetAllAsync())
-                    .Where(b =>
-                        b.BillYearId == YearStatechangeService.SelectedYearId &&
-                        salesVoucherIds.Contains(b.BillVoucherId))
-                    .ToList();
-            }
-            else
-            {
+            //     billList = (billList)
+            //         .Where(b =>
+            //             b.BillYearId == YearStatechangeService.SelectedYearId &&
+            //             salesVoucherIds.Contains(b.BillVoucherId))
+            //         .ToList();
+            // }
+            // else
+            // {
 
-                IsCreditnote = false;
-            }
-
+            //     IsCreditnote = false;
+            //     QuotationList = (billList)
+            //        .Where(b =>
+            //            b.BillYearId == YearStatechangeService.SelectedYearId &&
+            //             string.Equals(b.BillType, "QUOTATION", StringComparison.OrdinalIgnoreCase))
+            //        .ToList();
+            // }
+             if (voucher != null)
+        {
+            await LoadBillListBasedOnVoucherType(voucher);
         }
+        // }
+       
     }
 
     private void Hide()
@@ -3289,7 +3417,8 @@
             }
 
 
-
+             if (EditModel.BillJobNo==null)
+                    return;
 
 
 

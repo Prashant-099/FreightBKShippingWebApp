@@ -24,6 +24,8 @@
 @inject ConfirmationDialogService ConfirmDialogService
 @inject NavigationManager Navigation
 @inject GridLayoutService GridLayoutService
+@inject LocationService LocationService
+@inject NotifyService NotifyService
 @inject IBranchContext BranchContext
 
 <style>
@@ -37,10 +39,14 @@
     }
 
         .quotation-grid-wrapper .dxbl-grid {
-            min-width: 2000px ;
+            min-width: 1800px;
             width: max-content;
         }
-
+    /* Prevent column shrinking */
+        .quotation-grid-wrapper .dxbl-grid-table {
+        table-layout: auto !important;
+        width: 100% !important;
+    }
     .fixed-height-grid {
         height: 300px;
         overflow-y: auto;
@@ -282,14 +288,53 @@
                                 SearchFilterCondition="ListSearchFilterCondition.StartsWith"
                                 ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
                 </DxFormLayoutItem>
+                 <DxFormLayoutItem Caption="POL" ColSpanMd="3">
+     <DxComboBox TData="Location" TValue="int"
+     Data="@locationList"
+     TextFieldName="LocationName"
+     ValueFieldName="LocationId"
+     AllowUserInput="true"
+     NullText="-- Select POl --"
+     @bind-Value="EditModel.BillPolId"
+     SearchMode="ListSearchMode.AutoSearch"
+     SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
 
+ </DxFormLayoutItem>
+   <DxFormLayoutItem Caption="POD" ColSpanMd="3">
+      <DxComboBox TData="Location" TValue="int"
+      Data="@locationList"
+      TextFieldName="LocationName"
+      ValueFieldName="LocationId"
+      AllowUserInput="true"
+      NullText="-- Select POD --"
+      @bind-Value="EditModel.BillPodId"
+      SearchMode="ListSearchMode.AutoSearch"
+      SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+  </DxFormLayoutItem>
+
+                <DxFormLayoutItem Caption="Line" ColSpanMd="3">
+                    <DxComboBox TData="Notify" TValue="int"
+                                Data="@LineList"
+                                TextFieldName="NotifyName"
+                                ValueFieldName="NotifyId"
+                                AllowUserInput="true"
+                                NullText="-- Select Line --"
+                                @bind-Value="EditModel.BillLineId"
+                                SearchMode="ListSearchMode.AutoSearch"
+                                SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+                </DxFormLayoutItem>
                 <DxFormLayoutItem Caption="Is RCM Applicable" ColSpanMd="3">
                     <DxCheckBox Checked="@EditModel.BillIsRcm"
                                 CheckedChanged="@((bool isChecked) => ApplyRcmLogic(isChecked))"
                                 CheckedExpression="() => EditModel.BillIsRcm" />
                 </DxFormLayoutItem>
             </DxFormLayout>
+           
 
+
+
+                            
+                            
             <DxFormLayout>
                 <DxFormLayoutTabPages>
                     <DxFormLayoutTabPage Caption="Service Details">
@@ -542,6 +587,7 @@
                             </DxGrid>
                         </div>
                     </DxFormLayoutTabPage>
+                   
 
                     <DxFormLayoutTabPage Caption="Customer Details">
                         <div class="popup-content-container">
@@ -611,15 +657,17 @@
                                             <DxTextBox @bind-Text="EditModel.BillCust3" />
                                         </DxFormLayoutItem>
                                     </DxFormLayoutGroup> *@
+                                   @*  <DxFormLayoutItem Caption="Containers" ColSpanMd="6">
+                                        <DxMemo @bind-Text="EditModel.BillContainerNo" Rows="3" />
+                                    </DxFormLayoutItem> *@
+
                                 </DxFormLayout>
 
                                @*  <DxFormLayoutItem Caption="Terms & Conditions" ColSpanMd="12">
                                     <DxMemo @bind-Text="EditModel.BillRemarksDefault" Rows="4" />
                                 </DxFormLayoutItem> *@
 
-                                <DxFormLayoutItem Caption="Containers" ColSpanMd="12">
-                                    <DxMemo @bind-Text="EditModel.BillContainerNo" Rows="3" />
-                                </DxFormLayoutItem>
+                               
                             </div>
                         </div>
                     </DxFormLayoutTabPage>
@@ -778,6 +826,11 @@
     private List<ReportData> ReportDataList = new();
     private List<Account> BankList = new();
 
+    private List<Location> locationList = new();
+    private List<Notify> LineList = new();
+
+
+
     private bool isCriticalDataLoaded = false;
     private bool isBackgroundDataLoaded = false;
 
@@ -828,8 +881,10 @@
             var hsnTask = HsnSacService.GetAllAsync();
             var gstTask = GstSlabService.GetAllAsync();
             var reportTask = ReportDataService.GetAllAsync();
+            var locationTask = LocationService.GetAllAsync();
+            var notifyTask = NotifyService.GetAllAsync();
 
-            await Task.WhenAll(serviceTask, voucherTask, unitTask, hsnTask, gstTask, reportTask);
+            await Task.WhenAll(serviceTask, voucherTask, unitTask, hsnTask, gstTask, reportTask, locationTask, notifyTask);
 
             // Only get QUOTATION voucher types
             VoucherList = voucherTask.Result
@@ -837,6 +892,8 @@
                          && v.VoucherGroup.Trim().Equals("QUOTATION", StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
+            locationList = locationTask.Result;
+            LineList = notifyTask.Result.Where(n => n.NotifyType == "LINE").ToList();
             ReportDataList = reportTask.Result;
             ServiceList = serviceTask.Result;
             UnitList = unitTask.Result;
@@ -1058,6 +1115,8 @@
 
         var dueDate = selectedParty.AccountCreditDays ?? 30;
         EditModel.BillDueDate = DateTime.Now.AddDays(dueDate);
+        ShipPartyDetails(partyid);
+
     }
 
     private async Task OnBranchChanged(Bill model, int branchId)
