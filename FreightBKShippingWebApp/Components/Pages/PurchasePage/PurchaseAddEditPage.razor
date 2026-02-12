@@ -459,7 +459,7 @@ width:fit-content;
                                     ValueFieldName="JobNo"
                                     ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
                                     AllowUserInput="true"
-                                     ShowValidationIcon="true"
+                                    
                                 ListRenderMode="ListRenderMode.Virtual"
                                     SearchMode="ListSearchMode.AutoSearch" 
                                     SearchFilterCondition="ListSearchFilterCondition.Contains"
@@ -1515,8 +1515,17 @@ width:fit-content;
         EditModel.BillRemarks = selectedBill.BillRemarks;
         EditModel.BillExchRate = selectedBill.BillExchRate;
         EditModel.BillDefaultCurrencyId = selectedBill.BillDefaultCurrencyId;
-        EditModel.BillIsRcm = selectedBill.BillIsRcm;
+         EditModel.BillPolId = selectedBill.BillPolId;
+    EditModel.BillPodId = selectedBill.BillPodId;
+    EditModel.BillLineId = selectedBill.BillLineId;
 
+
+        EditModel.BillIsRcm = selectedBill.BillIsRcm;
+        EditModel.BillIsRoundOff = selectedBill.BillIsRoundOff;
+        if (EditModel.BillIsRoundOff)
+        {
+            ApplyRoundOff(true);
+        }
         EditModel.BillAgainstBillNo = selectedBill.BillNo;
         EditModel.BillAgainstBillDate = selectedBill.BillDate.ToString();
         // --- Clone detail lines from the selected bill (negative amounts for credit note) ---
@@ -1527,7 +1536,7 @@ width:fit-content;
         {
             foreach (var detail in selectedBill.BillDetails.OrderBy(d => d.BillDetailSno))
             {
-                BillDetails.Add(new BillDetail
+                var newDetail = new BillDetail
                 {
                     BillDetailSno = sno++,
                     BillDetailId = 0,               // New rows — not saved yet
@@ -1537,7 +1546,7 @@ width:fit-content;
                     BillDetailUnit = detail.BillDetailUnit,
                     BillDetailUnitId = detail.BillDetailUnitId,
                     BillDetailRemarks = detail.BillDetailRemarks,
-                    BillDetailRate = detail.BillDetailRate,
+                    BillDetailRate = detail.BillDetailActualRate,
                     BillDetailQty = detail.BillDetailQty,
                     BillDetailExchRate = detail.BillDetailExchRate,
                     BillDetailCurrencyId = detail.BillDetailCurrencyId,
@@ -1558,7 +1567,9 @@ width:fit-content;
                     BillDetailCgstAcId = detail.BillDetailCgstAcId,
                     BillDetailSgstAcId = detail.BillDetailSgstAcId,
                     BillDetailStatus = true
-                });
+                };
+                BillDetails.Add(newDetail);
+                UpdateRowAmounts(newDetail);
             }
         }
 
@@ -1901,14 +1912,14 @@ width:fit-content;
         var allBills = await BillService.GetAllAsync();
         var currentYearBills = allBills.Where(b => b.BillYearId == YearStatechangeService.SelectedYearId).ToList();
 
-        if (voucher.VoucherGroup?.Equals("CREDIT NOTE", StringComparison.OrdinalIgnoreCase) == true)
+        if (voucher.VoucherGroup?.Equals("DEBIT NOTE", StringComparison.OrdinalIgnoreCase) == true)
         {
             // ✅ CREDIT NOTE: Show only SALES bills
             Quotationvisible = false;
             IsCreditnote = true;
 
             var salesVoucherIds = VoucherList
-                .Where(v => v.VoucherGroup?.Equals("SALES", StringComparison.OrdinalIgnoreCase) == true)
+                .Where(v => v.VoucherGroup?.Equals("PURCHASE", StringComparison.OrdinalIgnoreCase) == true)
                 .Select(v => v.VoucherId)
                 .ToList();
 
@@ -1916,7 +1927,7 @@ width:fit-content;
                 .Where(b => salesVoucherIds.Contains(b.BillVoucherId) && b.Bill_due_amt>0)
                 .ToList();
         }
-        else if (voucher.VoucherGroup?.Equals("SALES", StringComparison.OrdinalIgnoreCase) == true)
+        else if (voucher.VoucherGroup?.Equals("PURCHASE", StringComparison.OrdinalIgnoreCase) == true)
         {
             // ✅ SALES: Show only QUOTATION bills
             Quotationvisible = true;
@@ -2101,6 +2112,8 @@ width:fit-content;
              OnvoucherChanged(EditModel,EditModel.BillVoucherId);
             BillDetails = new List<BillDetail>();
             nextSNo = 1;
+            IsCreditnote = false;
+            Quotationvisible = true;
             Title = "Add Purchase Bill";
             InitializeInvoiceDetails();
             IsPartyLocked = false;
@@ -3327,7 +3340,13 @@ width:fit-content;
             }
 
             if (EditModel.BillJobNo == null)
+            {
+
+                ToastService.Error(
+                        "Please Select the Job No."
+                    );
                 return;
+            }
 
             // --- STEP 1: Apply Unsaved Changes ---
             foreach (var unsavedChange in UnsavedChanges)
