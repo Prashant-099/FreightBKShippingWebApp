@@ -70,8 +70,7 @@
                     <Items>
                         @* <DxToolbarItem Text="Send WhatsApp" IconCssClass="bi bi-whatsapp" Click="@(async () => await DownloadReport(true))" /> *@
                         <DxToolbarItem Text="Download PDF" IconCssClass="bi bi-printer" Click="@(async () => await PrintReports(false))" />
-                        @* <DxToolbarItem Text="Print Preview" IconCssClass="bi bi-printer" Click="@((_) => ShowReportPopup())"></DxToolbarItem> *@
-
+                        <DxToolbarItem Text="Print Preview" IconCssClass="bi bi-printer" Click="@((_) => PreviewReport())"></DxToolbarItem>
                     </Items>
                 </DxToolbarItem>
             </Items>
@@ -622,14 +621,44 @@
 
     private async Task PrintReports(bool sendViaWhatsapp)
     {
-        await ReportManager.PrintAsync<Job, JobreportDto>(
+        if (!SelectedJobs.Any())
+        {
+            ToastService.Warning("Please select at least one job.");
+            return;
+        }
+
+        await ReportManager.DownloadAsync<Job, JobreportDto>(
             SelectedJobs.Cast<Job>().ToList(),
 
             // Get ReportId from Job
-job => Task.FromResult(job.JobReportId ?? 0),
+            job => Task.FromResult(job.JobReportId ?? 0),
 
             // Get DTO
-            job => JobService.GetJobWithContainerAsync(job.JobId)
+            job => JobService.GetJobWithContainerAsync(job.JobId),
+
+            "JobReport.pdf"
+        );
+
+        await ClearSelection();
+    }
+
+    private async Task PreviewReport()
+    {
+        if (!SelectedJobs.Any())
+        {
+            ToastService.Warning("Please select at least one certificate.");
+            return;
+        }
+
+        await ReportManager.PreviewAsync<Job, JobreportDto>(
+            SelectedJobs.Cast<Job>().ToList(),
+
+            c => Task.FromResult(c.JobReportId ?? 0),
+
+            c => JobService.GetJobWithContainerAsync(c.JobId),
+
+            "Report.pdf"
+
         );
 
         await ClearSelection();

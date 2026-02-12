@@ -2,20 +2,28 @@
 {
     public interface IGenericReportManager
     {
-        Task PrintAsync<T, TDto>(
+        // 🔹 Core generator (Preview / Download / WhatsApp all use this)
+        Task<(byte[] pdfBytes, string fileName)> GeneratePdfAsync<T, TDto>(
             List<T> items,
             Func<T, Task<int>> getReportIdAsync,
-            Func<T, Task<TDto?>> getDtoAsync)
+            Func<T, Task<TDto?>> getDtoAsync,
+            string fileName = "Report.pdf")
             where TDto : class;
 
+        // 🔹 Download directly
         Task DownloadAsync<T, TDto>(
             List<T> items,
             Func<T, Task<int>> getReportIdAsync,
             Func<T, Task<TDto?>> getDtoAsync,
-            bool sendViaWhatsapp = false)
+            string fileName = "Report.pdf")
+            where TDto : class;
+
+
+        Task PreviewAsync<T, TDto>(
+            List<T> items,
+            Func<T, Task<int>> getReportIdAsync,
+            Func<T, Task<TDto?>> getDtoAsync,
+            string fileName = "Report.pdf")
             where TDto : class;
     }
-
-
-
 }

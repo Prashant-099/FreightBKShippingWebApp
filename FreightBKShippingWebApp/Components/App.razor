@@ -101,6 +101,14 @@
             }
         }
 
+        //preview pdf
+                window.previewPdfFromStream = async (fileName, contentStreamReference) => {
+            const arrayBuffer = await contentStreamReference.arrayBuffer();
+            const blob = new Blob([arrayBuffer], { type: "application/pdf" });
+            const url = URL.createObjectURL(blob);
+            window.open(url, "_blank");
+        };
+
     </script>
     <script src="js/javascriptforall.js"></script>
     <script src="_framework/blazor.web.js"></script>
