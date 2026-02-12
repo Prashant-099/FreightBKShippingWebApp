@@ -30,6 +30,7 @@
 @inject StatusService StatusService
 @inject VoucherService VoucherService
 @inject FileUploadService FileUploadService
+@inject ReportDataService ReportDataService
 @inject IJSRuntime JS
 
 <DxPopup @bind-Visible="Visible"
@@ -791,11 +792,37 @@ MinWidth="200"
         </EditForm>
     </BodyContentTemplate>
     <FooterContentTemplate Context="ftrbrnch">
+        <div class="my-footer">
+
+            <!-- LEFT SIDE -->
+            <div class="footer-left">
+                @* <DxComboBox TData="Account" TValue="int" 
+                            Data="@BankList"
+                            TextFieldName="AccountName"
+                            ValueFieldName="AccountId"
+                            AllowUserInput="true"
+                            NullText="-- Select Bank --"
+                            @bind-Value="EditModel.BillBankId"
+                            SearchMode="ListSearchMode.AutoSearch"
+                            SearchFilterCondition="ListSearchFilterCondition.StartsWith"
+                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" /> *@
+
+                <DxComboBox TData="ReportData" TValue="int?"
+                            Data="@ReportDataList"
+                            TextFieldName="FormatName"
+                            ValueFieldName="ReportDataId"
+                            AllowUserInput="true"
+                            NullText="-- Select Report --"
+                            @bind-Value="EditModel.JobReportId"
+                            SearchMode="ListSearchMode.AutoSearch"
+                            SearchFilterCondition="ListSearchFilterCondition.StartsWith"
+                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+            </div>
         <div class="mt-3 text-end">
             <DxButton RenderStyle="ButtonRenderStyle.Primary" Text="Save" SubmitFormOnClick="true" Form="jobForm" />
             <DxButton RenderStyle="ButtonRenderStyle.None" Text="Cancel" Click="Cancel" CssClass="ms-2" />
         </div>
-
+</div>
     </FooterContentTemplate>
 
 
@@ -832,7 +859,7 @@ MinWidth="200"
     private bool IsPreviewVisible = false;
     private UploadedFileInfo? PreviewFile;
     private FileUploadpopup? uploadPopup;
-
+    private List<ReportData> ReportDataList = new();
     // private List<UploadedFileInfo> UploadedDocs = new();
 
     private async Task LoadDocumentsAsync()
@@ -2077,7 +2104,7 @@ MinWidth="200"
         if (!branchId.HasValue) return;
 
         EditModel.JobBranchId = branchId.Value;
-        BranchContext.SetBranch(branchId.Value); // 🔥 global update
+        BranchContext.SetBranch(branchId.Value); 
         await LoadVoucherAndGenerateJobNo(branchId.Value);
     }
 
@@ -2096,6 +2123,7 @@ MinWidth="200"
                             if (voucher != null)
                             {
                                 // Example property name: change "VoucherMethod" to your real field
+                                         EditModel.JobReportId = voucher.VoucherReportId ?? 0; // Assuming you want to set report ID from voucher
                                         if (string.Equals(voucher.VoucherMethod, "Manual", StringComparison.OrdinalIgnoreCase))
                                 {
                                     JobnoVisible = false;
@@ -2212,6 +2240,8 @@ MinWidth="200"
             vessels = await VesselService.GetAllAsync();
             countryList = await CountryService.GetAllAsync();
             Currencies = await CurrencyService.GetAllAsync();
+           ReportDataList= await ReportDataService.GetAllAsync();
+
             if (Currencies.Any())
                 EditModel.JobDefCurrId = Currencies.First().CurrencyId;
 

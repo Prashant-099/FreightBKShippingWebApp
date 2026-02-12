@@ -4,7 +4,7 @@
 @using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Services
 @using static FreightBKShippingWebApp.Components.Pages.JOBpage.AddContainerJob
-
+@inject IGenericReportManager ReportManager
 @inject JobService JobService
 @inject ToasteService ToastService
 @inject LoadingService LoadingService
@@ -62,7 +62,18 @@
                 <DxToolbarItem Text="Delete" IconCssClass="bi bi-trash" Click="OnDelete" />
                 <DxToolbarItem Text="Import PDF" IconCssClass="bi bi-file-pdf-fill" Click="OnImportPDF" />
                 <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="LoadJobsAsync" />
-          
+                <DxToolbarItem Context="cfdr"
+                               Text="Print"
+                               RenderStyleMode="ToolbarItemRenderStyleMode.Contained"
+                               RenderStyle="ButtonRenderStyle.Secondary"
+                               IconCssClass="bi bi-printer">
+                    <Items>
+                        @* <DxToolbarItem Text="Send WhatsApp" IconCssClass="bi bi-whatsapp" Click="@(async () => await DownloadReport(true))" /> *@
+                        <DxToolbarItem Text="Download PDF" IconCssClass="bi bi-printer" Click="@(async () => await PrintReports(false))" />
+                        @* <DxToolbarItem Text="Print Preview" IconCssClass="bi bi-printer" Click="@((_) => ShowReportPopup())"></DxToolbarItem> *@
+
+                    </Items>
+                </DxToolbarItem>
             </Items>
         </DxToolbar>
     </ToolbarTemplate>
@@ -609,5 +620,20 @@
         }
     }
 
-   
+    private async Task PrintReports(bool sendViaWhatsapp)
+    {
+        await ReportManager.PrintAsync<Job, JobreportDto>(
+            SelectedJobs.Cast<Job>().ToList(),
+
+            // Get ReportId from Job
+job => Task.FromResult(job.JobReportId ?? 0),
+
+            // Get DTO
+            job => JobService.GetJobWithContainerAsync(job.JobId)
+        );
+
+        await ClearSelection();
+    }
+
+
 }

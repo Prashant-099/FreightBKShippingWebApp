@@ -92,5 +92,22 @@ namespace FreightBKShippingWebApp.Services
                 return (false, ex.Message);
             }
         }
+
+
+        // Get job with container + LRs
+        public async Task<JobreportDto?> GetJobWithContainerAsync(int jobId)
+        {
+            try
+            {
+                return await _api.GetFromJsonAsync<JobreportDto>(
+                    $"api/Job/getjobwithcontainer?jobid={jobId}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Error fetching job report {jobId}: {ex.Message}");
+                return null;
+            }
+        }
+
     }
 }
