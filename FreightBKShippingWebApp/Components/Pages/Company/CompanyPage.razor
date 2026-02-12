@@ -705,7 +705,7 @@
             {
                 foreach (var company in selectedList)
                 {
-                    await CompanyService.DeleteAsync(company.CompanyId);
+                    await CompanyService.DeleteAsync(company.CompanyId ?? 0);
                 }
 
                 ToastService.Success($"{SelectedCompanies.Count} company(s) deleted successfully.");

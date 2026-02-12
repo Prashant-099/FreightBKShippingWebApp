@@ -435,6 +435,8 @@ namespace FreightBKShippingWebApp.Model
 
         [Column("ismisc_service")]
         public bool? IsMiscService { get; set; }
+        [Column("job_report_id")]
+        public int? JobReportId { get; set; }
 
         [Column("job_shipment_type")]
         [StringLength(30)]

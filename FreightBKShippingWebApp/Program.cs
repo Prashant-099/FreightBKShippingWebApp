@@ -73,7 +73,7 @@ builder.Services.Configure<BrotliCompressionProviderOptions>(options =>
 });
 
 builder.Services.AddOutputCache();
-builder.Services.AddScoped<ApiClient>();
+builder.Services.AddHttpClient<ApiClient>();
 builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<BranchService>();
@@ -137,6 +137,7 @@ builder.Services.AddScoped<JournalService>();
 builder.Services.AddScoped<AuthTokenService>();
 builder.Services.AddScoped<IBranchContext, BranchContext>();
 builder.Services.AddScoped<ITokenProvider, TokenProvider>();
+builder.Services.AddScoped<IGenericReportManager, GenericReportManager>();
 
 //builder.Services.AddHttpClient<ApiClient>(client =>
 //{
@@ -149,6 +150,10 @@ builder.Services.AddHttpClient<ApiClient>(client =>
 //builder.Services.AddHttpClient<ApiClient>(client =>
 //{
 //    client.BaseAddress = new Uri("https://apihost.freightbook.in/");
+//});
+//builder.Services.AddHttpClient<ApiClient>(client =>
+//{
+//    client.BaseAddress = new Uri("http://apihost.freightbook.in/");
 //});
 builder.Services.AddLocalization();
 builder.Services.AddControllers();
