@@ -8,6 +8,9 @@
 @inject ReportDataService ReportDataService
 @inject ReportService ReportService
  @inject IJSRuntime JS
+
+@inject IGenericReportManager ReportManager
+
 @* <DxButton Text="Show Menu" Click="@OpenPopup" /> *@
 <style>
     .responsive-popup .dx-popup-content {
@@ -1092,7 +1095,92 @@
     }
 
 
-    async Task PrintPage(Lr lr)
+    // async Task PrintPage(Lr lr)
+    // {
+    //     if (lr == null)
+    //     {
+    //         ToastService.Warning("LR not found.");
+    //         return;
+    //     }
+
+    //     // ✅ Check if report is selected
+    //     if (!SelectedReportId.HasValue)
+    //     {
+    //         ToastService.Warning("Please select a report template first.");
+    //         return;
+    //     }
+
+    //     LoadingService.Show("Preparing print preview...");
+    //     try
+    //     {
+    //         // ✅ Use selected report ID
+    //         int reportId = SelectedReportId.Value;
+
+    //         var layoutBytes = await ReportDataService.GetLayoutBytesAsync(reportId);
+    //         if (layoutBytes == null || layoutBytes.Length == 0)
+    //         {
+    //             ToastService.Error("Report layout not found.");
+    //             return;
+    //         }
+
+    //         var dto = await ContainerAddServices.GetPrintableLrAsync(lr.LrId);
+    //         if (dto == null)
+    //         {
+    //             ToastService.Error("Nothing to print.");
+    //             return;
+    //         }
+
+    //         var lrList = new List<Lr> { lr };
+    //         var dtoDict = lrList.ToDictionary(x => x, x => (PrintLrFullDto?)dto);
+
+    //         try
+    //         {
+    //             await ReportService.CreateMergedReportAsync(
+    //                 lrList,
+    //                 item => dtoDict.ContainsKey(item) ? dtoDict[item] : null,
+    //                 layoutBytes
+    //             );
+    //         }
+    //         catch (InvalidOperationException ex) when (ex.Message.Contains("CodeDOM"))
+    //         {
+    //             ToastService.Error("Report template incompatible. Contact admin.");
+    //             return;
+    //         }
+
+    //         if (ReportService.MergedReport == null)
+    //         {
+    //             ToastService.Error("Report generation failed.");
+    //             return;
+    //         }
+
+    //         var report = ReportService.MergedReport;
+
+    //         if (report.Pages.Count == 0)
+    //             report.CreateDocument();
+
+    //         using var pdfStream = new MemoryStream();
+    //         report.ExportToPdf(pdfStream);
+    //         pdfStream.Position = 0;
+
+    //         using var streamRef = new Microsoft.JSInterop.DotNetStreamReference(pdfStream);
+    //         await JS.InvokeVoidAsync("downloadPdfFromStream", $"LR_{lr.LrNoStr}.pdf", streamRef);
+
+    //         // ✅ Show which report was used
+    //         var reportName = ReportDataList.FirstOrDefault(r => r.ReportDataId == reportId)?.FormatName ?? "Report";
+    //         ToastService.Success($"LR {lr.LrNoStr} printed with {reportName}");
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         ToastService.Error($"Print failed: {ex.Message}");
+    //     }
+    //     finally
+    //     {
+    //         LoadingService.Hide();
+    //     }
+    // }
+
+
+    private async Task PrintPage(Lr lr)
     {
         if (lr == null)
         {
@@ -1100,75 +1188,49 @@
             return;
         }
 
-        // ✅ Check if report is selected
         if (!SelectedReportId.HasValue)
         {
             ToastService.Warning("Please select a report template first.");
             return;
         }
 
-        LoadingService.Show("Preparing print preview...");
         try
         {
-            // ✅ Use selected report ID
-            int reportId = SelectedReportId.Value;
-
-            var layoutBytes = await ReportDataService.GetLayoutBytesAsync(reportId);
-            if (layoutBytes == null || layoutBytes.Length == 0)
-            {
-                ToastService.Error("Report layout not found.");
-                return;
-            }
-
-            var dto = await ContainerAddServices.GetPrintableLrAsync(lr.LrId);
-            if (dto == null)
-            {
-                ToastService.Error("Nothing to print.");
-                return;
-            }
+            LoadingService.Show("Preparing preview...");
 
             var lrList = new List<Lr> { lr };
-            var dtoDict = lrList.ToDictionary(x => x, x => (PrintLrFullDto?)dto);
 
-            try
+            // 🔹 Dynamic filename
+            var fileName = $"LR_{lr.LrNoStr}.pdf";
+
+            // Remove invalid filename characters
+            foreach (var c in Path.GetInvalidFileNameChars())
             {
-                await ReportService.CreateMergedReportAsync(
-                    lrList,
-                    item => dtoDict.ContainsKey(item) ? dtoDict[item] : null,
-                    layoutBytes
-                );
-            }
-            catch (InvalidOperationException ex) when (ex.Message.Contains("CodeDOM"))
-            {
-                ToastService.Error("Report template incompatible. Contact admin.");
-                return;
+                fileName = fileName.Replace(c, '_');
             }
 
-            if (ReportService.MergedReport == null)
-            {
-                ToastService.Error("Report generation failed.");
-                return;
-            }
+            // 🔹 Use central preview logic
+            await ReportManager.PreviewAsync<Lr, PrintLrFullDto>(
+                lrList,
 
-            var report = ReportService.MergedReport;
+                // Get selected ReportId
+                item => Task.FromResult(SelectedReportId.Value),
 
-            if (report.Pages.Count == 0)
-                report.CreateDocument();
+                // Get DTO
+                item => ContainerAddServices.GetPrintableLrAsync(item.LrId),
+                items => "LR",
+                fileName
+            );
 
-            using var pdfStream = new MemoryStream();
-            report.ExportToPdf(pdfStream);
-            pdfStream.Position = 0;
+            var reportName = ReportDataList
+                .FirstOrDefault(r => r.ReportDataId == SelectedReportId.Value)
+                ?.FormatName ?? "Report";
 
-            using var streamRef = new Microsoft.JSInterop.DotNetStreamReference(pdfStream);
-            await JS.InvokeVoidAsync("downloadPdfFromStream", $"LR_{lr.LrNoStr}.pdf", streamRef);
-
-            // ✅ Show which report was used
-            var reportName = ReportDataList.FirstOrDefault(r => r.ReportDataId == reportId)?.FormatName ?? "Report";
-            ToastService.Success($"LR {lr.LrNoStr} printed with {reportName}");
+            ToastService.Success($"LR {lr.LrNoStr} previewed with {reportName}");
         }
         catch (Exception ex)
         {
-            ToastService.Error($"Print failed: {ex.Message}");
+            ToastService.Error($"Preview failed: {ex.Message}");
         }
         finally
         {
