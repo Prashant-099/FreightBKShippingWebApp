@@ -121,6 +121,22 @@ namespace FreightBKShippingWebApp.Services
             }
 
         }
+        //added by dhruv - get report data by doctype
+        public async Task<int?> GetDefaultReportIdByTypeAsync(string docType)
+        {
+            try
+            {
+                var response = await _apiClient
+                    .GetFromJsonAsync<int>($"api/ReportData/default-report-id?docType={docType}");
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Error fetching default report id: {ex.Message}");
+                return null;
+            }
+        }
 
         // 🔹 Get raw layout (bytes) by numeric id
         public async Task<byte[]?> GetLayoutBytesAsync(int layoutId)
