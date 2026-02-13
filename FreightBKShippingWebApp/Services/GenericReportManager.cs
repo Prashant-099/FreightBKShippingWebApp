@@ -25,10 +25,73 @@ namespace FreightBKShippingWebApp.Services
             _loading = loading;
         }
 
-        public async Task PrintAsync<T, TDto>(
+        // ============================================================
+        // 🔹 MAIN METHOD → GENERATE PDF BYTES (Reusable Core Logic)
+        // ============================================================
+
+        public async Task<(byte[] pdfBytes, string fileName)> GeneratePdfAsync<T, TDto>(
             List<T> items,
             Func<T, Task<int>> getReportIdAsync,
-            Func<T, Task<TDto?>> getDtoAsync)
+            Func<T, Task<TDto?>> getDtoAsync,
+            string fileName = "Report.pdf")
+            where TDto : class
+        {
+            if (items == null || !items.Any())
+                throw new Exception("Select at least one item.");
+
+            var reportGroups = await BuildReportGroupsAsync(items, getReportIdAsync);
+            var allReports = new List<XtraReport>();
+
+            foreach (var group in reportGroups)
+            {
+                var reportId = group.Key;
+                var groupItems = group.Value;
+
+                if (reportId <= 0)
+                    continue;
+
+                var layoutBytes = await _reportDataService
+                    .GetLayoutBytesAsync(reportId);
+
+                if (layoutBytes == null || layoutBytes.Length == 0)
+                    continue;
+
+                var dtoDict = new Dictionary<T, TDto?>();
+
+                foreach (var item in groupItems)
+                {
+                    dtoDict[item] = await getDtoAsync(item);
+                }
+
+                var report = await _reportService.CreateMergedReportAsync<T, TDto>(
+                    groupItems,
+                    item => dtoDict.TryGetValue(item, out var dto) ? dto : null,
+                    layoutBytes);
+
+                if (report != null)
+                    allReports.Add(report);
+            }
+
+            if (!allReports.Any())
+                throw new Exception("No reports generated.");
+
+            var finalReport = MergeReports(allReports);
+
+            using var stream = new MemoryStream();
+            finalReport.ExportToPdf(stream);
+
+            return (stream.ToArray(), fileName);
+        }
+
+        // ============================================================
+        // 🔹 DOWNLOAD PDF
+        // ============================================================
+
+        public async Task DownloadAsync<T, TDto>(
+            List<T> items,
+            Func<T, Task<int>> getReportIdAsync,
+            Func<T, Task<TDto?>> getDtoAsync,
+            string fileName = "Report.pdf")
             where TDto : class
         {
             if (items == null || !items.Any())
@@ -37,55 +100,30 @@ namespace FreightBKShippingWebApp.Services
                 return;
             }
 
-            _loading.Show("Building PDF...");
-
             try
             {
-                // 🔹 Resolve report groups
-                var reportGroups = await BuildReportGroupsAsync(items, getReportIdAsync);
+                _loading.Show("Building PDF...");
 
-                var allReports = new List<XtraReport>();
+                var (pdfBytes, finalFileName) =
+                    await GeneratePdfAsync(
+                        items,
+                        getReportIdAsync,
+                        getDtoAsync,
+                        fileName);
 
-                foreach (var (reportId, groupItems) in reportGroups)
-                {
-                    var layoutBytes = await _reportDataService
-                        .GetLayoutBytesAsync(reportId);
+                using var stream = new MemoryStream(pdfBytes);
+                using var streamRef = new DotNetStreamReference(stream);
 
-                    if (layoutBytes == null || layoutBytes.Length == 0)
-                    {
-                        _toast.Error($"Layout not found for Report ID: {reportId}");
-                        continue;
-                    }
-
-                    var dtoDict = new Dictionary<T, TDto?>();
-
-                    foreach (var item in groupItems)
-                    {
-                        dtoDict[item] = await getDtoAsync(item);
-                    }
-
-                    await _reportService.CreateMergedReportAsync<T, TDto>(
-                        groupItems,
-                        item => dtoDict.TryGetValue(item, out var dto) ? dto : null,
-                        layoutBytes);
-
-                    if (_reportService.MergedReport != null)
-                        allReports.Add(_reportService.MergedReport);
-                }
-
-                if (!allReports.Any())
-                {
-                    _toast.Error("No reports generated.");
-                    return;
-                }
-
-                await ExportReportsAsync(allReports, "Report.pdf");
+                await _js.InvokeVoidAsync(
+                    "downloadPdfFromStream",
+                    finalFileName,
+                    streamRef);
 
                 _toast.Success("PDF downloaded successfully.");
             }
             catch (Exception ex)
             {
-                _toast.Error($"Failed to generate report: {ex.Message}");
+                _toast.Error(ex.Message);
             }
             finally
             {
@@ -93,20 +131,9 @@ namespace FreightBKShippingWebApp.Services
             }
         }
 
-        public async Task DownloadAsync<T, TDto>(
-            List<T> items,
-            Func<T, Task<int>> getReportIdAsync,
-            Func<T, Task<TDto?>> getDtoAsync,
-            bool sendViaWhatsapp = false)
-            where TDto : class
-        {
-            // For now reuse same logic
-            await PrintAsync(items, getReportIdAsync, getDtoAsync);
-
-            // Later you can add:
-            // - Blob upload
-            // - WhatsApp sending
-        }
+        // ============================================================
+        // 🔹 INTERNAL → GROUP BY REPORT ID
+        // ============================================================
 
         private async Task<Dictionary<int, List<T>>> BuildReportGroupsAsync<T>(
             List<T> items,
@@ -118,6 +145,9 @@ namespace FreightBKShippingWebApp.Services
             {
                 var reportId = await getReportIdAsync(item);
 
+                if (reportId <= 0)
+                    continue;
+
                 if (!result.ContainsKey(reportId))
                     result[reportId] = new List<T>();
 
@@ -127,23 +157,9 @@ namespace FreightBKShippingWebApp.Services
             return result;
         }
 
-        private async Task ExportReportsAsync(
-            List<XtraReport> reports,
-            string fileName)
-        {
-            var finalReport = MergeReports(reports);
-
-            using var stream = new MemoryStream();
-            finalReport.ExportToPdf(stream);
-            stream.Position = 0;
-
-            using var streamRef = new DotNetStreamReference(stream);
-
-            await _js.InvokeVoidAsync(
-                "downloadFileFromStream",
-                fileName,
-                streamRef);
-        }
+        // ============================================================
+        // 🔹 MERGE MULTIPLE REPORTS
+        // ============================================================
 
         private XtraReport MergeReports(List<XtraReport> reports)
         {
@@ -157,13 +173,55 @@ namespace FreightBKShippingWebApp.Services
                 if (report.Pages.Count == 0)
                     report.CreateDocument();
 
-                foreach (DevExpress.XtraPrinting.Page page in report.Pages)
-                {
-                    combinedReport.Pages.Add(page);
-                }
+                combinedReport.Pages.AddRange(report.Pages);
             }
 
             return combinedReport;
         }
+
+        public async Task PreviewAsync<T, TDto>(
+    List<T> items,
+    Func<T, Task<int>> getReportIdAsync,
+    Func<T, Task<TDto?>> getDtoAsync,
+    string fileName = "Report.pdf")
+    where TDto : class
+        {
+            if (items == null || !items.Any())
+            {
+                _toast.Warning("Select at least one item.");
+                return;
+            }
+
+            try
+            {
+                _loading.Show("Generating preview...");
+
+                var (pdfBytes, finalFileName) =
+                    await GeneratePdfAsync(
+                        items,
+                        getReportIdAsync,
+                        getDtoAsync,
+                        fileName);
+
+                using var stream = new MemoryStream(pdfBytes);
+                using var streamRef = new DotNetStreamReference(stream);
+
+                await _js.InvokeVoidAsync(
+                    "previewPdfFromStream",
+                    finalFileName,
+                    streamRef);
+            }
+            catch (Exception ex)
+            {
+                _toast.Error(ex.Message);
+            }
+            finally
+            {
+                _loading.Hide();
+            }
+        }
+
     }
+
+
 }
