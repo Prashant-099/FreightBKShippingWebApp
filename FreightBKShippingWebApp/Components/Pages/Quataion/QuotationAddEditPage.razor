@@ -26,6 +26,7 @@
 @inject GridLayoutService GridLayoutService
 @inject LocationService LocationService
 @inject NotifyService NotifyService
+@inject CurrencyService CurrencyService
 @inject IBranchContext BranchContext
 
 <style>
@@ -506,7 +507,27 @@
                                             <DxSpinEditSettings ShowSpinButtons="false" />
                                         </EditSettings>
                                     </DxGridDataColumn>
+                                    <DxGridDataColumn FieldName="BillDetailExchRate" Caption="Ex. Rate" Visible="@(layoutManager?.GetColumnVisibility("BillDetailExchRate") ?? true)"
+                                                      Width="@(layoutManager?.GetColumnWidth("BillDetailExchRate") ?? "100px")">
+                                        <EditSettings>
+                                            <DxSpinEditSettings ShowSpinButtons="false" />
+                                        </EditSettings>
+                                    </DxGridDataColumn>
 
+                                    <DxGridDataColumn FieldName="BillDetailCurrencyId" Caption="Curr." Visible="@(layoutManager?.GetColumnVisibility("BillDetailCurrencyId") ?? true)"
+                                                      Width="@(layoutManager?.GetColumnWidth("BillDetailCurrencyId") ?? "90px")">
+                                        <EditSettings>
+                                            <DxComboBoxSettings Data="@CurrList"
+                                                                TextFieldName="CurrencySymbol"
+                                                                ValueFieldName="CurrencyId" />
+                                        </EditSettings>
+                                    </DxGridDataColumn>
+                                    <DxGridDataColumn FieldName="BillDetailExtraChrg" Caption="Extra" Visible="@(layoutManager?.GetColumnVisibility("BillDetailExtraChrg") ?? true)"
+                                                      Width="@(layoutManager?.GetColumnWidth("BillDetailExtraChrg") ?? "100px")">
+                                        <EditSettings>
+                                            <DxSpinEditSettings ShowSpinButtons="false" />
+                                        </EditSettings>
+                                    </DxGridDataColumn>
                                     <DxGridDataColumn FieldName="BillDetailTaxableAmt" ReadOnly="true" Caption="Taxable"
                                                       Visible="@(layoutManager?.GetColumnVisibility("BillDetailTaxableAmt") ?? true)"
                                                       Width="@(layoutManager?.GetColumnWidth("BillDetailTaxableAmt") ?? "120px")">
@@ -783,15 +804,18 @@
             new() { FieldName = "BillDetailRate", Caption = "Sale Rate", Visible = true, Width = 100, DisplayIndex = 7 },
             new() { FieldName = "BillDetailQty", Caption = "Qty", Visible = true, Width = 100, DisplayIndex = 8 },
             new() { FieldName = "BillDetailAmount", Caption = "Amount", Visible = true, Width = 120, DisplayIndex = 9 },
-            new() { FieldName = "BillDetailTaxableAmt", Caption = "Taxable", Visible = true, Width = 100, DisplayIndex = 10 },
-            new() { FieldName = "BillDetailSlabId", Caption = "Tax Code", Visible = true, Width = 100, DisplayIndex = 11 },
-            new() { FieldName = "BillDetailIgstPer", Caption = "IGST %", Visible = true, Width = 80, DisplayIndex = 12 },
-            new() { FieldName = "BillDetailIgst", Caption = "IGST", Visible = true, Width = 80, DisplayIndex = 13 },
-            new() { FieldName = "BillDetailCgstPer", Caption = "CGST %", Visible = true, Width = 80, DisplayIndex = 14 },
-            new() { FieldName = "BillDetailCgst", Caption = "CGST", Visible = true, Width = 80, DisplayIndex = 15 },
-            new() { FieldName = "BillDetailSgstPer", Caption = "SGST %", Visible = true, Width = 80, DisplayIndex = 16 },
-            new() { FieldName = "BillDetailSgst", Caption = "SGST", Visible = true, Width = 80, DisplayIndex = 17 },
-            new() { FieldName = "BillDetailTotal", Caption = "Total", Visible = true, Width = 120, DisplayIndex = 18 }
+             new() { FieldName = "BillDetailExchRate", Caption = "Ex. Rate", Visible = true, Width = 100, DisplayIndex = 10 },
+        new() { FieldName = "BillDetailCurrencyId", Caption = "Curr.", Visible = true, Width = 80, DisplayIndex = 11 },
+         new() { FieldName = "BillDetailExtraChrg", Caption = "ExtraCharge", Visible = true, Width = 80, DisplayIndex = 12 },
+            new() { FieldName = "BillDetailTaxableAmt", Caption = "Taxable", Visible = true, Width = 100, DisplayIndex = 13 },
+            new() { FieldName = "BillDetailSlabId", Caption = "Tax Code", Visible = true, Width = 100, DisplayIndex = 14 },
+            new() { FieldName = "BillDetailIgstPer", Caption = "IGST %", Visible = true, Width = 80, DisplayIndex = 15 },
+            new() { FieldName = "BillDetailIgst", Caption = "IGST", Visible = true, Width = 80, DisplayIndex = 16 },
+            new() { FieldName = "BillDetailCgstPer", Caption = "CGST %", Visible = true, Width = 80, DisplayIndex = 17 },
+            new() { FieldName = "BillDetailCgst", Caption = "CGST", Visible = true, Width = 80, DisplayIndex = 18},
+            new() { FieldName = "BillDetailSgstPer", Caption = "SGST %", Visible = true, Width = 80, DisplayIndex = 19 },
+            new() { FieldName = "BillDetailSgst", Caption = "SGST", Visible = true, Width = 80, DisplayIndex = 20 },
+            new() { FieldName = "BillDetailTotal", Caption = "Total", Visible = true, Width = 120, DisplayIndex = 21 }
         };
     }
 
@@ -825,6 +849,7 @@
     private List<Branch> branchList = new();
     private List<ReportData> ReportDataList = new();
     private List<Account> BankList = new();
+        private List<Currency> CurrList = new();
 
     private List<Location> locationList = new();
     private List<Notify> LineList = new();
@@ -883,8 +908,9 @@
             var reportTask = ReportDataService.GetAllAsync();
             var locationTask = LocationService.GetAllAsync();
             var notifyTask = NotifyService.GetAllAsync();
+             var currTask = CurrencyService.GetAllAsync();
 
-            await Task.WhenAll(serviceTask, voucherTask, unitTask, hsnTask, gstTask, reportTask, locationTask, notifyTask);
+            await Task.WhenAll(serviceTask, voucherTask, unitTask, hsnTask, gstTask, reportTask, locationTask, notifyTask, currTask);
 
             // Only get QUOTATION voucher types
             VoucherList = voucherTask.Result
@@ -899,6 +925,8 @@
             UnitList = unitTask.Result;
             HsnList = hsnTask.Result;
             GstslabList = gstTask.Result;
+            
+            CurrList = currTask.Result;
 
             isBackgroundDataLoaded = true;
             StateHasChanged();
@@ -1053,6 +1081,8 @@
                     BillDetailId = 0,
                     BillDetailQty = 1,
                     BillDetailRate = 0,
+                    BillDetailExchRate=1,
+                    BillDetailExtraChrg=0,
                     BillDetailActualRate = 0, // ✅ Initialize purchase rate
                     BillDetailStatus = true
                 });
@@ -1350,6 +1380,47 @@
 
         InvokeAsync(StateHasChanged);
     }
+    private string ConvertNumberToWords(decimal number)
+    {
+        if (EditModel == null)
+            return string.Empty;
+
+        if (number == 0)
+        {
+            EditModel.BillAmountInWord = "Zero Rupees Only";
+            return EditModel.BillAmountInWord;
+        }
+
+        string[] unitsMap = { "Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen" };
+        string[] tensMap = { "Zero", "Ten", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety" };
+
+        string ConvertIntPart(long n)
+        {
+            if (n == 0)
+                return "";
+            if (n < 20)
+                return unitsMap[n];
+            if (n < 100)
+                return tensMap[n / 10] + (n % 10 > 0 ? " " + unitsMap[n % 10] : "");
+            if (n < 1000)
+                return unitsMap[n / 100] + " Hundred" + (n % 100 > 0 ? " and " + ConvertIntPart(n % 100) : "");
+            if (n < 100000)
+                return ConvertIntPart(n / 1000) + " Thousand" + (n % 1000 > 0 ? " " + ConvertIntPart(n % 1000) : "");
+            if (n < 10000000)
+                return ConvertIntPart(n / 100000) + " Lakh" + (n % 100000 > 0 ? " " + ConvertIntPart(n % 100000) : "");
+            return ConvertIntPart(n / 10000000) + " Crore" + (n % 10000000 > 0 ? " " + ConvertIntPart(n % 10000000) : "");
+        }
+
+        long intPart = (long)Math.Floor(number);
+        int decimalPart = (int)((number - intPart) * 100);
+
+        string words = ConvertIntPart(intPart) + " Rupees";
+        if (decimalPart > 0)
+            words += " and " + ConvertIntPart(decimalPart) + " Paise";
+
+        EditModel.BillAmountInWord = words + " Only";
+        return EditModel.BillAmountInWord;
+    }
 
     private double? ParseDouble(object value)
     {
@@ -1476,7 +1547,7 @@
         }
 
         item.BillDetailAmount = (double)(item.BillDetailQty * item?.BillDetailRate??0);
-        item.BillDetailTaxableAmt = item.BillDetailAmount;
+        item.BillDetailTaxableAmt = item.BillDetailAmount * item.BillDetailExchRate + item.BillDetailExtraChrg; ;
         item.BillDetailTotal = item.BillDetailTaxableAmt + item.BillDetailIgst + item.BillDetailCgst + item.BillDetailSgst;
 
         if (EditModel != null)
@@ -1519,6 +1590,7 @@
             EditModel.BillRoundAmt = 0;
             EditModel.BillNetAmount = (float)Math.Round(baseAmount, 2);
         }
+        ConvertNumberToWords((decimal)EditModel.BillNetAmount);
     }
 
     private HashSet<string> ApplyModifiedFields(BillDetail source, BillDetail target)
