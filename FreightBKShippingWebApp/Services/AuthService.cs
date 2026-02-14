@@ -44,70 +44,114 @@ namespace FreightBKShippingWebApp.Services
         }
 
 
+        //public async Task<LoginResponseModel?> LoginAsync(LoginModel model)
+        //{
+        //    try
+        //    {
+        //        if (model == null ||
+        //            string.IsNullOrWhiteSpace(model.UserEmail) ||
+        //            string.IsNullOrWhiteSpace(model.UserPassword))
+        //        {
+        //            return null;
+        //        }
+
+        //        var result = await _api.PostAsync<LoginResponseModel, LoginModel>(
+        //            "api/Auth/login", model);
+
+        //        if (result == null || string.IsNullOrWhiteSpace(result.Token))
+        //            return null;
+
+        //        // ================= BRANCH DECISION =================
+        //        int activeBranchId = ResolveActiveBranch(result);
+
+        //        if (activeBranchId > 0)
+        //        {
+        //            // 🔥 SINGLE SOURCE OF TRUTH
+        //            _branchContext.SetBranch(activeBranchId);
+
+        //            result.ActiveBranchId = activeBranchId;
+
+        //            await _localStorage.SetAsync("activeBranchId", activeBranchId);
+
+        //            Console.WriteLine($"🌿 Active Branch Selected: {activeBranchId}");
+        //        }
+
+        //        // ================= TOKEN INFO =================
+        //        var userId = BaseService.JwtHelper.GetUserIdFromToken(result.Token);
+        //        var branches = await _branchService.GetBranchesForCurrentUserAsync();
+        //        _branchContext.SetUserBranches(branches);
+
+        //        if (branches.Any())
+        //        {
+        //            _branchContext.SetBranch(branches.First().BranchId);
+        //        }
+        //        var companyId = BaseService.JwtHelper.GetCompanyIdFromToken(result.Token);
+
+        //        await _localStorage.SetAsync("loggedInUserId", userId);
+        //        await _localStorage.SetAsync("loggedInCompanyId", companyId);
+
+        //        // ================= SESSION =================
+        //        await _localStorage.SetAsync("sessionState", result);
+
+        //        // ================= AUTH =================
+        //        await ((CustomAuthStateProvider)_authStateProvider)
+        //            .MarkUserAsAuthenticated(result);
+
+        //        // 🚀 Redirect only AFTER branch is set
+        //        _navigationManager.NavigateTo("/", true);
+
+        //        return result;
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Console.WriteLine($"🔥 LoginAsync Error: {ex}");
+        //        return null;
+        //    }
+        //}
+
         public async Task<LoginResponseModel?> LoginAsync(LoginModel model)
         {
-            try
+            if (model == null ||
+                string.IsNullOrWhiteSpace(model.UserEmail) ||
+                string.IsNullOrWhiteSpace(model.UserPassword))
             {
-                if (model == null ||
-                    string.IsNullOrWhiteSpace(model.UserEmail) ||
-                    string.IsNullOrWhiteSpace(model.UserPassword))
-                {
-                    return null;
-                }
-
-                var result = await _api.PostAsync<LoginResponseModel, LoginModel>(
-                    "api/Auth/login", model);
-
-                if (result == null || string.IsNullOrWhiteSpace(result.Token))
-                    return null;
-
-                // ================= BRANCH DECISION =================
-                int activeBranchId = ResolveActiveBranch(result);
-
-                if (activeBranchId > 0)
-                {
-                    // 🔥 SINGLE SOURCE OF TRUTH
-                    _branchContext.SetBranch(activeBranchId);
-
-                    result.ActiveBranchId = activeBranchId;
-
-                    await _localStorage.SetAsync("activeBranchId", activeBranchId);
-
-                    Console.WriteLine($"🌿 Active Branch Selected: {activeBranchId}");
-                }
-
-                // ================= TOKEN INFO =================
-                var userId = BaseService.JwtHelper.GetUserIdFromToken(result.Token);
-                var branches = await _branchService.GetBranchesForCurrentUserAsync();
-                _branchContext.SetUserBranches(branches);
-
-                if (branches.Any())
-                {
-                    _branchContext.SetBranch(branches.First().BranchId);
-                }
-                var companyId = BaseService.JwtHelper.GetCompanyIdFromToken(result.Token);
-
-                await _localStorage.SetAsync("loggedInUserId", userId);
-                await _localStorage.SetAsync("loggedInCompanyId", companyId);
-
-                // ================= SESSION =================
-                await _localStorage.SetAsync("sessionState", result);
-
-                // ================= AUTH =================
-                await ((CustomAuthStateProvider)_authStateProvider)
-                    .MarkUserAsAuthenticated(result);
-
-                // 🚀 Redirect only AFTER branch is set
-                _navigationManager.NavigateTo("/", true);
-
-                return result;
+                throw new Exception("Email and password are required.");
             }
-            catch (Exception ex)
+
+            var result = await _api.PostAsync<LoginResponseModel, LoginModel>(
+                "api/Auth/login", model);
+
+            if (result == null || string.IsNullOrWhiteSpace(result.Token))
+                throw new Exception("Login failed. Please try again.");
+
+            // ================= BRANCH DECISION =================
+            int activeBranchId = ResolveActiveBranch(result);
+
+            if (activeBranchId > 0)
             {
-                Console.WriteLine($"🔥 LoginAsync Error: {ex}");
-                return null;
+                _branchContext.SetBranch(activeBranchId);
+                result.ActiveBranchId = activeBranchId;
+                await _localStorage.SetAsync("activeBranchId", activeBranchId);
             }
+
+            // ================= TOKEN INFO =================
+            var userId = BaseService.JwtHelper.GetUserIdFromToken(result.Token);
+            var companyId = BaseService.JwtHelper.GetCompanyIdFromToken(result.Token);
+
+            await _localStorage.SetAsync("loggedInUserId", userId);
+            await _localStorage.SetAsync("loggedInCompanyId", companyId);
+            await _localStorage.SetAsync("sessionState", result);
+
+            await ((CustomAuthStateProvider)_authStateProvider)
+                .MarkUserAsAuthenticated(result);
+
+            _navigationManager.NavigateTo("/", true);
+
+            return result;
         }
+
+
+
 
         //public async Task<LoginResponseModel?> LoginAsync(LoginModel model)
         //{

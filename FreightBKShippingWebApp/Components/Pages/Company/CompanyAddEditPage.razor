@@ -1,6 +1,8 @@
 ﻿@using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Models
 @using FreightBKShippingWebApp.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthStateProvider
 @inject CompanyService CompanyService
 @inject ToasteService ToastService
 @inject LoadingService LoadingService
@@ -24,129 +26,183 @@
             <DataAnnotationsValidator />
 
             <DxFormLayout>
-                <DxFormLayoutItem Caption="Company Name" ColSpanMd="12">
-                    <ChildContent Context="ctx">
+
+                <!-- BASIC INFO -->
+                <DxFormLayoutGroup Caption="Basic Information">
+
+                    <DxFormLayoutItem Caption="Company Name" ColSpanMd="12">
                         <DxTextBox @bind-Text="EditModel.Name"
                                    @oninput="AutoFillPrintName"
                                    ShowValidationIcon="true"
                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
-                    </ChildContent>
-                </DxFormLayoutItem>
+                    </DxFormLayoutItem>
 
-                <DxFormLayoutItem Caption="Print Name"ColSpanMd="12">
-                    <ChildContent Context="ctx">
+                    <DxFormLayoutItem Caption="Print Name" ColSpanMd="12">
                         <DxTextBox @bind-Text="EditModel.PrintName"
                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
-                    </ChildContent>
-                </DxFormLayoutItem>
+                    </DxFormLayoutItem>
 
-                @* <DxFormLayoutItem Caption="Code">
-                    <ChildContent Context="ctx">
-                        <DxTextBox @bind-Text="EditModel.Code"
-                                   ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
-                    </ChildContent>
-                </DxFormLayoutItem> *@
-                <DxFormLayoutItem Caption="Address" ColSpanMd="12">
-                    <ChildContent Context="ctx">
+                    <DxFormLayoutItem Caption="Address" ColSpanMd="12">
                         <DxMemo @bind-Text="EditModel.Address1"
                                 Rows="2"
                                 ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
-                    </ChildContent>
-                </DxFormLayoutItem>
-                <DxFormLayoutItem Caption="GSTIN">
-                    <ChildContent Context="ctx">
-                        <DxTextBox @bind-Text="EditModel.Gstin"
-                                   ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
-                    </ChildContent>
-                </DxFormLayoutItem>
+                    </DxFormLayoutItem>
 
-                <DxFormLayoutItem Caption="PAN">
-                    <ChildContent Context="ctx">
-                        <DxTextBox @bind-Text="EditModel.Panno"
-                                   ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
-                    </ChildContent>
-                </DxFormLayoutItem>
-
-               
-
-                <DxFormLayoutItem Caption="City">
-                    <ChildContent Context="ctx">
+                    <DxFormLayoutItem Caption="City">
                         <DxTextBox @bind-Text="EditModel.City"
                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
-                    </ChildContent>
-                </DxFormLayoutItem>
+                    </DxFormLayoutItem>
 
-                <DxFormLayoutItem Caption="State">
-                    <Template Context="ctx">
+                    <DxFormLayoutItem Caption="Pincode">
+                        <DxTextBox @bind-Text="EditModel.Pincode"
+                                   ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                    </DxFormLayoutItem>
+
+                    <DxFormLayoutItem Caption="State">
                         <DxComboBox TData="State"
                                     TValue="int"
                                     Data="@stateList"
                                     TextFieldName="StateName"
                                     ValueFieldName="StateId"
-                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
-                                    AllowUserInput="false"
-                                    ShowValidationIcon="true"
                                     NullText="-- Select State --"
                                     @bind-Value="EditModel.StateId"
                                     SearchMode="ListSearchMode.AutoSearch"
                                     SearchFilterCondition="ListSearchFilterCondition.Contains" />
-                    </Template>
-                </DxFormLayoutItem>
+                    </DxFormLayoutItem>
 
-                <DxFormLayoutItem Caption="Country">
-                    <ChildContent Context="ctx">
+                    <DxFormLayoutItem Caption="Country">
                         <DxComboBox TData="Country"
                                     TValue="String"
                                     Data="@CountryList"
                                     TextFieldName="CountryName"
                                     ValueFieldName="CountryName"
-                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
-                                    AllowUserInput="false"
                                     NullText="-- Select Country --"
                                     @bind-Value="EditModel.Country"
                                     SearchMode="ListSearchMode.AutoSearch"
                                     SearchFilterCondition="ListSearchFilterCondition.Contains" />
-                    </ChildContent>
-                </DxFormLayoutItem>
+                    </DxFormLayoutItem>
 
-                <DxFormLayoutItem Caption="Email">
-                    <ChildContent Context="ctx">
+                </DxFormLayoutGroup>
+
+                <!-- CONTACT INFO -->
+                <DxFormLayoutGroup Caption="Contact Information">
+
+                    <DxFormLayoutItem Caption="Email">
                         <DxTextBox @bind-Text="EditModel.Email"
                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
-                    </ChildContent>
-                </DxFormLayoutItem>
+                    </DxFormLayoutItem>
 
-                <DxFormLayoutItem Caption="Mobile">
-                    <ChildContent Context="ctx">
+                    <DxFormLayoutItem Caption="Mobile">
                         <DxTextBox @bind-Text="EditModel.Mobile"
                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
-                    </ChildContent>
-                </DxFormLayoutItem>
+                    </DxFormLayoutItem>
 
-                <DxFormLayoutItem Caption="Website">
-                    <ChildContent Context="ctx">
+                    <DxFormLayoutItem Caption="Telephone">
+                        <DxTextBox @bind-Text="EditModel.Telephone"
+                                   ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                    </DxFormLayoutItem>
+
+                    <DxFormLayoutItem Caption="Fax">
+                        <DxTextBox @bind-Text="EditModel.Fax"
+                                   ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                    </DxFormLayoutItem>
+
+                    <DxFormLayoutItem Caption="Website">
                         <DxTextBox @bind-Text="EditModel.Website"
                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
-                    </ChildContent>
-                </DxFormLayoutItem>
+                    </DxFormLayoutItem>
 
-                <DxFormLayoutItem Caption="GST Applicable">
-                    <ChildContent Context="ctx">
+                    <DxFormLayoutItem Caption="Contact Person">
+                        <DxTextBox @bind-Text="EditModel.ContactPerson"
+                                   ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                    </DxFormLayoutItem>
+
+                </DxFormLayoutGroup>
+
+                <!-- GST INFO -->
+                <DxFormLayoutGroup Caption="Tax Information">
+
+                    <DxFormLayoutItem Caption="GST Applicable">
                         <DxCheckBox @bind-Checked="EditModel.IsGstApplicable" />
-                    </ChildContent>
-                </DxFormLayoutItem>
+                    </DxFormLayoutItem>
 
-                <DxFormLayoutItem Caption="Active">
-                    <ChildContent Context="ctx">
-                        <DxCheckBox @bind-Checked="EditModel.Status" />
-                    </ChildContent>
-                </DxFormLayoutItem>
-                <DxFormLayoutItem Caption="WhatsappEnable">
-                    <ChildContent Context="ctx">
-                        <DxCheckBox @bind-Checked="EditModel.HasWhatsapp" />
-                    </ChildContent>
-                </DxFormLayoutItem>
+                    <DxFormLayoutItem Caption="GSTIN">
+                        <DxTextBox @bind-Text="EditModel.Gstin"
+                                   ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                    </DxFormLayoutItem>
+
+                    <DxFormLayoutItem Caption="PAN">
+                        <DxTextBox @bind-Text="EditModel.Panno"
+                                   ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                    </DxFormLayoutItem>
+
+                </DxFormLayoutGroup>
+
+                <!-- OTHER DETAILS -->
+                <DxFormLayoutGroup Caption="Additional Details">
+
+                    <DxFormLayoutItem Caption="Currency Symbol">
+                        <DxTextBox @bind-Text="EditModel.CurrencySymbol" />
+                    </DxFormLayoutItem>
+
+                    <DxFormLayoutItem Caption="Tagline 1">
+                        <DxTextBox @bind-Text="EditModel.Tagline1" />
+                    </DxFormLayoutItem>
+
+                    <DxFormLayoutItem Caption="Tagline 2">
+                        <DxTextBox @bind-Text="EditModel.Tagline2" />
+                    </DxFormLayoutItem>
+
+                    <DxFormLayoutItem Caption="MSME No">
+                        <DxTextBox @bind-Text="EditModel.MsmeNo" />
+                    </DxFormLayoutItem>
+
+                    <DxFormLayoutItem Caption="FSS Expiry">
+                        <DxDateEdit ReadOnly @bind-Date="EditModel.FssExpiry" DisplayFormat="dd/MM/yyyy" />
+                    </DxFormLayoutItem>
+
+                
+
+                </DxFormLayoutGroup>
+
+                <!-- SUPER ADMIN SECTION -->
+                @if (IsSuperAdmin)
+                {
+                    <DxFormLayoutGroup Caption="Admin Controls">
+
+                        <DxFormLayoutItem Caption="Is Online">
+                            <DxCheckBox @bind-Checked="EditModel.IsOnline" />
+                        </DxFormLayoutItem>
+
+                        <DxFormLayoutItem Caption="In Online">
+                            <DxCheckBox @bind-Checked="EditModel.InOnline" />
+                        </DxFormLayoutItem>
+
+                        <DxFormLayoutItem Caption="Multi Branch">
+                            <DxCheckBox @bind-Checked="EditModel.IsMultiBranch" />
+                        </DxFormLayoutItem>
+
+                        <DxFormLayoutItem Caption="Remarks" ColSpanMd="12">
+                            <DxMemo @bind-Text="EditModel.Remarks"
+                                    Rows="2" />
+                        </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="Extend Days">
+                            <DxSpinEdit @bind-Value="EditModel.ExtendDays"
+                                        MinValue="0" />
+                        </DxFormLayoutItem>
+
+                        <DxFormLayoutItem Caption="Whatsapp Enable">
+                            <DxCheckBox @bind-Checked="EditModel.HasWhatsapp" />
+                        </DxFormLayoutItem>
+
+                        <DxFormLayoutItem Caption="Active">
+                            <DxCheckBox @bind-Checked="EditModel.Status" />
+                        </DxFormLayoutItem>
+                    </DxFormLayoutGroup>
+                }
+
             </DxFormLayout>
+
         </EditForm>
     </BodyContentTemplate>
 
@@ -168,6 +224,7 @@
     private Company EditModel { get; set; } = new();
     private List<State> stateList = new();
     private List<Country> CountryList = new();
+    private bool IsSuperAdmin = false;
 
     private void AutoFillPrintName(ChangeEventArgs e)
     {
@@ -206,11 +263,15 @@
     {
         Visible = false;
     }
-
     protected override async Task OnInitializedAsync()
     {
         stateList = await StateService.GetStatesAsync();
         CountryList = await CountryService.GetAllAsync();
+
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        IsSuperAdmin = user.IsInRole("SuperAdmin");
     }
 
     private async Task HandleValidSubmit()
@@ -218,28 +279,41 @@
         LoadingService.Show();
         try
         {
-            if (EditModel.CompanyId == 0)
+            int? resultId;
+
+            if (EditModel.CompanyId == null || EditModel.CompanyId == 0)
             {
-                var result = await CompanyService.CreateAsync(EditModel);
-                if (result == true)
-                    ToastService.Success("Company created successfully!");
-                else
+                resultId = await CompanyService.CreateAsync(EditModel);
+
+                if (resultId == null)
                 {
                     ToastService.Error("Company failed to create!");
                     return;
                 }
+
+                EditModel.CompanyId = resultId;
+                ToastService.Success("Company created successfully!");
             }
             else
             {
-                var result = await CompanyService.UpdateAsync(EditModel);
-                if (result == true)
-                    ToastService.Success("Company updated successfully!");
+                if (IsSuperAdmin)
+                {
+                    resultId = await CompanyService.UpdateByAdminAsync(EditModel);
+                }
                 else
+                {
+                    resultId = await CompanyService.UpdateAsync(EditModel);
+                }
+
+                if (resultId == null)
                 {
                     ToastService.Error("Company failed to update!");
                     return;
                 }
+
+                ToastService.Success("Company updated successfully!");
             }
+
 
             Visible = false;
             await OnSaved.InvokeAsync();
@@ -253,4 +327,5 @@
             LoadingService.Hide();
         }
     }
+
 }

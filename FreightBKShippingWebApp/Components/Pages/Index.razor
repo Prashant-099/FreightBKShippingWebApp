@@ -278,6 +278,132 @@
         </div>
     }
     else
+{
+    @if (isSuperAdmin)
+    {
+            <!-- 🔥 SUPER ADMIN DASHBOARD -->
+            <div class="row g-3">
+
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <div>
+                            <div class="stat-label">Total Companies</div>
+                            <div class="stat-value text-primary">@superAdminData?.TotalCompanies</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <div>
+                            <div class="stat-label">Expired Companies</div>
+                            <div class="stat-value text-danger">@superAdminData?.ExpiredCompanies</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <div>
+                            <div class="stat-label">Online Companies</div>
+                            <div class="stat-value text-success">@superAdminData?.OnlineCompanies</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="stat-card">
+                        <div>
+                            <div class="stat-label">Today's Logins</div>
+                            <div class="stat-value text-info">@superAdminData?.TodayLogins</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <hr />
+
+            <!-- Company Wise Table -->
+            <div class="card mt-4 shadow-sm border-0">
+                <div class="card-header bg-white fw-semibold d-flex justify-content-between align-items-center">
+                    <span>Company Login & User Stats</span>
+                    <span class="text-muted small">
+                        @superAdminData?.CompanyLoginCounts?.Count() Companies
+                    </span>
+                </div>
+
+                <div class="table-wrapper">
+                    <table class="table custom-table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Company</th>
+                                <th>Total Users</th>
+                                <th>Max Users</th>
+                                <th>Remaining</th>
+                                <th>Online</th>
+                                <th>Total Success</th>
+                                <th>Total Failed</th>
+                                <th>Monthly Success</th>
+                                <th>Expiry</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var c in superAdminData?.CompanyLoginCounts ?? new())
+                            {
+                                var expiry = superAdminData.CompanyExpiryList
+                                .FirstOrDefault(x => x.CompanyId == c.CompanyId);
+
+                                var online = superAdminData.OnlineCompaniesList
+                                .FirstOrDefault(x => x.CompanyId == c.CompanyId);
+
+                                <tr>
+                                    <td>@c.CompanyName</td>
+                                    <td>@c.TotalUsers</td>
+                                    <td>@c.MaxUsersAllowed</td>
+                                    <td>@c.RemainingUserSlots</td>
+                                    <td>@(online?.OnlineUsers ?? 0)</td>
+                                    <td>@c.TotalSuccessfulLogins</td>
+                                    <td>@c.TotalFailedLogins</td>
+                                    <td>@c.MonthlySuccessfulLogins</td>
+                                    <td>
+                                        @if (expiry != null)
+                                        {
+                                            <div class="d-flex flex-column">
+                                                <span class="fw-semibold">
+                                                    @expiry.FinalExpiryDate?.ToString("dd MMM yyyy")
+                                                </span>
+
+                                                @if (expiry.IsExpired)
+                                                {
+                                                    <span class="badge rounded-pill bg-danger-subtle text-danger mt-1">
+                                                        Expired
+                                                    </span>
+                                                }
+                                                else if (expiry.DaysRemaining <= 7)
+                                                {
+                                                    <span class="badge rounded-pill bg-warning-subtle text-warning mt-1">
+                                                        @expiry.DaysRemaining days left
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge rounded-pill bg-success-subtle text-success mt-1">
+                                                        @expiry.DaysRemaining days left
+                                                    </span>
+                                                }
+                                            </div>
+                                        }
+                                    </td>
+
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+    }
+    else
     {
       
         <!-- Swiper Container -->
@@ -466,30 +592,30 @@
                                     <DxChartLegend Visible="true" Position="RelativePosition.Outside" />
 
                                    <!-- Import Series -->
-    <DxChartBarSeries T="JobTypeData"
-                      TArgument="string"
-                      TValue="int"
-                      Name="Import"
-                      ArgumentField="@(j => j.Label)"
-                      ValueField="@(j => j.Count)"
-                      Filter="@(j => j.Label == "IMPORT")">
-    </DxChartBarSeries>
+                                    <DxChartBarSeries T="JobTypeData"
+                                                      TArgument="string"
+                                                      TValue="int"
+                                                      Name="Import"
+                                                      ArgumentField="@(j => j.Label)"
+                                                      ValueField="@(j => j.Count)"
+                                                      Filter="@(j => j.Label == "IMPORT")">
+                                    </DxChartBarSeries>
 
-    <!-- Export Series -->
-    <DxChartBarSeries T="JobTypeData"
-                      TArgument="string"
-                      TValue="int"
-                      Name="Export"
-                      ArgumentField="@(j => j.Label)"
-                      ValueField="@(j => j.Count)"
-                      Filter="@(j => j.Label == "EXPORT")">
-    </DxChartBarSeries>
-                                </DxChart>
-                            </div>
-                        </div>
+                                    <!-- Export Series -->
+                                    <DxChartBarSeries T="JobTypeData"
+                                                      TArgument="string"
+                                                      TValue="int"
+                                                      Name="Export"
+                                                      ArgumentField="@(j => j.Label)"
+                                                      ValueField="@(j => j.Count)"
+                                                      Filter="@(j => j.Label == "EXPORT")">
+                                    </DxChartBarSeries>
+                                 </DxChart>
+                                </div>
+                          </div>
 
                    
-                </div>
+                    </div>
 
                 
                 </div>
@@ -600,7 +726,7 @@
                 <i class="bi bi-chevron-compact-right"></i>
             </div>
         
-
+            }
        
         <!-- Pagination Dots -->
        @*  <div class="swiper-pagination">
@@ -631,6 +757,11 @@
     private List<MonthlyRevenueDto> revenueData = new();
     private DateTime? filterFromDate;
     private DateTime? filterToDate;
+
+    private bool isSuperAdmin = false;
+    private SuperAdminDashboardDto? superAdminData;
+
+
 
     private void OpenDateFilter()
     {
@@ -665,12 +796,24 @@
             if (user.Identity != null && user.Identity.IsAuthenticated)
             {
                 UserName = user.Identity.Name ?? "User";
+                isSuperAdmin = user.IsInRole("SuperAdmin");
+
             }
 
-            CurrentYearName = YearStatechangeService.Years.FirstOrDefault(y => y.YearId == YearStatechangeService.SelectedYearId)?.YearName ?? DateTime.Now.Year.ToString();
-            YearStatechangeService.OnYearChanged += HandleYearChanged;
+            if (isSuperAdmin)
+            {
+                await LoadSuperAdminDashboard();
+            }
+            else
+            {
+                CurrentYearName = YearStatechangeService.Years
+                    .FirstOrDefault(y => y.YearId == YearStatechangeService.SelectedYearId)?
+                    .YearName ?? DateTime.Now.Year.ToString();
 
-            await LoadDashboardData();
+                YearStatechangeService.OnYearChanged += HandleYearChanged;
+
+                await LoadDashboardData();
+            }
         }
         catch (Exception ex)
         {
@@ -681,6 +824,25 @@
         //     isLoading = false;
         // }
     }
+
+    private async Task LoadSuperAdminDashboard()
+    {
+        try
+        {
+            isLoading = true;
+            superAdminData = await DashboardService.GetSuperAdminDashboardAsync();
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Error loading super admin dashboard: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
 
     // Carousel Navigation
     private void NextSlide()
@@ -762,14 +924,14 @@
 
             stats = result.Stats;
             jobStatusData = result.JobStatusChart?
-    .Where(x => !string.IsNullOrWhiteSpace(x.Label))
-    .Select(x => new JobTypeData
-    {
-        Label = x.Label!,
-        Count = x.Count
-    })
-    .ToList()
-    ?? new();
+                .Where(x => !string.IsNullOrWhiteSpace(x.Label))
+                .Select(x => new JobTypeData
+                {
+                    Label = x.Label!,
+                    Count = x.Count
+                })
+                .ToList()
+                ?? new();
             jobTypeData = result.JobTypeChart;
             revenueData = result.MonthlyRevenue;
             if (result != null && result.MonthlyRevenue != null)
