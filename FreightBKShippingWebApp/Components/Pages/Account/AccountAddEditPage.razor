@@ -311,8 +311,8 @@ verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body"
 
     private List<string> balanceTypes = new() { "Dr", "Cr" };
     private List<string> methods = new() { "Bill to Bill", "On Account" };
-    
-        private List<string> registrationTypes = new()
+
+    private List<string> registrationTypes = new()
     {
         "N/A",
         "OVERSEA",
@@ -374,7 +374,7 @@ verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body"
         groupList = await AccountGroupService.GetAllAsync();   // API से load
         typeList = await AccountTypeService.GetAllAsync(); 
         states = await StateService.GetStatesAsync();
-        
+
     }
 
     private async Task HandleValidSubmit()
@@ -387,6 +387,16 @@ verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body"
 
             if (EditModel.AccountId == 0)
             {
+                if ((EditModel.AccountTypeId == 17 || EditModel.AccountTypeId == 18)
+                     && (EditModel.AccountStateId == null || EditModel.AccountStateId == 0))
+                {
+                    ToastService.Error("❌ Please select a State before saving!");
+                    return;
+                }
+
+
+
+
                 // Create new account
                 result = await AccountService.CreateAsync(EditModel);
 

@@ -55,7 +55,7 @@ namespace FreightBKShippingWebApp.Model
         [Column("account_city")]
         public string? AccountCity { get; set; }
 
-        [Required]
+        //[Required]
         [Column("account_state_id")]
         public int? AccountStateId { get; set; }
 
