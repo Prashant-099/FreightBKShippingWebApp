@@ -1,0 +1,259 @@
+﻿@page "/partybill"
+@using FreightBKShipping.Client.Services
+@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Services
+@inject LrApiService LrApiService
+@inject AccountService AccountService
+@inject VoucherService VoucherService
+@inject StateService StateService
+<style>
+
+    .tab-section {
+        margin-top: 20px;
+    }
+    .footer-section {
+        position: sticky;
+        bottom: 0;
+        background: white;
+        padding: 15px;
+        border-top: 1px solid #ddd;
+        text-align: right;
+        z-index: 10;
+    }
+
+</style>
+
+<div class="d-flex align-items-center">
+    <i class="bi bi-receipt me-2 py-2"></i>
+    <span class="fs-5">Party Bill</span>
+</div>
+
+<DxFormLayout>
+
+    <!-- Party Dropdown -->
+    <DxFormLayoutItem Caption="Party" ColSpanMd="4">
+        <DxComboBox Data="partylist"
+                    TextFieldName="AccountName"
+                    ValueFieldName="AccountId"
+                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                    AllowUserInput="true"
+                    SearchMode="ListSearchMode.AutoSearch" 
+                    SearchFilterCondition="ListSearchFilterCondition.StartsWith"
+                    @bind-Value="lrs.LrPartyAccountId"
+        >
+        </DxComboBox>
+    </DxFormLayoutItem>
+
+    <!-- From Date -->
+    <DxFormLayoutItem Caption="From Date" ColSpanMd="3">
+        <DxDateEdit @bind-Date="fromDate"
+                    DisplayFormat="dd-MM-yyyy" Format="dd-MM-yyyy"
+                    NullText="Select From Date">
+        </DxDateEdit>
+    </DxFormLayoutItem>
+
+    <!-- To Date -->
+    <DxFormLayoutItem Caption="To Date" ColSpanMd="3">
+        <DxDateEdit @bind-Date="toDate"
+                    DisplayFormat="dd-MM-yyyy" Format="dd-MM-yyyy"
+                    NullText="Select To Date">
+        </DxDateEdit>
+    </DxFormLayoutItem>
+
+    <!-- Search Button -->
+    <DxFormLayoutItem ColSpanMd="2">
+        <DxButton Text="Search"
+                  RenderStyle="ButtonRenderStyle.Primary"
+                  Click="SerchLrs">
+        </DxButton>
+    </DxFormLayoutItem>
+
+</DxFormLayout>
+
+<br />
+
+<!-- Result Grid -->
+<DxGrid Data="lrslist"  SelectedDataItems="selectedLrs"
+        SelectedDataItemsChanged="OnSelectionChanged"
+        KeyFieldName="LrId" PageSize="10">
+    <Columns>
+      
+<DxGridSelectionColumn AllowSelectAll FixedPosition="GridColumnFixedPosition.Left"
+></DxGridSelectionColumn>
+        <DxGridDataColumn FieldName="LrNoStr" Caption="LR No" />
+        <DxGridDataColumn FieldName="LrDate" Caption="LR Date" />
+        <DxGridDataColumn FieldName="LrPartyAccountId" Caption="Party Id" />
+        <DxGridDataColumn FieldName="LrCompanyId" Caption="Status" />
+    </Columns>
+</DxGrid>
+<br />
+<br />
+<br />
+<br />
+<br />
+<!-- Tabs Section -->
+<div class="tab-section">
+
+ <DxFormLayout>
+    <DxFormLayoutGroup ColSpanMd="6" Decoration="FormLayoutGroupDecoration.None" >
+   <DxFormLayoutTabPages>
+     <DxFormLayoutTabPage Caption="Bill Details">
+            <DxFormLayoutItem Caption="Bill Type">
+                        <DxComboBox Data="@VoucherList" @bind-Value="bill.BillType"></DxComboBox>
+            </DxFormLayoutItem>
+            <DxFormLayoutItem Caption="Bill Date">
+                <DxMaskedInput @bind-Value="bill.BillDate"></DxMaskedInput>
+            </DxFormLayoutItem>
+
+            <DxFormLayoutItem Caption="Bill No">
+                <DxTextBox @bind-Text="bill.BillNo"></DxTextBox>
+            </DxFormLayoutItem>
+            <DxFormLayoutItem Caption="Due Date">
+                <DxMaskedInput @bind-Value="bill.BillDueDate"></DxMaskedInput>
+            </DxFormLayoutItem>
+            <DxFormLayoutItem Caption="Place of Supply">
+                        <DxComboBox TData="State" TValue="int"
+                                    Data="@stateList"
+                                    TextFieldName="StateName"
+                                    ValueFieldName="StateId"
+                                    ClearButtonVisible="true"
+                                    AllowUserInput="true"
+                                    NullText="-- Select POS --"
+                                    @bind-Value="bill.BillPlaceOfSupply"
+                                    SearchMode="ListSearchMode.AutoSearch"
+                                    SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+            </DxFormLayoutItem>
+            <DxFormLayoutItem Caption="Ref No">
+                <DxTextBox ></DxTextBox>
+            </DxFormLayoutItem>
+            <DxFormLayoutItem Caption="Remarks">
+                <DxMemo rows="3" @bind-Text="bill.BillRemarks"></DxMemo>
+            </DxFormLayoutItem>
+</DxFormLayoutTabPage>
+     <DxFormLayoutTabPage Caption="Ship To">
+            <DxFormLayoutItem Caption="Ship To Party"></DxFormLayoutItem>
+            <DxFormLayoutItem Caption="State"></DxFormLayoutItem>
+            <DxFormLayoutItem Caption="Address"></DxFormLayoutItem>
+            <DxFormLayoutItem Caption="GSTIN"></DxFormLayoutItem>
+            <DxFormLayoutItem Caption="PIN"></DxFormLayoutItem>
+            <DxFormLayoutItem Caption="Contact"></DxFormLayoutItem>
+            <DxFormLayoutItem Caption="Job No"></DxFormLayoutItem>
+            <DxFormLayoutItem Caption="BE no"></DxFormLayoutItem>
+                    <DxFormLayoutItem Caption="Supply Type" ColSpanMd="3">
+                        <DxComboBox Data="@SupplyTypeList"
+                                    @bind-Value="bill.BillSupplyType"
+                                    TextFieldName="Text"
+                                    ValueFieldName="Value"
+                                    ShowValidationIcon="true"
+                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                    AllowUserInput="true"
+                                    SearchMode="ListSearchMode.AutoSearch" SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+                    </DxFormLayoutItem>
+              
+</DxFormLayoutTabPage>
+     <DxFormLayoutTabPage Caption="E-Invoice Details">
+            <DxFormLayoutItem Caption="Bill Type"></DxFormLayoutItem>
+           
+</DxFormLayoutTabPage>
+
+</DxFormLayoutTabPages>
+      
+</DxFormLayoutGroup>
+<DxFormLayoutGroup ColSpanMd="6" Decoration="FormLayoutGroupDecoration.None">
+  <DxFormLayoutTabPages>
+     <DxFormLayoutTabPage Caption="Total Summary">
+                    <DxFormLayoutItem Caption="Total Trip"></DxFormLayoutItem>
+                    <DxFormLayoutItem Caption="Gross Total"></DxFormLayoutItem>
+                    <DxFormLayoutItem Caption="Total Wt"></DxFormLayoutItem>
+                    <DxFormLayoutItem Caption="Tax Amount"></DxFormLayoutItem>
+                    <DxFormLayoutItem Caption="Shortage(-)"></DxFormLayoutItem>
+                    <DxFormLayoutItem Caption="Total Bill Amount"></DxFormLayoutItem>
+                    <DxFormLayoutItem Caption="Extra Charge"></DxFormLayoutItem>
+                    <DxFormLayoutItem Caption="Less Advance(-)"></DxFormLayoutItem>
+                    <DxFormLayoutItem Caption="Is RCM Applicable"></DxFormLayoutItem>
+                    <DxFormLayoutItem Caption="Round Off "></DxFormLayoutItem>
+                    <DxFormLayoutItem Caption="Net Total"></DxFormLayoutItem>
+      </DxFormLayoutTabPage>
+     <DxFormLayoutTabPage Caption="Total Summary">
+            
+                    <DxFormLayoutItem Caption="Is RCM Applicable"></DxFormLayoutItem>
+                    <DxFormLayoutItem Caption="Round Off "></DxFormLayoutItem>
+                    <DxFormLayoutItem Caption="Net Total"></DxFormLayoutItem>
+      </DxFormLayoutTabPage>
+     <DxFormLayoutTabPage Caption="Total Summary">
+                    <DxFormLayoutItem Caption="Total Trip"></DxFormLayoutItem>
+                    <DxFormLayoutItem Caption="Gross Total"></DxFormLayoutItem>
+                    <DxFormLayoutItem Caption="Total Wt"></DxFormLayoutItem>
+                    <DxFormLayoutItem Caption="Tax Amount"></DxFormLayoutItem>
+              
+      </DxFormLayoutTabPage>
+  </DxFormLayoutTabPages>
+
+</DxFormLayoutGroup>
+</DxFormLayout>
+</div>
+<!-- Footer Section -->
+<div class="footer-section">
+<DxFormLayout >
+    <DxFormLayoutItem>
+    <DxButton Text ="Save"></DxButton>
+    </DxFormLayoutItem>
+</DxFormLayout>
+</div>
+@code {
+
+    private Lr lrs = new Lr();
+
+    private IEnumerable<Account> partylist = new List<Account>();
+    private IEnumerable<Lr> lrslist = new List<Lr>();
+    private List<Lr> selectedLrs = new();
+    private DateTime? fromDate;
+    private DateTime? toDate;
+
+    private Bill bill = new Bill();
+    private List<Voucher> VoucherList = new();
+    private List<State> stateList = new();
+    public class SelectItem
+    {
+        public string Text { get; set; }
+        public string Value { get; set; }
+    }
+    List<SelectItem> SupplyTypeList = new()
+{
+    new SelectItem { Text = "B2B", Value = "B2B" },
+    new SelectItem { Text = "B2CS", Value = "B2CS" },
+    new SelectItem { Text = "SEZWP", Value = "SEZWP" },
+    new SelectItem { Text = "SEZWOP", Value = "SEZWOP" },
+    new SelectItem { Text = "EXPWP", Value = "EXPWP" },
+    new SelectItem { Text = "EXPWOP", Value = "EXPWOP" },
+    new SelectItem { Text = "DEXP", Value = "DEXP" }
+};
+    protected override async Task OnInitializedAsync()
+    {
+        var list = await AccountService.GetAllAsync();
+        var voucher = await VoucherService.GetAllAsync();
+        stateList = await StateService.GetStatesAsync();
+            VoucherList = voucher.Where(x => x.VoucherId == 1).ToList();
+        partylist = list
+            .Where(x => x.AccountTypeId == 18)
+            .ToList();
+    }
+
+    private async Task SerchLrs()
+    {
+        if (lrs.LrPartyAccountId == 0)
+            return;
+
+        lrslist = await LrApiService.SearchAsync(
+            lrs.LrPartyAccountId,
+            fromDate,
+            toDate);
+    }
+
+    private void OnSelectionChanged(IReadOnlyList<object> items)
+    {
+        selectedLrs = items.Cast<Lr>().ToList();
+
+    }
+
+}

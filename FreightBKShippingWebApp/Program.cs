@@ -1,13 +1,15 @@
-﻿using FreightBKShippingWebApp;
+﻿using DevExpress.Drawing.Internal;
+using FreightBKShipping.Client.Services;
+using FreightBKShippingWebApp;
 using FreightBKShippingWebApp.Authentication;
 using FreightBKShippingWebApp.Components;
 using FreightBKShippingWebApp.Services;
-using Microsoft.AspNetCore.Components.Authorization;
-using Microsoft.AspNetCore.ResponseCompression;
 using FreightBKShippingWebApp.Services.PdfReaderAndHelperService;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.ResponseCompression;
 
-using DevExpress.Drawing.Internal;
+
 
 var builder = WebApplication.CreateBuilder(args);
 DXDrawingEngine.ForceSkia();
@@ -44,10 +46,12 @@ builder.Services.AddDataProtection()
 //        Path.Combine(builder.Environment.ContentRootPath, "DataProtectionKeys")))
 //    .SetApplicationName("FreightBKShippingWebApp");
 
+
 builder.Services.AddDevExpressBlazor(options => {
     options.BootstrapVersion = DevExpress.Blazor.BootstrapVersion.v5;
     options.SizeMode = DevExpress.Blazor.SizeMode.Medium;
 });
+
 
 builder.Services.AddMvc();
 builder.Services.AddAuthenticationCore();
@@ -132,6 +136,7 @@ builder.Services.AddScoped<WpMailConfigService>();
 builder.Services.AddScoped<Sentwpcerti>();
 builder.Services.AddScoped<FileUploadService>();
 builder.Services.AddScoped<JournalService>();
+builder.Services.AddScoped<LrApiService>();
 
 //
 builder.Services.AddScoped<AuthTokenService>();

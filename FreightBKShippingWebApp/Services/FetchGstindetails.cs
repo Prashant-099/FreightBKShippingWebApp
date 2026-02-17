@@ -2,7 +2,7 @@
 using FreightBKShippingWebApp.Services;
 using System.Net.Http;
 using System.Text.Json;
-using static FreightBKShippingWebApp.Components.Pages.Account.AccountAddEditPage;
+using static FreightBKShippingWebApp.Components.Pages.AccountPage.AccountAddEditPage;
 
 public class GstinService
 {
