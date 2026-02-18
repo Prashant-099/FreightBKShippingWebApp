@@ -45,10 +45,12 @@ namespace FreightBKShippingWebApp.Model
         [Column("company_statecode")]
         public string? StateCode { get; set; }
 
+        [Required]
         [Column("company_email")]
         [EmailAddress(ErrorMessage = "Invalid email format.")]
         public string? Email { get; set; }
 
+        [Required]
         [Column("company_mobile")]
         public string? Mobile { get; set; }
 
@@ -153,6 +155,9 @@ namespace FreightBKShippingWebApp.Model
         //added by dhruv
         [Column("company_haswpmsg")]
         public bool? HasWhatsapp { get; set; }
+
+        [Column("company_maxuser")]
+        public int? MaxUser { get; set; }
         [NotMapped]  // ✅ Since this doesn't exist in the database table
         public string? StateName { get; set; }
     }

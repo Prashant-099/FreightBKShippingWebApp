@@ -7,6 +7,7 @@
             List<T> items,
             Func<T, Task<int>> getReportIdAsync,
             Func<T, Task<TDto?>> getDtoAsync,
+            Func<T, string> getDocType,     // 🔹 Added
             string fileName = "Report.pdf")
             where TDto : class;
 
@@ -15,14 +16,16 @@
             List<T> items,
             Func<T, Task<int>> getReportIdAsync,
             Func<T, Task<TDto?>> getDtoAsync,
+            Func<T, string> getDocType,     // 🔹 Added
             string fileName = "Report.pdf")
             where TDto : class;
 
-
+        // 🔹 Preview directly
         Task PreviewAsync<T, TDto>(
             List<T> items,
             Func<T, Task<int>> getReportIdAsync,
             Func<T, Task<TDto?>> getDtoAsync,
+            Func<T, string> getDocType,     // 🔹 Added
             string fileName = "Report.pdf")
             where TDto : class;
     }

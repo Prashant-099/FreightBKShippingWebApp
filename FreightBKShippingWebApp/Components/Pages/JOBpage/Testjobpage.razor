@@ -70,7 +70,7 @@
                     <Items>
                         @* <DxToolbarItem Text="Send WhatsApp" IconCssClass="bi bi-whatsapp" Click="@(async () => await DownloadReport(true))" /> *@
                         <DxToolbarItem Text="Download PDF" IconCssClass="bi bi-printer" Click="@(async () => await PrintReports(false))" />
-                        <DxToolbarItem Text="Print Preview" IconCssClass="bi bi-printer" Click="@((_) => PreviewReport())"></DxToolbarItem>
+                        <DxToolbarItem Text="Preview" IconCssClass="bi bi-printer" Click="@((_) => PreviewReport())"></DxToolbarItem>
                     </Items>
                 </DxToolbarItem>
             </Items>
@@ -627,6 +627,17 @@
             return;
         }
 
+        var Jobs = SelectedJobs.Cast<Job>().ToList();
+        var jobNumbers = Jobs
+          .Select(b => b.JobNo) // Make sure this property exists
+          .Where(x => !string.IsNullOrWhiteSpace(x))
+          .Select(x => x.Replace("/", "-").Replace("\\", "-")) // sanitize filename
+          .ToList();
+
+        var fileName = jobNumbers.Count == 1
+         ? $"{jobNumbers.First()}.pdf"
+         : $"Job_{DateTime.Now:yyyyMMddHHmmss}.pdf";
+
         await ReportManager.DownloadAsync<Job, JobreportDto>(
             SelectedJobs.Cast<Job>().ToList(),
 
@@ -635,8 +646,8 @@
 
             // Get DTO
             job => JobService.GetJobWithContainerAsync(job.JobId),
-
-            "JobReport.pdf"
+            job => "Job",
+           fileName
         );
 
         await ClearSelection();
@@ -649,15 +660,25 @@
             ToastService.Warning("Please select at least one certificate.");
             return;
         }
+        var jobsNumbers = SelectedJobs
+           .Cast<Job>()
+           .Select(b => b.JobNo)   // Make sure BillNumber property exists
+           .Where(x => !string.IsNullOrWhiteSpace(x))
+           .Select(x => x.Replace("/", "-").Replace("\\", "-")) // sanitize filename
+           .ToList();
 
+        // Dynamic file name
+        var fileName = jobsNumbers.Count == 1
+            ? $"{jobsNumbers.First()}.pdf"
+            : $"Jobs_{DateTime.Now:yyyyMMddHHmmss}.pdf";
         await ReportManager.PreviewAsync<Job, JobreportDto>(
             SelectedJobs.Cast<Job>().ToList(),
 
             c => Task.FromResult(c.JobReportId ?? 0),
 
             c => JobService.GetJobWithContainerAsync(c.JobId),
-
-            "Report.pdf"
+            c => "Job", 
+            fileName
 
         );
 

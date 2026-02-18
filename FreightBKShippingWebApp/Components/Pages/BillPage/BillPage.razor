@@ -20,6 +20,7 @@
 @inject YearStatechangeService YearStatechangeService
 @inject IJSRuntime JSRuntime
 @inject GridLayoutService GridLayoutService
+@inject IGenericReportManager ReportManager
 <style>
     .grid-size {
         max-height: 570px;
@@ -74,9 +75,8 @@ SelectedDataItemsChanged="OnSelectedBillsChanged"
                                IconCssClass="bi bi-printer">
                     <Items>
                         <DxToolbarItem Text="Send WhatsApp" IconCssClass="bi bi-whatsapp" Click="@(async () => await DownloadReport(true))" />
-                        <DxToolbarItem Text="Print PDF" IconCssClass="bi bi-printer" Click="@(async () => await PrintReports(false))" />
-                        <DxToolbarItem Text="Print Preview" IconCssClass="bi bi-printer" Click="@((_) => ShowReportPopup())"></DxToolbarItem>
-
+                        <DxToolbarItem Text="Download PDF" IconCssClass="bi bi-printer" Click="@(async () => await PrintReports(false))" />
+                        <DxToolbarItem Text="Preview" IconCssClass="bi bi-printer" Click="@((_) => ShowReportPopup())"></DxToolbarItem>
                     </Items>
                 </DxToolbarItem>
                 <DxToolbarItem  Context="cfdr"
@@ -825,110 +825,147 @@ DefaultFileName="@PendingFileName"
     }
 
     // ✅ FIXED: Print PDF with proper cleanup
-    private async Task PrintReports(bool sendViaWhatsapp = false)
+    // private async Task PrintReports(bool sendViaWhatsapp = false)
+    // {
+    //     if (SelectedBills == null || SelectedBills.Count == 0)
+    //     {
+    //         ToastService.Warning("Select at least one Bill.");
+    //         return;
+    //     }
+
+    //     var billList = SelectedBills.Cast<Bill>().ToList();
+    //     LoadingService.Show("Building merged PDF...");
+
+    //     try
+    //     {
+    //         var billsByReportId = billList.GroupBy(b => b.BillReportId).ToList();
+    //         var allReports = new List<DevExpress.XtraReports.UI.XtraReport>();
+
+    //         foreach (var group in billsByReportId)
+    //         {
+    //             var reportId = group.Key;
+    //             var groupBills = group.ToList();
+    //             var layoutBytes = await ReportDataService.GetLayoutBytesAsync(reportId);
+
+    //             if (layoutBytes == null || layoutBytes.Length == 0)
+    //             {
+    //                 ToastService.Error($"Failed to load report layout for Report ID: {reportId}");
+    //                 continue;
+    //             }
+
+    //             var dtoList = new List<PrintBillFullDto?>();
+    //             foreach (var bill in groupBills)
+    //             {
+    //                 var dto = await BillService.GetPrintableBillAsync(bill.BillId);
+    //                 dtoList.Add(dto);
+    //             }
+
+    //             var dtoDict = groupBills.Select((bill, i) => new { bill, dto = dtoList[i] })
+    //                                     .ToDictionary(x => x.bill, x => x.dto);
+
+    //             try
+    //             {
+    //                 await ReportService.CreateMergedReportAsync(
+    //                     groupBills,
+    //                     bill => dtoDict.ContainsKey(bill) ? dtoDict[bill] : null,
+    //                     layoutBytes);
+    //             }
+    //             catch (InvalidOperationException ex) when (ex.Message.Contains("CodeDOM"))
+    //             {
+    //                 ToastService.Error("Report format incompatible. Please contact administrator to update report template.");
+    //                 LoadingService.Hide();
+    //                 return;
+    //             }
+
+    //             if (ReportService.MergedReport != null)
+    //             {
+    //                 allReports.Add(ReportService.MergedReport);
+    //             }
+    //         }
+
+    //         if (!allReports.Any())
+    //         {
+    //             ToastService.Error("Failed to generate any reports.");
+    //             return;
+    //         }
+
+    //         using var pdfStream = new MemoryStream();
+
+    //         if (allReports.Count == 1)
+    //         {
+    //             allReports[0].ExportToPdf(pdfStream);
+    //         }
+    //         else
+    //         {
+    //             var combinedReport = new DevExpress.XtraReports.UI.XtraReport();
+    //             foreach (var report in allReports)
+    //             {
+    //                 if (report.Pages.Count == 0) report.CreateDocument();
+    //                 foreach (DevExpress.XtraPrinting.Page page in report.Pages)
+    //                 {
+    //                     combinedReport.Pages.Add(page);
+    //                 }
+    //             }
+    //             combinedReport.ExportToPdf(pdfStream);
+    //         }
+
+    //         pdfStream.Position = 0;
+
+    //         string fileName = billList.Count == 1
+    //             ? $"{billList.First().BillNo?.Replace("/", "_") ?? "Bill"}.pdf"
+    //             : $"Bills_{billList.First().BillNo?.Replace("/", "_")}_to_{billList.Last().BillNo?.Replace("/", "_")}.pdf";
+
+    //         using var streamRef = new Microsoft.JSInterop.DotNetStreamReference(pdfStream);
+    //         await JSRuntime.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
+
+    //         ToastService.Success("PDF downloaded successfully.");
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         ToastService.Error($"Failed to generate report: {ex.Message}");
+    //     }
+    //     finally
+    //     {
+    //         LoadingService.Hide();
+    //         await ClearSelection();
+    //     }
+    // }
+
+    private async Task PrintReports(bool sendViaWhatsapp)
     {
-        if (SelectedBills == null || SelectedBills.Count == 0)
+        if (!SelectedBills.Any())
         {
-            ToastService.Warning("Select at least one Bill.");
+            ToastService.Warning("Please select at least one job.");
             return;
         }
 
-        var billList = SelectedBills.Cast<Bill>().ToList();
-        LoadingService.Show("Building merged PDF...");
+        // Get bill numbers safely
+        var bills = SelectedBills.Cast<Bill>().ToList();
 
-        try
-        {
-            var billsByReportId = billList.GroupBy(b => b.BillReportId).ToList();
-            var allReports = new List<DevExpress.XtraReports.UI.XtraReport>();
+        var billNumbers = bills
+            .Select(b => b.BillNo) // Make sure this property exists
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => x.Replace("/", "-").Replace("\\", "-")) // sanitize filename
+            .ToList();
 
-            foreach (var group in billsByReportId)
-            {
-                var reportId = group.Key;
-                var groupBills = group.ToList();
-                var layoutBytes = await ReportDataService.GetLayoutBytesAsync(reportId);
+        // Generate proper file name
+        var fileName = billNumbers.Count == 1
+            ? $"{billNumbers.First()}.pdf"
+            : $"Bills_{DateTime.Now:yyyyMMddHHmmss}.pdf";
 
-                if (layoutBytes == null || layoutBytes.Length == 0)
-                {
-                    ToastService.Error($"Failed to load report layout for Report ID: {reportId}");
-                    continue;
-                }
+        await ReportManager.DownloadAsync<Bill, PrintBillFullDto>(
+            bills,
 
-                var dtoList = new List<PrintBillFullDto?>();
-                foreach (var bill in groupBills)
-                {
-                    var dto = await BillService.GetPrintableBillAsync(bill.BillId);
-                    dtoList.Add(dto);
-                }
+            // Get ReportId from Bill
+            bill => Task.FromResult(bill.BillReportId),
 
-                var dtoDict = groupBills.Select((bill, i) => new { bill, dto = dtoList[i] })
-                                        .ToDictionary(x => x.bill, x => x.dto);
+            // Get DTO
+            bill => BillService.GetPrintableBillAsync(bill.BillId),
+               bill => "Bill",
+            fileName
+        );
 
-                try
-                {
-                    await ReportService.CreateMergedReportAsync(
-                        groupBills,
-                        bill => dtoDict.ContainsKey(bill) ? dtoDict[bill] : null,
-                        layoutBytes);
-                }
-                catch (InvalidOperationException ex) when (ex.Message.Contains("CodeDOM"))
-                {
-                    ToastService.Error("Report format incompatible. Please contact administrator to update report template.");
-                    LoadingService.Hide();
-                    return;
-                }
-
-                if (ReportService.MergedReport != null)
-                {
-                    allReports.Add(ReportService.MergedReport);
-                }
-            }
-
-            if (!allReports.Any())
-            {
-                ToastService.Error("Failed to generate any reports.");
-                return;
-            }
-
-            using var pdfStream = new MemoryStream();
-
-            if (allReports.Count == 1)
-            {
-                allReports[0].ExportToPdf(pdfStream);
-            }
-            else
-            {
-                var combinedReport = new DevExpress.XtraReports.UI.XtraReport();
-                foreach (var report in allReports)
-                {
-                    if (report.Pages.Count == 0) report.CreateDocument();
-                    foreach (DevExpress.XtraPrinting.Page page in report.Pages)
-                    {
-                        combinedReport.Pages.Add(page);
-                    }
-                }
-                combinedReport.ExportToPdf(pdfStream);
-            }
-
-            pdfStream.Position = 0;
-
-            string fileName = billList.Count == 1
-                ? $"{billList.First().BillNo?.Replace("/", "_") ?? "Bill"}.pdf"
-                : $"Bills_{billList.First().BillNo?.Replace("/", "_")}_to_{billList.Last().BillNo?.Replace("/", "_")}.pdf";
-
-            using var streamRef = new Microsoft.JSInterop.DotNetStreamReference(pdfStream);
-            await JSRuntime.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
-
-            ToastService.Success("PDF downloaded successfully.");
-        }
-        catch (Exception ex)
-        {
-            ToastService.Error($"Failed to generate report: {ex.Message}");
-        }
-        finally
-        {
-            LoadingService.Hide();
-            await ClearSelection();
-        }
+        await ClearSelection();
     }
 
     private bool IsReportPopupVisible = false;
@@ -953,81 +990,209 @@ DefaultFileName="@PendingFileName"
             return;
         }
         IsReportPopupVisible = false;
-        await PreviewMergedReports();
+        await PreviewReport();
     }
 
-    private async Task PreviewMergedReports()
+    // private async Task PreviewMergedReports()
+    // {
+    //     if (SelectedBills == null || SelectedBills.Count == 0)
+    //     {
+    //         ToastService.Warning("Select at least one Bill.");
+    //         return;
+    //     }
+
+    //     if (SelectedReportId == null)
+    //     {
+    //         ToastService.Warning("Please select a report format.");
+    //         return;
+    //     }
+
+    //     var billList = SelectedBills.Cast<Bill>().ToList();
+    //     LoadingService.Show("Building merged report...");
+
+    //     try
+    //     {
+    //         Get the report layout
+    //         var layoutBytes = await ReportDataService.GetLayoutBytesAsync(SelectedReportId.Value);
+
+    //         if (layoutBytes == null || layoutBytes.Length == 0)
+    //         {
+    //             ToastService.Error($"Failed to load report layout for Report ID: {SelectedReportId}");
+    //             return;
+    //         }
+
+    //         Prepare DTOs for all selected bills
+    //         var dtoList = new List<PrintBillFullDto?>();
+    //         foreach (var bill in billList)
+    //         {
+    //             var dto = await BillService.GetPrintableBillAsync(bill.BillId);
+    //             dtoList.Add(dto);
+    //         }
+
+    //         var dtoDict = billList.Select((bill, i) => new { bill, dto = dtoList[i] })
+    //                               .ToDictionary(x => x.bill, x => x.dto);
+
+    //         Create the merged report
+    //         try
+    //         {
+    //             await ReportService.CreateMergedReportAsync(
+    //                 billList,
+    //                 bill => dtoDict.ContainsKey(bill) ? dtoDict[bill] : null,
+    //                 layoutBytes);
+    //         }
+    //         catch (InvalidOperationException ex) when (ex.Message.Contains("CodeDOM"))
+    //         {
+    //             ToastService.Error("Report format incompatible. Please contact administrator to update report template.");
+    //             LoadingService.Hide();
+    //             return;
+    //         }
+
+    //         if (ReportService.MergedReport == null)
+    //         {
+    //             ToastService.Error("Failed to generate report.");
+    //             return;
+    //         }
+
+    //         Navigate to the report viewer
+    //         Navigation.NavigateTo("/reportviewer");
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         ToastService.Error($"Failed to generate report: {ex.Message}");
+    //     }
+    //     finally
+    //     {
+    //         LoadingService.Hide();
+    //         await ClearSelection();
+    //     }
+    // }
+
+
+    //======================================================================
+
+    // private async Task PreviewMergedReports()
+    // {
+    //     if (SelectedBills == null || SelectedBills.Count == 0)
+    //     {
+    //         ToastService.Warning("Select at least one Bill.");
+    //         return;
+    //     }
+
+    //     if (SelectedReportId == null)
+    //     {
+    //         ToastService.Warning("Please select a report format.");
+    //         return;
+    //     }
+
+    //     var billList = SelectedBills.Cast<Bill>().ToList();
+    //     LoadingService.Show("Building merged report...");
+
+    //     try
+    //     {
+    //         // 🔹 Get layout
+    //         var layoutBytes = await ReportDataService
+    //             .GetLayoutBytesAsync(SelectedReportId.Value);
+
+    //         if (layoutBytes == null || layoutBytes.Length == 0)
+    //         {
+    //             ToastService.Error("Failed to load report layout.");
+    //             return;
+    //         }
+
+    //         // 🔹 Prepare DTO dictionary
+    //         var dtoDict = new Dictionary<Bill, PrintBillFullDto?>();
+
+    //         foreach (var bill in billList)
+    //         {
+    //             dtoDict[bill] =
+    //                 await BillService.GetPrintableBillAsync(bill.BillId);
+    //         }
+
+    //         // 🔹 Create merged report
+    //         var report = await ReportService.CreateMergedReportAsync(
+    //             billList,
+    //             bill => dtoDict.TryGetValue(bill, out var dto) ? dto : null,
+    //             layoutBytes);
+
+    //         if (report == null)
+    //         {
+    //             ToastService.Error("Failed to generate report.");
+    //             return;
+    //         }
+
+    //         // 🔹 Export to memory
+    //         using var stream = new MemoryStream();
+    //         report.ExportToPdf(stream);
+    //         stream.Position = 0;
+
+    //         using var streamRef = new DotNetStreamReference(stream);
+
+    //         // 🔹 Dynamic filename (ONLY BillNo)
+    //         var billNumbers = string.Join("_", billList.Select(b => b.BillNo));
+
+    //         // Remove invalid filename characters
+    //         foreach (var c in Path.GetInvalidFileNameChars())
+    //         {
+    //             billNumbers = billNumbers.Replace(c, '_');
+    //         }
+
+    //         var fileName = $"{billNumbers}.pdf";
+
+    //         // 🔹 Open preview in new tab
+    //         await JSRuntime.InvokeVoidAsync(
+    //             "previewPdfFromStream",
+    //             fileName,
+    //             streamRef);
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         ToastService.Error($"Failed to generate report: {ex.Message}");
+    //     }
+    //     finally
+    //     {
+    //         LoadingService.Hide();
+    //         await ClearSelection();
+    //     }
+    // }
+
+    private async Task PreviewReport()
     {
-        if (SelectedBills == null || SelectedBills.Count == 0)
+        if (!SelectedBills.Any())
         {
-            ToastService.Warning("Select at least one Bill.");
+            ToastService.Warning("Please select at least one certificate.");
             return;
         }
 
         if (SelectedReportId == null)
         {
-            ToastService.Warning("Please select a report format.");
+            ToastService.Warning("Please select a report first.");
             return;
         }
 
-        var billList = SelectedBills.Cast<Bill>().ToList();
-        LoadingService.Show("Building merged report...");
+        // Get bill numbers safely
+        var billNumbers = SelectedBills
+            .Cast<Bill>()
+            .Select(b => b.BillNo)   // Make sure BillNumber property exists
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => x.Replace("/", "-").Replace("\\", "-")) // sanitize filename
+            .ToList();
 
-        try
-        {
-            // Get the report layout
-            var layoutBytes = await ReportDataService.GetLayoutBytesAsync(SelectedReportId.Value);
+        // Dynamic file name
+        var fileName = billNumbers.Count == 1
+            ? $"{billNumbers.First()}.pdf"
+            : $"Bills_{DateTime.Now:yyyyMMddHHmmss}.pdf";
 
-            if (layoutBytes == null || layoutBytes.Length == 0)
-            {
-                ToastService.Error($"Failed to load report layout for Report ID: {SelectedReportId}");
-                return;
-            }
+        var reportId = SelectedReportId.Value;
 
-            // Prepare DTOs for all selected bills
-            var dtoList = new List<PrintBillFullDto?>();
-            foreach (var bill in billList)
-            {
-                var dto = await BillService.GetPrintableBillAsync(bill.BillId);
-                dtoList.Add(dto);
-            }
+        await ReportManager.PreviewAsync<Bill, PrintBillFullDto>(
+            SelectedBills.Cast<Bill>().ToList(),
+            _ => Task.FromResult(reportId),
+            c => BillService.GetPrintableBillAsync(c.BillId),
+            c => "Bill",
+            fileName
+        );
 
-            var dtoDict = billList.Select((bill, i) => new { bill, dto = dtoList[i] })
-                                  .ToDictionary(x => x.bill, x => x.dto);
-
-            // Create the merged report
-            try
-            {
-                await ReportService.CreateMergedReportAsync(
-                    billList,
-                    bill => dtoDict.ContainsKey(bill) ? dtoDict[bill] : null,
-                    layoutBytes);
-            }
-            catch (InvalidOperationException ex) when (ex.Message.Contains("CodeDOM"))
-            {
-                ToastService.Error("Report format incompatible. Please contact administrator to update report template.");
-                LoadingService.Hide();
-                return;
-            }
-
-            if (ReportService.MergedReport == null)
-            {
-                ToastService.Error("Failed to generate report.");
-                return;
-            }
-
-            // Navigate to the report viewer
-            Navigation.NavigateTo("/reportviewer");
-        }
-        catch (Exception ex)
-        {
-            ToastService.Error($"Failed to generate report: {ex.Message}");
-        }
-        finally
-        {
-            LoadingService.Hide();
-            await ClearSelection();
-        }
+        await ClearSelection();
     }
 
     [Inject] private Sentwpcerti Sentwpcerti { get; set; } = default!;

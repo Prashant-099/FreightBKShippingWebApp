@@ -1,4 +1,4 @@
-﻿@using FreightBKShippingWebApp.Components.Pages.Account
+﻿@using FreightBKShippingWebApp.Components.Pages.AccountPage
 @using FreightBKShippingWebApp.Components.Pages.ServicePage
 @using FreightBKShippingWebApp.Components.Pages.JOBpage
 @using FreightBKShippingWebApp.Model
@@ -295,8 +295,8 @@
     <BodyContentTemplate Context="bdy">
                     <EditForm Model="@EditModel" OnValidSubmit="OnSubmit" Context="cxbill" id="billForm">
 
-                    <DataAnnotationsValidator />
-                  @* <ValidationSummary /> *@
+                        <DataAnnotationsValidator />
+                      @* <ValidationSummary /> *@
 
                         <DxFormLayout>
 
@@ -788,62 +788,58 @@
                                         </EditSettings>
                                     </DxGridDataColumn> *@
                                                     <DxGridDataColumn FieldName="BillDetailRate" Caption="Rate" Width="@GetGridColumnWidth("BillDetailRate")" Visible="@GetGridColumnVisibility("BillDetailRate")">
-    <CellEditTemplate Context="editcontext">
+                                                        <CellEditTemplate Context="editcontext">
         
-@{
+                                                    @{
 
             
-var
- row 
-=
+                                                    var
+                                                     row 
+                                                    =
  
-(
-BillDetail
-)
-editcontext
-.
-EditModel
-;
+                                                    (
+                                                    BillDetail
+                                                    )
+                                                    editcontext
+                                                    .
+                                                    EditModel
+                                                    ;
 
         
-}
+                                                    }
+                                             <input type="number" step="0.01" class="form-control no-spin"value="@row.BillDetailRate"  
+                                           @onchange="@((ChangeEventArgs e) => OnRateChanged(ParseDouble(e.Value), row))" />
+                                </CellEditTemplate>
+                            </DxGridDataColumn>
 
-        <input type="number" 
-               step="0.01"
-                                                   class="form-control no-spin"
-                                                   value="@row.BillDetailRate"  
-               @onchange="@((ChangeEventArgs e) => OnRateChanged(ParseDouble(e.Value), row))" />
-    </CellEditTemplate>
-</DxGridDataColumn>
-
-<DxGridDataColumn FieldName="BillDetailQty" Caption="Qty" Width="@GetGridColumnWidth("BillDetailQty")" Visible="@GetGridColumnVisibility("BillDetailQty")">
-    <CellEditTemplate Context="editcontext">
+                                        <DxGridDataColumn FieldName="BillDetailQty" Caption="Qty" Width="@GetGridColumnWidth("BillDetailQty")" Visible="@GetGridColumnVisibility("BillDetailQty")">
+                                            <CellEditTemplate Context="editcontext">
         
-@{
+                                        @{
 
             
-var
- row 
-=
+                                        var
+                                         row 
+                                        =
  
-(
-BillDetail
-)
-editcontext
-.
-EditModel
-;
+                                        (
+                                        BillDetail
+                                        )
+                                        editcontext
+                                        .
+                                        EditModel
+                                        ;
 
         
-}
+                                        }
 
-        <input type="number" 
-               step="0.01"
-                                                   class="form-control no-spin"
-                                                   value="@row.BillDetailQty" 
-               @onchange="@((ChangeEventArgs e) => OnQtyChanged(ParseDouble(e.Value), row))" />
-    </CellEditTemplate>
-</DxGridDataColumn>
+                                                <input type="number" 
+                                                       step="0.01"
+                                                                                           class="form-control no-spin"
+                                                                                           value="@row.BillDetailQty" 
+                                                       @onchange="@((ChangeEventArgs e) => OnQtyChanged(ParseDouble(e.Value), row))" />
+                                            </CellEditTemplate>
+                                        </DxGridDataColumn>
                                                         <DxGridDataColumn FieldName="BillDetailAmount" Caption="Amount" Width="@GetGridColumnWidth("BillDetailAmount")" ReadOnly="true" Visible="@GetGridColumnVisibility("BillDetailAmount")">
                                                             <EditSettings>
                                                                 <DxSpinEditSettings ShowSpinButtons="false" />

@@ -5,7 +5,7 @@
 @using FreightBKShippingWebApp.Services
 @using FreightBKShippingWebApp.Services.PdfReaderAndHelperService
 @using static FreightBKShippingWebApp.Components.Pages.JOBpage.AddContainerJob
-
+@inject IGenericReportManager ReportManager
 @inject JobService JobService
 @inject ToasteService ToastService
 @inject LoadingService LoadingService
@@ -63,7 +63,17 @@
                 <DxToolbarItem Text="Delete" IconCssClass="bi bi-trash" Click="OnDelete" />
                 <DxToolbarItem Text="Import PDF" IconCssClass="bi bi-file-pdf-fill" Click="OnImportPDF" />
                 <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="LoadJobsAsync" />
-                
+                <DxToolbarItem Context="cfdr"
+                               Text="Print"
+                               RenderStyleMode="ToolbarItemRenderStyleMode.Contained"
+                               RenderStyle="ButtonRenderStyle.Secondary"
+                               IconCssClass="bi bi-printer">
+                    <Items>
+                        @* <DxToolbarItem Text="Send WhatsApp" IconCssClass="bi bi-whatsapp" Click="@(async () => await DownloadReport(true))" /> *@
+                        <DxToolbarItem Text="Download PDF" IconCssClass="bi bi-printer" Click="@(async () => await PrintReports(false))" />
+                        <DxToolbarItem Text="Preview" IconCssClass="bi bi-printer" Click="@((_) => PreviewReport())"></DxToolbarItem>
+                    </Items>
+                </DxToolbarItem>
             </Items>
         </DxToolbar>
     </ToolbarTemplate>
@@ -589,14 +599,14 @@
                 {
                 var result = await JobService.DeleteAsync(job.JobId);
               if (result.Success)
-{
-    successCount++;
-}
-else
-{
-    failCount++;
-    ToastService.Error(result.Error);   // 🎉 show real API message
-}
+                    {
+                        successCount++;
+                    }
+                    else
+                    {
+                        failCount++;
+                        ToastService.Error(result.Error);   // 🎉 show real API message
+                    }
                 }
             if (successCount > 0) ToastService.Success($"{successCount} job(s) Deleted Successfully.");
             // if (failCount > 0) ToastService.Error($"{failCount} job(s) Failed To Delete.");
@@ -608,4 +618,69 @@ else
             await ClearSelection();
             }
         }
+
+
+
+    private async Task PrintReports(bool sendViaWhatsapp)
+    {
+        if (!SelectedJobs.Any())
+        {
+            ToastService.Warning("Please select at least one job.");
+            return;
+        }
+        var Jobs = SelectedJobs.Cast<Job>().ToList();
+        var jobNumbers = Jobs
+          .Select(b => b.JobNo) // Make sure this property exists
+          .Where(x => !string.IsNullOrWhiteSpace(x))
+          .Select(x => x.Replace("/", "-").Replace("\\", "-")) // sanitize filename
+          .ToList();
+
+        var fileName = jobNumbers.Count == 1
+         ? $"{jobNumbers.First()}.pdf"
+         : $"Job_{DateTime.Now:yyyyMMddHHmmss}.pdf";
+        await ReportManager.DownloadAsync<Job, JobreportDto>(
+            SelectedJobs.Cast<Job>().ToList(),
+
+            // Get ReportId from Job
+            job => Task.FromResult(job.JobReportId ?? 0),
+
+            // Get DTO
+            job => JobService.GetJobWithContainerAsync(job.JobId), job => "Job", fileName);
+
+        await ClearSelection();
+    }
+
+    private async Task PreviewReport()
+    {
+        if (!SelectedJobs.Any())
+        {
+            ToastService.Warning("Please select at least one certificate.");
+            return;
+        }
+        var jobsNumbers = SelectedJobs
+         .Cast<Job>()
+         .Select(b => b.JobNo)   // Make sure BillNumber property exists
+         .Where(x => !string.IsNullOrWhiteSpace(x))
+         .Select(x => x.Replace("/", "-").Replace("\\", "-")) // sanitize filename
+         .ToList();
+
+        // Dynamic file name
+        var fileName = jobsNumbers.Count == 1
+            ? $"{jobsNumbers.First()}.pdf"
+            : $"Jobs_{DateTime.Now:yyyyMMddHHmmss}.pdf";
+        await ReportManager.PreviewAsync<Job, JobreportDto>(
+            SelectedJobs.Cast<Job>().ToList(),
+
+            c => Task.FromResult(c.JobReportId ?? 0),
+
+            c => JobService.GetJobWithContainerAsync(c.JobId),
+            c => "Job",
+            fileName
+
+        );
+
+        await ClearSelection();
+    }
+
+
     }

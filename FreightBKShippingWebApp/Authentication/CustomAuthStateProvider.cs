@@ -159,19 +159,33 @@ namespace FreightBKShippingWebApp.Authentication
                 return false;
             }
         }
+        //private ClaimsIdentity GetClaimsIdentity(JwtSecurityToken jwtToken)
+        //{
+        //    if (jwtToken == null)
+        //    {
+        //        throw new ArgumentNullException(nameof(jwtToken));
+        //    }
+
+        //    var claims = jwtToken.Claims.ToList();
+
+        //    // Add expiration claim for reference
+        //    claims.Add(new Claim("exp", jwtToken.ValidTo.ToString("O")));
+
+        //    return new ClaimsIdentity(claims, "jwt");
+        //}
         private ClaimsIdentity GetClaimsIdentity(JwtSecurityToken jwtToken)
         {
             if (jwtToken == null)
-            {
                 throw new ArgumentNullException(nameof(jwtToken));
-            }
 
             var claims = jwtToken.Claims.ToList();
 
-            // Add expiration claim for reference
-            claims.Add(new Claim("exp", jwtToken.ValidTo.ToString("O")));
-
-            return new ClaimsIdentity(claims, "jwt");
+            return new ClaimsIdentity(
+                claims,
+                "jwt",
+                ClaimTypes.Name,
+                ClaimTypes.Role   // 🔥 THIS IS THE FIX
+            );
         }
 
         private AuthenticationState CreateAnonymousState()

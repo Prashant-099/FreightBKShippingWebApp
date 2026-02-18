@@ -29,43 +29,107 @@ namespace FreightBKShippingWebApp.Services
         // 🔹 MAIN METHOD → GENERATE PDF BYTES (Reusable Core Logic)
         // ============================================================
 
+        //public async Task<(byte[] pdfBytes, string fileName)> GeneratePdfAsync<T, TDto>(
+        //    List<T> items,
+        //    Func<T, Task<int>> getReportIdAsync,
+        //    Func<T, Task<TDto?>> getDtoAsync,
+        //    string fileName = "Report.pdf")
+        //    where TDto : class
+        //{
+        //    if (items == null || !items.Any())
+        //        throw new Exception("Select at least one item.");
+
+        //    var reportGroups = await BuildReportGroupsAsync(items, getReportIdAsync);
+        //    var allReports = new List<XtraReport>();
+
+        //    foreach (var group in reportGroups)
+        //    {
+        //        var reportId = group.Key;
+        //        var groupItems = group.Value;
+
+        //        if (reportId <= 0)
+        //            continue;
+
+        //        var layoutBytes = await _reportDataService
+        //            .GetLayoutBytesAsync(reportId);
+
+        //        if (layoutBytes == null || layoutBytes.Length == 0)
+        //            continue;
+
+        //        var dtoDict = new Dictionary<T, TDto?>();
+
+        //        foreach (var item in groupItems)
+        //        {
+        //            dtoDict[item] = await getDtoAsync(item);
+        //        }
+
+        //        var report = await _reportService.CreateMergedReportAsync<T, TDto>(
+        //            groupItems,
+        //            item => dtoDict.TryGetValue(item, out var dto) ? dto : null,
+        //            layoutBytes);
+
+        //        if (report != null)
+        //            allReports.Add(report);
+        //    }
+
+        //    if (!allReports.Any())
+        //        throw new Exception("No reports generated.");
+
+        //    var finalReport = MergeReports(allReports);
+
+        //    using var stream = new MemoryStream();
+        //    finalReport.ExportToPdf(stream);
+
+        //    return (stream.ToArray(), fileName);
+        //}
+
+
         public async Task<(byte[] pdfBytes, string fileName)> GeneratePdfAsync<T, TDto>(
-            List<T> items,
-            Func<T, Task<int>> getReportIdAsync,
-            Func<T, Task<TDto?>> getDtoAsync,
-            string fileName = "Report.pdf")
-            where TDto : class
+    List<T> items,
+    Func<T, Task<int>> getReportIdAsync,
+    Func<T, Task<TDto?>> getDtoAsync,
+    Func<T, string> getDocType,   // 🔹 Added for fallback
+    string fileName = "Report.pdf")
+    where TDto : class
         {
             if (items == null || !items.Any())
                 throw new Exception("Select at least one item.");
 
-            var reportGroups = await BuildReportGroupsAsync(items, getReportIdAsync);
             var allReports = new List<XtraReport>();
 
-            foreach (var group in reportGroups)
+            foreach (var item in items)
             {
-                var reportId = group.Key;
-                var groupItems = group.Value;
+                // 🔹 Step 1: Get ReportId
+                var reportId = await getReportIdAsync(item);
 
+                // 🔹 Step 2: If invalid → get default reportId using DocType
                 if (reportId <= 0)
-                    continue;
+                {
+                    var docType = getDocType(item);
 
+                    var defaultReportId = await _reportDataService
+                        .GetDefaultReportIdByTypeAsync(docType);
+
+                    if (!defaultReportId.HasValue || defaultReportId.Value <= 0)
+                        throw new Exception("Report format not found.");
+
+                    reportId = defaultReportId.Value;
+                }
+
+                // 🔹 Step 3: Get Layout
                 var layoutBytes = await _reportDataService
                     .GetLayoutBytesAsync(reportId);
 
                 if (layoutBytes == null || layoutBytes.Length == 0)
-                    continue;
+                    throw new Exception("Report format not found.");
 
-                var dtoDict = new Dictionary<T, TDto?>();
+                // 🔹 Step 4: Get DTO
+                var dto = await getDtoAsync(item);
 
-                foreach (var item in groupItems)
-                {
-                    dtoDict[item] = await getDtoAsync(item);
-                }
-
+                // 🔹 Step 5: Create Report
                 var report = await _reportService.CreateMergedReportAsync<T, TDto>(
-                    groupItems,
-                    item => dtoDict.TryGetValue(item, out var dto) ? dto : null,
+                    new List<T> { item },
+                    _ => dto,
                     layoutBytes);
 
                 if (report != null)
@@ -75,6 +139,7 @@ namespace FreightBKShippingWebApp.Services
             if (!allReports.Any())
                 throw new Exception("No reports generated.");
 
+            // 🔹 Step 6: Merge All Reports
             var finalReport = MergeReports(allReports);
 
             using var stream = new MemoryStream();
@@ -82,6 +147,7 @@ namespace FreightBKShippingWebApp.Services
 
             return (stream.ToArray(), fileName);
         }
+
 
         // ============================================================
         // 🔹 DOWNLOAD PDF
@@ -91,6 +157,7 @@ namespace FreightBKShippingWebApp.Services
             List<T> items,
             Func<T, Task<int>> getReportIdAsync,
             Func<T, Task<TDto?>> getDtoAsync,
+            Func<T, string> getDocType,   // 🔹 Added
             string fileName = "Report.pdf")
             where TDto : class
         {
@@ -109,6 +176,7 @@ namespace FreightBKShippingWebApp.Services
                         items,
                         getReportIdAsync,
                         getDtoAsync,
+                        getDocType,      // 🔹 Pass here
                         fileName);
 
                 using var stream = new MemoryStream(pdfBytes);
@@ -130,6 +198,7 @@ namespace FreightBKShippingWebApp.Services
                 _loading.Hide();
             }
         }
+
 
         // ============================================================
         // 🔹 INTERNAL → GROUP BY REPORT ID
@@ -183,6 +252,7 @@ namespace FreightBKShippingWebApp.Services
     List<T> items,
     Func<T, Task<int>> getReportIdAsync,
     Func<T, Task<TDto?>> getDtoAsync,
+    Func<T, string> getDocType,   // 🔹 Added
     string fileName = "Report.pdf")
     where TDto : class
         {
@@ -201,6 +271,7 @@ namespace FreightBKShippingWebApp.Services
                         items,
                         getReportIdAsync,
                         getDtoAsync,
+                        getDocType,   // 🔹 Pass here
                         fileName);
 
                 using var stream = new MemoryStream(pdfBytes);
@@ -220,6 +291,7 @@ namespace FreightBKShippingWebApp.Services
                 _loading.Hide();
             }
         }
+
 
     }
 

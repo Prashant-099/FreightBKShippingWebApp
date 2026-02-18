@@ -1,4 +1,7 @@
 ﻿@page "/"
+
+
+
 @using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Services
 @using Microsoft.AspNetCore.Components.Authorization
@@ -23,9 +26,11 @@
         background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
         min-height: 100vh;
         padding: 1rem;
-        overflow-x: hidden;
+        height: auto;
+        /* overflow-x: auto;
+            overflow-y: auto; */
     }
-   
+
     .welcome-header {
         background: linear-gradient(135deg, #67cef8 0%, #ffffff 100%);
         border-radius: 20px;
@@ -124,29 +129,29 @@
     }
 
     .stat-icon {
-        width: 2.5rem; 
+        width: 2.5rem;
         height: 40px;
         border-radius: 14px;
         display: flex;
         align-items: center;
         justify-content: center;
         font-size: 2rem;
-       /*  margin-bottom: 1rem; */
+        /*  margin-bottom: 1rem; */
     }
 
     .stat-value {
         font-size: 25px;
         font-weight: 700;
-      /*   margin: 0.5rem 0; */
+        /*   margin: 0.5rem 0; */
         line-height: 1;
-        padding-right:15px;
+        padding-right: 15px;
     }
 
     .stat-label {
         color: black;
         font-size: 0.89rem;
         font-weight: 500;
-       /*  text-transform: uppercase; */
+        /*  text-transform: uppercase; */
         letter-spacing: 0.5px;
     }
 
@@ -157,22 +162,22 @@
     }
 
     .chart-card {
-     background: white;
-     border-radius: 16px;
-    /*  padding: 1.5rem; */
-    /*  box-shadow: 0 4px 15px rgba(0,0,0,0.08); */
-     height: 379px;
- }
+        background: white;
+        border-radius: 16px;
+        /*  padding: 1.5rem; */
+        /*  box-shadow: 0 4px 15px rgba(0,0,0,0.08); */
+        height: 379px;
+    }
 
- .chart-title {
-     padding-left:1rem;
-     font-size: 0.89rem;
-     font-weight: 500;
-    /*  margin-bottom: 1.5rem; */
-     color:black;
- }
+    .chart-title {
+        padding-left: 1rem;
+        font-size: 0.89rem;
+        font-weight: 500;
+        /*  margin-bottom: 1.5rem; */
+        color: black;
+    }
 
-    
+
     .stat-import {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     }
@@ -201,7 +206,7 @@
         background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
     }
 
-    
+
 
     .touch-indicator {
         display: none;
@@ -214,14 +219,12 @@
         animation: swipeHint 2s infinite;
     }
 
-    .chart-card-sale 
-    {
+    .chart-card-sale {
         background: white;
         border-radius: 16px;
         /*  padding: 1.5rem; */
         /*  box-shadow: 0 4px 15px rgba(0,0,0,0.08); */
         height: 530px;
-    
     }
 
     .swiper-slide1 {
@@ -229,13 +232,12 @@
         width: 100%;
         height: auto;
     }
-    @@media (max-width: 576px) { /* mobile screens */
-        .swiper-slide1
 
-    {
-        max-height: 410px;
-        overflow-y: auto;
-    }
+    @@media (max-width: 576px) { /* mobile screens */
+        .swiper-slide1 {
+            max-height: 515px;
+            overflow-y: auto;
+        }
 
         .swiper-slide {
             max-width: 576px;
@@ -245,10 +247,8 @@
 
         .stat-change {
             font-size: 0rem;
-           
         }
     }
-     
 </style>
 
 <div class="dashboard-container">
@@ -259,7 +259,7 @@
                 <h1 class="fw-bold mb-2">
                     <i class="bi bi-speedometer2 me-2"></i>Welcome, @UserName!
                 </h1>
-                
+
             </div>
             <div class="year-indicator" @onclick="OpenDateFilter">
                 <i class="bi bi-calendar3 me-2"></i>
@@ -268,18 +268,293 @@
         </div>
     </div>
 
-    @if (isLoading)
-    {
-        <div class="text-center py-5">
-            <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
-                <span class="visually-hidden">Loading...</span>
-            </div>
-            <p class="mt-3 text-muted">Loading dashboard data...</p>
-        </div>
-    }
+    @if (isSuperAdmin)
+            { 
+                @if (superAdminData == null)
+                {
+                    <div class="text-center py-5">
+                        <span class="spinner-border text-primary"></span>
+                        <p class="mt-2">Loading dashboard…</p>
+                    </div>
+                } 
+                else
+                {
+                    <div class="swiper-slide1">
+                        <!-- 🔥 SUPER ADMIN DASHBOARD -->
+                        <div class="row g-3 swiper-container">
+
+                            <div class="col-md-3">
+                                <div class="stat-card">
+                                    <div>
+                                        <div class="stat-label">Total Companies</div>
+                                        <div class="stat-value text-primary">@superAdminData?.TotalCompanies</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-3">
+                                <div class="stat-card">
+                                    <div>
+                                        <div class="stat-label">Expired Companies</div>
+                                        <div class="stat-value text-danger">@superAdminData?.ExpiredCompanies</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-3">
+                                <div class="stat-card">
+                                    <div>
+                                        <div class="stat-label">Online Companies</div>
+                                        <div class="stat-value text-success">@superAdminData?.OnlineCompanies</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-3">
+                                <div class="stat-card">
+                                    <div>
+                                        <div class="stat-label">Today's Logins</div>
+                                        <div class="stat-value text-info">@superAdminData?.TodayLogins</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <hr />
+
+                        <!-- Company Wise Table -->
+                        <div class="card mt-4 shadow-sm border-0">
+                            <div class="card-header bg-white fw-semibold d-flex justify-content-between align-items-center">
+                                <span>Company Login & User Stats</span>
+                                <span class="text-muted small">
+                                    @superAdminData?.CompanyLoginCounts?.Count() Companies
+                                </span>
+                            </div>
+
+                            <div class="table-wrapper">
+                                <div class="table-responsive">
+                                    @*     <table class="table custom-table mb-0">
+
+                                    <thead>
+                                        <tr>
+                                            <th>Company</th>
+                                            <th>Total Users</th>
+                                            <th>Max Users</th>
+                                            <th>Remaining</th>
+                                            <th>Online</th>
+                                            <th>Total Success</th>
+                                            <th>Total Failed</th>
+                                            <th>Monthly Success</th>
+                                            <th>Expiry</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var c in superAdminData?.CompanyLoginCounts ?? new())
+                                        {
+                                            var expiry = superAdminData.CompanyExpiryList
+                                            .FirstOrDefault(x => x.CompanyId == c.CompanyId);
+
+                                            var online = superAdminData.OnlineCompaniesList
+                                            .FirstOrDefault(x => x.CompanyId == c.CompanyId);
+
+                                            <tr>
+                                                <td>@c.CompanyName</td>
+                                                <td>@c.TotalUsers</td>
+                                                <td>@c.MaxUsersAllowed</td>
+                                                <td>@c.RemainingUserSlots</td>
+                                                <td>@(online?.OnlineUsers ?? 0)</td>
+                                                <td>@c.TotalSuccessfulLogins</td>
+                                                <td>@c.TotalFailedLogins</td>
+                                                <td>@c.MonthlySuccessfulLogins</td>
+                                                <td>
+                                                    @if (expiry != null)
+                                                    {
+                                                        <div class="d-flex flex-column">
+                                                            <span class="fw-semibold">
+                                                                @expiry.FinalExpiryDate?.ToString("dd MMM yyyy")
+                                                            </span>
+
+                                                            @if (expiry.IsExpired)
+                                                            {
+                                                                <span class="badge rounded-pill bg-danger-subtle text-danger mt-1">
+                                                                    Expired
+                                                                </span>
+                                                            }
+                                                            else if (expiry.DaysRemaining <= 7)
+                                                            {
+                                                                <span class="badge rounded-pill bg-warning-subtle text-warning mt-1">
+                                                                    @expiry.DaysRemaining days left
+                                                                </span>
+                                                            }
+                                                            else
+                                                            {
+                                                                <span class="badge rounded-pill bg-success-subtle text-success mt-1">
+                                                                    @expiry.DaysRemaining days left
+                                                                </span>
+                                                            }
+                                                        </div>
+                                                    }
+                                                </td>
+
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table> *@
+
+                                    <DxGrid Data="@superAdminData.CompanyLoginCounts"
+                                            CssClass="dashboard-grid"
+                                            ShowSearchBox="true"
+                                            PageSize="10"
+                                            PageSizeSelectorVisible="true"
+                                            ShowGroupPanel="true"
+                                            FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always"
+                                            FocusedRowEnabled="false"
+                                            ColumnResizeMode="GridColumnResizeMode.ColumnsContainer">
+
+                                        <Columns>
+
+                                            <!-- Company -->
+                                            <DxGridDataColumn Caption="Company" FixedPosition="GridColumnFixedPosition.Left" MinWidth="200">
+                                                <CellDisplayTemplate Context="c">
+                                                    @{
+                                                        var row = (CompanyLoginCountDto)c.DataItem;
+                                                    }
+                                                    <strong class="text-primary">@row.CompanyName</strong>
+                                                </CellDisplayTemplate>
+                                            </DxGridDataColumn>
+                                            @* <DxGridDataColumn Caption="Company"
+                                                              MinWidth="200"
+                                                              Visible="@( IsMobile )">
+                                                <CellDisplayTemplate Context="c">
+                                                    @{
+                                                        var row = (CompanyLoginCountDto)c.DataItem;
+                                                    }
+                                                    <strong class="text-primary">@row.CompanyName</strong>
+                                                </CellDisplayTemplate>
+                                            </DxGridDataColumn> *@
+                                            <!-- Total Users -->
+                                            <DxGridDataColumn Caption="Total Users">
+                                                <CellDisplayTemplate Context="c">
+                                                    @{
+                                                        var row = (CompanyLoginCountDto)c.DataItem;
+                                                    }
+                                                    <span class="badge bg-info-subtle text-info">
+                                                        @row.TotalUsers
+                                                    </span>
+                                                </CellDisplayTemplate>
+                                            </DxGridDataColumn>
+
+                                            <!-- Max Users -->
+                                            <DxGridDataColumn FieldName="MaxUsersAllowed" Caption="Max Users" />
+
+                                            <!-- Remaining -->
+                                            <DxGridDataColumn Caption="Remaining">
+                                                <CellDisplayTemplate Context="c">
+                                                    @{
+                                                        var row = (CompanyLoginCountDto)c.DataItem;
+                                                    }
+                                                    <span class="badge bg-success-subtle text-success">
+                                                        @row.RemainingUserSlots
+                                                    </span>
+                                                </CellDisplayTemplate>
+                                            </DxGridDataColumn>
+
+                                            <!-- Online -->
+                                            <DxGridDataColumn Caption="Online">
+                                                <CellDisplayTemplate Context="c">
+                                                    @{
+                                                        var row = (CompanyLoginCountDto)c.DataItem;
+                                                        var online = superAdminData.OnlineCompaniesList
+                                                        .FirstOrDefault(x => x.CompanyId == row.CompanyId);
+                                                    }
+
+                                                    <span class="badge bg-primary-subtle text-primary">
+                                                        @(online?.OnlineUsers ?? 0)
+                                                    </span>
+                                                </CellDisplayTemplate>
+                                            </DxGridDataColumn>
+
+                                            <!-- Total Success -->
+                                            <DxGridDataColumn Caption="Total Success">
+                                                <CellDisplayTemplate Context="c">
+                                                    @{
+                                                        var row = (CompanyLoginCountDto)c.DataItem;
+                                                    }
+                                                    <span class="fw-semibold text-success">
+                                                        @row.TotalSuccessfulLogins
+                                                    </span>
+                                                </CellDisplayTemplate>
+                                            </DxGridDataColumn>
+
+                                            <!-- Total Failed -->
+                                            <DxGridDataColumn Caption="Total Failed">
+                                                <CellDisplayTemplate Context="c">
+                                                    @{
+                                                        var row = (CompanyLoginCountDto)c.DataItem;
+                                                    }
+                                                    <span class="fw-semibold text-danger">
+                                                        @row.TotalFailedLogins
+                                                    </span>
+                                                </CellDisplayTemplate>
+                                            </DxGridDataColumn>
+
+                                            <!-- Monthly Success -->
+                                            <DxGridDataColumn FieldName="MonthlySuccessfulLogins"
+                                                              Caption="Monthly Success" />
+
+                                            <!-- Expiry -->
+                                            <DxGridDataColumn Caption="Expiry" FixedPosition="GridColumnFixedPosition.Left" MinWidth="150" FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always">
+                                                <CellDisplayTemplate Context="c">
+                                                    @{
+                                                        var row = (CompanyLoginCountDto)c.DataItem;
+                                                        var expiry = superAdminData.CompanyExpiryList
+                                                        .FirstOrDefault(x => x.CompanyId == row.CompanyId);
+                                                    }
+
+                                                    @if (expiry != null)
+                                                    {
+                                                        <div class="d-flex flex-column">
+                                                            <span class="fw-semibold">
+                                                                @expiry.FinalExpiryDate?.ToString("dd MMM yyyy")
+                                                            </span>
+
+                                                            @if (expiry.IsExpired)
+                                                            {
+                                                                <span class="badge bg-danger-subtle text-danger mt-1">
+                                                                    Expired
+                                                                </span>
+                                                            }
+                                                            else if (expiry.DaysRemaining <= 7)
+                                                            {
+                                                                <span class="badge bg-warning-subtle text-warning mt-1">
+                                                                    @expiry.DaysRemaining days left
+                                                                </span>
+                                                            }
+                                                            else
+                                                            {
+                                                                <span class="badge bg-success-subtle text-success mt-1">
+                                                                    @expiry.DaysRemaining days left
+                                                                </span>
+                                                            }
+                                                        </div>
+                                                    }
+                                                </CellDisplayTemplate>
+                                            </DxGridDataColumn>
+
+                                        </Columns>
+                                    </DxGrid>
+
+
+                                </div>
+                        </div>
+                    </div>
+                </div>
+                }
+       }     
     else
     {
-      
+
         <!-- Swiper Container -->
         <div class="swiper-container" @ref="swiperRef" @ontouchstart="HandleTouchStart" @ontouchmove="HandleTouchMove" @ontouchend="HandleTouchEnd">
             <button class="swiper-nav swiper-prev" @onclick="PreviousSlide" disabled="@(currentSlide == 0)">
@@ -290,10 +565,10 @@
             </button>
 
             <div class="swiper-wrapper" style="transform: translateX(-@(currentSlide * 100)%)">
-                
+
                 <!-- Slide 1: Statistics Cards -->
-                <div class="swiper-slide1" >
-                    
+                <div class="swiper-slide1">
+
                     <div class="row g-3 g-md-4">
                         <!-- Import Jobs -->
                         <div class="col-12 col-sm-3">
@@ -308,7 +583,7 @@
                                 <!-- Column 2: Details -->
                                 <div class="flex-grow-1">
                                     <div class="stat-label">Import Active</div>
-                                    
+
                                     <div class="stat-change">
                                         <i class="bi bi-arrow-up"></i> @stats.ImportJobsThisMonth this month
                                     </div>
@@ -323,13 +598,13 @@
                             <div class="stat-card d-flex align-items-center" @onclick="@(() => Navigation.NavigateTo("/jobexport"))">
                                 <div class="stat-icon stat-export me-3">
                                     <i class="bi bi-box-arrow-up text-white"></i>
-                             
+
                                 </div>
                                 <div class="flex-grow-1">
-                                <div class="stat-label">Export Active</div> 
-                                <div class="stat-change">
-                                    <i class="bi bi-arrow-up"></i> @stats.ExportJobsThisMonth this month
-                                </div>
+                                    <div class="stat-label">Export Active</div>
+                                    <div class="stat-change">
+                                        <i class="bi bi-arrow-up"></i> @stats.ExportJobsThisMonth this month
+                                    </div>
                                 </div>
 
                                 <div class="stat-value text-danger ms-3" style="min-width: 5ch; text-align:right; font-variant-numeric: tabular-nums;">@stats.TotalExportJobs</div>
@@ -344,10 +619,10 @@
                                     <i class="bi bi-clock-history text-white"></i>
                                 </div>
                                 <div class="flex-grow-1">
-                                <div class="stat-label">Pending</div>
-                                <div class="stat-change text-warning">
-                                    <i class="bi bi-exclamation-triangle"></i> Requires attention
-                                </div>
+                                    <div class="stat-label">Pending</div>
+                                    <div class="stat-change text-warning">
+                                        <i class="bi bi-exclamation-triangle"></i> Requires attention
+                                    </div>
                                 </div>
 
                                 <div class="stat-value text-infoms-3 ms-3" style="min-width: 5ch; text-align:right; font-variant-numeric: tabular-nums;">@stats.PendingJobs</div>
@@ -361,11 +636,11 @@
                                 <div class="stat-icon stat-complete  me-3">
                                     <i class="bi bi-check-circle text-white"></i>
                                 </div>
-                                    <div class="flex-grow-1">
-                                <div class="stat-label">Completed</div>
-                                <div class="stat-change">
-                                    <i class="bi bi-graph-up"></i> @stats.CompletionRate% rate
-                                </div>
+                                <div class="flex-grow-1">
+                                    <div class="stat-label">Completed</div>
+                                    <div class="stat-change">
+                                        <i class="bi bi-graph-up"></i> @stats.CompletionRate% rate
+                                    </div>
                                 </div>
 
                                 <div class="stat-value text-success ms-3" style="min-width: 5ch; text-align:right; font-variant-numeric: tabular-nums;">@stats.CompletedJobs</div>
@@ -380,9 +655,9 @@
                                 </div>
                                 <div class="flex-grow-1">
                                     <div class="stat-label">Cancelled</div>
-                                <div class="stat-change">
-                                    <i class="bi bi-arrow-down"></i> @stats.CancellationRate% rate
-                                </div>
+                                    <div class="stat-change">
+                                        <i class="bi bi-arrow-down"></i> @stats.CancellationRate% rate
+                                    </div>
                                 </div>
                                 <div class="stat-value text-danger  ms-3" style="min-width: 5ch; text-align:right; font-variant-numeric: tabular-nums;">@stats.CancelledJobs</div>
 
@@ -395,9 +670,9 @@
                                     <i class="bi bi-receipt text-white "></i>
                                 </div>
                                 <div class="flex-grow-1">
-                                <div class="stat-label">Total Invoices</div>
-                                <div class="stat-change">
-                                    <i class="bi bi-arrow-up"></i> @stats.BillsThisMonth this month
+                                    <div class="stat-label">Total Invoices</div>
+                                    <div class="stat-change">
+                                        <i class="bi bi-arrow-up"></i> @stats.BillsThisMonth this month
                                     </div>
                                 </div>
 
@@ -412,13 +687,13 @@
                                 <div class="stat-icon stat-revenue me-3">
                                     <i class="bi bi-currency-rupee text-white"></i>
                                 </div>
-                                    <div class="flex-grow-1">
-                                <div class="stat-label">Total Revenue</div>
-                                <div class="stat-change">
-                                    <i class="bi bi-graph-up"></i> ₹@stats.RevenueThisMonth.ToString("N0") this month
+                                <div class="flex-grow-1">
+                                    <div class="stat-label">Total Revenue</div>
+                                    <div class="stat-change">
+                                        <i class="bi bi-graph-up"></i> ₹@stats.RevenueThisMonth.ToString("N0") this month
+                                    </div>
                                 </div>
-                                </div>
-                                <div class="stat-value text-success ms-3" style="min-width: 5ch; text-align:right; font-variant-numeric: tabular-nums;" >₹@stats.TotalRevenue.ToString("N0")</div>
+                                <div class="stat-value text-success ms-3" style="min-width: 5ch; text-align:right; font-variant-numeric: tabular-nums;">₹@stats.TotalRevenue.ToString("N0")</div>
 
                             </div>
                         </div>
@@ -465,40 +740,40 @@
                                 <DxChart Data="@jobTypeData" Width="100%" Height="320px">
                                     <DxChartLegend Visible="true" Position="RelativePosition.Outside" />
 
-                                   <!-- Import Series -->
-    <DxChartBarSeries T="JobTypeData"
-                      TArgument="string"
-                      TValue="int"
-                      Name="Import"
-                      ArgumentField="@(j => j.Label)"
-                      ValueField="@(j => j.Count)"
-                      Filter="@(j => j.Label == "IMPORT")">
-    </DxChartBarSeries>
+                                    <!-- Import Series -->
+                                    <DxChartBarSeries T="JobTypeData"
+                                                      TArgument="string"
+                                                      TValue="int"
+                                                      Name="Import"
+                                                      ArgumentField="@(j => j.Label)"
+                                                      ValueField="@(j => j.Count)"
+                                                      Filter="@(j => j.Label == "IMPORT")">
+                                    </DxChartBarSeries>
 
-    <!-- Export Series -->
-    <DxChartBarSeries T="JobTypeData"
-                      TArgument="string"
-                      TValue="int"
-                      Name="Export"
-                      ArgumentField="@(j => j.Label)"
-                      ValueField="@(j => j.Count)"
-                      Filter="@(j => j.Label == "EXPORT")">
-    </DxChartBarSeries>
+                                    <!-- Export Series -->
+                                    <DxChartBarSeries T="JobTypeData"
+                                                      TArgument="string"
+                                                      TValue="int"
+                                                      Name="Export"
+                                                      ArgumentField="@(j => j.Label)"
+                                                      ValueField="@(j => j.Count)"
+                                                      Filter="@(j => j.Label == "EXPORT")">
+                                    </DxChartBarSeries>
                                 </DxChart>
                             </div>
                         </div>
 
-                   
-                </div>
 
-                
+                    </div>
+
+
                 </div>
 
 
 
 
                 <div class="swiper-slide">
-                      
+
                     <div class="row g-1">
 
                         <!-- Revenue Chart -->
@@ -551,7 +826,7 @@
                         </div>
 
 
-                      @*   <!-- Recent Activity -->
+                        @*   <!-- Recent Activity -->
                         <div class="col-6 col-md-3">
                             <div class="chart-card">
                                 <h5 class="chart-title">
@@ -591,27 +866,38 @@
                     </div>
 
 
-                  
+
                 </div>
             </div>
-            
-        </div>
-            <div class="touch-indicator">
-                <i class="bi bi-chevron-compact-right"></i>
-            </div>
-        
 
-       
-        <!-- Pagination Dots -->
-       @*  <div class="swiper-pagination">
+        </div>
+        <div class="touch-indicator">
+            <i class="bi bi-chevron-compact-right"></i>
+        </div>
+
+    }
+
+    <!-- Pagination Dots -->
+    @* <div class="swiper-pagination">
             <button class="swiper-dot @(currentSlide == 0 ? "active" : "")" @onclick="@(() => GoToSlide(0))" aria-label="Go to slide 1"></button>
             <button class="swiper-dot @(currentSlide == 1 ? "active" : "")" @onclick="@(() => GoToSlide(1))" aria-label="Go to slide 2"></button>
             <button class="swiper-dot @(currentSlide == 2 ? "active" : "")" @onclick="@(() => GoToSlide(2))" aria-label="Go to slide 3"></button>
         </div> *@
-    }
+    
 </div>
 <DateFilterPage @ref="dateFilterPopup" OnFilterApplied="HandleFilterApplied" />
 @code {
+    // bool IsMobile;
+
+    // protected override void OnAfterRender(bool firstRender)
+    // {
+    //     if (firstRender)
+    //     {
+    //         IsMobile = JSRuntime.InvokeAsync<bool>(
+    //             "eval", "window.innerWidth < 768").Result;
+    //         StateHasChanged();
+    //     }
+    // }
     private List<Status> statusList = new();
     private DateFilterPage dateFilterPopup;
     private string UserName { get; set; } = "User";
@@ -632,9 +918,14 @@
     private DateTime? filterFromDate;
     private DateTime? filterToDate;
 
+    private bool isSuperAdmin = false;
+    private SuperAdminDashboardDto? superAdminData;
+
+
+
     private void OpenDateFilter()
     {
-        dateFilterPopup.Show(filterFromDate, filterToDate ,null ,null,null);
+        dateFilterPopup.Show(filterFromDate, filterToDate, null, null, null);
     }
 
     // Handle Filter Applied
@@ -665,12 +956,24 @@
             if (user.Identity != null && user.Identity.IsAuthenticated)
             {
                 UserName = user.Identity.Name ?? "User";
+                isSuperAdmin = user.IsInRole("SuperAdmin");
+
             }
 
-            CurrentYearName = YearStatechangeService.Years.FirstOrDefault(y => y.YearId == YearStatechangeService.SelectedYearId)?.YearName ?? DateTime.Now.Year.ToString();
-            YearStatechangeService.OnYearChanged += HandleYearChanged;
+            if (isSuperAdmin)
+            {
+                await LoadSuperAdminDashboard();
+            }
+            else
+            {
+                CurrentYearName = YearStatechangeService.Years
+                    .FirstOrDefault(y => y.YearId == YearStatechangeService.SelectedYearId)?
+                    .YearName ?? DateTime.Now.Year.ToString();
 
-            await LoadDashboardData();
+                YearStatechangeService.OnYearChanged += HandleYearChanged;
+
+                await LoadDashboardData();
+            }
         }
         catch (Exception ex)
         {
@@ -681,6 +984,25 @@
         //     isLoading = false;
         // }
     }
+
+    private async Task LoadSuperAdminDashboard()
+    {
+        try
+        {
+            isLoading = true;
+            superAdminData = await DashboardService.GetSuperAdminDashboardAsync();
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Error loading super admin dashboard: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
 
     // Carousel Navigation
     private void NextSlide()
@@ -762,14 +1084,14 @@
 
             stats = result.Stats;
             jobStatusData = result.JobStatusChart?
-    .Where(x => !string.IsNullOrWhiteSpace(x.Label))
-    .Select(x => new JobTypeData
-    {
-        Label = x.Label!,
-        Count = x.Count
-    })
-    .ToList()
-    ?? new();
+                .Where(x => !string.IsNullOrWhiteSpace(x.Label))
+                .Select(x => new JobTypeData
+                {
+                    Label = x.Label!,
+                    Count = x.Count
+                })
+                .ToList()
+                ?? new();
             jobTypeData = result.JobTypeChart;
             revenueData = result.MonthlyRevenue;
             if (result != null && result.MonthlyRevenue != null)
@@ -899,5 +1221,5 @@
     }
 
     // Data Classes
-       
+
 }
