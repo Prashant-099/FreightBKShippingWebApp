@@ -115,6 +115,10 @@ builder.Services.AddScoped<GstinAuthTokenService>();
 builder.Services.AddScoped<DashboardService>();
 builder.Services.AddScoped<AuditLogService>();
 builder.Services.AddScoped<ContainerAddServices>();
+builder.Services.AddScoped<GstTemplateService>();
+builder.Services.AddScoped<GstExcelService>();
+builder.Services.AddScoped<Gstr2TemplateService>();
+builder.Services.AddScoped<Gstr3BTemplateService>();
 //pdfreder services
 builder.Services.AddScoped<DataCleanupService>();
 //builder.Services.AddScoped<PdfExtractionService>();

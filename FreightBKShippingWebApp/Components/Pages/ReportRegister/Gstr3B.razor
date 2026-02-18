@@ -1,0 +1,954 @@
+﻿@page "/gstr3b"
+@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Models
+@using FreightBKShippingWebApp.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@inject BillService BillService
+@inject ToasteService ToastService
+@inject LoadingService LoadingService
+@inject YearStatechangeService YearStatechangeService
+@inject VoucherService VoucherService
+@inject Gstr3BTemplateService TemplateService
+@inject IWebHostEnvironment Environment
+@inject IJSRuntime JSRuntime
+@inject CompanyService CompanyService
+
+<PageTitle>GSTR-3B Summary Return</PageTitle>
+
+<style>
+    .grid-size {
+        max-height: 570px;
+    }
+
+    .summary-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 15px;
+        margin-bottom: 20px;
+        padding: 0 15px;
+    }
+
+    .summary-card {
+        background: white;
+        border-left: 4px solid #7d92ff;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+        .summary-card.igst {
+            border-left-color: #7d92ff;
+        }
+
+        .summary-card.cgst {
+            border-left-color: #7d92ff;
+        }
+
+        .summary-card.sgst {
+            border-left-color: #7d92ff;
+        }
+
+        .summary-card.itc {
+            border-left-color: #7d92ff;
+        }
+
+        .summary-card.cash {
+            border-left-color: #7d92ff;
+        }
+
+        .summary-card h3 {
+            font-size: 1.6rem;
+            margin: 0;
+            color: #7d92ff;
+            font-weight: 600;
+        }
+
+        .summary-card.igst h3 {
+            color: #7d92ff;
+        }
+
+        .summary-card.cgst h3 {
+            color: #7d92ff;
+        }
+
+        .summary-card.sgst h3 {
+            color: #7d92ff;
+        }
+
+        .summary-card.itc h3 {
+            color: #7d92ff;
+        }
+
+        .summary-card.cash h3 {
+            color: #7d92ff;
+        }
+
+        .summary-card p {
+            margin: 5px 0 0 0;
+            color: #6c757d;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+    .toolbar-title {
+        display: flex;
+        align-items: center;
+    }
+
+    .validation-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        margin-left: 10px;
+    }
+
+        .validation-badge.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .validation-badge.warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+    /* Data grid rows for section tables */
+    .section-grid {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9rem;
+    }
+
+        .section-grid th {
+            background: #f8f9fa;
+            padding: 10px 12px;
+            text-align: right;
+            font-weight: 600;
+            border-bottom: 2px solid #dee2e6;
+            color: #495057;
+        }
+
+            .section-grid th:first-child {
+                text-align: left;
+            }
+
+        .section-grid td {
+            padding: 9px 12px;
+            border-bottom: 1px solid #ecf0f1;
+            text-align: right;
+            font-family: 'Courier New', monospace;
+        }
+
+            .section-grid td:first-child {
+                text-align: left;
+                font-family: inherit;
+                color: #2c3e50;
+            }
+
+        .section-grid tr:hover td {
+            background: #f8f9fa;
+        }
+
+        .section-grid tr.subtotal td {
+            background: #e8f5e9;
+            font-weight: 600;
+        }
+
+        .section-grid tr.total-row td {
+            background: #fff3cd;
+            font-weight: 700;
+            border-top: 2px solid #dee2e6;
+        }
+
+        .section-grid tr.section-header td {
+            background: #f0f4ff;
+            font-weight: 600;
+            color: #3a4d9f;
+            font-family: inherit;
+        }
+
+    @@media (max-width: 1024px) {
+        .summary-cards {
+            display: none;
+        }
+    }
+
+    @@media (max-width: 768px) {
+        .summary-cards {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .toolbar-title span {
+            font-size: 1rem !important;
+        }
+    }
+
+    @@media (max-width: 480px) {
+        .summary-cards {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<script>
+    window.downloadFileFromBase64 = (fileName, contentType, base64Data) => {
+        const link = document.createElement('a');
+        link.download = fileName;
+        link.href = `data:${contentType};base64,${base64Data}`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+</script>
+
+<div class="px-3 py-3">
+
+    <!-- Summary Cards -->
+    @if (gstr3BData != null)
+    {
+        <div class="summary-cards">
+            <div class="summary-card">
+                <h3>₹@totalTaxLiability_IGST.ToString("N0")</h3>
+                <p>Total Tax Liability (IGST)</p>
+            </div>
+            <div class="summary-card igst">
+                <h3>₹@totalTaxLiability_CGST.ToString("N0")</h3>
+                <p>Total Tax Liability (CGST)</p>
+            </div>
+            <div class="summary-card cgst">
+                <h3>₹@totalTaxLiability_SGST.ToString("N0")</h3>
+                <p>Total Tax Liability (SGST)</p>
+            </div>
+            <div class="summary-card itc">
+                <h3>₹@((netITC_IGST + netITC_CGST + netITC_SGST).ToString("N0"))</h3>
+                <p>Net ITC Available</p>
+            </div>
+            <div class="summary-card cash">
+                <h3>₹@totalCashRequired.ToString("N0")</h3>
+                <p>Cash Required</p>
+            </div>
+        </div>
+    }
+
+    <!-- Tabs -->
+    <DxTabs @bind-ActiveTabIndex="activeTab">
+
+        <!-- 3.1 Outward Supplies Tab -->
+        <DxTabPage Text="3.1 Outward Supplies">
+            <DxGrid TItem="object"
+                    Data="@outwardSuppliesDisplay"
+                    KeyFieldName="Key"
+                    PageSize="20"
+                    CssClass="grid-size">
+
+                <ToolbarTemplate>
+                    <DxToolbar>
+                        <DxToolbarItem Alignment="ToolbarItemAlignment.Left">
+                            <Template Context="t">
+                                <div class="toolbar-title">
+                                    <i class="bi bi-arrow-up-circle me-2"></i>
+                                    <span class="fs-5">3.1 Outward Supplies &amp; Inward Supplies liable to Reverse Charge</span>
+                                    @if (gstr3BData != null)
+                                    {
+                                        <span class="validation-badge success ms-2">
+                                            <i class="bi bi-check-circle"></i> Calculated
+                                        </span>
+                                    }
+                                </div>
+                            </Template>
+                        </DxToolbarItem>
+
+                        <DxToolbarItem Text="Filter"
+                                       IconCssClass="bi bi-funnel-fill"
+                                       Click="OpenFilter"
+                                       RenderStyle="ButtonRenderStyle.None"
+                                       AdaptivePriority="2" />
+
+                        <DxToolbarItem Text="Actions"
+                                       RenderStyle="ButtonRenderStyle.None"
+                                       AdaptivePriority="2">
+                            <Items>
+                               @*  <DxToolbarItem Text="Calculate GSTR-3B"
+                                               RenderStyle="ButtonRenderStyle.Success"
+                                               IconCssClass="bi bi-calculator"
+                                               Click="CalculateGSTR3B" /> *@
+                                <DxToolbarItem Text="Export Excel"
+                                               RenderStyle="ButtonRenderStyle.None"
+                                               IconCssClass="bi bi-file-earmark-spreadsheet"
+                                               Click="ExportGSTR3BExcel" />
+                                <DxToolbarItem Text="Export JSON"
+                                               RenderStyle="ButtonRenderStyle.None"
+                                               IconCssClass="bi bi-filetype-json"
+                                               Click="ExportGSTR3BJson" />
+                            </Items>
+                        </DxToolbarItem>
+                    </DxToolbar>
+                </ToolbarTemplate>
+
+                <EmptyDataAreaTemplate>
+                    <div class="p-4 text-center text-muted">
+                        <i class="bi bi-info-circle fs-3 d-block mb-2"></i>
+                        Please select a date range and click <strong>Calculate GSTR-3B</strong> to generate the summary return.
+                    </div>
+                </EmptyDataAreaTemplate>
+
+                <Columns>
+                    <DxGridDataColumn FieldName="Nature" Caption="Nature of Supplies" Width="350px" />
+                    <DxGridDataColumn FieldName="TaxableValue" Caption="Taxable Value (₹)" DisplayFormat="N2" Width="150px" />
+                    <DxGridDataColumn FieldName="IGST" Caption="IGST (₹)" DisplayFormat="N2" Width="130px" />
+                    <DxGridDataColumn FieldName="CGST" Caption="CGST (₹)" DisplayFormat="N2" Width="130px" />
+                    <DxGridDataColumn FieldName="SGST" Caption="SGST/UTGST (₹)" DisplayFormat="N2" Width="140px" />
+                    <DxGridDataColumn FieldName="Cess" Caption="Cess (₹)" DisplayFormat="N2" Width="120px" />
+                </Columns>
+            </DxGrid>
+        </DxTabPage>
+
+        <!-- 4. Eligible ITC Tab -->
+        <DxTabPage Text="4. Eligible ITC">
+            <DxGrid TItem="object"
+                    Data="@eligibleItcDisplay"
+                    KeyFieldName="Key"
+                    PageSize="20"
+                    CssClass="grid-size">
+
+                <ToolbarTemplate>
+                    <DxToolbar>
+                        <DxToolbarItem Alignment="ToolbarItemAlignment.Left">
+                            <Template Context="t">
+                                <div class="toolbar-title">
+                                    <i class="bi bi-arrow-down-circle me-2"></i>
+                                    <span class="fs-5">4. Eligible ITC</span>
+                                    @if (gstr3BData != null)
+                                    {
+                                        <span class="validation-badge warning ms-2">
+                                            <i class="bi bi-calculator"></i> Auto-calculated from Purchases
+                                        </span>
+                                    }
+                                </div>
+                            </Template>
+                        </DxToolbarItem>
+
+                        <DxToolbarItem Text="Filter"
+                                       IconCssClass="bi bi-funnel-fill"
+                                       Click="OpenFilter"
+                                       RenderStyle="ButtonRenderStyle.None"
+                                       AdaptivePriority="2" />
+
+                        <DxToolbarItem Text="Actions"
+                                       RenderStyle="ButtonRenderStyle.None"
+                                       AdaptivePriority="2">
+                            <Items>
+                               @*  <DxToolbarItem Text="Calculate GSTR-3B"
+                                               RenderStyle="ButtonRenderStyle.Success"
+                                               IconCssClass="bi bi-calculator"
+                                               Click="CalculateGSTR3B" /> *@
+                                <DxToolbarItem Text="Export Excel"
+                                               RenderStyle="ButtonRenderStyle.None"
+                                               IconCssClass="bi bi-file-earmark-spreadsheet"
+                                               Click="ExportGSTR3BExcel" />
+                            </Items>
+                        </DxToolbarItem>
+                    </DxToolbar>
+                </ToolbarTemplate>
+
+                <EmptyDataAreaTemplate>
+                    <div class="p-4 text-center text-muted">
+                        <i class="bi bi-info-circle fs-3 d-block mb-2"></i>
+                        Please select a date range and click <strong>Calculate GSTR-3B</strong>.
+                    </div>
+                </EmptyDataAreaTemplate>
+
+                <Columns>
+                    <DxGridDataColumn FieldName="Detail" Caption="Details" Width="350px" />
+                    <DxGridDataColumn FieldName="IGST" Caption="IGST (₹)" DisplayFormat="N2" Width="150px" />
+                    <DxGridDataColumn FieldName="CGST" Caption="CGST (₹)" DisplayFormat="N2" Width="150px" />
+                    <DxGridDataColumn FieldName="SGST" Caption="SGST/UTGST (₹)" DisplayFormat="N2" Width="150px" />
+                    <DxGridDataColumn FieldName="Cess" Caption="Cess (₹)" DisplayFormat="N2" Width="150px" />
+                </Columns>
+            </DxGrid>
+        </DxTabPage>
+
+        <!-- 5. Exempt Supplies Tab -->
+        <DxTabPage Text="5. Exempt Supplies">
+            <DxGrid TItem="object"
+                    Data="@exemptSuppliesDisplay"
+                    KeyFieldName="Key"
+                    PageSize="10"
+                    CssClass="grid-size">
+
+                <ToolbarTemplate>
+                    <DxToolbar>
+                        <DxToolbarItem Alignment="ToolbarItemAlignment.Left">
+                            <Template Context="t">
+                                <div class="toolbar-title">
+                                    <i class="bi bi-shield-check me-2"></i>
+                                    <span class="fs-5">5. Exempt, Nil-rated and Non-GST Inward Supplies</span>
+                                </div>
+                            </Template>
+                        </DxToolbarItem>
+
+                        <DxToolbarItem Text="Filter"
+                                       IconCssClass="bi bi-funnel-fill"
+                                       Click="OpenFilter"
+                                       RenderStyle="ButtonRenderStyle.None"
+                                       AdaptivePriority="2" />
+
+                        @* <DxToolbarItem Text="Calculate GSTR-3B"
+                                       IconCssClass="bi bi-calculator"
+                                       RenderStyle="ButtonRenderStyle.None"
+                                       Click="CalculateGSTR3B" /> *@
+                    </DxToolbar>
+                </ToolbarTemplate>
+
+                <EmptyDataAreaTemplate>
+                    <div class="p-4 text-center text-muted">
+                        <i class="bi bi-info-circle fs-3 d-block mb-2"></i>
+                        Please select a date range and click <strong>Calculate GSTR-3B</strong>.
+                    </div>
+                </EmptyDataAreaTemplate>
+
+                <Columns>
+                    <DxGridDataColumn FieldName="Nature" Caption="Nature of Supplies" Width="350px" />
+                    <DxGridDataColumn FieldName="Value" Caption="Value (₹)" DisplayFormat="N2" Width="200px" />
+                </Columns>
+            </DxGrid>
+        </DxTabPage>
+
+        <!-- 6. Tax Liability / Payment Tab -->
+        <DxTabPage Text="6. Tax Payment">
+            <DxGrid TItem="object"
+                    Data="@taxPaymentDisplay"
+                    KeyFieldName="Key"
+                    PageSize="10"
+                    CssClass="grid-size">
+
+                <ToolbarTemplate>
+                    <DxToolbar>
+                        <DxToolbarItem Alignment="ToolbarItemAlignment.Left">
+                            <Template Context="t">
+                                <div class="toolbar-title">
+                                    <i class="bi bi-cash-coin me-2"></i>
+                                    <span class="fs-5">6. Tax Liability &amp; Payment Summary</span>
+                                </div>
+                            </Template>
+                        </DxToolbarItem>
+
+                        <DxToolbarItem Text="Filter"
+                                       IconCssClass="bi bi-funnel-fill"
+                                       Click="OpenFilter"
+                                       RenderStyle="ButtonRenderStyle.None"
+                                       AdaptivePriority="2" />
+
+                        <DxToolbarItem Text="Actions"
+                                       RenderStyle="ButtonRenderStyle.None"
+                                       AdaptivePriority="2">
+                            <Items>
+                              @*   <DxToolbarItem Text="Calculate GSTR-3B"
+                                               RenderStyle="ButtonRenderStyle.Success"
+                                               IconCssClass="bi bi-calculator"
+                                               Click="CalculateGSTR3B" /> *@
+                                <DxToolbarItem Text="Export Excel"
+                                               RenderStyle="ButtonRenderStyle.None"
+                                               IconCssClass="bi bi-file-earmark-spreadsheet"
+                                               Click="ExportGSTR3BExcel" />
+                                <DxToolbarItem Text="Export JSON"
+                                               RenderStyle="ButtonRenderStyle.None"
+                                               IconCssClass="bi bi-filetype-json"
+                                               Click="ExportGSTR3BJson" />
+                            </Items>
+                        </DxToolbarItem>
+                    </DxToolbar>
+                </ToolbarTemplate>
+
+                <EmptyDataAreaTemplate>
+                    <div class="p-4 text-center text-muted">
+                        <i class="bi bi-info-circle fs-3 d-block mb-2"></i>
+                        Please select a date range and click <strong>Calculate GSTR-3B</strong>.
+                    </div>
+                </EmptyDataAreaTemplate>
+
+                <Columns>
+                    <DxGridDataColumn FieldName="TaxType" Caption="Tax Type" Width="200px" />
+                    <DxGridDataColumn FieldName="TaxLiability" Caption="Tax Liability (₹)" DisplayFormat="N2" Width="160px" />
+                    <DxGridDataColumn FieldName="ITCAvailable" Caption="ITC Available (₹)" DisplayFormat="N2" Width="160px" />
+                    <DxGridDataColumn FieldName="CashRequired" Caption="Cash Required (₹)" DisplayFormat="N2" Width="160px" />
+                </Columns>
+
+                <TotalSummary>
+                    <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum"
+                                       FieldName="TaxLiability"
+                                       ValueDisplayFormat="Total Liability: {0:N2}" />
+                    <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum"
+                                       FieldName="ITCAvailable"
+                                       ValueDisplayFormat="Total ITC: {0:N2}" />
+                    <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum"
+                                       FieldName="CashRequired"
+                                       ValueDisplayFormat="Total Cash: {0:N2}" />
+                </TotalSummary>
+            </DxGrid>
+        </DxTabPage>
+
+        <!-- 5.1 Interest & Late Fee Tab -->
+        <DxTabPage Text="5.1 Interest & Late Fee">
+            <DxGrid TItem="object"
+                    Data="@interestLateFeeDisplay"
+                    KeyFieldName="Key"
+                    PageSize="10"
+                    CssClass="grid-size">
+
+                <ToolbarTemplate>
+                    <DxToolbar>
+                        <DxToolbarItem Alignment="ToolbarItemAlignment.Left">
+                            <Template Context="t">
+                                <div class="toolbar-title">
+                                    <i class="bi bi-clock-history me-2"></i>
+                                    <span class="fs-5">5.1 Interest and Late Fee Details</span>
+                                </div>
+                            </Template>
+                        </DxToolbarItem>
+
+                        <DxToolbarItem Text="Filter"
+                                       IconCssClass="bi bi-funnel-fill"
+                                       Click="OpenFilter"
+                                       RenderStyle="ButtonRenderStyle.None"
+                                       AdaptivePriority="2" />
+
+                       @*  <DxToolbarItem Text="Calculate GSTR-3B"
+                                       IconCssClass="bi bi-calculator"
+                                       RenderStyle="ButtonRenderStyle.None"
+                                       Click="CalculateGSTR3B" /> *@
+                    </DxToolbar>
+                </ToolbarTemplate>
+
+                <EmptyDataAreaTemplate>
+                    <div class="p-4 text-center text-muted">
+                        <i class="bi bi-info-circle fs-3 d-block mb-2"></i>
+                        Please select a date range and click <strong>Calculate GSTR-3B</strong>.
+                    </div>
+                </EmptyDataAreaTemplate>
+
+                <Columns>
+                    <DxGridDataColumn FieldName="TaxType" Caption="Tax Type" Width="200px" />
+                    <DxGridDataColumn FieldName="Interest" Caption="Interest (₹)" DisplayFormat="N2" Width="200px" />
+                    <DxGridDataColumn FieldName="LateFee" Caption="Late Fee (₹)" DisplayFormat="N2" Width="200px" />
+                </Columns>
+
+                <TotalSummary>
+                    <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum"
+                                       FieldName="Interest"
+                                       ValueDisplayFormat="Total Interest: {0:N2}" />
+                    <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum"
+                                       FieldName="LateFee"
+                                       ValueDisplayFormat="Total Late Fee: {0:N2}" />
+                </TotalSummary>
+            </DxGrid>
+        </DxTabPage>
+
+    </DxTabs>
+</div>
+
+<DateFilterPage @ref="dateFilterPopup" OnFilterApplied="ConfirmPeriod" />
+
+@code {
+    // Configuration
+    private string gstin = "27AAAAA0000A1Z5";
+    private string legalName = "Your Company Name";
+
+    private bool showPeriodSelector = false;
+    private int activeTab = 0;
+
+    // Data
+    private Gstr3BTemplateService.Gstr3BData gstr3BData;
+    private List<Bill> salesInvoices = new();
+    private List<Bill> purchaseInvoices = new();
+
+    // Calculated values
+    private decimal netITC_IGST = 0;
+    private decimal netITC_CGST = 0;
+    private decimal netITC_SGST = 0;
+    private decimal netITC_Cess = 0;
+
+    private decimal totalTaxLiability_IGST = 0;
+    private decimal totalTaxLiability_CGST = 0;
+    private decimal totalTaxLiability_SGST = 0;
+
+    private decimal cashRequired_IGST = 0;
+    private decimal cashRequired_CGST = 0;
+    private decimal cashRequired_SGST = 0;
+    private decimal totalCashRequired = 0;
+
+    private DateTime? filterFromDate;
+    private DateTime? filterToDate;
+    private DateFilterPage dateFilterPopup;
+
+    // Display data lists for grids
+    private List<OutwardSupplyRow> outwardSuppliesDisplay = new();
+    private List<EligibleItcRow> eligibleItcDisplay = new();
+    private List<ExemptSupplyRow> exemptSuppliesDisplay = new();
+    private List<TaxPaymentRow> taxPaymentDisplay = new();
+    private List<InterestLateFeeRow> interestLateFeeDisplay = new();
+
+    // ─── Row model classes ───────────────────────────────────────────────────
+
+    public class OutwardSupplyRow
+    {
+        public string Key { get; set; }
+        public string Nature { get; set; }
+        public decimal TaxableValue { get; set; }
+        public decimal IGST { get; set; }
+        public decimal CGST { get; set; }
+        public decimal SGST { get; set; }
+        public decimal Cess { get; set; }
+    }
+
+    public class EligibleItcRow
+    {
+        public string Key { get; set; }
+        public string Detail { get; set; }
+        public decimal IGST { get; set; }
+        public decimal CGST { get; set; }
+        public decimal SGST { get; set; }
+        public decimal Cess { get; set; }
+    }
+
+    public class ExemptSupplyRow
+    {
+        public string Key { get; set; }
+        public string Nature { get; set; }
+        public decimal Value { get; set; }
+    }
+
+    public class TaxPaymentRow
+    {
+        public string Key { get; set; }
+        public string TaxType { get; set; }
+        public decimal TaxLiability { get; set; }
+        public decimal ITCAvailable { get; set; }
+        public decimal CashRequired { get; set; }
+    }
+
+    public class InterestLateFeeRow
+    {
+        public string Key { get; set; }
+        public string TaxType { get; set; }
+        public decimal Interest { get; set; }
+        public decimal LateFee { get; set; }
+    }
+
+    // ─── Lifecycle ───────────────────────────────────────────────────────────
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Load company details from settings if available
+        var companies = await CompanyService.GetAllAsync();
+
+        var company = companies.FirstOrDefault();
+
+        if (company != null)
+        {
+            gstin = company.Gstin ?? ""; ;
+            legalName = company.Name ?? ""; ;
+        }
+    }
+
+    // ─── Filter ──────────────────────────────────────────────────────────────
+
+    private void OpenFilter()
+    {
+        dateFilterPopup.Show(filterFromDate, filterToDate, null, null, null);
+    }
+
+    private async Task  ConfirmPeriod((DateTime? FromDate, DateTime? ToDate, string? JobType, int? vouchertype, string? OutstandingType) f)
+    {
+        filterFromDate = f.FromDate;
+        filterToDate = f.ToDate;
+        showPeriodSelector = false;
+        await CalculateGSTR3B();
+        StateHasChanged();
+    }
+
+    // ─── Calculate ───────────────────────────────────────────────────────────
+
+    private async Task CalculateGSTR3B()
+    {
+        try
+        {
+            LoadingService.Show("Calculating GSTR-3B...");
+
+            if (filterFromDate == null || filterToDate == null)
+            {
+                ToastService.Warning("Please select a date range first.");
+                return;
+            }
+
+            var fromDate = filterFromDate.Value.Date;
+            var toDate = filterToDate.Value.Date;
+
+            var allVouchers = await VoucherService.GetAllAsync();
+
+            var salesVoucherIds = allVouchers
+                .Where(v => v.VoucherGroup == "SALES" || v.VoucherGroup == "CREDIT NOTE")
+                .Select(v => v.VoucherId)
+                .ToList();
+
+            var purchaseVoucherIds = allVouchers
+                .Where(v => v.VoucherGroup == "PURCHASE" || v.VoucherGroup == "DEBIT NOTE")
+                .Select(v => v.VoucherId)
+                .ToList();
+
+            var allBills = await BillService.GetAllAsync();
+
+            salesInvoices = allBills
+                .Where(b =>
+                    b.BillYearId == YearStatechangeService.SelectedYearId &&
+                    salesVoucherIds.Contains(b.BillVoucherId) &&
+                    b.BillDate.Date >= fromDate &&
+                    b.BillDate.Date <= toDate)
+                .ToList();
+
+            purchaseInvoices = allBills
+                .Where(b =>
+                    b.BillYearId == YearStatechangeService.SelectedYearId &&
+                    purchaseVoucherIds.Contains(b.BillVoucherId) &&
+                    b.BillDate.Date >= fromDate &&
+                    b.BillDate.Date <= toDate)
+                .ToList();
+
+            gstr3BData = TemplateService.CalculateFromGSTR1And2(salesInvoices, purchaseInvoices);
+
+            CalculateNetITC();
+            CalculateTaxLiability();
+            BuildDisplayData();
+
+            ToastService.Success($"GSTR-3B calculated from {fromDate:dd-MMM-yyyy} to {toDate:dd-MMM-yyyy}");
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Error calculating GSTR-3B: {ex.Message}");
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+
+    // ─── Build grid display data ──────────────────────────────────────────────
+
+    private void BuildDisplayData()
+    {
+        if (gstr3BData == null) return;
+
+        // 3.1 Outward Supplies
+        outwardSuppliesDisplay = new List<OutwardSupplyRow>
+        {
+            new() { Key = "a", Nature = "(a) Outward taxable supplies (other than zero rated, nil rated and exempted)",
+                    TaxableValue = gstr3BData.OutwardTaxableSupplies_TaxableValue,
+                    IGST = gstr3BData.OutwardTaxableSupplies_IGST,
+                    CGST = gstr3BData.OutwardTaxableSupplies_CGST,
+                    SGST = gstr3BData.OutwardTaxableSupplies_SGST,
+                    Cess = gstr3BData.OutwardTaxableSupplies_Cess },
+            new() { Key = "b", Nature = "(b) Outward taxable supplies (zero rated)",
+                    TaxableValue = gstr3BData.OutwardZeroRated_TaxableValue,
+                    IGST = gstr3BData.OutwardZeroRated_IGST,
+                    CGST = gstr3BData.OutwardZeroRated_CGST,
+                    SGST = gstr3BData.OutwardZeroRated_SGST,
+                    Cess = gstr3BData.OutwardZeroRated_Cess },
+            new() { Key = "c", Nature = "(c) Other outward supplies (Nil rated, exempted)",
+                    TaxableValue = gstr3BData.OutwardNilRated_TaxableValue },
+            new() { Key = "d", Nature = "(d) Inward supplies liable to reverse charge",
+                    TaxableValue = gstr3BData.InwardReverseCharge_TaxableValue,
+                    IGST = gstr3BData.InwardReverseCharge_IGST,
+                    CGST = gstr3BData.InwardReverseCharge_CGST,
+                    SGST = gstr3BData.InwardReverseCharge_SGST,
+                    Cess = gstr3BData.InwardReverseCharge_Cess },
+            new() { Key = "e", Nature = "(e) Non-GST outward supplies",
+                    TaxableValue = gstr3BData.NonGSTOutward_TaxableValue },
+        };
+
+        // 4. Eligible ITC
+        eligibleItcDisplay = new List<EligibleItcRow>
+        {
+            new() { Key = "A1", Detail = "(A) ITC Available — (1) Import of goods",
+                    IGST = gstr3BData.ITC_ImportGoods_IGST, CGST = gstr3BData.ITC_ImportGoods_CGST,
+                    SGST = gstr3BData.ITC_ImportGoods_SGST, Cess = gstr3BData.ITC_ImportGoods_Cess },
+            new() { Key = "A2", Detail = "(A) ITC Available — (2) Import of services",
+                    IGST = gstr3BData.ITC_ImportServices_IGST, CGST = gstr3BData.ITC_ImportServices_CGST,
+                    SGST = gstr3BData.ITC_ImportServices_SGST, Cess = gstr3BData.ITC_ImportServices_Cess },
+            new() { Key = "A3", Detail = "(A) ITC Available — (3) Inward supplies liable to reverse charge",
+                    IGST = gstr3BData.ITC_ReverseCharge_IGST, CGST = gstr3BData.ITC_ReverseCharge_CGST,
+                    SGST = gstr3BData.ITC_ReverseCharge_SGST, Cess = gstr3BData.ITC_ReverseCharge_Cess },
+            new() { Key = "A4", Detail = "(A) ITC Available — (4) Inward supplies from ISD",
+                    IGST = gstr3BData.ITC_ISD_IGST, CGST = gstr3BData.ITC_ISD_CGST,
+                    SGST = gstr3BData.ITC_ISD_SGST, Cess = gstr3BData.ITC_ISD_Cess },
+            new() { Key = "A5", Detail = "(A) ITC Available — (5) All other ITC",
+                    IGST = gstr3BData.ITC_Others_IGST, CGST = gstr3BData.ITC_Others_CGST,
+                    SGST = gstr3BData.ITC_Others_SGST, Cess = gstr3BData.ITC_Others_Cess },
+            new() { Key = "B1", Detail = "(B) ITC Reversed — (1) As per rules 42 & 43 of CGST Rules",
+                    IGST = gstr3BData.ITC_Reversed_Rule42_43_IGST, CGST = gstr3BData.ITC_Reversed_Rule42_43_CGST,
+                    SGST = gstr3BData.ITC_Reversed_Rule42_43_SGST, Cess = gstr3BData.ITC_Reversed_Rule42_43_Cess },
+            new() { Key = "B2", Detail = "(B) ITC Reversed — (2) Others",
+                    IGST = gstr3BData.ITC_Reversed_Others_IGST, CGST = gstr3BData.ITC_Reversed_Others_CGST,
+                    SGST = gstr3BData.ITC_Reversed_Others_SGST, Cess = gstr3BData.ITC_Reversed_Others_Cess },
+            new() { Key = "C",  Detail = "(C) Net ITC Available (A) − (B)",
+                    IGST = netITC_IGST, CGST = netITC_CGST,
+                    SGST = netITC_SGST, Cess = netITC_Cess },
+        };
+
+        // 5. Exempt Supplies
+        exemptSuppliesDisplay = new List<ExemptSupplyRow>
+        {
+            new() { Key = "IS", Nature = "Inter-State supplies",  Value = gstr3BData.Exempt_InterState },
+            new() { Key = "InS", Nature = "Intra-State supplies", Value = gstr3BData.Exempt_IntraState },
+        };
+
+        // 6. Tax Payment
+        taxPaymentDisplay = new List<TaxPaymentRow>
+        {
+            new() { Key = "IGST", TaxType = "Integrated Tax (IGST)",
+                    TaxLiability = totalTaxLiability_IGST, ITCAvailable = netITC_IGST, CashRequired = cashRequired_IGST },
+            new() { Key = "CGST", TaxType = "Central Tax (CGST)",
+                    TaxLiability = totalTaxLiability_CGST, ITCAvailable = netITC_CGST, CashRequired = cashRequired_CGST },
+            new() { Key = "SGST", TaxType = "State/UT Tax (SGST/UTGST)",
+                    TaxLiability = totalTaxLiability_SGST, ITCAvailable = netITC_SGST, CashRequired = cashRequired_SGST },
+        };
+
+        // 5.1 Interest & Late Fee
+        interestLateFeeDisplay = new List<InterestLateFeeRow>
+        {
+            new() { Key = "IGST", TaxType = "Integrated Tax", Interest = gstr3BData.Interest_IGST, LateFee = gstr3BData.LateFee_IGST },
+            new() { Key = "CGST", TaxType = "Central Tax",    Interest = gstr3BData.Interest_CGST, LateFee = gstr3BData.LateFee_CGST },
+            new() { Key = "SGST", TaxType = "State/UT Tax",   Interest = gstr3BData.Interest_SGST, LateFee = gstr3BData.LateFee_SGST },
+        };
+    }
+
+    // ─── ITC & Liability Calculations ────────────────────────────────────────
+
+    private void CalculateNetITC()
+    {
+        if (gstr3BData == null) return;
+
+        netITC_IGST = gstr3BData.ITC_ImportGoods_IGST + gstr3BData.ITC_ImportServices_IGST +
+                      gstr3BData.ITC_ReverseCharge_IGST + gstr3BData.ITC_ISD_IGST + gstr3BData.ITC_Others_IGST -
+                      gstr3BData.ITC_Reversed_Rule42_43_IGST - gstr3BData.ITC_Reversed_Others_IGST;
+
+        netITC_CGST = gstr3BData.ITC_ImportGoods_CGST + gstr3BData.ITC_ImportServices_CGST +
+                      gstr3BData.ITC_ReverseCharge_CGST + gstr3BData.ITC_ISD_CGST + gstr3BData.ITC_Others_CGST -
+                      gstr3BData.ITC_Reversed_Rule42_43_CGST - gstr3BData.ITC_Reversed_Others_CGST;
+
+        netITC_SGST = gstr3BData.ITC_ImportGoods_SGST + gstr3BData.ITC_ImportServices_SGST +
+                      gstr3BData.ITC_ReverseCharge_SGST + gstr3BData.ITC_ISD_SGST + gstr3BData.ITC_Others_SGST -
+                      gstr3BData.ITC_Reversed_Rule42_43_SGST - gstr3BData.ITC_Reversed_Others_SGST;
+
+        netITC_Cess = gstr3BData.ITC_ImportGoods_Cess + gstr3BData.ITC_ImportServices_Cess +
+                      gstr3BData.ITC_ReverseCharge_Cess + gstr3BData.ITC_ISD_Cess + gstr3BData.ITC_Others_Cess -
+                      gstr3BData.ITC_Reversed_Rule42_43_Cess - gstr3BData.ITC_Reversed_Others_Cess;
+    }
+
+    private void CalculateTaxLiability()
+    {
+        if (gstr3BData == null) return;
+
+        totalTaxLiability_IGST = gstr3BData.OutwardTaxableSupplies_IGST +
+                                  gstr3BData.OutwardZeroRated_IGST + gstr3BData.InwardReverseCharge_IGST;
+
+        totalTaxLiability_CGST = gstr3BData.OutwardTaxableSupplies_CGST +
+                                  gstr3BData.OutwardZeroRated_CGST + gstr3BData.InwardReverseCharge_CGST;
+
+        totalTaxLiability_SGST = gstr3BData.OutwardTaxableSupplies_SGST +
+                                  gstr3BData.OutwardZeroRated_SGST + gstr3BData.InwardReverseCharge_SGST;
+
+        cashRequired_IGST = Math.Max(0, totalTaxLiability_IGST - netITC_IGST);
+        cashRequired_CGST = Math.Max(0, totalTaxLiability_CGST - netITC_CGST);
+        cashRequired_SGST = Math.Max(0, totalTaxLiability_SGST - netITC_SGST);
+
+        totalCashRequired = cashRequired_IGST + cashRequired_CGST + cashRequired_SGST;
+    }
+
+    // ─── Export ──────────────────────────────────────────────────────────────
+
+    private async Task ExportGSTR3BExcel()
+    {
+        try
+        {
+            if (filterFromDate == null || filterToDate == null)
+        {
+            ToastService.Warning("Please select return period.");
+            return;
+        }
+
+            LoadingService.Show();
+
+            string templatePath = Path.Combine(Environment.WebRootPath, "templates", "GSTR3B.xlsm");
+
+            var excelBytes = TemplateService.GenerateFromTemplate(
+                templatePath,
+                gstin,
+                legalName,
+                filterFromDate?.ToString("dd-MM-yyyy"),
+                filterToDate?.ToString("dd-MM-yyyy"),
+                gstr3BData
+            );
+
+            string fileName = $"GSTR3B_{filterFromDate:yyyyMMdd}_{filterToDate:yyyyMMdd}.xlsm";
+            await DownloadFile(fileName, excelBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            ToastService.Success("GSTR-3B Excel exported successfully!");
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Export error: {ex.Message}");
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+
+    private async Task ExportGSTR3BJson()
+    {
+        try
+        {
+            var exportData = new
+            {
+                GSTIN = gstin,
+                LegalName = legalName,
+                ReturnPeriod = new { FromDate = filterFromDate, ToDate = filterToDate },
+                GeneratedOn = DateTime.Now,
+                Summary = new
+                {
+                    TotalTaxLiability = new { IGST = totalTaxLiability_IGST, CGST = totalTaxLiability_CGST, SGST = totalTaxLiability_SGST },
+                    NetITC = new { IGST = netITC_IGST, CGST = netITC_CGST, SGST = netITC_SGST },
+                    CashRequired = new { IGST = cashRequired_IGST, CGST = cashRequired_CGST, SGST = cashRequired_SGST, Total = totalCashRequired }
+                },
+                Data = gstr3BData
+            };
+
+            var json = System.Text.Json.JsonSerializer.Serialize(exportData,
+                new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+
+            string fileName = $"GSTR3B_{filterFromDate:yyyyMMdd}_{filterToDate:yyyyMMdd}.json";
+            await DownloadJsonFile(fileName, json);
+            ToastService.Success("JSON exported successfully!");
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"JSON export error: {ex.Message}");
+        }
+    }
+
+    private async Task DownloadFile(string fileName, byte[] bytes, string contentType)
+    {
+        var base64 = Convert.ToBase64String(bytes);
+        await JSRuntime.InvokeVoidAsync("downloadFileFromBase64", fileName, contentType, base64);
+    }
+
+    private async Task DownloadJsonFile(string fileName, string jsonContent)
+    {
+        var bytes = System.Text.Encoding.UTF8.GetBytes(jsonContent);
+        await DownloadFile(fileName, bytes, "application/json");
+    }
+}

@@ -1,0 +1,1464 @@
+﻿@page "/gstr1"
+@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Models
+@using FreightBKShippingWebApp.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@inject BillService BillService
+@inject ToasteService ToastService
+@inject LoadingService LoadingService
+@inject YearStatechangeService YearStatechangeService
+@inject VoucherService VoucherService
+@inject GridLayoutService GridLayoutService
+@inject GstTemplateService TemplateService
+@inject IWebHostEnvironment Environment
+@inject IJSRuntime JSRuntime
+
+<PageTitle>GSTR-1 Report</PageTitle>
+
+<style>
+    .grid-size {
+        max-height: 570px;
+    }
+
+    .layout-combobox {
+        border-radius: 6px;
+        width: 185px;
+    }
+
+    .toolbar-title {
+        display: flex;
+        align-items: center;
+    }
+
+    .summary-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 15px;
+        margin-bottom: 20px;
+        padding: 0 15px;
+    }
+
+    .summary-card {
+        background: white;
+        border-left: 4px solid #667eea;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+        .summary-card h3 {
+            font-size: 1.6rem;
+            margin: 0;
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .summary-card p {
+            margin: 5px 0 0 0;
+            color: #6c757d;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+    .validation-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        margin-left: 10px;
+    }
+
+        .validation-badge.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .validation-badge.warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .validation-badge.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+    @@media (max-width: 1024px){
+        .summary-cards {
+            display: none;
+        }
+    @@media (max-width: 768px) {
+        .summary-cards {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .toolbar-title span {
+            font-size: 1rem !important;
+        }
+    }
+
+    @@media (max-width: 480px) {
+        .summary-cards {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<script>
+    window.downloadFileFromBase64 = (fileName, contentType, base64Data) => {
+        const link = document.createElement('a');
+        link.download = fileName;
+        link.href = `data:${contentType};base64,${base64Data}`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+</script>
+
+<div class="px-3 py-3">
+    <!-- Summary Cards -->
+    @if (summaryData != null)
+    {
+        <div class="summary-cards">
+            <div class="summary-card">
+                <h3>@summaryData.TotalInvoices</h3>
+                <p>Total Invoices</p>
+            </div>
+            <div class="summary-card">
+                <h3>₹@summaryData.TotalTaxableValue.ToString("N2")</h3>
+                <p>Taxable Value</p>
+            </div>
+            <div class="summary-card">
+                <h3>₹@summaryData.TotalIGST.ToString("N2")</h3>
+                <p>Total IGST</p>
+            </div>
+            <div class="summary-card">
+                <h3>₹@((summaryData.TotalCGST + summaryData.TotalSGST).ToString("N2"))</h3>
+                <p>CGST + SGST</p>
+            </div>
+            <div class="summary-card">
+                <h3>₹@summaryData.TotalInvoiceValue.ToString("N2")</h3>
+                <p>Invoice Value</p>
+            </div>
+        </div>
+    }
+
+    <!-- Tabs -->
+    <DxTabs @bind-ActiveTabIndex="activeTab">
+        <!-- B2B Tab -->
+        <DxTabPage Text="@($"B2B ({b2bInvoices?.Count ?? 0})")">
+            <DxGrid TItem="Bill"
+                    Data="@b2bInvoices"
+                    @ref="B2BGrid"
+                    KeyFieldName="BillId"
+                    ShowSearchBox="true"
+                    PageSize="100"
+                    PageSizeSelectorVisible="false"
+                    ShowGroupPanel="true"
+                    FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always"
+                    FocusedRowEnabled="true"
+                    ColumnResizeMode="GridColumnResizeMode.NextColumn"
+                    CssClass="grid-size"
+                    AllowColumnReorder="true">
+
+                <ToolbarTemplate Context="gridContext">
+                    <DxToolbar>
+                        <DxToolbarItem Alignment="ToolbarItemAlignment.Left">
+                            <Template Context="t">
+                                <div class="toolbar-title">
+                                    <i class="bi bi-building me-2"></i>
+                                    <span class="fs-5">B2B Invoices</span>
+                                    @if (validationStatus != null)
+                                    {
+                                        <span class="validation-badge @validationStatus.CssClass">
+                                            <i class="bi bi-@validationStatus.Icon"></i>
+                                            @validationStatus.Message
+                                        </span>
+                                    }
+                                </div>
+                            </Template>
+                        </DxToolbarItem>
+
+                        <DxToolbarItem Text="Filter"
+                                       IconCssClass="bi bi-funnel-fill"
+                                       Click="OpenFilter"
+                                       RenderStyle="ButtonRenderStyle.None"
+                                       AdaptivePriority="2" />
+
+                        <DxToolbarItem Text="Export"
+                                       RenderStyle="ButtonRenderStyle.None"
+                                       AdaptivePriority="2">
+                            <Items>
+                                <DxToolbarItem Text="Complete GSTR-1 Excel"
+                                               RenderStyle="ButtonRenderStyle.Success"
+                                               IconCssClass="bi bi-file-earmark-spreadsheet"
+                                               Click="ExportCompleteGSTR1Excel" />
+                                <DxToolbarItem Text="B2B Excel"
+                                               RenderStyle="ButtonRenderStyle.None"
+                                               IconCssClass="bi bi-file-earmark-excel"
+                                               Click="ExportB2BExcel" />
+                                <DxToolbarItem Text="JSON for Upload"
+                                               RenderStyle="ButtonRenderStyle.None"
+                                               IconCssClass="bi bi-filetype-json"
+                                               Click="ExportFullGSTR1Json" />
+                                <DxToolbarItem Text="Validate Data"
+                                               RenderStyle="ButtonRenderStyle.Warning"
+                                               IconCssClass="bi bi-check-circle"
+                                               Click="ValidateGSTR1Data" />
+                            </Items>
+                        </DxToolbarItem>
+
+                        <!-- Layout Selector -->
+                        <DxToolbarItem IconCssClass="bi bi-gear-wide-connected"
+                                       Alignment="ToolbarItemAlignment.Right"
+                                       AdaptivePriority="1">
+                            <Template Context="ctx">
+                                <DxComboBox Data="@availableB2BLayouts"
+                                            Value="@selectedB2BLayoutId"
+                                            ValueExpression="@(() => selectedB2BLayoutId)"
+                                            ValueChanged="@((int? value) => OnB2BLayoutSelectedAsync(value))"
+                                            ValueFieldName="GridLayoutId"
+                                            TextFieldName="GridLayoutName"
+                                            NullText="Default View"
+                                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                            CssClass="layout-combobox" />
+                            </Template>
+                        </DxToolbarItem>
+
+                        <!-- Layout Management -->
+                        <DxToolbarItem Context="cfdr"
+                                       Alignment="ToolbarItemAlignment.Right"
+                                       RenderStyleMode="ToolbarItemRenderStyleMode.Contained"
+                                       RenderStyle="ButtonRenderStyle.Secondary"
+                                       IconCssClass="bi bi-gear-wide-connected"
+                                       AdaptivePriority="1">
+                            <Items>
+                                <DxToolbarItem Text="Save Current Layout"
+                                               RenderStyle="ButtonRenderStyle.Primary"
+                                               IconCssClass="bi bi-floppy"
+                                               Click="ShowSaveB2BLayoutDialog" />
+
+                                <DxToolbarItem Text="Create New Layout"
+                                               RenderStyle="ButtonRenderStyle.Success"
+                                               IconCssClass="bi bi-plus-square"
+                                               Click="ShowNewB2BLayoutDialog" />
+
+                                @if (selectedB2BLayoutId.HasValue)
+                                {
+                                    <DxToolbarItem Text="Delete Current Layout"
+                                                   RenderStyle="ButtonRenderStyle.Danger"
+                                                   IconCssClass="bi bi-trash"
+                                                   Click="DeleteCurrentB2BLayout" />
+                                }
+                            </Items>
+                        </DxToolbarItem>
+                    </DxToolbar>
+                </ToolbarTemplate>
+
+                <Columns>
+                    <DxGridDataColumn FieldName="BillGstNo"
+                                      Caption="GSTIN"
+                                      Visible="@GetB2BColumnVisibility("BillGstNo")"
+                                      Width="@GetB2BColumnWidth("BillGstNo")" />
+
+                    <DxGridDataColumn FieldName="partyname"
+                                      Caption="Customer Name"
+                                      Visible="@GetB2BColumnVisibility("partyname")"
+                                      Width="@GetB2BColumnWidth("partyname")" />
+
+                    <DxGridDataColumn FieldName="BillNo"
+                                      Caption="Invoice No"
+                                      Visible="@GetB2BColumnVisibility("BillNo")"
+                                      Width="@GetB2BColumnWidth("BillNo")" />
+
+                    <DxGridDataColumn FieldName="BillDate"
+                                      Caption="Invoice Date"
+                                      DisplayFormat="dd-MM-yyyy"
+                                      Visible="@GetB2BColumnVisibility("BillDate")"
+                                      Width="@GetB2BColumnWidth("BillDate")" />
+
+                    <DxGridDataColumn FieldName="posname"
+                                      Caption="Place Of Supply"
+                                      Visible="@GetB2BColumnVisibility("posname")"
+                                      Width="@GetB2BColumnWidth("posname")" />
+
+                    <DxGridDataColumn FieldName="BillTotal"
+                                      Caption="Taxable Value"
+                                      DisplayFormat="N2"
+                                      Visible="@GetB2BColumnVisibility("BillTotal")"
+                                      Width="@GetB2BColumnWidth("BillTotal")" />
+
+                    <DxGridDataColumn FieldName="BillCgst"
+                                      Caption="CGST"
+                                      DisplayFormat="N2"
+                                      Visible="@GetB2BColumnVisibility("BillCgst")"
+                                      Width="@GetB2BColumnWidth("BillCgst")" />
+
+                    <DxGridDataColumn FieldName="BillSgst"
+                                      Caption="SGST"
+                                      DisplayFormat="N2"
+                                      Visible="@GetB2BColumnVisibility("BillSgst")"
+                                      Width="@GetB2BColumnWidth("BillSgst")" />
+
+                    <DxGridDataColumn FieldName="BillIgst"
+                                      Caption="IGST"
+                                      DisplayFormat="N2"
+                                      Visible="@GetB2BColumnVisibility("BillIgst")"
+                                      Width="@GetB2BColumnWidth("BillIgst")" />
+
+                    <DxGridDataColumn FieldName="BillNetAmount"
+                                      Caption="Invoice Value"
+                                      DisplayFormat="N2"
+                                      Visible="@GetB2BColumnVisibility("BillNetAmount")"
+                                      Width="@GetB2BColumnWidth("BillNetAmount")" />
+                </Columns>
+
+                <TotalSummary>
+                    <DxGridSummaryItem SummaryType="GridSummaryItemType.Count" FieldName="BillId" />
+                    <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum"
+                                       FieldName="BillTotal"
+                                       ValueDisplayFormat="Total Taxable: {0:N2}" />
+                    <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum"
+                                       FieldName="BillCgst"
+                                       ValueDisplayFormat="CGST: {0:N2}" />
+                    <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum"
+                                       FieldName="BillSgst"
+                                       ValueDisplayFormat="SGST: {0:N2}" />
+                    <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum"
+                                       FieldName="BillIgst"
+                                       ValueDisplayFormat="IGST: {0:N2}" />
+                    <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum"
+                                       FieldName="BillNetAmount"
+                                       ValueDisplayFormat="Total: {0:N2}" />
+                </TotalSummary>
+            </DxGrid>
+        </DxTabPage>
+
+        <!-- B2C Large Tab -->
+        <DxTabPage Text="@($"B2C Large ({b2cLargeInvoices?.Count ?? 0})")">
+            <DxGrid TItem="Bill"
+                    Data="@b2cLargeInvoices"
+                    @ref="B2CLargeGrid"
+                    KeyFieldName="BillId"
+                    ShowSearchBox="true"
+                    PageSize="100"
+                    ShowGroupPanel="true"
+                    ColumnResizeMode="GridColumnResizeMode.NextColumn"
+                    CssClass="grid-size">
+
+                <ToolbarTemplate>
+                    <DxToolbar>
+                        <DxToolbarItem Alignment="ToolbarItemAlignment.Left">
+                            <Template Context="ctx">
+                                <div class="toolbar-title">
+                                    <i class="bi bi-cash-stack me-2"></i>
+                                    <span class="fs-5">B2C Large (> ₹2.5L)</span>
+                                </div>
+                            </Template>
+                        </DxToolbarItem>
+
+                        <DxToolbarItem Text="Export Excel"
+                                       IconCssClass="bi bi-file-earmark-excel"
+                                       RenderStyle="ButtonRenderStyle.None"
+                                       Click="ExportB2CLargeExcel" />
+                    </DxToolbar>
+                </ToolbarTemplate>
+
+                <Columns>
+                    <DxGridDataColumn FieldName="BillNo" Caption="Invoice No" Width="150px" />
+                    <DxGridDataColumn FieldName="BillDate" Caption="Invoice Date" DisplayFormat="dd-MM-yyyy" Width="120px" />
+                    <DxGridDataColumn FieldName="posname" Caption="Place of Supply" Width="150px" />
+                    <DxGridDataColumn FieldName="BillTotal" Caption="Taxable Value" DisplayFormat="N2" Width="120px" />
+                    <DxGridDataColumn FieldName="BillIgst" Caption="IGST" DisplayFormat="N2" Width="100px" />
+                    <DxGridDataColumn FieldName="BillCgst" Caption="CGST" DisplayFormat="N2" Width="120px" />
+                    <DxGridDataColumn FieldName="BillSgst" Caption="SGST" DisplayFormat="N2" Width="120px" />
+                    <DxGridDataColumn FieldName="BillNetAmount" Caption="Invoice Value" DisplayFormat="N2" Width="120px" />
+                </Columns>
+
+                <TotalSummary>
+                    <DxGridSummaryItem SummaryType="GridSummaryItemType.Count" FieldName="BillId" />
+                    <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum" FieldName="BillTotal" ValueDisplayFormat="Total: {0:N2}" />
+                    <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum" FieldName="BillNetAmount" ValueDisplayFormat="Total: {0:N2}" />
+                </TotalSummary>
+            </DxGrid>
+        </DxTabPage>
+
+        <!-- B2C Small Summary Tab -->
+        <DxTabPage Text="@($"B2C Summary ({b2cSmallSummary?.Count ?? 0})")">
+            <DxGrid TItem="GstTemplateService.B2CSmallSummary"
+                    Data="@b2cSmallSummary"
+                    @ref="B2CSmallGrid"
+                    KeyFieldName="PlaceOfSupply"
+                    ShowSearchBox="true"
+                    PageSize="50"
+                    ColumnResizeMode="GridColumnResizeMode.NextColumn"
+                    CssClass="grid-size">
+
+                <ToolbarTemplate>
+                    <DxToolbar>
+                        <DxToolbarItem Alignment="ToolbarItemAlignment.Left">
+                            <Template Context="ctx">
+                                <div class="toolbar-title">
+                                    <i class="bi bi-list-ul me-2"></i>
+                                    <span class="fs-5">B2C Small Summary (&lt; ₹2.5L)</span>
+                                </div>
+                            </Template>
+                        </DxToolbarItem>
+
+                        <DxToolbarItem Text="Export Excel"
+                                       IconCssClass="bi bi-file-earmark-excel"
+                                       RenderStyle="ButtonRenderStyle.None"
+                                       Click="ExportB2CSmallExcel" />
+                    </DxToolbar>
+                </ToolbarTemplate>
+
+                <Columns>
+                    <DxGridDataColumn FieldName="PlaceOfSupply" Caption="Place of Supply" Width="200px" />
+                    <DxGridDataColumn FieldName="TaxableValue" Caption="Taxable Value" DisplayFormat="N2" Width="150px" />
+                    <DxGridDataColumn FieldName="IGST" Caption="IGST" DisplayFormat="N2" Width="100px" />
+                    <DxGridDataColumn FieldName="CGST" Caption="CGST" DisplayFormat="N2" Width="120px" />
+                    <DxGridDataColumn FieldName="SGST" Caption="SGST" DisplayFormat="N2" Width="120px" />
+                    <DxGridDataColumn FieldName="InvoiceValue" Caption="Invoice Value" DisplayFormat="N2" Width="150px" />
+                </Columns>
+
+                <TotalSummary>
+                    <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum" FieldName="TaxableValue" ValueDisplayFormat="Total: {0:N2}" />
+                    <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum" FieldName="IGST" ValueDisplayFormat="Total: {0:N2}" />
+                    <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum" FieldName="CGST" ValueDisplayFormat="Total: {0:N2}" />
+                    <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum" FieldName="SGST" ValueDisplayFormat="Total: {0:N2}" />
+                    <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum" FieldName="InvoiceValue" ValueDisplayFormat="Total: {0:N2}" />
+                </TotalSummary>
+            </DxGrid>
+        </DxTabPage>
+
+        <!-- Credit/Debit Notes Tab -->
+        <DxTabPage Text="@($"Credit/Debit Notes ({creditDebitNotes?.Count ?? 0})")">
+            <DxGrid TItem="Bill"
+                    Data="@creditDebitNotes"
+                    @ref="CreditDebitGrid"
+                    KeyFieldName="BillId"
+                    ShowSearchBox="true"
+                    PageSize="100"
+                    ShowGroupPanel="true"
+                    ColumnResizeMode="GridColumnResizeMode.NextColumn"
+                    CssClass="grid-size">
+
+                <ToolbarTemplate>
+                    <DxToolbar>
+                        <DxToolbarItem Alignment="ToolbarItemAlignment.Left">
+                            <Template Context="ctx">
+                                <div class="toolbar-title">
+                                    <i class="bi bi-receipt me-2"></i>
+                                    <span class="fs-5">Credit/Debit Notes</span>
+                                </div>
+                            </Template>
+                        </DxToolbarItem>
+
+                        <DxToolbarItem Text="Export Excel"
+                                       IconCssClass="bi bi-file-earmark-excel"
+                                       RenderStyle="ButtonRenderStyle.None"
+                                       Click="ExportCreditDebitExcel" />
+                    </DxToolbar>
+                </ToolbarTemplate>
+
+                <Columns>
+                    <DxGridDataColumn FieldName="BillNo" Caption="Note No" Width="150px" />
+                    <DxGridDataColumn FieldName="BillDate" Caption="Note Date" DisplayFormat="dd-MM-yyyy" Width="120px" />
+                    <DxGridDataColumn FieldName="Vouchname" Caption="Note Type" Width="150px" />
+                    <DxGridDataColumn FieldName="BillGstNo" Caption="Customer GSTIN" Width="180px" />
+                    <DxGridDataColumn FieldName="partyname" Caption="Customer Name" Width="200px" />
+                    <DxGridDataColumn FieldName="BillTotal" Caption="Taxable Value" DisplayFormat="N2" Width="120px" />
+                    <DxGridDataColumn FieldName="BillNetAmount" Caption="Note Value" DisplayFormat="N2" Width="120px" />
+                </Columns>
+
+                <TotalSummary>
+                    <DxGridSummaryItem SummaryType="GridSummaryItemType.Count" FieldName="BillId" />
+                    <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum" FieldName="BillTotal" ValueDisplayFormat="Total: {0:N2}" />
+                    <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum" FieldName="BillNetAmount" ValueDisplayFormat="Total: {0:N2}" />
+                </TotalSummary>
+                </DxGrid>
+                </DxTabPage>
+
+                <!-- HSN Summary B2B Tab -->
+                <DxTabPage Text="@($"HSN Summary B2B ({hsnSummaryB2B?.Count ?? 0})")">
+                    <DxGrid TItem="GstTemplateService.HSNSummary"
+                            Data="@hsnSummaryB2B"
+                            @ref="HSNSummaryB2BGrid"
+                            KeyFieldName="HSNCode"
+                            ShowSearchBox="true"
+                            PageSize="50"
+                            ColumnResizeMode="GridColumnResizeMode.NextColumn"
+                            CssClass="grid-size">
+
+                        <ToolbarTemplate>
+                            <DxToolbar>
+                                <DxToolbarItem Alignment="ToolbarItemAlignment.Left">
+                                    <Template Context="ctx">
+                                        <div class="toolbar-title">
+                                            <i class="bi bi-grid-3x3-gap me-2"></i>
+                                            <span class="fs-5">HSN Summary - B2B</span>
+                                        </div>
+                                    </Template>
+                                </DxToolbarItem>
+
+                                <DxToolbarItem Text="Export Excel"
+                                               IconCssClass="bi bi-file-earmark-excel"
+                                               RenderStyle="ButtonRenderStyle.None"
+                                               Click="ExportHSNB2BExcel" />
+                            </DxToolbar>
+                        </ToolbarTemplate>
+
+                        <Columns>
+                            <DxGridDataColumn FieldName="HSNCode" Caption="HSN Code" Width="120px" />
+                            <DxGridDataColumn FieldName="Description" Caption="Description" Width="250px" />
+                            <DxGridDataColumn FieldName="UQC" Caption="UQC" Width="80px" />
+                            <DxGridDataColumn FieldName="TotalQuantity" Caption="Quantity" DisplayFormat="N2" Width="100px" />
+                            <DxGridDataColumn FieldName="TotalValue" Caption="Total Value" DisplayFormat="N2" Width="120px" />
+                            <DxGridDataColumn FieldName="TaxRate" Caption="Tax Rate %" DisplayFormat="N2" Width="100px" />
+                            <DxGridDataColumn FieldName="TaxableValue" Caption="Taxable Value" DisplayFormat="N2" Width="130px" />
+                            <DxGridDataColumn FieldName="IGSTAmount" Caption="IGST" DisplayFormat="N2" Width="100px" />
+                            <DxGridDataColumn FieldName="CGSTAmount" Caption="CGST" DisplayFormat="N2" Width="100px" />
+                            <DxGridDataColumn FieldName="SGSTAmount" Caption="SGST" DisplayFormat="N2" Width="100px" />
+                        </Columns>
+
+                        <TotalSummary>
+                            <DxGridSummaryItem SummaryType="GridSummaryItemType.Count" FieldName="HSNCode" DisplayText="Total HSN Codes: {0}" />
+                            <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum" FieldName="TotalQuantity" ValueDisplayFormat="Total Qty: {0:N2}" />
+                            <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum" FieldName="TotalValue" ValueDisplayFormat="Total: {0:N2}" />
+                            <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum" FieldName="TaxableValue" ValueDisplayFormat="Taxable: {0:N2}" />
+                            <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum" FieldName="IGSTAmount" ValueDisplayFormat="IGST: {0:N2}" />
+                            <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum" FieldName="CGSTAmount" ValueDisplayFormat="CGST: {0:N2}" />
+                            <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum" FieldName="SGSTAmount" ValueDisplayFormat="SGST: {0:N2}" />
+                        </TotalSummary>
+                    </DxGrid>
+                </DxTabPage>
+
+                <!-- HSN Summary B2C Tab -->
+                <DxTabPage Text="@($"HSN Summary B2C ({hsnSummaryB2C?.Count ?? 0})")">
+                    <DxGrid TItem="GstTemplateService.HSNSummary"
+                            Data="@hsnSummaryB2C"
+                            @ref="HSNSummaryB2CGrid"
+                            KeyFieldName="HSNCode"
+                            ShowSearchBox="true"
+                            PageSize="50"
+                            ColumnResizeMode="GridColumnResizeMode.NextColumn"
+                            CssClass="grid-size">
+
+                        <ToolbarTemplate>
+                            <DxToolbar>
+                                <DxToolbarItem Alignment="ToolbarItemAlignment.Left">
+                                    <Template Context="ctx">
+                                        <div class="toolbar-title">
+                                            <i class="bi bi-grid-3x3-gap me-2"></i>
+                                            <span class="fs-5">HSN Summary - B2C</span>
+                                        </div>
+                                    </Template>
+                                </DxToolbarItem>
+
+                                <DxToolbarItem Text="Export Excel"
+                                               IconCssClass="bi bi-file-earmark-excel"
+                                               RenderStyle="ButtonRenderStyle.None"
+                                               Click="ExportHSNB2CExcel" />
+                            </DxToolbar>
+                        </ToolbarTemplate>
+
+                        <Columns>
+                            <DxGridDataColumn FieldName="HSNCode" Caption="HSN Code" Width="120px" />
+                            <DxGridDataColumn FieldName="Description" Caption="Description" Width="250px" />
+                            <DxGridDataColumn FieldName="UQC" Caption="UQC" Width="80px" />
+                            <DxGridDataColumn FieldName="TotalQuantity" Caption="Quantity" DisplayFormat="N2" Width="100px" />
+                            <DxGridDataColumn FieldName="TotalValue" Caption="Total Value" DisplayFormat="N2" Width="120px" />
+                            <DxGridDataColumn FieldName="TaxRate" Caption="Tax Rate %" DisplayFormat="N2" Width="100px" />
+                            <DxGridDataColumn FieldName="TaxableValue" Caption="Taxable Value" DisplayFormat="N2" Width="130px" />
+                            <DxGridDataColumn FieldName="IGSTAmount" Caption="IGST" DisplayFormat="N2" Width="100px" />
+                            <DxGridDataColumn FieldName="CGSTAmount" Caption="CGST" DisplayFormat="N2" Width="100px" />
+                            <DxGridDataColumn FieldName="SGSTAmount" Caption="SGST" DisplayFormat="N2" Width="100px" />
+                        </Columns>
+
+                        <TotalSummary>
+                            <DxGridSummaryItem SummaryType="GridSummaryItemType.Count" FieldName="HSNCode" DisplayText="Total HSN Codes: {0}" />
+                            <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum" FieldName="TotalQuantity" ValueDisplayFormat="Total Qty: {0:N2}" />
+                            <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum" FieldName="TotalValue" ValueDisplayFormat="Total: {0:N2}" />
+                            <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum" FieldName="TaxableValue" ValueDisplayFormat="Taxable: {0:N2}" />
+                            <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum" FieldName="IGSTAmount" ValueDisplayFormat="IGST: {0:N2}" />
+                            <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum" FieldName="CGSTAmount" ValueDisplayFormat="CGST: {0:N2}" />
+                            <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum" FieldName="SGSTAmount" ValueDisplayFormat="SGST: {0:N2}" />
+                        </TotalSummary>
+                    </DxGrid>
+                </DxTabPage>
+    </DxTabs>
+</div>
+
+<!-- B2B Layout Dialog -->
+@if (showB2BLayoutDialog)
+{
+    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5); z-index:1050;">
+        <div class="modal-dialog modal-md" @onclick:stopPropagation="true">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@dialogTitle</h5>
+                    <button type="button" class="btn-close" @onclick="CloseB2BLayoutDialog"></button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Layout Name:</label>
+                        <input type="text"
+                               class="form-control"
+                               @bind="newLayoutName"
+                               @bind:event="oninput"
+                               placeholder="Enter layout name..."
+                               maxlength="100" />
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input"
+                                   type="checkbox"
+                                   @bind="isDefaultLayout"
+                                   id="defaultLayoutCheck" />
+                            <label class="form-check-label" for="defaultLayoutCheck">
+                                Set as Default Layout
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="mt-3">
+                        <label class="form-label fw-bold mb-2">Column Configuration:</label>
+                        <div class="table-responsive" style="max-height:400px; overflow-y:auto;">
+                            <table class="table table-sm table-bordered">
+                                <thead class="table-light sticky-top">
+                                    <tr>
+                                        <th style="width:50px;">Visible</th>
+                                        <th style="width:200px;">Column Name</th>
+                                        <th style="width:150px;">Width (px)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var col in allB2BColumns)
+                                    {
+                                        <tr>
+                                            <td class="text-center">
+                                                <input class="form-check-input"
+                                                       type="checkbox"
+                                                       @bind="col.Visible"
+                                                       id="col_@col.FieldName" />
+                                            </td>
+                                            <td>
+                                                <label class="mb-0" for="col_@col.FieldName">
+                                                    @col.Caption
+                                                </label>
+                                            </td>
+                                            <td>
+                                                <input type="number"
+                                                       class="form-control form-control-sm"
+                                                       @bind="col.Width"
+                                                       @bind:event="oninput"
+                                                       min="50"
+                                                       max="500"
+                                                       step="10" />
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseB2BLayoutDialog">
+                        Cancel
+                    </button>
+                    <button type="button" class="btn btn-primary" @onclick="SaveCurrentB2BLayout">
+                        <i class="bi bi-floppy me-1"></i>
+                        @(isEditMode ? "Update" : "Create") Layout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<DateFilterPage @ref="dateFilterPopup" OnFilterApplied="ApplyFilter" />
+
+@code {
+    // Grid references
+    private IGrid B2BGrid;
+    private IGrid B2CLargeGrid;
+    private IGrid B2CSmallGrid;
+    private IGrid CreditDebitGrid;
+    private IGrid HSNSummaryB2BGrid;
+    private IGrid HSNSummaryB2CGrid;
+
+    // Filter properties
+    private DateTime? filterFromDate;
+    private DateTime? filterToDate;
+    private int activeTab = 0;
+    private DateFilterPage dateFilterPopup;
+
+    // Data lists
+    private List<Bill> allSalesInvoices = new();
+    private List<Bill> b2bInvoices = new();
+    private List<Bill> b2cLargeInvoices = new();
+    private List<Bill> b2cSmallInvoices = new();  // Added to store actual small invoices
+    private List<Bill> creditDebitNotes = new();
+    private List<GstTemplateService.B2CSmallSummary> b2cSmallSummary = new();
+    private List<GstTemplateService.HSNSummary> hsnSummaryB2B = new();
+    private List<GstTemplateService.HSNSummary> hsnSummaryB2C = new();
+    private GSTR1Summary? summaryData;
+    private ValidationStatus validationStatus;
+
+    // B2B Grid Layout Management
+    private List<GridLayoutDto> availableB2BLayouts = [];
+    private int? selectedB2BLayoutId;
+    private bool showB2BLayoutDialog = false;
+    private string newLayoutName = "";
+    private string dialogTitle = "";
+    private bool isEditMode = false;
+    private bool isDefaultLayout = false;
+    private const string B2B_VOUCHER_TYPE = "GSTR1_B2B";
+    private List<GridColumnLayout> allB2BColumns = [];
+    private List<GridColumnLayout> currentB2BLayout = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        InitializeB2BColumns();
+        await LoadAvailableB2BLayouts();
+        await LoadDefaultB2BLayout();
+        await LoadData();
+    }
+
+    private void InitializeB2BColumns()
+    {
+        allB2BColumns = new List<GridColumnLayout>
+        {
+            new() { FieldName = "BillGstNo", Caption = "GSTIN", Visible = true, Width = 180, DisplayIndex = 0 },
+            new() { FieldName = "partyname", Caption = "Customer Name", Visible = true, Width = 200, DisplayIndex = 1 },
+            new() { FieldName = "BillNo", Caption = "Invoice No", Visible = true, Width = 150, DisplayIndex = 2 },
+            new() { FieldName = "BillDate", Caption = "Invoice Date", Visible = true, Width = 120, DisplayIndex = 3 },
+            new() { FieldName = "posname", Caption = "Place Of Supply", Visible = true, Width = 150, DisplayIndex = 4 },
+            new() { FieldName = "BillTotal", Caption = "Taxable Value", Visible = true, Width = 120, DisplayIndex = 5 },
+            new() { FieldName = "BillCgst", Caption = "CGST", Visible = true, Width = 100, DisplayIndex = 6 },
+            new() { FieldName = "BillSgst", Caption = "SGST", Visible = true, Width = 100, DisplayIndex = 7 },
+            new() { FieldName = "BillIgst", Caption = "IGST", Visible = true, Width = 100, DisplayIndex = 8 },
+            new() { FieldName = "BillNetAmount", Caption = "Invoice Value", Visible = true, Width = 120, DisplayIndex = 9 }
+        };
+        currentB2BLayout = allB2BColumns.ToList();
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            LoadingService.Show("Loading GSTR-1 data...");
+
+            var salesVoucherIds = (await VoucherService.GetAllAsync())
+                .Where(v => v.VoucherGroup == "SALES" || v.VoucherGroup == "CREDIT NOTE")
+                .Select(v => v.VoucherId)
+                .ToList();
+
+            allSalesInvoices = (await BillService.GetAllAsync())
+                .Where(b => b.BillYearId == YearStatechangeService.SelectedYearId
+                         && salesVoucherIds.Contains(b.BillVoucherId))
+                .ToList();
+
+            await ApplyCurrentFilter();
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Error loading data: {ex.Message}");
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+
+    private void OpenFilter()
+    {
+        dateFilterPopup.Show(filterFromDate, filterToDate, null, null, null);
+    }
+
+    private async Task ApplyFilter((DateTime? FromDate, DateTime? ToDate, string? JobType, int? vouchertype, string? OutstandingType) f)
+    {
+        filterFromDate = f.FromDate;
+        filterToDate = f.ToDate;
+        await ApplyCurrentFilter();
+    }
+
+    private async Task ApplyCurrentFilter()
+    {
+        try
+        {
+            var filteredInvoices = allSalesInvoices.AsEnumerable();
+
+            if (filterFromDate.HasValue)
+                filteredInvoices = filteredInvoices.Where(b => b.BillDate >= filterFromDate.Value);
+
+            if (filterToDate.HasValue)
+                filteredInvoices = filteredInvoices.Where(b => b.BillDate <= filterToDate.Value);
+
+            var finalList = filteredInvoices.ToList();
+
+            ClassifyInvoices(finalList);
+            CalculateSummary(finalList);
+
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Error applying filter: {ex.Message}");
+        }
+    }
+
+    private void ClassifyInvoices(List<Bill> invoices)
+    {
+        b2bInvoices = invoices
+            .Where(b => !string.IsNullOrWhiteSpace(b.BillGstNo)
+                     && b.BillGstNo.Length == 15
+                     && (b.Vouchname?.Contains("CREDIT NOTE") != true))
+            .ToList();
+
+        b2cLargeInvoices = invoices
+            .Where(b => (string.IsNullOrWhiteSpace(b.BillGstNo) || b.BillGstNo.Length != 15)
+                     && b.BillNetAmount >= 250000
+                     && (b.Vouchname?.Contains("CREDIT NOTE") != true))
+            .ToList();
+
+        b2cSmallInvoices = invoices
+            .Where(b => (string.IsNullOrWhiteSpace(b.BillGstNo) || b.BillGstNo.Length != 15)
+                     && b.BillNetAmount < 250000
+                     && (b.Vouchname?.Contains("CREDIT NOTE") != true))
+            .ToList();
+
+        b2cSmallSummary = b2cSmallInvoices
+            .GroupBy(b => b.posname ?? "Unknown")
+            .Select(g => new GstTemplateService.B2CSmallSummary
+            {
+                PlaceOfSupply = g.Key,
+                TaxableValue = (decimal)g.Sum(b => b.BillTotal),
+                CGST = (decimal)g.Sum(b => b.BillCgst),
+                SGST = (decimal)g.Sum(b => b.BillSgst),
+                InvoiceValue = (decimal)g.Sum(b => b.BillNetAmount)
+            })
+            .ToList();
+
+        creditDebitNotes = invoices
+            .Where(b => b.Vouchname?.Contains("CREDIT NOTE") == true || b.Vouchname?.Contains("DEBIT NOTE") == true)
+            .ToList();
+
+        // Calculate HSN summaries
+        hsnSummaryB2B = CalculateHSNSummary(b2bInvoices);
+        hsnSummaryB2C = CalculateHSNSummary(b2cLargeInvoices.Concat(b2cSmallInvoices).ToList());
+    }
+
+    private void CalculateSummary(List<Bill> invoices)
+    {
+        summaryData = new GSTR1Summary
+        {
+            TotalInvoices = invoices.Count,
+            TotalTaxableValue = (decimal)invoices.Sum(b => b.BillTotal),
+            TotalCGST = (decimal)invoices.Sum(b => b.BillCgst),
+            TotalSGST = (decimal)invoices.Sum(b => b.BillSgst),
+            TotalIGST = (decimal)invoices.Sum(b => b.BillIgst),
+            TotalInvoiceValue = (decimal)invoices.Sum(b => b.BillNetAmount)
+        };
+    }
+
+    // Export Methods
+    private async Task ExportCompleteGSTR1Excel()
+    {
+        try
+        {
+           
+
+            LoadingService.Show();
+
+            string templatePath = Path.Combine(Environment.WebRootPath, "templates", "GSTR1_Template.xlsx");
+
+            var excelBytes = TemplateService.GenerateFromTemplate(
+                templatePath,
+                b2bInvoices,
+                b2cLargeInvoices,
+                b2cSmallInvoices,
+                b2cSmallSummary,
+                creditDebitNotes,
+                filterFromDate,
+                filterToDate
+            );
+
+            string fileName = "GSTR1_Complete";
+            if (filterFromDate.HasValue && filterToDate.HasValue)
+                fileName += $"_{filterFromDate.Value:ddMMyyyy}_{filterToDate.Value:ddMMyyyy}";
+            fileName += ".xlsx";
+
+            await DownloadFile(fileName, excelBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            ToastService.Success("GSTR-1 Excel exported successfully!");
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Export error: {ex.Message}");
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+
+    private async Task ExportB2BExcel()
+    {
+        if (b2bInvoices == null || !b2bInvoices.Any())
+        {
+            ToastService.Warning("No B2B data to export.");
+            return;
+        }
+
+        string fileName = "GSTR1_B2B";
+        if (filterFromDate.HasValue && filterToDate.HasValue)
+            fileName += $"_{filterFromDate.Value:ddMMyyyy}_{filterToDate.Value:ddMMyyyy}";
+        fileName += ".xlsx";
+
+        await B2BGrid.ExportToXlsxAsync(fileName);
+    }
+
+    private async Task ExportB2CLargeExcel()
+    {
+        if (b2cLargeInvoices == null || !b2cLargeInvoices.Any())
+        {
+            ToastService.Warning("No B2C Large data to export.");
+            return;
+        }
+
+        string fileName = "GSTR1_B2CLarge";
+        if (filterFromDate.HasValue && filterToDate.HasValue)
+            fileName += $"_{filterFromDate.Value:ddMMyyyy}_{filterToDate.Value:ddMMyyyy}";
+        fileName += ".xlsx";
+
+        await B2CLargeGrid.ExportToXlsxAsync(fileName);
+    }
+
+    private async Task ExportB2CSmallExcel()
+    {
+        if (b2cSmallSummary == null || !b2cSmallSummary.Any())
+        {
+            ToastService.Warning("No B2C Small data to export.");
+            return;
+        }
+
+        string fileName = "GSTR1_B2CSmall";
+        if (filterFromDate.HasValue && filterToDate.HasValue)
+            fileName += $"_{filterFromDate.Value:ddMMyyyy}_{filterToDate.Value:ddMMyyyy}";
+        fileName += ".xlsx";
+
+        await B2CSmallGrid.ExportToXlsxAsync(fileName);
+    }
+
+    private async Task ExportCreditDebitExcel()
+    {
+        if (creditDebitNotes == null || !creditDebitNotes.Any())
+        {
+            ToastService.Warning("No Credit/Debit Notes to export.");
+            return;
+        }
+
+        string fileName = "GSTR1_CreditDebit";
+        if (filterFromDate.HasValue && filterToDate.HasValue)
+            fileName += $"_{filterFromDate.Value:ddMMyyyy}_{filterToDate.Value:ddMMyyyy}";
+        fileName += ".xlsx";
+
+        await CreditDebitGrid.ExportToXlsxAsync(fileName);
+    }
+
+    private async Task ExportFullGSTR1Json()
+    {
+        try
+        {
+            var fullData = new
+            {
+                FilingPeriod = new
+                {
+                    FromDate = filterFromDate?.ToString("yyyy-MM-dd"),
+                    ToDate = filterToDate?.ToString("yyyy-MM-dd"),
+                },
+                GeneratedOn = DateTime.Now,
+                Summary = summaryData,
+                B2B = b2bInvoices,
+                B2CLarge = b2cLargeInvoices,
+                B2CSmallSummary = b2cSmallSummary,
+                CreditDebitNotes = creditDebitNotes
+            };
+
+            var json = System.Text.Json.JsonSerializer.Serialize(fullData, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+
+            string fileName = "GSTR1_Complete";
+            if (filterFromDate.HasValue && filterToDate.HasValue)
+                fileName += $"_{filterFromDate.Value:ddMMyyyy}_{filterToDate.Value:ddMMyyyy}";
+            fileName += ".json";
+
+            await DownloadJsonFile(fileName, json);
+            ToastService.Success("JSON exported successfully!");
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"JSON export error: {ex.Message}");
+        }
+    }
+
+    private async Task ValidateGSTR1Data()
+    {
+        try
+        {
+            LoadingService.Show("Validating data...");
+
+            var errors = new List<string>();
+
+            foreach (var inv in b2bInvoices)
+            {
+                if (string.IsNullOrWhiteSpace(inv.BillGstNo) || inv.BillGstNo.Length != 15)
+                    errors.Add($"Invalid GSTIN for invoice {inv.BillNo}");
+            }
+
+            if (errors.Any())
+            {
+                validationStatus = new ValidationStatus
+                {
+                    CssClass = "error",
+                    Icon = "x-circle",
+                    Message = $"{errors.Count} errors"
+                };
+                ToastService.Error($"Validation failed: {errors.Count} errors");
+            }
+            else
+            {
+                validationStatus = new ValidationStatus
+                {
+                    CssClass = "success",
+                    Icon = "check-circle",
+                    Message = "Validated"
+                };
+                ToastService.Success("Data validation passed!");
+            }
+
+            await InvokeAsync(StateHasChanged);
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+
+    // B2B Layout Management
+    private string GetB2BColumnWidth(string fieldName)
+    {
+        var col = currentB2BLayout.FirstOrDefault(x => x.FieldName == fieldName);
+        return $"{col?.Width ?? 100}px";
+    }
+
+    private bool GetB2BColumnVisibility(string fieldName)
+    {
+        var col = currentB2BLayout.FirstOrDefault(x => x.FieldName == fieldName);
+        return col?.Visible ?? true;
+    }
+
+    private async Task LoadAvailableB2BLayouts()
+    {
+        availableB2BLayouts = await GridLayoutService.GetLayoutsByVoucherTypeAsync(B2B_VOUCHER_TYPE);
+    }
+
+    private async Task LoadDefaultB2BLayout()
+    {
+        var defaultLayout = await GridLayoutService.GetDefaultLayoutAsync(B2B_VOUCHER_TYPE);
+        if (defaultLayout != null)
+        {
+            selectedB2BLayoutId = defaultLayout.GridLayoutId;
+            await ApplyB2BLayout(defaultLayout);
+        }
+    }
+
+    private async Task OnB2BLayoutSelectedAsync(int? layoutId)
+    {
+        selectedB2BLayoutId = layoutId;
+        if (layoutId.HasValue)
+        {
+            var layout = await GridLayoutService.GetByIdAsync(layoutId.Value);
+            if (layout != null) await ApplyB2BLayout(layout);
+        }
+        else
+        {
+            InitializeB2BColumns();
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task ApplyB2BLayout(GridLayoutDto layout)
+    {
+        if (!string.IsNullOrEmpty(layout.GridLayoutData))
+        {
+            var savedLayout = GridLayoutService.DeserializeColumnLayout(layout.GridLayoutData);
+            if (savedLayout != null && savedLayout.Any())
+            {
+                currentB2BLayout = savedLayout.ToList();
+                foreach (var saved in savedLayout)
+                {
+                    var existing = allB2BColumns.FirstOrDefault(x => x.FieldName == saved.FieldName);
+                    if (existing != null)
+                    {
+                        existing.Visible = saved.Visible;
+                        existing.Width = saved.Width;
+                        existing.DisplayIndex = saved.DisplayIndex;
+                    }
+                }
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+    }
+
+    private void ShowSaveB2BLayoutDialog()
+    {
+        if (selectedB2BLayoutId.HasValue)
+        {
+            var layout = availableB2BLayouts.FirstOrDefault(x => x.GridLayoutId == selectedB2BLayoutId.Value);
+            if (layout != null)
+            {
+                newLayoutName = layout.GridLayoutName ?? "";
+                isDefaultLayout = layout.GridLayoutDefault;
+                isEditMode = true;
+                dialogTitle = "Update Grid Layout";
+                showB2BLayoutDialog = true;
+                return;
+            }
+        }
+        ShowNewB2BLayoutDialog();
+    }
+
+    private void ShowNewB2BLayoutDialog()
+    {
+        newLayoutName = "";
+        isDefaultLayout = false;
+        isEditMode = false;
+        dialogTitle = "Create New Grid Layout";
+        showB2BLayoutDialog = true;
+    }
+
+    private async Task SaveCurrentB2BLayout()
+    {
+        if (string.IsNullOrWhiteSpace(newLayoutName))
+        {
+            ToastService.Warning("Please enter a layout name.");
+            return;
+        }
+
+        LoadingService.Show("Saving layout...");
+        try
+        {
+            foreach (var col in allB2BColumns)
+            {
+                var current = currentB2BLayout.FirstOrDefault(c => c.FieldName == col.FieldName);
+                if (current != null)
+                {
+                    current.Visible = col.Visible;
+                    current.Width = col.Width;
+                }
+            }
+
+            var configJson = GridLayoutService.SerializeColumnLayout(currentB2BLayout);
+            bool success;
+
+            if (isEditMode && selectedB2BLayoutId.HasValue)
+            {
+                success = await GridLayoutService.UpdateAsync(selectedB2BLayoutId.Value, new SaveGridLayoutRequest
+                {
+                    GridLayoutName = newLayoutName,
+                    GridLayoutVoucherType = B2B_VOUCHER_TYPE,
+                    GridLayoutData = configJson,
+                    GridLayoutDefault = isDefaultLayout
+                });
+            }
+            else
+            {
+                success = await GridLayoutService.CreateAsync(new SaveGridLayoutRequest
+                {
+                    GridLayoutName = newLayoutName,
+                    GridLayoutVoucherType = B2B_VOUCHER_TYPE,
+                    GridLayoutData = configJson,
+                    GridLayoutDefault = isDefaultLayout
+                });
+            }
+
+            if (success)
+            {
+                ToastService.Success($"Layout {(isEditMode ? "updated" : "created")} successfully!");
+                await LoadAvailableB2BLayouts();
+                CloseB2BLayoutDialog();
+            }
+            else
+            {
+                ToastService.Error("Failed to save layout.");
+            }
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+
+    private async Task DeleteCurrentB2BLayout()
+    {
+        if (!selectedB2BLayoutId.HasValue) return;
+
+        LoadingService.Show("Deleting layout...");
+        try
+        {
+            var success = await GridLayoutService.DeleteAsync(selectedB2BLayoutId.Value);
+            if (success)
+            {
+                ToastService.Success("Layout deleted successfully!");
+                selectedB2BLayoutId = null;
+                InitializeB2BColumns();
+                await LoadAvailableB2BLayouts();
+            }
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+
+    private void CloseB2BLayoutDialog()
+    {
+        showB2BLayoutDialog = false;
+        newLayoutName = "";
+        isDefaultLayout = false;
+        isEditMode = false;
+    }
+
+    // Helper methods
+    private async Task DownloadFile(string fileName, byte[] bytes, string contentType)
+    {
+        var base64 = Convert.ToBase64String(bytes);
+        await JSRuntime.InvokeVoidAsync("downloadFileFromBase64", fileName, contentType, base64);
+    }
+
+    private async Task DownloadJsonFile(string fileName, string jsonContent)
+    {
+        var bytes = System.Text.Encoding.UTF8.GetBytes(jsonContent);
+        await DownloadFile(fileName, bytes, "application/json");
+    }
+
+    private async Task ExportHSNB2BExcel()
+    {
+        if (hsnSummaryB2B == null || !hsnSummaryB2B.Any())
+        {
+            ToastService.Warning("No HSN B2B data to export.");
+            return;
+        }
+
+        string fileName = "GSTR1_HSN_B2B";
+        if (filterFromDate.HasValue && filterToDate.HasValue)
+            fileName += $"_{filterFromDate.Value:ddMMyyyy}_{filterToDate.Value:ddMMyyyy}";
+        fileName += ".xlsx";
+
+        await HSNSummaryB2BGrid.ExportToXlsxAsync(fileName);
+    }
+
+    private async Task ExportHSNB2CExcel()
+    {
+        if (hsnSummaryB2C == null || !hsnSummaryB2C.Any())
+        {
+            ToastService.Warning("No HSN B2C data to export.");
+            return;
+        }
+
+        string fileName = "GSTR1_HSN_B2C";
+        if (filterFromDate.HasValue && filterToDate.HasValue)
+            fileName += $"_{filterFromDate.Value:ddMMyyyy}_{filterToDate.Value:ddMMyyyy}";
+        fileName += ".xlsx";
+
+        await HSNSummaryB2CGrid.ExportToXlsxAsync(fileName);
+    }
+
+    /// <summary>
+    /// Calculate HSN summary from Bills using BillDetails
+    /// </summary>
+    private List<GstTemplateService.HSNSummary> CalculateHSNSummary(List<Bill> bills)
+    {
+        if (bills == null || !bills.Any())
+            return new List<GstTemplateService.HSNSummary>();
+
+        // Collect all BillDetails from all Bills
+        var allDetails = new List<BillDetailWithParent>();
+
+        foreach (var bill in bills)
+        {
+            if (bill.BillDetails != null && bill.BillDetails.Any())
+            {
+                // Use BillDetails for HSN data
+                foreach (var detail in bill.BillDetails)
+                {
+                    allDetails.Add(new BillDetailWithParent
+                    {
+                        Detail = detail,
+                        ParentBill = bill
+                    });
+                }
+            }
+            else
+            {
+                // If no BillDetails, create virtual detail from Bill
+                allDetails.Add(new BillDetailWithParent
+                {
+                    Detail = null,
+                    ParentBill = bill
+                });
+            }
+        }
+
+        // Group by HSN code and aggregate
+        var summary = allDetails
+            .GroupBy(item => new
+            {
+                HSN = GetHSNCode(item),
+                Description = GetDescription(item),
+                UQC = GetUQC(item)
+            })
+            .Select(g => new GstTemplateService.HSNSummary
+            {
+                HSNCode = g.Key.HSN,
+                Description = g.Key.Description,
+                UQC = g.Key.UQC,
+                TotalQuantity = g.Sum(item => GetQuantity(item)),
+                TotalValue = g.Sum(item => GetValue(item)),
+                TaxableValue = g.Sum(item => GetTaxableValue(item)),
+                IGSTAmount = g.Sum(item => GetIGST(item)),
+                CGSTAmount = g.Sum(item => GetCGST(item)),
+                SGSTAmount = g.Sum(item => GetSGST(item)),
+                TaxRate = CalculateTaxRateFromGroup(g.First())
+            })
+            .OrderBy(h => h.HSNCode)
+            .ToList();
+
+        return summary;
+    }
+
+    // Helper class for HSN calculation
+    private class BillDetailWithParent
+    {
+        public BillDetail Detail { get; set; }
+        public Bill ParentBill { get; set; }
+    }
+
+    // HSN extraction helpers
+    private string GetHSNCode(BillDetailWithParent item)
+    {
+        if (item.Detail != null && !string.IsNullOrWhiteSpace(item.Detail.BillDetailHsnCode))
+            return item.Detail.BillDetailHsnCode;
+
+        return "9997"; // Default: Transport services
+    }
+
+    private string GetDescription(BillDetailWithParent item)
+    {
+        if (item.Detail != null && !string.IsNullOrWhiteSpace(item.Detail.BillDetailRemarks))
+            return item.Detail.BillDetailRemarks;
+
+        return "Freight and Transport Services";
+    }
+
+    private string GetUQC(BillDetailWithParent item)
+    {
+        if (item.Detail != null && !string.IsNullOrWhiteSpace(item.Detail.BillDetailUnit))
+            return item.Detail.BillDetailUnit;
+
+        return "NOS";
+    }
+
+    private double GetQuantity(BillDetailWithParent item)
+    {
+        if (item.Detail != null && item.Detail.BillDetailQty > 0)
+            return item.Detail.BillDetailQty;
+
+        return 1;
+    }
+
+    private double GetValue(BillDetailWithParent item)
+    {
+        if (item.Detail != null)
+            return item.Detail.BillDetailAmount;
+
+        return (double)item.ParentBill.BillNetAmount;
+    }
+
+    private double GetTaxableValue(BillDetailWithParent item)
+    {
+        if (item.Detail != null)
+            return item.Detail.BillDetailAmount;
+
+        return (double)item.ParentBill.BillTotal;
+    }
+
+    private double GetIGST(BillDetailWithParent item)
+    {
+        if (item.Detail != null)
+            return item.Detail.BillDetailIgst;
+
+        return (double)item.ParentBill.BillIgst;
+    }
+
+    private double GetCGST(BillDetailWithParent item)
+    {
+        if (item.Detail != null)
+            return item.Detail.BillDetailCgst;
+
+        return (double)item.ParentBill.BillCgst;
+    }
+
+    private double GetSGST(BillDetailWithParent item)
+    {
+        if (item.Detail != null)
+            return item.Detail.BillDetailSgst;
+
+        return (double)item.ParentBill.BillSgst;
+    }
+
+    private double CalculateTaxRateFromGroup(BillDetailWithParent item)
+    {
+        var taxableValue = GetTaxableValue(item);
+        if (taxableValue == 0) return 0;
+
+        var igst = GetIGST(item);
+        if (igst > 0)
+            return Math.Round((igst / taxableValue) * 100, 2);
+
+        var cgst = GetCGST(item);
+        var sgst = GetSGST(item);
+        if (cgst > 0 || sgst > 0)
+        {
+            var totalGst = cgst + sgst;
+            return Math.Round((totalGst / taxableValue) * 100, 2);
+        }
+
+        return 0;
+    }
+
+    // Helper classes
+    public class GSTR1Summary
+    {
+        public int TotalInvoices { get; set; }
+        public decimal TotalTaxableValue { get; set; }
+        public decimal TotalCGST { get; set; }
+        public decimal TotalSGST { get; set; }
+        public decimal TotalIGST { get; set; }
+        public decimal TotalInvoiceValue { get; set; }
+    }
+
+    public class ValidationStatus
+    {
+        public string CssClass { get; set; }
+        public string Icon { get; set; }
+        public string Message { get; set; }
+    }
+}
