@@ -2,12 +2,14 @@
 @using FreightBKShipping.Client.Services
 @using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Services
+
 @inject LrApiService LrApiService
 @inject AccountService AccountService
 @inject VoucherService VoucherService
 @inject StateService StateService
-<style>
+@inject GstSlabService GstSlabService
 
+<style>
     .page-container {
         display: flex;
         flex-direction: column;
@@ -16,7 +18,7 @@
     }
 
     .page-header {
-        padding: 10px 10px;
+        padding: 10px;
         background: white;
         border-bottom: 1px solid #e5e5e5;
     }
@@ -25,6 +27,7 @@
         flex: 1;
         overflow-y: auto;
         padding: 20px;
+        padding-bottom: 120px;
     }
 
     .page-footer {
@@ -40,14 +43,9 @@
         z-index: 1000;
     }
 
-    .page-content {
-        padding-bottom: 120px;
-    }
-
     .grid-size {
         max-height: 280px;
     }
-
 </style>
 
 <div class="page-container">
@@ -60,115 +58,82 @@
     <div class="page-content">
 
         <DxFormLayout>
-
-            <!-- Party Dropdown -->
             <DxFormLayoutItem Caption="Party" ColSpanMd="4">
                 <DxComboBox Data="partylist"
                             TextFieldName="AccountName"
                             ValueFieldName="AccountId"
+                            Value="@lrs.LrPartyAccountId"
+ValueChanged="@( (int v) => OnPartyChanged(v) )"
+ValueExpression="@(() => lrs.LrPartyAccountId)"
+
                             ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
                             AllowUserInput="true"
                             SearchMode="ListSearchMode.AutoSearch"
                             SearchFilterCondition="ListSearchFilterCondition.StartsWith"
-                            @bind-Value="lrs.LrPartyAccountId">
-                </DxComboBox>
+                            />
             </DxFormLayoutItem>
-
-            <!-- From Date -->
             <DxFormLayoutItem Caption="From Date" ColSpanMd="3">
-                <DxDateEdit @bind-Date="fromDate"
-                            DisplayFormat="dd-MM-yyyy" Format="dd-MM-yyyy"
-                            NullText="Select From Date">
-                </DxDateEdit>
+                <DxDateEdit @bind-Date="fromDate" DisplayFormat="dd-MM-yyyy" Format="dd-MM-yyyy" NullText="Select From Date" />
             </DxFormLayoutItem>
-
-            <!-- To Date -->
             <DxFormLayoutItem Caption="To Date" ColSpanMd="3">
-                <DxDateEdit @bind-Date="toDate"
-                            DisplayFormat="dd-MM-yyyy" Format="dd-MM-yyyy"
-                            NullText="Select To Date">
-                </DxDateEdit>
+                <DxDateEdit @bind-Date="toDate" DisplayFormat="dd-MM-yyyy" Format="dd-MM-yyyy" NullText="Select To Date" />
             </DxFormLayoutItem>
-
-            <!-- Search Button -->
             <DxFormLayoutItem ColSpanMd="2">
-                <DxButton Text="Search"
-                          RenderStyle="ButtonRenderStyle.Primary"
-                          Click="SerchLrs">
-                </DxButton>
+                <DxButton Text="Search" RenderStyle="ButtonRenderStyle.Primary" Click="SerchLrs" />
             </DxFormLayoutItem>
-
         </DxFormLayout>
 
         <br />
 
-        <!-- Result Grid -->
         <DxGrid Data="lrslist" SelectedDataItems="selectedLrs"
                 SelectedDataItemsChanged="@OnSelectionChanged"
                 KeyFieldName="LrId" PageSize="10" CssClass="grid-size">
             <Columns>
-
-                <!-- Selection -->
-                <DxGridSelectionColumn AllowSelectAll="true"
-                                       Width="40"
-                                       FixedPosition="GridColumnFixedPosition.Left" />
-
-                <!-- Basic LR Info -->
+                <DxGridSelectionColumn AllowSelectAll="true" Width="40" FixedPosition="GridColumnFixedPosition.Left" />
                 <DxGridDataColumn FieldName="SrNo" Caption="Sr No" Width="70" />
                 <DxGridDataColumn FieldName="LrNoStr" Caption="LR No" />
                 <DxGridDataColumn FieldName="LrDate" Caption="LR Date" DisplayFormat="dd-MM-yyyy" />
-
-                <!-- Party / Job -->
                 <DxGridDataColumn FieldName="LrJobNo" Caption="Job No" />
                 <DxGridDataColumn FieldName="LrPartyAccountId" Caption="Party" />
                 <DxGridDataColumn FieldName="LrSupplierAccountId" Caption="Supplier" />
-
-                <!-- Route -->
                 <DxGridDataColumn FieldName="LrFromLocationId" Caption="From" />
                 <DxGridDataColumn FieldName="LrToLocationId" Caption="To" />
-
-                <!-- Vehicle -->
                 <DxGridDataColumn FieldName="LrVehicleId" Caption="Vehicle" />
                 <DxGridDataColumn FieldName="LrDriverMobile" Caption="Driver Mobile" />
-
-                <!-- Weight -->
                 <DxGridDataColumn FieldName="LrLoadWt" Caption="Load Wt" />
                 <DxGridDataColumn FieldName="LrUnloadWt" Caption="Unload Wt" />
-
-                <!-- Billing -->
                 <DxGridDataColumn FieldName="LrRateBill" Caption="Rate" />
                 <DxGridDataColumn FieldName="LrNetFreightBill" Caption="Net Freight" />
-
-                <!-- Status -->
                 <DxGridDataColumn FieldName="LrPaymentType" Caption="Payment Type" />
                 <DxGridDataColumn FieldName="LrStatus" Caption="Status" />
                 <DxGridDataColumn FieldName="LrGrossFreightBill" Caption="Gross Amount" />
-
             </Columns>
-
         </DxGrid>
-        <br />
-        <!-- Tabs Section -->
-        <div class="tab-section">
 
+        <br />
+
+        <div class="tab-section">
             <DxFormLayout>
+
+                <!-- LEFT GROUP -->
                 <DxFormLayoutGroup ColSpanMd="6" Decoration="FormLayoutGroupDecoration.None">
                     <DxFormLayoutTabPages>
-                        <DxFormLayoutTabPage Caption="Bill Details">
-                            <DxFormLayoutItem Caption="Bill Type">
-                                <DxComboBox Data="@VoucherList" @bind-Value="bill.BillType"></DxComboBox>
-                            </DxFormLayoutItem>
-                            <DxFormLayoutItem Caption="Bill Date">
-                                <DxMaskedInput @bind-Value="bill.BillDate"></DxMaskedInput>
-                            </DxFormLayoutItem>
 
-                            <DxFormLayoutItem Caption="Bill No">
-                                <DxTextBox @bind-Text="bill.BillNo"></DxTextBox>
+                        <DxFormLayoutTabPage Caption="Bill Details">
+
+                            <DxFormLayoutItem Caption="Bill Type" CaptionPosition="CaptionPosition.Vertical" ColSpanMd="4">
+                                <DxComboBox Data="@VoucherList" @bind-Value="bill.BillType" />
                             </DxFormLayoutItem>
-                            <DxFormLayoutItem Caption="Due Date">
-                                <DxMaskedInput @bind-Value="bill.BillDueDate"></DxMaskedInput>
+                            <DxFormLayoutItem Caption="Bill Date" CaptionPosition="CaptionPosition.Vertical" ColSpanMd="4">
+                                <DxMaskedInput @bind-Value="bill.BillDate" DisplayFormat="dd/MM/yyyy"/>
                             </DxFormLayoutItem>
-                            <DxFormLayoutItem Caption="Place of Supply">
+                            <DxFormLayoutItem Caption="Due Date" CaptionPosition="CaptionPosition.Vertical" ColSpanMd="4">
+                                <DxMaskedInput @bind-Value="bill.BillDueDate" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Bill No" CaptionPosition="CaptionPosition.Vertical" >
+                                <DxTextBox @bind-Text="bill.BillNo" />
+                            </DxFormLayoutItem>                            
+                            <DxFormLayoutItem Caption="Place of Supply" CaptionPosition="CaptionPosition.Vertical">
                                 <DxComboBox TData="State" TValue="int"
                                             Data="@stateList"
                                             TextFieldName="StateName"
@@ -180,45 +145,48 @@
                                             SearchMode="ListSearchMode.AutoSearch"
                                             SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
                             </DxFormLayoutItem>
-                            <DxFormLayoutItem Caption="Ref No">
-                                <DxTextBox></DxTextBox>
+                            <DxFormLayoutItem Caption="Ref No" CaptionPosition="CaptionPosition.Vertical">
+                                <DxTextBox />
                             </DxFormLayoutItem>
-                            <DxFormLayoutItem Caption="Remarks">
-                                <DxMemo rows="3" @bind-Text="bill.BillRemarks"></DxMemo>
+                            <DxFormLayoutItem Caption="Remarks" CaptionPosition="CaptionPosition.Vertical">
+                                <DxMemo rows="1" @bind-Text="bill.BillRemarks" />
                             </DxFormLayoutItem>
                         </DxFormLayoutTabPage>
+
                         <DxFormLayoutTabPage Caption="Ship To">
-                            <DxFormLayoutItem Caption="Ship To Party">
-                                <DxComboBox Data="partylist" @bind-Value="bill.BillShipPartyId"></DxComboBox>
+                            <DxFormLayoutItem Caption="Ship To Party" CaptionPosition="CaptionPosition.Vertical" ColSpanMd="6">
+                                <DxComboBox Data="partylist" @bind-Value="bill.BillShipPartyId" TextFieldName="AccountName"
+                                            ValueFieldName="AccountId" />
                             </DxFormLayoutItem>
-                            <DxFormLayoutItem Caption="State">
-                                <DxComboBox Data="@stateList" @bind-Value="bill.BillStateId" TData="State" TValue="int"
+
+                            <DxFormLayoutItem Caption="State" CaptionPosition="CaptionPosition.Vertical" ColSpanMd="3"> 
+                                <DxComboBox Data="@stateList" TData="State" TValue="int"
                                             TextFieldName="StateName"
                                             ValueFieldName="StateId"
                                             ClearButtonVisible="true"
                                             AllowUserInput="true"
+                                            @bind-Value="bill.BillStateId"
                                             SearchMode="ListSearchMode.AutoSearch"
-                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith"></DxComboBox>
+                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
                             </DxFormLayoutItem>
-                            <DxFormLayoutItem Caption="Address">
-                               <DxMemo @bind-Text="bill.BillAddress1" Rows="3"></DxMemo>
+                            <DxFormLayoutItem Caption="PIN" CaptionPosition="CaptionPosition.Vertical" ColSpanMd="3">
+                                <DxTextBox @bind-Text="bill.BillPincode" />
                             </DxFormLayoutItem>
-                            <DxFormLayoutItem Caption="GSTIN">
-                                <DxTextBox @bind-Text="bill.BillGstNo"></DxTextBox>
+
+
+                            <DxFormLayoutItem Caption="Contact" CaptionPosition="CaptionPosition.Vertical" ColSpanMd="3">
+                                <DxTextBox @bind-Text="bill.BillContactNo" />
                             </DxFormLayoutItem>
-                            <DxFormLayoutItem Caption="PIN">
-                                <DxTextBox @bind-Text="bill.BillPincode"></DxTextBox>
+                            <DxFormLayoutItem Caption="Job No" CaptionPosition="CaptionPosition.Vertical" ColSpanMd="3">
+                                <DxTextBox @bind-Text="bill.BillJobNo" />
                             </DxFormLayoutItem>
-                            <DxFormLayoutItem Caption="Contact">
-                                <DxTextBox @bind-Text="bill.BillContactNo"></DxTextBox>
+                            <DxFormLayoutItem Caption="GSTIN" CaptionPosition="CaptionPosition.Vertical" ColSpanMd="3">
+                                <DxTextBox @bind-Text="bill.BillGstNo" />
                             </DxFormLayoutItem>
-                            <DxFormLayoutItem Caption="Job No">
-                                <DxTextBox @bind-Text="bill.BillJobNo"></DxTextBox>
+                            <DxFormLayoutItem Caption="BE No" CaptionPosition="CaptionPosition.Vertical" ColSpanMd="3">
+                                <DxTextBox @bind-Text="bill.BillBlNo" />
                             </DxFormLayoutItem>
-                            <DxFormLayoutItem Caption="BE no">
-                                <DxTextBox @bind-Text="bill.BillBlNo"></DxTextBox>
-                            </DxFormLayoutItem>
-                            <DxFormLayoutItem Caption="Supply Type" ColSpanMd="12">
+                            <DxFormLayoutItem Caption="Supply Type" ColSpanMd="6" CaptionPosition="CaptionPosition.Vertical">
                                 <DxComboBox Data="@SupplyTypeList"
                                             @bind-Value="bill.BillSupplyType"
                                             TextFieldName="Text"
@@ -226,112 +194,159 @@
                                             ShowValidationIcon="true"
                                             ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
                                             AllowUserInput="true"
-                                            SearchMode="ListSearchMode.AutoSearch" SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+                                            SearchMode="ListSearchMode.AutoSearch"
+                                            SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
                             </DxFormLayoutItem>
 
-                        </DxFormLayoutTabPage>
-                        <DxFormLayoutTabPage Caption="E-Invoice Details">
-                            <DxFormLayoutItem Caption="IRN No"></DxFormLayoutItem>
-                            <DxFormLayoutItem Caption="ACK No"></DxFormLayoutItem>
-                            <DxFormLayoutItem Caption="ACK Date"></DxFormLayoutItem>
-
-                        </DxFormLayoutTabPage>
-
-                    </DxFormLayoutTabPages>
-
-                </DxFormLayoutGroup>
-
-                <DxFormLayoutGroup ColSpanMd="6" Decoration="FormLayoutGroupDecoration.None">
-                    <DxFormLayoutTabPages>
-                        <DxFormLayoutTabPage Caption="Total Summary">
-                            <DxFormLayoutItem Caption="Total Trip" ColSpanMd="4">
-                                <Template><b>@TotalTrip</b></Template>
-                            </DxFormLayoutItem>
-
-                            <DxFormLayoutItem Caption="Gross Total" ColSpanMd="4">
-                                <Template><b>@GrossTotal</b></Template>
-                            </DxFormLayoutItem>
-                            <DxFormLayoutItem Caption="Shortage(-)" ColSpanMd="4">
-                                <Template><b>@ShortageAmount</b></Template>
-                            </DxFormLayoutItem>
-
-                            <DxFormLayoutItem Caption="Total Wt" ColSpanMd="4">
-                                <Template><b>@TotalWeight</b></Template>
-                            </DxFormLayoutItem>
-
-                            <DxFormLayoutItem Caption="Tax Amount" ColSpanMd="4">
-                                <Template><b>@TaxAmount</b></Template>
-                            </DxFormLayoutItem>
-
-                            <DxFormLayoutItem Caption="Extra Charge" ColSpanMd="4">
-                                <Template>
-                                    <DxSpinEdit Value="ExtraCharge"
-                                                ValueChanged="@((double value) => OnExtraChargeChanged(value))"
-                                                ShowSpinButtons="false" />
-                                </Template>
-                            </DxFormLayoutItem>
-                            <DxFormLayoutItem Caption="Less Advance(-)" ColSpanMd="4">
-                                <Template>
-                                    <DxSpinEdit Value="LessAdvance"
-                                                ValueChanged="@((double value) => OnLessAdvanceChanged(value))"
-                                                ShowSpinButtons="false" />
-                                </Template>
-                            </DxFormLayoutItem>
-                            <DxFormLayoutItem Caption="Total Bill Amount" ColSpanMd="4">
-                                <Template><b>@TotalBillAmount</b></Template>
-                            </DxFormLayoutItem>
-
-                         
-
-                        
-                           
-                            <DxFormLayoutItem Caption="Net Total" ColSpanMd="4" >
-                                <DxSpinEdit @bind-Text="bill.BillNetAmount" T="int" ShowSpinButtons="false"></DxSpinEdit>
-                            </DxFormLayoutItem>
-                            <DxFormLayoutItem Caption="Is RCM Applicable" CaptionPosition="CaptionPosition.Vertical">
-                                <DxCheckBox @bind-Checked="bill.BillIsRcm" />
-                            </DxFormLayoutItem>
-                            <DxFormLayoutItem Caption="Round Off " CaptionPosition="CaptionPosition.Vertical">
-                                <DxCheckBox @bind-Checked="bill.BillIsRoundOff" />
-                            </DxFormLayoutItem>
-                        </DxFormLayoutTabPage>
-
-                        @* <DxFormLayoutItem Caption="Total Trip"> *@
-
-
-
-                        <DxFormLayoutTabPage Caption="Account Summary">
-
-                            <DxFormLayoutItem >
-                                <Template>
-                                    <b>No Fields</b>
-                                </Template>
+                            <DxFormLayoutItem Caption="Address" CaptionPosition="CaptionPosition.Vertical">
+                                <DxMemo @bind-Text="bill.BillAddress1" Rows="1" />
                             </DxFormLayoutItem>
                             
+                           
                         </DxFormLayoutTabPage>
-                        <DxFormLayoutTabPage Caption="Tax Summary">
-                            <DxFormLayoutItem Caption="SAC">
-                                <DxTextBox @bind-Text=""></DxTextBox>
+
+                        <DxFormLayoutTabPage Caption="E-Invoice Details">
+                            <DxFormLayoutItem Caption="IRN No" CaptionPosition="CaptionPosition.Vertical"></DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="ACK No" CaptionPosition="CaptionPosition.Vertical"></DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="ACK Date" CaptionPosition="CaptionPosition.Vertical"></DxFormLayoutItem>
+                        </DxFormLayoutTabPage>
+
+                    </DxFormLayoutTabPages>
+                </DxFormLayoutGroup>
+
+                <!-- RIGHT GROUP -->
+                <DxFormLayoutGroup ColSpanMd="6" Decoration="FormLayoutGroupDecoration.None">
+                    <DxFormLayoutTabPages>
+
+                        <DxFormLayoutTabPage Caption="Total Summary">
+                            <DxFormLayoutItem Caption="Total Trip" ColSpanMd="4" CaptionPosition="CaptionPosition.Vertical">
+                                <Template><b>@TotalTrip</b></Template>
                             </DxFormLayoutItem>
-                            <DxFormLayoutItem Caption="Taxable (Transport)"></DxFormLayoutItem>
-                            <DxFormLayoutItem Caption="GST (%)"></DxFormLayoutItem>
-                            <DxFormLayoutItem Caption="SAC"></DxFormLayoutItem>
-                            <DxFormLayoutItem Caption="Taxable (Other)"></DxFormLayoutItem>
-                            <DxFormLayoutItem Caption="GST (%)"></DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Gross Total" ColSpanMd="4" CaptionPosition="CaptionPosition.Vertical">
+                                <Template><b>@GrossTotal</b></Template>
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Shortage(-)" ColSpanMd="4" CaptionPosition="CaptionPosition.Vertical">
+                                <Template><b>@ShortageAmount</b></Template>
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Total Wt" ColSpanMd="4" CaptionPosition="CaptionPosition.Vertical">
+                                <Template><b>@TotalWeight.ToString("F3")</b></Template>
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Tax Amount" ColSpanMd="4" CaptionPosition="CaptionPosition.Vertical">
+                                <Template>
+                                    <b>@(bill.BillIsRcm ? "0.00" : CalculatedGstAmount.ToString("F2"))</b>
+                                </Template>
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Extra Charge" ColSpanMd="4" CaptionPosition="CaptionPosition.Vertical">
+                                <Template>
+                                    <DxSpinEdit TValue="double"
+                                                Value="@ExtraCharge"
+                                                ValueChanged="@(async (double v) => { ExtraCharge = v; RecalculateTotals(); })"
+                                                ShowSpinButtons="false" />
+                                </Template>
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Less Advance(-)" ColSpanMd="4" CaptionPosition="CaptionPosition.Vertical">
+                                <Template>
+                                    <DxSpinEdit TValue="double"
+                                                Value="@LessAdvance"
+                                                ValueChanged="@(async (double v) => { LessAdvance = v; RecalculateTotals(); })"
+                                                ShowSpinButtons="false" />
+                                </Template>
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Total Bill Amount" ColSpanMd="4" CaptionPosition="CaptionPosition.Vertical">
+                                <Template><b>@TotalBillAmount.ToString("N2")</b></Template>
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Round Off Amount" ColSpanMd="4" CaptionPosition="CaptionPosition.Vertical">
+                                <Template><b>@bill.BillRoundAmt.ToString("F2")</b></Template>
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Net Total" ColSpanMd="4" CaptionPosition="CaptionPosition.Vertical">
+                                <Template><b>@bill.BillTotal.ToString("N2")</b></Template>
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Is RCM Applicable" CaptionPosition="CaptionPosition.Vertical" ColSpanMd="3">
+                                <DxCheckBox Checked="@bill.BillIsRcm"
+                                            CheckedChanged="@( (bool v) =>
+                                                        {
+                                                            bill.BillIsRcm = v;
+                                                            RecalculateTotals();
+                                                        })" />
+
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Round Off" CaptionPosition="CaptionPosition.Vertical" ColSpanMd="2">
+                                <DxCheckBox Checked="@bill.BillIsRoundOff"
+                                            CheckedChanged="@(async (bool v) => { bill.BillIsRoundOff = v; RecalculateTotals(); })" />
+                            </DxFormLayoutItem>
                         </DxFormLayoutTabPage>
+
+                        <DxFormLayoutTabPage Caption="Account Summary">
+                            <DxFormLayoutItem>
+                                <Template><b>No Fields</b></Template>
+                            </DxFormLayoutItem>
+                        </DxFormLayoutTabPage>
+
+                        <DxFormLayoutTabPage Caption="Tax Summary">
+
+                            <DxFormLayoutItem Caption="SAC">
+                                <DxTextBox />
+                            </DxFormLayoutItem>
+
+                            <DxFormLayoutItem Caption="Taxable (Transport)">
+                                <DxSpinEdit TValue="double"
+                                            Value="@bill.BillTaxableAmt"
+                                            ValueChanged="@((double v) =>
+                                          {
+                                              bill.BillTaxableAmt = v;
+                                              RecalculateTotals();
+                                          })"
+                                            ShowSpinButtons="false" />
+                            </DxFormLayoutItem>
+
+                            <DxFormLayoutItem Caption="GST (%)">
+                                <div class="d-flex gap-2 align-items-center">
+                                    <DxComboBox TData="GstSlab"
+                                                TValue="GstSlab"
+                                                Data="Gstperlist"
+                                                Value="@SelectedGstSlab"
+                                                ValueChanged="@((GstSlab v) =>
+                                                {
+                                                    SelectedGstSlab = v;
+                                                    RecalculateTotals();
+                                                })"
+                                                TextFieldName="GstSlabName" />
+                                    <DxTextBox Text="@CalculatedGstAmount.ToString("F2")"
+                                               ReadOnly="true"
+                                               Width="120px" />
+                                </div>
+                            </DxFormLayoutItem>
+
+                            @* <DxFormLayoutItem Caption="CGST">
+                                <Template><b>@bill.BillCgst.ToString("F2")</b></Template>
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="SGST">
+                                <Template><b>@bill.BillSgst.ToString("F2")</b></Template>
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="IGST">
+                                <Template><b>@bill.BillIgst.ToString("F2")</b></Template>
+                            </DxFormLayoutItem> *@
+
+                            <DxFormLayoutItem Caption="SAC" CaptionPosition="CaptionPosition.Vertical"></DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Taxable (Other)" CaptionPosition="CaptionPosition.Vertical"></DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="GST (%)" CaptionPosition="CaptionPosition.Vertical"></DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="GST Amount (Other)" CaptionPosition="CaptionPosition.Vertical">
+                                <Template><b>@bill.BillGstAmtCharge.ToString("F2")</b></Template>
+                            </DxFormLayoutItem>
+
+                        </DxFormLayoutTabPage>
+
                     </DxFormLayoutTabPages>
 
                 </DxFormLayoutGroup>
+
             </DxFormLayout>
         </div>
     </div>
 
     <div class="page-footer">
-        <DxButton Text="Save"
-                  RenderStyle="ButtonRenderStyle.Primary"
-                  CssClass="me-2" />
-        <DxButton Text="Cancel"
-                  RenderStyle="ButtonRenderStyle.Secondary" />
+        <DxButton Text="Save" RenderStyle="ButtonRenderStyle.Primary" CssClass="me-2" />
+        <DxButton Text="Cancel" RenderStyle="ButtonRenderStyle.Secondary" />
     </div>
 
 </div>
@@ -339,126 +354,182 @@
 @code {
 
     private Lr lrs = new Lr();
+    private Bill bill = new Bill();
 
     private IEnumerable<Account> partylist = new List<Account>();
     private IEnumerable<Lr> lrslist = new List<Lr>();
+    private IEnumerable<GstSlab> Gstperlist = new List<GstSlab>();
     private List<Lr> selectedLrs = new();
-    private DateTime? fromDate;
-    private DateTime? toDate;
-
-    private Bill bill = new Bill();
     private List<Voucher> VoucherList = new();
     private List<State> stateList = new();
+
+    private DateTime? fromDate;
+    private DateTime? toDate;
 
     private int TotalTrip;
     private double GrossTotal;
     private double TotalWeight;
-    private double TaxAmount;
     private double ShortageAmount;
     private double ExtraCharge;
     private double LessAdvance;
     private double TotalBillAmount;
     private double NetTotal;
 
-
+    private double CalculatedGstAmount;
+    private GstSlab? SelectedGstSlab;
+    private bool IsInterState = false;
 
     public class SelectItem
     {
-        public string Text { get; set; }
-        public string Value { get; set; }
+        public string Text { get; set; } = "";
+        public string Value { get; set; } = "";
     }
-    List<SelectItem> SupplyTypeList = new()
-{
-    new SelectItem { Text = "B2B", Value = "B2B" },
-    new SelectItem { Text = "B2CS", Value = "B2CS" },
-    new SelectItem { Text = "SEZWP", Value = "SEZWP" },
-    new SelectItem { Text = "SEZWOP", Value = "SEZWOP" },
-    new SelectItem { Text = "EXPWP", Value = "EXPWP" },
-    new SelectItem { Text = "EXPWOP", Value = "EXPWOP" },
-    new SelectItem { Text = "DEXP", Value = "DEXP" }
-};
+
+    private List<SelectItem> SupplyTypeList = new()
+    {
+        new SelectItem { Text = "B2B",    Value = "B2B" },
+        new SelectItem { Text = "B2CS",   Value = "B2CS" },
+        new SelectItem { Text = "SEZWP",  Value = "SEZWP" },
+        new SelectItem { Text = "SEZWOP", Value = "SEZWOP" },
+        new SelectItem { Text = "EXPWP",  Value = "EXPWP" },
+        new SelectItem { Text = "EXPWOP", Value = "EXPWOP" },
+        new SelectItem { Text = "DEXP",   Value = "DEXP" }
+    };
+
     protected override async Task OnInitializedAsync()
     {
         var list = await AccountService.GetAllAsync();
         var voucher = await VoucherService.GetAllAsync();
+        Gstperlist = await GstSlabService.GetAllAsync();
         stateList = await StateService.GetStatesAsync();
-            VoucherList = voucher.Where(x => x.VoucherId == 1).ToList();
-        partylist = list
-            .Where(x => x.AccountTypeId == 18)
-            .ToList();
+
+        VoucherList = voucher.Where(x => x.VoucherId == 1).ToList();
+        partylist = list.Where(x => x.AccountTypeId == 18).ToList();
     }
 
     private async Task SerchLrs()
     {
-        if (lrs.LrPartyAccountId == 0)
-            return;
-
-        lrslist = await LrApiService.SearchAsync(
-            lrs.LrPartyAccountId,
-            fromDate,
-            toDate);
+        if (lrs.LrPartyAccountId == 0) return;
+        lrslist = await LrApiService.SearchAsync(lrs.LrPartyAccountId, fromDate, toDate);
     }
-
-    private void OnExtraChargeChanged(double value)
-    {
-        ExtraCharge = value;
-        RecalculateTotals();
-    }
-
-    private void OnLessAdvanceChanged(double value)
-    {
-        LessAdvance = value;
-        RecalculateTotals();
-    }
-
-    private void RecalculateTotals()
-    {
-        TaxAmount = bill.BillIsRcm ? 0 : GrossTotal * 0.18;
-
-        TotalBillAmount = GrossTotal + TaxAmount - ShortageAmount;
-
-        NetTotal = TotalBillAmount + ExtraCharge - LessAdvance;
-
-        if (bill.BillIsRoundOff)
-            NetTotal = Math.Round(NetTotal);
-
-        bill.BillNetAmount = (int)Math.Round(NetTotal);
-
-        StateHasChanged();
-    }
-
 
     private void OnSelectionChanged(IEnumerable<object> items)
     {
-        var typedList = items?
-            .Cast<Lr>()
-            .ToList() ?? new List<Lr>();
-
+        var typedList = items?.Cast<Lr>().ToList() ?? new List<Lr>();
         selectedLrs = typedList;
-
         CalculateSummary(typedList);
     }
-
 
     private void CalculateSummary(List<Lr> selected)
     {
         if (selected == null || !selected.Any())
         {
-            TotalTrip = 0;
-            GrossTotal = 0;
-            TotalWeight = 0;
-            ShortageAmount = 0;
+            TotalTrip = 0; GrossTotal = 0; TotalWeight = 0; ShortageAmount = 0;
         }
         else
         {
             TotalTrip = selected.Count;
-            GrossTotal = selected.Sum(x => x.LrGrossFreightBill);
-            TotalWeight = selected.Sum(x => x.LrLoadWt);
+            GrossTotal = selected.Sum(x => (double)x.LrRateBill);
+            TotalWeight = Math.Round(selected.Sum(x => (double)x.LrLoadWt), 3);
             ShortageAmount = 0;
         }
-
         RecalculateTotals();
     }
 
+    private void RecalculateTotals()
+    {
+        bill.BillTaxableAmt = GrossTotal - ShortageAmount;
+
+        CalculateGst();
+
+        // Always add GST to total (RCM or not)
+        TotalBillAmount = bill.BillTaxableAmt + CalculatedGstAmount;
+
+        NetTotal = TotalBillAmount + ExtraCharge - LessAdvance;
+
+        if (bill.BillIsRoundOff)
+        {
+            double rounded = Math.Round(NetTotal, MidpointRounding.AwayFromZero);
+            bill.BillRoundAmt = rounded - NetTotal;
+            NetTotal = rounded;
+        }
+        else
+        {
+            bill.BillRoundAmt = 0;
+        }
+
+        bill.BillAmount = GrossTotal;
+        bill.BillTotal = Math.Round(NetTotal, 2);
+        bill.BillNetAmount = (float)bill.BillTotal;
+
+        StateHasChanged();
+    }
+    private void CalculateGst()
+    {
+        // RCM: buyer pays GST, seller does NOT charge it on the bill
+        if (bill.BillIsRcm)
+        {
+            bill.BillCgst = 0;
+            bill.BillSgst = 0;
+            bill.BillIgst = 0;
+            bill.BillGstAmtFreight = 0;
+            CalculatedGstAmount = 0;
+            return;
+        }
+
+        if (SelectedGstSlab == null || SelectedGstSlab.GstSlabType != "GST")
+        {
+            bill.BillCgst = 0;
+            bill.BillSgst = 0;
+            bill.BillIgst = 0;
+            bill.BillGstAmtFreight = 0;
+            CalculatedGstAmount = 0;
+            return;
+        }
+
+        double taxable = bill.BillTaxableAmt;
+
+        if (IsInterState)
+        {
+            bill.BillIgst = Math.Round(taxable * SelectedGstSlab.GstSlabIgstPer / 100, 2);
+            bill.BillCgst = 0;
+            bill.BillSgst = 0;
+        }
+        else
+        {
+            bill.BillCgst = Math.Round(taxable * SelectedGstSlab.GstSlabCgstPer / 100, 2);
+            bill.BillSgst = Math.Round(taxable * SelectedGstSlab.GstSlabSgstPer / 100, 2);
+            bill.BillIgst = 0;
+        }
+
+        bill.BillGstAmtFreight = bill.BillCgst + bill.BillSgst + bill.BillIgst;
+        bill.BillGstIdFreight = SelectedGstSlab.GstSlabId;
+        CalculatedGstAmount = bill.BillGstAmtFreight;
+    }
+
+    private void OnPartyChanged(int partyId)
+    {
+        lrs.LrPartyAccountId = partyId;
+
+        var party = partylist.FirstOrDefault(x => x.AccountId == partyId);
+
+        if (party == null)
+            return;
+
+        // Fill Ship To
+        bill.BillShipPartyId = party.AccountId;
+
+        // Fill Address Details
+        bill.BillAddress1 = party.AccountAddress1;
+        bill.BillPincode = party.AccountPincode;
+        bill.BillContactNo = party.AccountMobile;
+        bill.BillGstNo = party.AccountGstNo;
+
+        // Fill State
+        bill.BillStateId = party.AccountStateId ?? 0;
+        bill.BillPlaceOfSupply = party.AccountStateId ?? 0;
+
+        StateHasChanged();
+    }
 
 }
