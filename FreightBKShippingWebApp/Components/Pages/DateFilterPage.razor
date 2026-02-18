@@ -73,6 +73,9 @@
                 <button type="button" class="quick-filter-btn" @onclick="SetLastMonth">
                     <i class="bi bi-calendar3 me-1"></i>Last Month
                 </button>
+                <button type="button" class="quick-filter-btn" @onclick="SetThisQuarter">
+                    <i class="bi bi-calendar3 me-1"></i>This Quarter
+                </button>
             </div>
           
              
@@ -287,7 +290,29 @@
         EditModel.ToDate = new DateTime(lastMonth.Year, lastMonth.Month, DateTime.DaysInMonth(lastMonth.Year, lastMonth.Month));
         ErrorMessage = string.Empty;
     }
+    private void SetThisQuarter()
+    {
+        var today = DateTime.Today;
+        int year = today.Year;
 
+        DateTime fromDate;
+        DateTime toDate;
+
+        if (today.Month >= 4 && today.Month <= 6)        // Q1
+            fromDate = new DateTime(year, 4, 1);
+        else if (today.Month >= 7 && today.Month <= 9)   // Q2
+            fromDate = new DateTime(year, 7, 1);
+        else if (today.Month >= 10 && today.Month <= 12) // Q3
+            fromDate = new DateTime(year, 10, 1);
+        else                                             // Q4 (Jan–Mar)
+            fromDate = new DateTime(year, 1, 1);
+
+        toDate = fromDate.AddMonths(3).AddDays(-1);
+
+        EditModel.FromDate = fromDate;
+        EditModel.ToDate = toDate;
+        ErrorMessage = string.Empty;
+    }
     // Model Class
     public class DateFilterModel
     {

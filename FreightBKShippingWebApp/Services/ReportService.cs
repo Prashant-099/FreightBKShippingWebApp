@@ -92,6 +92,7 @@ namespace FreightBKShippingWebApp.Services
                 if (baseRpt == null)
                 {
                     baseRpt = rpt;
+                    MergedReport = baseRpt;
                     baseRpt.PrintingSystem.ContinuousPageNumbering = true;
                 }
                 else
