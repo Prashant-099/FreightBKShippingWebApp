@@ -8,6 +8,7 @@
 @inject ContainerAddServices ContainerAddServices
 @inject CargoService CargoService
 @inject ReportDataService ReportDataService
+
 <DxPopup @bind-Visible="@PopupVisible"
          HeaderText="LR/Challan Details"
          Width="90%"
@@ -16,7 +17,8 @@
          ShowFooter="true" Scrollable=true> 
 
     <BodyContentTemplate Context="popupaddcontainerctx">
-        <div class="p-3"> <p>Enter Date like this </p>
+        <div class="p-1"> 
+            @* <p>Enter Date like this </p> *@
             <DxFormLayout>
                 @* <DxFormLayoutGroup Caption="Details"
                                    AnimationType="LayoutAnimationType.Slide"
@@ -29,11 +31,11 @@
 
                     <DxFormLayoutGroup ColSpanMd="10" Decoration="FormLayoutGroupDecoration.None">
                         @* //row-1 *@
-                    <DxFormLayoutItem Caption="Challan/LR No" ColSpanMd="4">
+                    <DxFormLayoutItem Caption="Challan/LR No" ColSpanMd="2" CaptionPosition="CaptionPosition.Vertical">
                         <DxTextBox @bind-Text="EditModel.LrNoStr" />
                     </DxFormLayoutItem>
 
-                    <DxFormLayoutItem Caption="LR Date" ColSpanMd="4">
+                    <DxFormLayoutItem Caption="LR Date" ColSpanMd="2" CaptionPosition="CaptionPosition.Vertical">
                         @* <DxDateEdit @bind-Date="EditModel.LrNtDate" DisplayFormat="dd-MM-yyyy" /> *@
                         <DxMaskedInput @bind-Value="EditModel.LrDate"
                                        Mask="dd/MM/yyyy"
@@ -42,7 +44,7 @@
                         </DxMaskedInput>
                     </DxFormLayoutItem>
 
-                    <DxFormLayoutItem Caption="Payment Mode" ColSpanMd="4">
+                    <DxFormLayoutItem Caption="Payment Mode" ColSpanMd="2" CaptionPosition="CaptionPosition.Vertical">
                         <DxComboBox Data="@PaymethodList"                              
                                     @bind-Value="EditModel.LrPaymentType" TextFieldName="Text"
                                     ValueFieldName="Value"
@@ -51,11 +53,11 @@
                                     SearchFilterCondition="ListSearchFilterCondition.Contains" NullText="Select Payment Mode" />
                     </DxFormLayoutItem>
 @* row-2 *@
-                    <DxFormLayoutItem Caption="Vehicle No" ColSpanMd="4">
+                    <DxFormLayoutItem Caption="Vehicle No" ColSpanMd="2" CaptionPosition="CaptionPosition.Vertical">
                         <DxTextBox @bind-Text="EditModel.LrNtVehicleNo" />
                     </DxFormLayoutItem>
 
-                        <DxFormLayoutItem Caption="From" ColSpanMd="4">
+                    <DxFormLayoutItem Caption="From" ColSpanMd="2" CaptionPosition="CaptionPosition.Vertical">
                         <DxComboBox Data="@StationLocationList" ValueFieldName="LocationId" TextFieldName="LocationName"
                                         @bind-Value="EditModel.LrFromLocationId"
                                     ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" AllowUserInput="true"
@@ -63,7 +65,7 @@
                                     SearchFilterCondition="ListSearchFilterCondition.Contains" />
                         </DxFormLayoutItem>
 
-                        <DxFormLayoutItem Caption="To" ColSpanMd="4">
+                    <DxFormLayoutItem Caption="To" ColSpanMd="2" CaptionPosition="CaptionPosition.Vertical">
                         <DxComboBox Data="@StationLocationList" ValueFieldName="LocationId" TextFieldName="LocationName"
                                         @bind-Value="EditModel.LrToLocationId"
                                     ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" AllowUserInput="true"
@@ -71,7 +73,7 @@
                                     SearchFilterCondition="ListSearchFilterCondition.Contains" />
                         </DxFormLayoutItem>
 @* row3 *@
-                        <DxFormLayoutItem Caption="Bill To Party" ColSpanMd="4">
+                    <DxFormLayoutItem Caption="Bill To Party" ColSpanMd="4" CaptionPosition="CaptionPosition.Vertical">
                         <DxComboBox Data="@accountpartylist" TextFieldName="AccountName" ValueFieldName="AccountId"
                                         @bind-Value="EditModel.LrPartyAccountId"
                                     ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" AllowUserInput="true"
@@ -79,15 +81,25 @@
                                     SearchFilterCondition="ListSearchFilterCondition.Contains" />
                         </DxFormLayoutItem>
 
-                        <DxFormLayoutItem Caption="Pickup Location" ColSpanMd="4">
+                    <DxFormLayoutItem Caption="Pickup Location" ColSpanMd="2" CaptionPosition="CaptionPosition.Vertical">
                             <DxTextBox @bind-Text="EditModel.LrNtPickupLoc" />
                         </DxFormLayoutItem>
 
-                        <DxFormLayoutItem Caption="Drop Location" ColSpanMd="4">
+                    <DxFormLayoutItem Caption="Drop Location" ColSpanMd="2" CaptionPosition="CaptionPosition.Vertical">
                             <DxTextBox />
                         </DxFormLayoutItem>
-@* row-4 *@
-                        <DxFormLayoutItem Caption="Consignor" ColSpanMd="4">
+
+                    <DxFormLayoutItem Caption="Load Wt" ColSpanMd="2" CaptionPosition="CaptionPosition.Vertical">
+                        <DxSpinEdit @bind-Value="EditModel.LrLoadWt"
+                                    DisplayFormat="n2"
+                                    ShowSpinButtons=false />
+                    </DxFormLayoutItem>
+                    <DxFormLayoutItem Caption="Unload Wt" ColSpanMd="2" CaptionPosition="CaptionPosition.Vertical">
+                        <DxSpinEdit @bind-Value="EditModel.LrUnloadWt"
+                                    DisplayFormat="n2" ShowSpinButtons=false />
+                    </DxFormLayoutItem>
+                    @* row-4 *@
+                    <DxFormLayoutItem Caption="Consignor" ColSpanMd="4" CaptionPosition="CaptionPosition.Vertical">
                         <DxComboBox Data="notifylist" Value="@EditModel.LrConsignorNotifyId"
                                     TData="Notify" TValue="int?" 
                                     ValueChanged="@(id => OnConsignorChanged(id))" 
@@ -96,7 +108,7 @@
                                     SearchMode="ListSearchMode.AutoSearch"
                                     SearchFilterCondition="ListSearchFilterCondition.Contains" />
                         </DxFormLayoutItem>
-                    <DxFormLayoutItem Caption="Consignee" ColSpanMd="4">
+                    <DxFormLayoutItem Caption="Consignee" ColSpanMd="4" CaptionPosition="CaptionPosition.Vertical">
                         <DxComboBox Data="notifylist" Value="@EditModel.LrConsigneeNotifyId"
                                     TData="Notify" TValue="int?" 
                                     ValueChanged="@(id => OnConsigneeChanged(id))"
@@ -105,52 +117,49 @@
                                     SearchMode="ListSearchMode.AutoSearch"
                                     SearchFilterCondition="ListSearchFilterCondition.Contains" />
                     </DxFormLayoutItem>
-                    <DxFormLayoutItem Caption="Load Wt" ColSpanMd="4">
-                        <DxSpinEdit @bind-Value="EditModel.LrLoadWt"
-                                    DisplayFormat="n2"
-                                    ShowSpinButtons=false />
-                    </DxFormLayoutItem>
-              
-
-@* row-5 *@
-                        <DxFormLayoutItem Caption="Consignor Address" ColSpanMd="4">
-                        <DxMemo @bind-Text="EditModel.LrConsignorNotifyAddress" Rows="3"/>
-                        </DxFormLayoutItem>
-                    <DxFormLayoutItem Caption="Consignee Address" ColSpanMd="4">
-                        <DxMemo @bind-Text="EditModel.LrConsigneeNotifyAddress" Rows="3" />
-                    </DxFormLayoutItem>                     
-
-                    <DxFormLayoutItem Caption="Gross Wt" ColSpanMd="4">
+                    <DxFormLayoutItem Caption="Gross Wt" ColSpanMd="2" CaptionPosition="CaptionPosition.Vertical">
                         <DxSpinEdit @bind-Value="EditModel.LrGrossWt"
                                     DisplayFormat="n2" ShowSpinButtons=false />
                     </DxFormLayoutItem>
-
-                @* row-6 *@
-                    <DxFormLayoutItem Caption="Consignor Gstin" ColSpanMd="4">
-                        <DxTextBox @bind-Text="EditModel.LrConsignorNotifyGst" />
-                    </DxFormLayoutItem>
-                    <DxFormLayoutItem Caption="Consignee Gstin" ColSpanMd="4">
-                        <DxTextBox @bind-Text="EditModel.LrConsigneeNotifyGst" />
-                    </DxFormLayoutItem>
-             
-                    <DxFormLayoutItem Caption="Tare Wt" ColSpanMd="4">
-                        <DxSpinEdit @bind-Value="EditModel.LrTareWt"
-                                    DisplayFormat="n2" ShowSpinButtons=false />
-                    </DxFormLayoutItem>
-                  
-
-@* row-7                    *@
-                    <DxFormLayoutItem Caption="Consignor State" ColSpanMd="4">
-                        <DxTextBox @bind-Text="EditModel.LrConsignorNotifyState" />
-                    </DxFormLayoutItem>
-                    <DxFormLayoutItem Caption="Consignee State" ColSpanMd="4">
-                        <DxTextBox @bind-Text="EditModel.LrConsigneeNotifyState" />
-                    </DxFormLayoutItem>
-                    <DxFormLayoutItem Caption="Charge Wt" ColSpanMd="4">
+                    <DxFormLayoutItem Caption="Charg Qty" ColSpanMd="2" CaptionPosition="CaptionPosition.Vertical">
                         <DxSpinEdit @bind-Value="EditModel.LrChargeQty" DisplayFormat="n2" ShowSpinButtons=false />
                     </DxFormLayoutItem>
-                    @* row-8         *@
-                    <DxFormLayoutItem Caption="Product" ColSpanMd="4">
+              
+
+                        @* row-5 *@
+                    <DxFormLayoutItem Caption="Consignor Address" ColSpanMd="4" CaptionPosition="CaptionPosition.Vertical">
+                        <DxMemo @bind-Text="EditModel.LrConsignorNotifyAddress" Rows="1"/>
+                        </DxFormLayoutItem>
+
+                    <DxFormLayoutItem Caption="Consignee Address" ColSpanMd="4" CaptionPosition="CaptionPosition.Vertical">
+                        <DxMemo @bind-Text="EditModel.LrConsigneeNotifyAddress" Rows="1" />
+                    </DxFormLayoutItem>
+
+                    <DxFormLayoutItem Caption="Tare Wt" ColSpanMd="2" CaptionPosition="CaptionPosition.Vertical">
+                        <DxSpinEdit @bind-Value="EditModel.LrTareWt" DisplayFormat="n2" ShowSpinButtons=false />
+                    </DxFormLayoutItem>
+                    <DxFormLayoutItem Caption="Billing Rate" ColSpanMd="2" CaptionPosition="CaptionPosition.Vertical">
+                        <DxSpinEdit @bind-Value="EditModel.LrRateBill" DisplayFormat="n2" ShowSpinButtons=false />
+                    </DxFormLayoutItem>
+                    @* <DxFormLayoutItem Caption="Unload Wt" ColSpanMd="2" CaptionPosition="CaptionPosition.Vertical">
+                        <DxSpinEdit @bind-Value="EditModel.LrUnloadWt"
+                                    DisplayFormat="n2" ShowSpinButtons=false />
+                    </DxFormLayoutItem> *@
+
+                    @* row-6 *@
+                    <DxFormLayoutItem Caption="Consignor Gstin" ColSpanMd="2" CaptionPosition="CaptionPosition.Vertical">
+                        <DxTextBox @bind-Text="EditModel.LrConsignorNotifyGst" />
+                    </DxFormLayoutItem>
+                    <DxFormLayoutItem Caption="Consignor State" ColSpanMd="2" CaptionPosition="CaptionPosition.Vertical">
+                        <DxTextBox @bind-Text="EditModel.LrConsignorNotifyState" />
+                    </DxFormLayoutItem>
+                    <DxFormLayoutItem Caption="Consignee Gstin" ColSpanMd="2" CaptionPosition="CaptionPosition.Vertical">
+                        <DxTextBox @bind-Text="EditModel.LrConsigneeNotifyGst" />
+                    </DxFormLayoutItem>
+                    <DxFormLayoutItem Caption="Consignee State" ColSpanMd="2" CaptionPosition="CaptionPosition.Vertical">
+                        <DxTextBox @bind-Text="EditModel.LrConsigneeNotifyState" />
+                    </DxFormLayoutItem>
+                    <DxFormLayoutItem Caption="Product" ColSpanMd="4" CaptionPosition="CaptionPosition.Vertical">
                         <DxComboBox Data="@ProductList"
                                     TextFieldName="CargoName"
                                     ValueFieldName="CargoId"
@@ -159,25 +168,45 @@
                                     SearchMode="ListSearchMode.AutoSearch"
                                     SearchFilterCondition="ListSearchFilterCondition.Contains" />
                     </DxFormLayoutItem>
+                    @* <DxFormLayoutItem Caption="Billing Rate" ColSpanMd="4" CaptionPosition="CaptionPosition.Vertical">
+                        <DxSpinEdit @bind-Value="EditModel.LrRateBill" DisplayFormat="n2" ShowSpinButtons=false />
+                    </DxFormLayoutItem> *@
+                    @* <DxFormLayoutItem Caption="Gross Wt" ColSpanMd="2" CaptionPosition="CaptionPosition.Vertical">
+                        <DxSpinEdit @bind-Value="EditModel.LrGrossWt"
+                                    DisplayFormat="n2" ShowSpinButtons=false />
+                    </DxFormLayoutItem> *@
+                    @* row-7                    *@
+             
+                   
+               
+                    @* -- *@
 
-                    <DxFormLayoutItem Caption="Cont#1" ColSpanMd="4">
+                    
+                  
+                    @* <DxFormLayoutItem Caption="Charg Qty" ColSpanMd="4" CaptionPosition="CaptionPosition.Vertical">
+                        <DxSpinEdit @bind-Value="EditModel.LrChargeQty" DisplayFormat="n2" ShowSpinButtons=false />
+                    </DxFormLayoutItem> *@
+
+                    @* row-8         *@
+                 
+
+                    <DxFormLayoutItem Caption="Cont#1" ColSpanMd="2" CaptionPosition="CaptionPosition.Vertical">
                         <DxTextBox @bind-Text="EditModel.LrContainer1"></DxTextBox>
                     </DxFormLayoutItem>
-                    <DxFormLayoutItem Caption="Cont#2" ColSpanMd="4">
+                    <DxFormLayoutItem Caption="Cont#2" ColSpanMd="2" CaptionPosition="CaptionPosition.Vertical">
                         <DxTextBox @bind-Text="EditModel.LrContainer2"></DxTextBox>
-
                     </DxFormLayoutItem>
-                    <DxFormLayoutItem Caption="Custom 1" ColSpanMd="4">
+                    <DxFormLayoutItem Caption="Custom 1" ColSpanMd="2" CaptionPosition="CaptionPosition.Vertical">
                         <DxTextBox @bind-Text="EditModel.LrCustom1" />
                     </DxFormLayoutItem>
 
-                    <DxFormLayoutItem Caption="Custom 2" ColSpanMd="4">
+                    <DxFormLayoutItem Caption="Custom 2" ColSpanMd="2" CaptionPosition="CaptionPosition.Vertical">
                         <DxTextBox @bind-Text="EditModel.LrCustom2" />
                     </DxFormLayoutItem>
-                    <DxFormLayoutItem Caption="Custom 3" ColSpanMd="4">
+                    <DxFormLayoutItem Caption="Custom 3" ColSpanMd="2" CaptionPosition="CaptionPosition.Vertical">
                         <DxTextBox @bind-Text="EditModel.LrCustom3" />
                     </DxFormLayoutItem>
-                    <DxFormLayoutItem Caption="Custom 4" ColSpanMd="4">
+                    <DxFormLayoutItem Caption="Custom 4" ColSpanMd="2" CaptionPosition="CaptionPosition.Vertical">
                         <DxTextBox @bind-Text="EditModel.LrCustom4" />
                     </DxFormLayoutItem>
      
@@ -251,16 +280,16 @@
                     @* 3rd Group *@
                 <DxFormLayoutGroup Caption="Transporter / Supplier Details" ColSpanMd="12">
                     
-                    <DxFormLayoutItem Caption="Supplier Name">
+                    <DxFormLayoutItem Caption="Supplier Name" CaptionPosition="CaptionPosition.Vertical" ColSpanMd="4">
                         <DxComboBox Data="accountSupplierlist" 
                             @bind-Value="EditModel.LrSupplierAccountId"
                             TextFieldName="AccountName" ValueFieldName="AccountId"></DxComboBox>
                     </DxFormLayoutItem>
-                    <DxFormLayoutItem Caption="Driver">
+                    <DxFormLayoutItem Caption="Driver" CaptionPosition="CaptionPosition.Vertical" ColSpanMd="4">
                         <DxComboBox Data="DriverList" @bind-Value="EditModel.LrDriverId"
                                     TextFieldName="AccountName" ValueFieldName="AccountId" AllowUserInput="true"></DxComboBox>
                     </DxFormLayoutItem>
-                    <DxFormLayoutItem Caption="Pay Type" ColSpanMd="2" CaptionPosition="CaptionPosition.Vertical">
+                    <DxFormLayoutItem Caption="Pay Type" CaptionPosition="CaptionPosition.Vertical" ColSpanMd="4">
                         <DxComboBox Data="paytypeList"
                             @bind-Value="EditModel.LrBillTypeTruck"
                                     ValueFieldName="PayTypeId"
