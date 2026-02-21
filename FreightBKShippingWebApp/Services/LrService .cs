@@ -1,7 +1,5 @@
 ﻿using FreightBKShippingWebApp;
 using FreightBKShippingWebApp.Model;
-using System.Net.Http.Json;
-
 
 namespace FreightBKShipping.Client.Services
 {
@@ -43,6 +41,30 @@ namespace FreightBKShipping.Client.Services
 
             return await _http.GetFromJsonAsync<List<Lr>>(url)
                    ?? new List<Lr>();
+        }
+
+        // ✅ CREATE
+        public async Task<Lr?> CreateAsync(Lr model)
+        {
+            return await _http.PostAsync<Lr, Lr>("api/lr", model);
+        }
+
+        // ✅ UPDATE
+        public async Task<bool> UpdateAsync(Lr model)
+        {
+            return await _http.PutAsync<bool, Lr>($"api/lr/{model.LrId}", model);
+        }
+
+        // ✅ DELETE
+        public async Task<bool> DeleteAsync(int id)
+        {
+            return await _http.DeleteAsync<bool>($"api/lr/{id}");
+        }
+
+        // 🔥 SAVE (Insert + Update)
+        public async Task<Lr?> SaveAsync(Lr model)
+        {
+            return await _http.PostAsync<Lr, Lr>("api/lr/save", model);
         }
     }
 }

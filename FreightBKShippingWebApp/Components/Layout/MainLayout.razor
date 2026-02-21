@@ -32,10 +32,10 @@
                          Width="300px"
                          ThemeMode="ToastThemeMode.Saturated" />
 
-        <DxGridLayout CssClass="page-layout px-0">
+        <DxGridLayout CssClass="page-layout px-0" Height="100%">
             <Rows>
-                <DxGridLayoutRow Areas="sidebar header" Height="auto"></DxGridLayoutRow>
-                <DxGridLayoutRow Areas="sidebar content"></DxGridLayoutRow>
+                <DxGridLayoutRow Areas="sidebar header" Height="auto" />
+                <DxGridLayoutRow Areas="sidebar content" Height="1fr" />
             </Rows>
             <Columns>
                 <DxGridLayoutColumn Width="auto" />
@@ -44,76 +44,81 @@
             <Items>
                 <DxGridLayoutItem Area="sidebar" CssClass="layout-sidebar">
                     <Template>
-                        @* <NavMenu /> *@
+                        @* <div style="height: 100%; overflow-y: auto;">
+                            <NavMenu />
+                        </div> *@
                     </Template>
                 </DxGridLayoutItem>
                 <DxGridLayoutItem Area="content" CssClass="content px-0">
                     <Template>
-                        <div class="w-100 d-flex justify-content-between align-items-center flex-wrap">
-                            <div style="display: flex; justify-content: center; background: linear-gradient(90deg, white -1%, #62cdf8 49%, #ffffff 87%); width: 100%; padding: 5px 0; color: black;">
-                                <div class="marquee-container">
+                        <div style="height: 100%; display: flex; flex-direction: column; overflow: hidden;">
+                            <div class="w-100 d-flex justify-content-between align-items-center flex-wrap">
+                                <div style="display: flex; justify-content: center; background: linear-gradient(90deg, white -1%, #62cdf8 49%, #ffffff 87%); width: 100%; padding: 5px 0; color: black;">
+                                    <div class="marquee-container">
 
 
-                                    <div class="marquee">
-                                            @(string.IsNullOrEmpty(CompanyName)
-                                                                                    ? "Unknown Company"
-                                                                                    : (string.IsNullOrEmpty(finYear) ? CompanyName : $"{CompanyName} - {finYear}"))
+                                        <div class="marquee">
+                                                @(string.IsNullOrEmpty(CompanyName)
+                                                                                        ? "Unknown Company"
+                                                                                        : (string.IsNullOrEmpty(finYear) ? CompanyName : $"{CompanyName} - {finYear}"))
 
-                                            <span style="margin: 0 50px;"></span>
+                                                <span style="margin: 0 50px;"></span>
 
-                                                <!-- Support Icon + Text -->
-                                           
-                                                <span style="margin-left: 8px; font-weight: 600;">
-                                                    <i class="bi bi-headset"></i> 9409309616
-                                                </span>
+                                                    <!-- Support Icon + Text -->
+                                            
+                                                    <span style="margin-left: 8px; font-weight: 600;">
+                                                        <i class="bi bi-headset"></i> 9409309616
+                                                    </span>
+                                        </div>
+
+
                                     </div>
 
 
                                 </div>
 
+                                @* <div class="marquee">
+                                    <div class="marquee-content">
+                                        @CompanyName – @finYear
+                                    </div>
+                                    <div class="marquee-content" aria-hidden="true">
+                                        @CompanyName – @finYear
+                                    </div>
+                                </div> *@
 
-                            </div>
-
-                            @* <div class="marquee">
-                                <div class="marquee-content">
-                                    @CompanyName – @finYear
-                                </div>
-                                <div class="marquee-content" aria-hidden="true">
-                                    @CompanyName – @finYear
-                                </div>
-                            </div> *@
-
-                            
-                            <div class="w-100 ">
-                                    <div class="fixed-navbar-wrapper">
-                                @* <NavLink id="menu-top" class="button-link hidden" onclick="(document.getElementById('sidebar').classList.toggle('auto-expanded'), document.getElementById('menu-top').classList.toggle('hidden'))">
-                            <DxButton RenderStyle="@ButtonRenderStyle.Dark" RenderStyleMode="@ButtonRenderStyleMode.Text" CssClass="menu-button" IconCssClass="icon icon-menu"></DxButton>
-
-                        </NavLink>
-                        @if (!string.IsNullOrEmpty(NavigationManager.ToBaseRelativePath(NavigationManager.Uri)))
-                        {
-                            <NavLink href="/" class="button-link">
-                                <DxButton RenderStyle="@ButtonRenderStyle.Dark" Text="Back to Home" RenderStyleMode="@ButtonRenderStyleMode.Text" CssClass="menu-button" IconCssClass="icon icon-back"></DxButton>
+                                
+                                <div class="w-100 ">
+                                        <div class="fixed-navbar-wrapper">
+                                    @* <NavLink id="menu-top" class="button-link hidden" onclick="(document.getElementById('sidebar').classList.toggle('auto-expanded'), document.getElementById('menu-top').classList.toggle('hidden'))">
+                                <DxButton RenderStyle="@ButtonRenderStyle.Dark" RenderStyleMode="@ButtonRenderStyleMode.Text" CssClass="menu-button" IconCssClass="icon icon-menu"></DxButton>
+                        
                             </NavLink>
-                        } *@
+                            @if (!string.IsNullOrEmpty(NavigationManager.ToBaseRelativePath(NavigationManager.Uri)))
+                            {
+                                <NavLink href="/" class="button-link">
+                                    <DxButton RenderStyle="@ButtonRenderStyle.Dark" Text="Back to Home" RenderStyleMode="@ButtonRenderStyleMode.Text" CssClass="menu-button" IconCssClass="icon icon-back"></DxButton>
+                                </NavLink>
+                            } *@
 
-                                <AuthorizeView Context="auth">
-                                    <Authorized>
-                               
-                                        <NavMenu />
-                                  
+                                    <AuthorizeView Context="auth">
+                                        <Authorized>
+                                
+                                            <NavMenu />
+                                    
 
-                                        <AntiforgeryToken />
-                                  
+                                            <AntiforgeryToken />
+                                    
 
-                                    </Authorized>
+                                        </Authorized>
 
-                                </AuthorizeView>
-                            </div>
+                                    </AuthorizeView>
                                 </div>
+                                    </div>
+                            </div>
+                            <div style="flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;">
+                                 @Body
+                            </div>
                         </div>
-                        @Body
-                           
                     </Template>
                 </DxGridLayoutItem>
             </Items>

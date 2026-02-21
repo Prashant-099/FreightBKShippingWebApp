@@ -7,7 +7,7 @@
 @inject LoadingService LoadingService
 @inject ReportDataService ReportDataService
 @inject ReportService ReportService
- @inject IJSRuntime JS
+@inject IJSRuntime JS
 
 @inject IGenericReportManager ReportManager
 
@@ -169,6 +169,7 @@
 
                         <!-- Grid -->
                         <DxFormLayoutItem ColSpanMd="12">
+                           
                             <DxGrid Data="@listofcontainer"
                             TItem="Lr"
                             @ref="GridTwo"
@@ -176,7 +177,7 @@
                  
                             EditOnKeyPress="true"
                             ShowAddNewButton="false"
-                              RowDoubleClick="ExportGrid_RowDoubleClick"
+                            RowDoubleClick="ExportGrid_RowDoubleClick"
                             AllowSort="false"
                             ShowFilterRow="false"
                             ShowGroupPanel="false"
@@ -185,7 +186,8 @@
                                 <Columns>
 
                                     <!-- Action Buttons Column -->
-                                    <DxGridCommandColumn Width="90px" EditButtonVisible="false" FixedPosition="GridColumnFixedPosition.Left"
+                                    <DxGridCommandColumn Width="90px" EditButtonVisible="false"
+                                        FixedPosition="GridColumnFixedPosition.Left"
                                     CancelButtonVisible="false" 
                                     SaveButtonVisible="false" NewButtonVisible="false"  >
 
@@ -246,7 +248,7 @@
                                                     <!-- Is RCM Applicable -->
 
 
-                                                </DxGridCommandColumn>
+                                </DxGridCommandColumn>
                                                     <DxGridDataColumn FieldName="SrNo"
                                                                       Caption="Sr No"
                                                                         Width="40px" FixedPosition="GridColumnFixedPosition.Left">
@@ -256,24 +258,24 @@
                                                         </EditSettings>
                                                     </DxGridDataColumn>
 
-                                <DxGridDataColumn FieldName="LrNoStr"
-                                              Caption="LR No" />
+                                        <DxGridDataColumn FieldName="LrNoStr"
+                                                      Caption="LR No" />
 
-                                                    <!-- LR Date -->
-                                <DxGridDataColumn FieldName="LrDate"
-                                                                      Caption="LR Date"
-                                                                      DisplayFormat="dd-MM-yyyy" />
-                                                    <!-- Vehicle -->
-                                <DxGridDataColumn FieldName="LrNtVehicleNo"
-                                              Caption="Vehicle No" />
+                                                            <!-- LR Date -->
+                                        <DxGridDataColumn FieldName="LrDate"
+                                                                              Caption="LR Date"
+                                                                              DisplayFormat="dd-MM-yyyy" />
+                                                            <!-- Vehicle -->
+                                        <DxGridDataColumn FieldName="LrNtVehicleNo"
+                                                      Caption="Vehicle No" />
 
-                                                    <!-- From / To -->
-                                <DxGridDataColumn FieldName="LrPartyAccountId"
-                                              Caption="Party" />
+                                                            <!-- From / To -->
+                                        <DxGridDataColumn FieldName="LrPartyAccountId"
+                                                      Caption="Party" />
 
-                                <DxGridDataColumn FieldName="LrFromLocationId"
-                                              Caption="From">
-                            </DxGridDataColumn>
+                                        <DxGridDataColumn FieldName="LrFromLocationId"
+                                                      Caption="From">
+                                    </DxGridDataColumn>
 
                                                     <!-- Weight info -->
                                 <DxGridDataColumn FieldName="LrToLocationId"
@@ -626,6 +628,7 @@
 
         addPopup.ShowPopup(selected, job);
     }
+
     async Task RevertGridtransport_Click()
     {
         await Grid.CancelEditAsync();

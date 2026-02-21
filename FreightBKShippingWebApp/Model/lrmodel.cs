@@ -39,7 +39,7 @@ namespace FreightBKShippingWebApp.Model
         public int LrVehicleId { get; set; }
 
         [Column("lr_supplier_account_id")]
-        public int LrSupplierAccountId { get; set; }
+        public int? LrSupplierAccountId { get; set; }
 
         [Column("lr_driver_id")]
         public int? LrDriverId { get; set; }
@@ -60,10 +60,10 @@ namespace FreightBKShippingWebApp.Model
         public int? LrTripNo { get; set; }
 
         [Column("lr_from_location_id")]
-        public int LrFromLocationId { get; set; }
+        public int? LrFromLocationId { get; set; }
 
         [Column("lr_to_location_id")]
-        public int LrToLocationId { get; set; }
+        public int? LrToLocationId { get; set; }
 
         [Column("lr_back_location_id")]
         public int? LrBackLocationId { get; set; }
