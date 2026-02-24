@@ -19,7 +19,7 @@ namespace FreightBKShipping.Client.Services
                    ?? new List<Lr>();
         }
 
-        // ✅ GET BY ID
+        // ✅ GET FULL LR ENTRY (WITH DETAILS + JOURNALS)
         public async Task<Lr?> GetByIdAsync(int id)
         {
             return await _http.GetFromJsonAsync<Lr>($"api/lr/{id}");
@@ -43,28 +43,29 @@ namespace FreightBKShipping.Client.Services
                    ?? new List<Lr>();
         }
 
-        // ✅ CREATE
-        public async Task<Lr?> CreateAsync(Lr model)
+        // 🔥 SAVE (LR + Details + Journals)
+        public async Task<Lr?> SaveAsync(
+                  Lr main,
+                  List<LRDetail> details,
+                  List<LRJournal> journals)
         {
-            return await _http.PostAsync<Lr, Lr>("api/lr", model);
-        }
+            // Build the single DTO the API expects
+            var dto = new LrEntryDto
+            {
+                Main = main,
+                Details = details,
+                Journals = journals
+            };
 
-        // ✅ UPDATE
-        public async Task<bool> UpdateAsync(Lr model)
-        {
-            return await _http.PutAsync<bool, Lr>($"api/lr/{model.LrId}", model);
+            // POST the DTO, expect a plain Lr back.
+            // ApiClient.PostAsync<TRequest, TResponse>: request body type first, return type second.
+            return await _http.PostAsync<Lr, LrEntryDto>("api/lr/save", dto);
         }
 
         // ✅ DELETE
         public async Task<bool> DeleteAsync(int id)
         {
             return await _http.DeleteAsync<bool>($"api/lr/{id}");
-        }
-
-        // 🔥 SAVE (Insert + Update)
-        public async Task<Lr?> SaveAsync(Lr model)
-        {
-            return await _http.PostAsync<Lr, Lr>("api/lr/save", model);
         }
     }
 }

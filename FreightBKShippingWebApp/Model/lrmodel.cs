@@ -36,7 +36,7 @@ namespace FreightBKShippingWebApp.Model
         public int? LrProductId { get; set; }
 
         [Column("lr_vehicle_id")]
-        public int LrVehicleId { get; set; }
+        public int? LrVehicleId { get; set; }
 
         [Column("lr_supplier_account_id")]
         public int? LrSupplierAccountId { get; set; }
@@ -223,7 +223,7 @@ namespace FreightBKShippingWebApp.Model
 
         // 🔹 Consignee Notify Address
         [Column("lr_consignee_notify_address")]
-        [StringLength(45)]
+        [StringLength(500)]
         public string? LrConsigneeNotifyAddress { get; set; }
 
         // 🔹 Consignor Notify GST
@@ -572,5 +572,14 @@ namespace FreightBKShippingWebApp.Model
         public bool IsNew { get; set; }
         public bool IsDirty { get; set; }
         public bool IsDeleted { get; set; }
+    }
+
+    public class LrEntryDto
+    {
+        public Lr Main { get; set; } = new();
+        [InverseProperty(nameof(LRDetail))]
+        public List<LRDetail> Details { get; set; } = new();
+        [InverseProperty(nameof(LRJournal))]
+        public List<LRJournal> Journals { get; set; } = new();
     }
 }

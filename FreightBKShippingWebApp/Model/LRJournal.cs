@@ -11,7 +11,7 @@ namespace FreightBKShippingWebApp.Model
             [Column("lr_journal_id")]
             public int LrJournalId { get; set; }
 
-            [Required]
+       
             [Column("lr_journal_addedby_user_id")]
             [StringLength(30)]
             public string AddedByUserId { get; set; }
@@ -76,7 +76,7 @@ namespace FreightBKShippingWebApp.Model
             [StringLength(45)]
             public string? ChequeDate { get; set; }
 
-            [Required]
+   
             [Column("lr_journal_status")]
             public bool Status { get; set; } = true;
 
@@ -90,7 +90,7 @@ namespace FreightBKShippingWebApp.Model
             public int? PaidById { get; set; }
 
             [Column("lr_journal_sno")]
-            public int? Sno { get; set; }
+            public int Sno { get; set; }
 
             [Column("lr_journal_adddeduct")]
             [StringLength(45)]
@@ -145,7 +145,10 @@ namespace FreightBKShippingWebApp.Model
             [Column("lr_journal_trans_id")]
             [StringLength(50)]
             public string? TransactionId { get; set; } = "";
-        }
+
+        [ForeignKey("LrId")]
+        public Lr? Lr { get; set; }
+    }
 
         public enum LrJournalGroup
         {
