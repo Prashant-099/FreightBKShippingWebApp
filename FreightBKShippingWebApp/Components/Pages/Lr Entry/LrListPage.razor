@@ -1,0 +1,154 @@
+﻿@page "/lrlist"
+@using FreightBKShipping.Client.Services
+@using FreightBKShippingWebApp.Model
+
+@inject LrApiService LrService
+@inject NavigationManager NavManager
+
+<DxGrid TItem="LrListVM"
+        Data="@LrList"
+        @ref="MyGrid"
+        KeyFieldName="LrId"
+        ShowSearchBox="true"
+        PageSize="10"
+        PageSizeSelectorVisible="true"
+        ShowGroupPanel="true"
+        FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always"
+        FocusedRowEnabled="true"
+        SelectionMode="GridSelectionMode.Multiple"
+        SelectedDataItems="@SelectedLrs"
+        SelectedDataItemsChanged="OnSelectedLrsChanged"
+        ColumnResizeMode="GridColumnResizeMode.NextColumn"
+        CssClass="grid-size"
+        AllowSelectRowByClick="true">
+
+    <!-- ================= TOOLBAR ================= -->
+    <ToolbarTemplate>
+        <DxToolbar>
+            <Items>
+                <DxToolbarItem Text="Add" IconCssClass="bi bi-plus-circle" Click="OnCreateNew" />
+                <DxToolbarItem Text="Edit" IconCssClass="bi bi-pencil-square" Click="OnEdit"
+                               Enabled="@(SelectedLrs?.Count == 1)" />
+                <DxToolbarItem Text="Delete" IconCssClass="bi bi-trash" Click="OnDelete"
+                               Enabled="@(SelectedLrs?.Any() == true)" />
+                <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="LoadDataAsync" />
+            </Items>
+        </DxToolbar>
+    </ToolbarTemplate>
+
+    <!-- ================= COLUMNS ================= -->
+    <Columns>
+
+        <DxGridSelectionColumn Width="40" FixedPosition="GridColumnFixedPosition.Left" />
+
+        <!-- Basic Info -->
+        <DxGridDataColumn FieldName="LrNoStr" Caption="LR No" Width="120">
+            <CellDisplayTemplate Context="ctx">
+                @{
+                    var lr = (LrListVM)ctx.DataItem;
+                }
+                <a href="javascript:void(0)"
+                   style="color:#2563eb;font-weight:600;text-decoration:none;cursor:pointer;"
+                   @onclick="@(() => NavigateToEdit(lr.LrId))">
+                    @lr.LrNoStr
+                </a>
+            </CellDisplayTemplate>
+        </DxGridDataColumn>
+        <DxGridDataColumn FieldName="LrDate" Caption="Date" DisplayFormat="dd-MM-yyyy" Width="120" />
+        <DxGridDataColumn FieldName="LrTripNo" Caption="Trip No" Width="100" />
+
+        <!-- Party Info -->
+        <DxGridDataColumn FieldName="PartyName" Caption="Party" Width="150" />
+        <DxGridDataColumn FieldName="SupplierName" Caption="Supplier" Width="150" />
+        <DxGridDataColumn FieldName="VehicleNo" Caption="Vehicle" Width="120" />
+        <DxGridDataColumn FieldName="DriverName" Caption="Driver" Width="120" />
+
+        <!-- Location -->
+        <DxGridDataColumn FieldName="FromLocationName" Caption="From" Width="130" />
+        <DxGridDataColumn FieldName="ToLocationName" Caption="To" Width="130" />
+
+        <!-- Weight -->
+        <DxGridDataColumn FieldName="LrLoadWt" Caption="Load Wt" Width="110" />
+        <DxGridDataColumn FieldName="LrUnloadWt" Caption="Unload Wt" Width="110" />
+        <DxGridDataColumn FieldName="LrShortWt" Caption="Short Wt" Width="100" />
+
+        <!-- Billing -->
+        <DxGridDataColumn FieldName="LrBillTypeBill" Caption="Bill Type" Width="130" />
+        <DxGridDataColumn FieldName="LrRateBill" Caption="Rate" Width="100" />
+        <DxGridDataColumn FieldName="LrGrossFreightBill" Caption="Gross Freight" Width="130" />
+        <DxGridDataColumn FieldName="LrNetFreightBill" Caption="Net Freight" Width="130" />
+
+        <!-- Truck -->
+        <DxGridDataColumn FieldName="LrBillRateTruck" Caption="Truck Rate" Width="120" />
+        <DxGridDataColumn FieldName="LrNetFreightTruck" Caption="Truck Net" Width="120" />
+
+        <!-- GST -->
+        <DxGridDataColumn FieldName="LrGstPercentage" Caption="GST %" Width="90" />
+        <DxGridDataColumn FieldName="LrGstAmount" Caption="GST Amt" Width="100" />
+
+        <!-- Status -->
+        <DxGridDataColumn FieldName="LrStatus" Caption="Status" Width="100">
+            <CellDisplayTemplate Context="ctx">
+                @{
+                    var status = (int)ctx.Value;
+                }
+                @if (status == 1)
+                {
+                    <span class="badge bg-success">Active</span>
+                }
+                else
+                {
+                    <span class="badge bg-danger">Cancelled</span>
+                }
+            </CellDisplayTemplate>
+        </DxGridDataColumn>
+    </Columns>
+</DxGrid>
+
+@code {
+
+    private DxGrid MyGrid;
+    private List<LrListVM> LrList = new();
+    private IReadOnlyList<object> SelectedLrs;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        LrList = await LrService.GetListAsync();
+    }
+
+    private void OnSelectedLrsChanged(IReadOnlyList<object> items)
+    {
+        SelectedLrs = items;
+    }
+
+    // ── Navigation ────────────────────────────────────────────────────
+
+    private void OnCreateNew()
+    {
+        NavManager.NavigateTo("/lrentry");
+    }
+
+    private void OnEdit()
+    {
+        if (SelectedLrs?.Count == 1)
+        {
+            var lr = (LrListVM)SelectedLrs.First();
+            NavigateToEdit(lr.LrId);
+        }
+    }
+
+    private void NavigateToEdit(int lrId)
+    {
+        NavManager.NavigateTo($"/lrentry/{lrId}");
+    }
+
+    private void OnDelete()
+    {
+        // delete logic
+    }
+}

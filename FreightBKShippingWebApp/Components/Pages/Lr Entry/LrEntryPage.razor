@@ -1,4 +1,5 @@
 ﻿@page "/lrentry"
+@page "/lrentry/{LrId:int}"
 @using FreightBKShipping.Client.Services
 @using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Services
@@ -16,6 +17,7 @@
 @inject FileUploadService FileUploadService
 @inject IJSRuntime JS
 @inject LrApiService LrApiService
+@inject NavigationManager NavManager
 
 <style>
     :root {
@@ -113,6 +115,33 @@
         text-transform: uppercase;
         white-space: nowrap;
         flex-shrink: 0;
+    }
+
+    .lr-header-badge.edit-mode {
+        background: #fef3c7;
+        color: #b45309;
+    }
+
+    .btn-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        background: #f1f5f9;
+        color: var(--clr-text);
+        border: 1px solid var(--clr-border);
+        border-radius: 6px;
+        padding: 6px 12px;
+        font-size: .8rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background .15s;
+        white-space: nowrap;
+        flex-shrink: 0;
+        text-decoration: none;
+    }
+
+    .btn-back:hover {
+        background: #e2e8f0;
     }
 
     @@media (max-width: 640px) {
@@ -334,6 +363,16 @@
         overflow-y: auto;
         padding: 0 16px 64px;
     }
+
+    .loading-overlay {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 200px;
+        color: var(--clr-muted);
+        font-size: .9rem;
+        gap: 8px;
+    }
 </style>
 
 <div class="lr-page">
@@ -355,835 +394,830 @@
             <h1>LR Entry</h1>
             <span>Lorry Receipt</span>
         </div>
-        <div class="lr-header-badge">New Entry</div>
+
+        <!-- Back button -->
+        <button type="button" class="btn-back" @onclick="GoBack">
+            ← List
+        </button>
+
+        <div class="lr-header-badge @(IsEditMode ? "edit-mode" : "")">
+            @(IsEditMode ? "Edit" : "New Entry")
+        </div>
     </div>
 
-    <div class="lr-form-scroll">
+    @if (IsLoading)
+    {
+        <div class="loading-overlay">
+            <span>⏳ Loading LR data...</span>
+        </div>
+    }
+    else
+    {
+        <div class="lr-form-scroll">
 
-        <EditForm Model="@model" OnValidSubmit="@Save">
-            <DataAnnotationsValidator />
-            <ValidationSummary class="validation-summary-errors" />
+            <EditForm Model="@model" OnValidSubmit="@Save">
+                <DataAnnotationsValidator />
+                <ValidationSummary class="validation-summary-errors" />
 
-            <!-- ══ CORE DETAILS ══ -->
-            <div class="lr-card">
-                <div class="lr-card-header"><h2>Core Details</h2></div>
-                <div class="lr-card-body">
-                    <div class="field-grid">
+                <!-- ══ CORE DETAILS ══ -->
+                <div class="lr-card">
+                    <div class="lr-card-header"><h2>Core Details</h2></div>
+                    <div class="lr-card-body">
+                        <div class="field-grid">
 
-                        <div class="twoinone">
-                            <div class="field-group">
-                                <label>LR No</label>
-                                <DxTextBox @bind-Text="model.LrNoStr" />
-                            </div>
-                            <div class="field-group">
-                                <label>LR Date</label>
-                                <DxDateEdit @bind-Date="model.LrDate" />
-                            </div>
-                        </div>
-
-                        <div class="field-group">
-                            <label>Vehicle</label>
-                            <DxSpinEdit @bind-Value="model.LrVehicleId" TValue="int?"
-                                        NullText="Enter Trip No" ShowSpinButtons=false/>
-                        </div>
-
-                        <div class="field-group">
-                            <label>Supplier</label>
-                            <DxComboBox Data="@accountSupplierlist"
-                                        TData="Account" TValue="int?"
-                                        TextFieldName="AccountName" ValueFieldName="AccountId"
-                                        @bind-Value="model.LrSupplierAccountId"
-                                        NullText="Select supplier"
-                                        ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
-                                        AllowUserInput="true"
-                                        SearchMode="ListSearchMode.AutoSearch"
-                                        SearchFilterCondition="ListSearchFilterCondition.Contains" />
-                        </div>
-
-                        <div class="field-group">
-                            <label>Billing Party</label>
-                            <DxComboBox Data="@accountSupplierlist"
-                                        TData="Account" TValue="int"
-                                        TextFieldName="AccountName" ValueFieldName="AccountId"
-                                        @bind-Value="model.LrPartyAccountId"
-                                        NullText="Select billing party"
-                                        ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
-                                        AllowUserInput="true"
-                                        SearchMode="ListSearchMode.AutoSearch"
-                                        SearchFilterCondition="ListSearchFilterCondition.Contains" />
-                        </div>
-
-                        <div class="field-group">
-                            <label>From Party / Consignor</label>
-                            <DxComboBox Data="@notifylist"
-                                        TData="Notify" TValue="int?"
-                                        Value="@model.LrConsignorNotifyId"
-                                        ValueChanged="@(id => OnConsignorChanged(id))"
-                                        ValueExpression="() => model.LrConsignorNotifyId"
-                                        TextFieldName="NotifyName" ValueFieldName="NotifyId"
-                                        NullText="Select consignor"
-                                        ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
-                                        AllowUserInput="true"
-                                        SearchMode="ListSearchMode.AutoSearch"
-                                        SearchFilterCondition="ListSearchFilterCondition.Contains" />
-                        </div>
-
-                        <div class="field-group">
-                            <label>To Party / Consignee</label>
-                            <DxComboBox Data="@notifylist"
-                                        TData="Notify" TValue="int?"
-                                        Value="@model.LrConsigneeNotifyId"
-                                        ValueChanged="@((int? id) => OnConsigneeChanged(id))"
-                                        ValueExpression="() => model.LrConsigneeNotifyId"
-                                        TextFieldName="NotifyName" ValueFieldName="NotifyId"
-                                        NullText="Select consignee"
-                                        ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
-                                        AllowUserInput="true"
-                                        SearchMode="ListSearchMode.AutoSearch"
-                                        SearchFilterCondition="ListSearchFilterCondition.Contains" />
-                        </div>
-
-                        <div class="field-group">
-                            <label>From (Station)</label>
-                            <DxComboBox Data="@StationLocationList"
-                                        TData="Location" TValue="int?"
-                                        TextFieldName="LocationName" ValueFieldName="LocationId"
-                                        @bind-Value="model.LrFromLocationId"
-                                        NullText="Select station"
-                                        AllowUserInput="true"
-                                        SearchMode="ListSearchMode.AutoSearch"
-                                        SearchFilterCondition="ListSearchFilterCondition.Contains" />
-                        </div>
-
-                        <div class="field-group">
-                            <label>To Location</label>
-                            <DxComboBox Data="@LocationList"
-                                        TData="Location" TValue="int?"
-                                        TextFieldName="LocationName" ValueFieldName="LocationId"
-                                        @bind-Value="model.LrToLocationId"
-                                        NullText="Select destination"
-                                        ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
-                                        AllowUserInput="true"
-                                        SearchMode="ListSearchMode.AutoSearch"
-                                        SearchFilterCondition="ListSearchFilterCondition.Contains" />
-                        </div>
-
-                        <div class="field-group">
-                            <label>Pickup Location</label>
-                            <DxTextBox @bind-Text="model.LrNtPickupLoc" />
-                        </div>
-
-                        <div class="field-group">
-                            <label>Back Location</label>
-                            <DxSpinEdit @bind-Value="model.LrBackLocationId" ShowSpinButtons=false/>
-                        </div>
-                        <div class="field-group">
-                            <label>Driver</label>
-                            <DxComboBox Data="@DriverList"
-                                        TData="Account"
-                                        TValue="int?"
-                                        TextFieldName="AccountName"
-                                        ValueFieldName="AccountId"
-                                        @bind-Value="model.LrDriverId"
-                                        NullText="Select Driver"
-                                        ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
-                                        SearchMode="ListSearchMode.AutoSearch"
-                                        SearchFilterCondition="ListSearchFilterCondition.Contains"
-                                        AllowUserInput="true">
-                            </DxComboBox>
-                        </div>
-                        <div class="field-group">
-                            <label>Container No</label>
-                            <DxTextBox @bind-Text="model.LrContainer1" />
-                        </div>
-
-                        <div class="field-group">
-                            <label>Container No 2</label>
-                            <DxTextBox @bind-Text="model.LrContainer2" />
-                        </div>
-
-                        <div class="field-group">
-                            <label>Reference No</label>
-                            <DxTextBox @bind-Text="model.LrRefName" />
-                        </div>
-
-                        <div class="field-group">
                             <div class="twoinone">
-                                <div>
-                                    <label>Payment Mode</label>
-                                    <DxComboBox Data="@PaymethodList"
-                                                @bind-Value="model.LrPaymentType"
-                                                TextFieldName="Text" ValueFieldName="Value"
-                                                ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
-                                                SearchMode="ListSearchMode.AutoSearch"
-                                                SearchFilterCondition="ListSearchFilterCondition.Contains"
-                                                AllowUserInput="false"
-                                                NullText="Payment Mode"
-                                                TData="SelectItem" TValue="string?" />
+                                <div class="field-group">
+                                    <label>LR No</label>
+                                    <DxTextBox @bind-Text="model.LrNoStr" />
                                 </div>
-                                <div>
-                                    <label>Trip No</label>
-                                    <DxSpinEdit @bind-Value="model.LrTripNo" ShowSpinButtons=false/>
+                                <div class="field-group">
+                                    <label>LR Date</label>
+                                    <DxDateEdit @bind-Date="model.LrDate" />
                                 </div>
                             </div>
-                        </div>
 
+                            <div class="field-group">
+                                <label>Vehicle</label>
+                                <DxSpinEdit @bind-Value="model.LrVehicleId" TValue="int?"
+                                            NullText="Enter Trip No" ShowSpinButtons=false/>
+                            </div>
+
+                            <div class="field-group">
+                                <label>Supplier</label>
+                                <DxComboBox Data="@accountSupplierlist"
+                                            TData="Account" TValue="int?"
+                                            TextFieldName="AccountName" ValueFieldName="AccountId"
+                                            @bind-Value="model.LrSupplierAccountId"
+                                            NullText="Select supplier"
+                                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                            AllowUserInput="true"
+                                            SearchMode="ListSearchMode.AutoSearch"
+                                            SearchFilterCondition="ListSearchFilterCondition.Contains" />
+                            </div>
+
+                            <div class="field-group">
+                                <label>Billing Party</label>
+                                <DxComboBox Data="@accountSupplierlist"
+                                            TData="Account" TValue="int"
+                                            TextFieldName="AccountName" ValueFieldName="AccountId"
+                                            @bind-Value="model.LrPartyAccountId"
+                                            NullText="Select billing party"
+                                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                            AllowUserInput="true"
+                                            SearchMode="ListSearchMode.AutoSearch"
+                                            SearchFilterCondition="ListSearchFilterCondition.Contains" />
+                            </div>
+
+                            <div class="field-group">
+                                <label>From Party / Consignor</label>
+                                <DxComboBox Data="@notifylist"
+                                            TData="Notify" TValue="int?"
+                                            Value="@model.LrConsignorNotifyId"
+                                            ValueChanged="@(id => OnConsignorChanged(id))"
+                                            ValueExpression="() => model.LrConsignorNotifyId"
+                                            TextFieldName="NotifyName" ValueFieldName="NotifyId"
+                                            NullText="Select consignor"
+                                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                            AllowUserInput="true"
+                                            SearchMode="ListSearchMode.AutoSearch"
+                                            SearchFilterCondition="ListSearchFilterCondition.Contains" />
+                            </div>
+
+                            <div class="field-group">
+                                <label>To Party / Consignee</label>
+                                <DxComboBox Data="@notifylist"
+                                            TData="Notify" TValue="int?"
+                                            Value="@model.LrConsigneeNotifyId"
+                                            ValueChanged="@((int? id) => OnConsigneeChanged(id))"
+                                            ValueExpression="() => model.LrConsigneeNotifyId"
+                                            TextFieldName="NotifyName" ValueFieldName="NotifyId"
+                                            NullText="Select consignee"
+                                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                            AllowUserInput="true"
+                                            SearchMode="ListSearchMode.AutoSearch"
+                                            SearchFilterCondition="ListSearchFilterCondition.Contains" />
+                            </div>
+
+                            <div class="field-group">
+                                <label>From (Station)</label>
+                                <DxComboBox Data="@StationLocationList"
+                                            TData="Location" TValue="int?"
+                                            TextFieldName="LocationName" ValueFieldName="LocationId"
+                                            @bind-Value="model.LrFromLocationId"
+                                            NullText="Select station"
+                                            AllowUserInput="true"
+                                            SearchMode="ListSearchMode.AutoSearch"
+                                            SearchFilterCondition="ListSearchFilterCondition.Contains" />
+                            </div>
+
+                            <div class="field-group">
+                                <label>To Location</label>
+                                <DxComboBox Data="@LocationList"
+                                            TData="Location" TValue="int?"
+                                            TextFieldName="LocationName" ValueFieldName="LocationId"
+                                            @bind-Value="model.LrToLocationId"
+                                            NullText="Select destination"
+                                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                            AllowUserInput="true"
+                                            SearchMode="ListSearchMode.AutoSearch"
+                                            SearchFilterCondition="ListSearchFilterCondition.Contains" />
+                            </div>
+
+                            <div class="field-group">
+                                <label>Pickup Location</label>
+                                <DxTextBox @bind-Text="model.LrNtPickupLoc" />
+                            </div>
+
+                            <div class="field-group">
+                                <label>Back Location</label>
+                                <DxSpinEdit @bind-Value="model.LrBackLocationId" ShowSpinButtons=false/>
+                            </div>
+                            <div class="field-group">
+                                <label>Driver</label>
+                                <DxComboBox Data="@DriverList"
+                                            TData="Account"
+                                            TValue="int?"
+                                            TextFieldName="AccountName"
+                                            ValueFieldName="AccountId"
+                                            @bind-Value="model.LrDriverId"
+                                            NullText="Select Driver"
+                                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                            SearchMode="ListSearchMode.AutoSearch"
+                                            SearchFilterCondition="ListSearchFilterCondition.Contains"
+                                            AllowUserInput="true">
+                                </DxComboBox>
+                            </div>
+                            <div class="field-group">
+                                <label>Container No</label>
+                                <DxTextBox @bind-Text="model.LrContainer1" />
+                            </div>
+
+                            <div class="field-group">
+                                <label>Container No 2</label>
+                                <DxTextBox @bind-Text="model.LrContainer2" />
+                            </div>
+
+                            <div class="field-group">
+                                <label>Reference No</label>
+                                <DxTextBox @bind-Text="model.LrRefName" />
+                            </div>
+
+                            <div class="field-group">
+                                <div class="twoinone">
+                                    <div>
+                                        <label>Payment Mode</label>
+                                        <DxComboBox Data="@PaymethodList"
+                                                    @bind-Value="model.LrPaymentType"
+                                                    TextFieldName="Text" ValueFieldName="Value"
+                                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                                    SearchMode="ListSearchMode.AutoSearch"
+                                                    SearchFilterCondition="ListSearchFilterCondition.Contains"
+                                                    AllowUserInput="false"
+                                                    NullText="Payment Mode"
+                                                    TData="SelectItem" TValue="string?" />
+                                    </div>
+                                    <div>
+                                        <label>Trip No</label>
+                                        <DxSpinEdit @bind-Value="model.LrTripNo" ShowSpinButtons=false/>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- ══ TABBED SECTIONS ══ -->
-            <div class="lr-tabs-wrapper">
-                <DxTabs>
+                <!-- ══ TABBED SECTIONS ══ -->
+                <div class="lr-tabs-wrapper">
+                    <DxTabs>
 
-                    <!-- ── Products ── -->
-                    <DxTabPage Text="Products">
-                        <div class="lr-tab-body">
+                        <!-- ── Products ── -->
+                        <DxTabPage Text="Products">
+                            <div class="lr-tab-body">
 
-                        <DxGrid AllowSort="false"
-        Data="@ProductRows"
-        ShowFilterRow="false"
-        ShowGroupPanel="false"
-        TItem="LrProductRow"
-        @ref="ProductGrid"
-        EditMode="GridEditMode.EditCell"
-        EditModelSaving="Product_EditModelSaving"
-        CustomizeEditModel="Product_CustomizeEditModel"
-        KeyFieldName="SrNo"
-        ColumnResizeMode="GridColumnResizeMode.ColumnsContainer" >
-    <Columns>
-        <DxGridCommandColumn Width="80px"
-                             EditButtonVisible="false"
-                             FixedPosition="GridColumnFixedPosition.Left"
-                             CancelButtonVisible="false"
-                             SaveButtonVisible="false"
-                             NewButtonVisible="false">
-            <HeaderCaptionTemplate Context="ctx">
-                <DxButton IconCssClass="bi bi-plus-circle-dotted" RenderStyle="ButtonRenderStyle.Link"
-                          Click="@AddNewProduct" style="padding:1px" />
-                <DxButton IconCssClass="bi bi-arrow-clockwise" RenderStyle="ButtonRenderStyle.Link"
-                          Click="@RevertProductGrid" style="padding:1px" />
-            </HeaderCaptionTemplate>
-            <CellEditTemplate Context="editCtx">
-                <DxButton Enabled="false" IconCssClass="bi bi-trash" RenderStyle="ButtonRenderStyle.Link" />
-            </CellEditTemplate>
-            <CellDisplayTemplate Context="dispCtx">
-                @{ var row = (LrProductRow)dispCtx.DataItem; }
-                <DxButton IconCssClass="bi bi-trash" RenderStyle="ButtonRenderStyle.Link"
-                          Click="@(() => DeleteProductRow(row))" />
-            </CellDisplayTemplate>
-        </DxGridCommandColumn>
+                            <DxGrid AllowSort="false"
+            Data="@ProductRows"
+            ShowFilterRow="false"
+            ShowGroupPanel="false"
+            TItem="LrProductRow"
+            @ref="ProductGrid"
+            EditMode="GridEditMode.EditCell"
+            EditModelSaving="Product_EditModelSaving"
+            CustomizeEditModel="Product_CustomizeEditModel"
+            KeyFieldName="SrNo"
+            ColumnResizeMode="GridColumnResizeMode.ColumnsContainer" >
+        <Columns>
+            <DxGridCommandColumn Width="80px"
+                                 EditButtonVisible="false"
+                                 FixedPosition="GridColumnFixedPosition.Left"
+                                 CancelButtonVisible="false"
+                                 SaveButtonVisible="false"
+                                 NewButtonVisible="false">
+                <HeaderCaptionTemplate Context="ctx">
+                    <DxButton IconCssClass="bi bi-plus-circle-dotted" RenderStyle="ButtonRenderStyle.Link"
+                              Click="@AddNewProduct" style="padding:1px" />
+                    <DxButton IconCssClass="bi bi-arrow-clockwise" RenderStyle="ButtonRenderStyle.Link"
+                              Click="@RevertProductGrid" style="padding:1px" />
+                </HeaderCaptionTemplate>
+                <CellEditTemplate Context="editCtx">
+                    <DxButton Enabled="false" IconCssClass="bi bi-trash" RenderStyle="ButtonRenderStyle.Link" />
+                </CellEditTemplate>
+                <CellDisplayTemplate Context="dispCtx">
+                    @{ var row = (LrProductRow)dispCtx.DataItem; }
+                    <DxButton IconCssClass="bi bi-trash" RenderStyle="ButtonRenderStyle.Link"
+                              Click="@(() => DeleteProductRow(row))" />
+                </CellDisplayTemplate>
+            </DxGridCommandColumn>
 
-        <DxGridDataColumn FieldName="SrNo" Caption="Sr No" Width="60px" ReadOnly="true" />
+            <DxGridDataColumn FieldName="SrNo" Caption="Sr No" Width="60px" ReadOnly="true" />
 
-        {{!-- ✅ Product --}}
-      {{!-- ✅ Product --}}
-<DxGridDataColumn FieldName="ProductId" Caption="Product" Width="280px">
-    <CellDisplayTemplate Context="data">
-        @{
-            var row = (LrProductRow)data.DataItem;
-            // ProductRows list se latest data lo (EditModel save hone ke baad sync hota hai)
-            var actualRow = ProductRows?.FirstOrDefault(r => r.SrNo == row.SrNo);
-            var pid = actualRow?.ProductId ?? row.ProductId;
-            var pname = ProductList?.FirstOrDefault(p => p.CargoId == pid)?.CargoName ?? "";
-        }
-        @pname
-    </CellDisplayTemplate>
-    <CellEditTemplate Context="editCtx">
-        @{ var edit = (LrProductRow)editCtx.EditModel; }
-        <DxComboBox Data="@ProductList"
-                    TData="Cargo" TValue="int"
-                    TextFieldName="CargoName"
-                    ValueFieldName="CargoId"
-                    NullText="Select Product..."
-                    Value="@edit.ProductId"
-                    ValueExpression="@(() => edit.ProductId)"
-                    ValueChanged="@((int v) => {
-                        edit.ProductId = v;
-                        edit.ProductName = ProductList?.FirstOrDefault(p => p.CargoId == v)?.CargoName;
-                        // ProductRows mein bhi turant update karo taaki display template sync rahe
-                        var existing = ProductRows?.FirstOrDefault(r => r.SrNo == edit.SrNo);
-                        if (existing != null)
-                        {
-                            existing.ProductId = v;
-                            existing.ProductName = edit.ProductName;
-                        }
-                        InvokeAsync(StateHasChanged);
-                    })"
-                    SearchMode="ListSearchMode.AutoSearch"
-                    SearchFilterCondition="ListSearchFilterCondition.Contains" />
-    </CellEditTemplate>
-</DxGridDataColumn>
+            <DxGridDataColumn FieldName="ProductId" Caption="Product" Width="280px">
+                <CellDisplayTemplate Context="data">
+                    @{
+                        var row = (LrProductRow)data.DataItem;
+                        var actualRow = ProductRows?.FirstOrDefault(r => r.SrNo == row.SrNo);
+                        var pid = actualRow?.ProductId ?? row.ProductId;
+                        var pname = ProductList?.FirstOrDefault(p => p.CargoId == pid)?.CargoName ?? "";
+                    }
+                    @pname
+                </CellDisplayTemplate>
+                <CellEditTemplate Context="editCtx">
+                    @{ var edit = (LrProductRow)editCtx.EditModel; }
+                    <DxComboBox Data="@ProductList"
+                                TData="Cargo" TValue="int"
+                                TextFieldName="CargoName"
+                                ValueFieldName="CargoId"
+                                NullText="Select Product..."
+                                Value="@edit.ProductId"
+                                ValueExpression="@(() => edit.ProductId)"
+                                ValueChanged="@((int v) => {
+                                    edit.ProductId = v;
+                                    edit.ProductName = ProductList?.FirstOrDefault(p => p.CargoId == v)?.CargoName;
+                                    var existing = ProductRows?.FirstOrDefault(r => r.SrNo == edit.SrNo);
+                                    if (existing != null)
+                                    {
+                                        existing.ProductId = v;
+                                        existing.ProductName = edit.ProductName;
+                                    }
+                                    InvokeAsync(StateHasChanged);
+                                })"
+                                SearchMode="ListSearchMode.AutoSearch"
+                                SearchFilterCondition="ListSearchFilterCondition.Contains" />
+                </CellEditTemplate>
+            </DxGridDataColumn>
 
-        {{!-- ✅ Bill Type --}}
-        <DxGridDataColumn FieldName="LrBillTypeBill" Caption="Bill Type" Width="180px">
-            <CellEditTemplate Context="editCtx">
-                @{ var edit = (LrProductRow)editCtx.EditModel; }
-                <DxComboBox Data="@BillTypeList"
-                            TData="BillTypeVM" TValue="string"
-                            TextFieldName="Name"
-                            ValueFieldName="Name"
-                            NullText="Select Type..."
-                            Value="@edit.LrBillTypeBill"
-                            ValueExpression="@(() => edit.LrBillTypeBill)"
-                            ValueChanged="@((string v) => {
-                                edit.LrBillTypeBill = v;
-                                RecalculateEditRow(edit);
-                                InvokeAsync(StateHasChanged);
-                            })"
-                            SearchMode="ListSearchMode.AutoSearch"
-                            SearchFilterCondition="ListSearchFilterCondition.Contains" />
-            </CellEditTemplate>
-        </DxGridDataColumn>
+            <DxGridDataColumn FieldName="LrBillTypeBill" Caption="Bill Type" Width="180px">
+                <CellEditTemplate Context="editCtx">
+                    @{ var edit = (LrProductRow)editCtx.EditModel; }
+                    <DxComboBox Data="@BillTypeList"
+                                TData="BillTypeVM" TValue="string"
+                                TextFieldName="Name"
+                                ValueFieldName="Name"
+                                NullText="Select Type..."
+                                Value="@edit.LrBillTypeBill"
+                                ValueExpression="@(() => edit.LrBillTypeBill)"
+                                ValueChanged="@((string v) => {
+                                    edit.LrBillTypeBill = v;
+                                    RecalculateEditRow(edit);
+                                    InvokeAsync(StateHasChanged);
+                                })"
+                                SearchMode="ListSearchMode.AutoSearch"
+                                SearchFilterCondition="ListSearchFilterCondition.Contains" />
+                </CellEditTemplate>
+            </DxGridDataColumn>
 
-        {{!-- Unit --}}
-        <DxGridDataColumn FieldName="NtUnit" Caption="Unit" Width="90px">
-            <EditSettings><DxTextBoxSettings /></EditSettings>
-        </DxGridDataColumn>
-         {{!-- Total Bags --}}
-        <DxGridDataColumn FieldName="TotalBags" Caption="Total Bags" Width="100px">
-            <CellEditTemplate Context="editCtx">
-                @{ var edit = (LrProductRow)editCtx.EditModel; }
-                <DxSpinEdit TValue="decimal?"
-                            Value="@edit.TotalBags"
-                            ValueExpression="@(() => edit.TotalBags)"
-                            ValueChanged="@((decimal? v) => { edit.TotalBags = v; })"
-                            ShowSpinButtons="false" />
-            </CellEditTemplate>
-        </DxGridDataColumn>
-        {{!-- ✅ Gross Wt --}}
-        <DxGridDataColumn FieldName="GrossWt" Caption="Gross Wt" Width="100px">
-            <CellEditTemplate Context="editCtx">
-                @{ var edit = (LrProductRow)editCtx.EditModel; }
-                <DxSpinEdit TValue="double?"
-                            Value="@edit.GrossWt"
-                            ValueExpression="@(() => edit.GrossWt)"
-                            ValueChanged="@((double? v) => {
-                                edit.GrossWt = v;
-                                edit.NetWt = Convert.ToDecimal(v ?? 0) - Convert.ToDecimal(edit.TareWt ?? 0);
-                                RecalculateEditRow(edit);
-                                InvokeAsync(StateHasChanged);
-                            })"
-                            ShowSpinButtons="false" />
-            </CellEditTemplate>
-        </DxGridDataColumn>
+            <DxGridDataColumn FieldName="NtUnit" Caption="Unit" Width="90px">
+                <EditSettings><DxTextBoxSettings /></EditSettings>
+            </DxGridDataColumn>
 
-        {{!-- ✅ Tare Wt --}}
-        <DxGridDataColumn FieldName="TareWt" Caption="Tare Wt" Width="90px">
-            <CellEditTemplate Context="editCtx">
-                @{ var edit = (LrProductRow)editCtx.EditModel; }
-                <DxSpinEdit TValue="double?"
-                            Value="@edit.TareWt"
-                            ValueExpression="@(() => edit.TareWt)"
-                            ValueChanged="@((double? v) => {
-                                edit.TareWt = v;
-                                edit.NetWt = Convert.ToDecimal(edit.GrossWt ?? 0) - Convert.ToDecimal(v ?? 0);
-                                RecalculateEditRow(edit);
-                                InvokeAsync(StateHasChanged);
-                            })"
-                            ShowSpinButtons="false" />
-            </CellEditTemplate>
-        </DxGridDataColumn>
+            <DxGridDataColumn FieldName="TotalBags" Caption="Total Bags" Width="100px">
+                <CellEditTemplate Context="editCtx">
+                    @{ var edit = (LrProductRow)editCtx.EditModel; }
+                    <DxSpinEdit TValue="decimal?"
+                                Value="@edit.TotalBags"
+                                ValueExpression="@(() => edit.TotalBags)"
+                                ValueChanged="@((decimal? v) => { edit.TotalBags = v; })"
+                                ShowSpinButtons="false" />
+                </CellEditTemplate>
+            </DxGridDataColumn>
 
-        {{!-- ✅ Net Wt - AUTO CALCULATED --}}
-        <DxGridDataColumn FieldName="NetWt" Caption="Net Wt" Width="90px" ReadOnly="true">
-            <CellDisplayTemplate Context="data">
-                @{ var row = (LrProductRow)data.DataItem; }
-                <span style="color:#1e293b;">@(row.NetWt.HasValue ? row.NetWt.Value.ToString("N2") : "")</span>
-            </CellDisplayTemplate>
-            <CellEditTemplate Context="editCtx">
-                @{ var edit = (LrProductRow)editCtx.EditModel; }
-                <span style="padding:4px 8px; display:block; color:#0ea5e9; font-weight:600;">
-                    @(edit.NetWt.HasValue ? edit.NetWt.Value.ToString("N2") : "0.00")
-                </span>
-            </CellEditTemplate>
-        </DxGridDataColumn>
+            <DxGridDataColumn FieldName="GrossWt" Caption="Gross Wt" Width="100px">
+                <CellEditTemplate Context="editCtx">
+                    @{ var edit = (LrProductRow)editCtx.EditModel; }
+                    <DxSpinEdit TValue="double?"
+                                Value="@edit.GrossWt"
+                                ValueExpression="@(() => edit.GrossWt)"
+                                ValueChanged="@((double? v) => {
+                                    edit.GrossWt = v;
+                                    edit.NetWt = Convert.ToDecimal(v ?? 0) - Convert.ToDecimal(edit.TareWt ?? 0);
+                                    RecalculateEditRow(edit);
+                                    InvokeAsync(StateHasChanged);
+                                })"
+                                ShowSpinButtons="false" />
+                </CellEditTemplate>
+            </DxGridDataColumn>
 
-        {{!-- ✅ Load Wt --}}
-        @* <DxGridDataColumn FieldName="LoadWt" Caption="Load Wt" Width="90px">
-            <CellEditTemplate Context="editCtx">
-                @{ var edit = (LrProductRow)editCtx.EditModel; }
-                <DxSpinEdit TValue="double?"
-                            Value="@edit.LoadWt"
-                            ValueExpression="@(() => edit.LoadWt)"
-                            ValueChanged="@((double? v) => {
-                                edit.LoadWt = v;
-                                RecalculateEditRow(edit);
-                                InvokeAsync(StateHasChanged);
-                            })"
-                            ShowSpinButtons="false" />
-            </CellEditTemplate>
-        </DxGridDataColumn> *@
+            <DxGridDataColumn FieldName="TareWt" Caption="Tare Wt" Width="90px">
+                <CellEditTemplate Context="editCtx">
+                    @{ var edit = (LrProductRow)editCtx.EditModel; }
+                    <DxSpinEdit TValue="double?"
+                                Value="@edit.TareWt"
+                                ValueExpression="@(() => edit.TareWt)"
+                                ValueChanged="@((double? v) => {
+                                    edit.TareWt = v;
+                                    edit.NetWt = Convert.ToDecimal(edit.GrossWt ?? 0) - Convert.ToDecimal(v ?? 0);
+                                    RecalculateEditRow(edit);
+                                    InvokeAsync(StateHasChanged);
+                                })"
+                                ShowSpinButtons="false" />
+                </CellEditTemplate>
+            </DxGridDataColumn>
 
-        {{!-- ✅ UnLoad Wt --}}
-        <DxGridDataColumn FieldName="UnLoadWt" Caption="UnLoad Wt" Width="100px">
-            <CellEditTemplate Context="editCtx">
-                @{ var edit = (LrProductRow)editCtx.EditModel; }
-                <DxSpinEdit TValue="double?"
-                            Value="@edit.UnLoadWt"
-                            ValueExpression="@(() => edit.UnLoadWt)"
-                            ValueChanged="@((double? v) => {
-                                edit.UnLoadWt = v;
-                                RecalculateEditRow(edit);
-                                InvokeAsync(StateHasChanged);
-                            })"
-                            ShowSpinButtons="false" />
-            </CellEditTemplate>
-        </DxGridDataColumn>
+            <DxGridDataColumn FieldName="NetWt" Caption="Net Wt" Width="90px" ReadOnly="true">
+                <CellDisplayTemplate Context="data">
+                    @{ var row = (LrProductRow)data.DataItem; }
+                    <span style="color:#1e293b;">@(row.NetWt.HasValue ? row.NetWt.Value.ToString("N2") : "")</span>
+                </CellDisplayTemplate>
+                <CellEditTemplate Context="editCtx">
+                    @{ var edit = (LrProductRow)editCtx.EditModel; }
+                    <span style="padding:4px 8px; display:block; color:#0ea5e9; font-weight:600;">
+                        @(edit.NetWt.HasValue ? edit.NetWt.Value.ToString("N2") : "0.00")
+                    </span>
+                </CellEditTemplate>
+            </DxGridDataColumn>
 
-        {{!-- ✅ Charge Wt --}}
-        <DxGridDataColumn FieldName="ChargeQty" Caption="Charge Wt" Width="100px">
-            <CellEditTemplate Context="editCtx">
-                @{ var edit = (LrProductRow)editCtx.EditModel; }
-                <DxSpinEdit TValue="double?"
-                            Value="@edit.ChargeQty"
-                            ValueExpression="@(() => edit.ChargeQty)"
-                            ValueChanged="@((double? v) => {
-                                edit.ChargeQty = v;
-                                RecalculateEditRow(edit);
-                                InvokeAsync(StateHasChanged);
-                            })"
-                            ShowSpinButtons="false" />
-            </CellEditTemplate>
-        </DxGridDataColumn>
+            <DxGridDataColumn FieldName="UnLoadWt" Caption="UnLoad Wt" Width="100px">
+                <CellEditTemplate Context="editCtx">
+                    @{ var edit = (LrProductRow)editCtx.EditModel; }
+                    <DxSpinEdit TValue="double?"
+                                Value="@edit.UnLoadWt"
+                                ValueExpression="@(() => edit.UnLoadWt)"
+                                ValueChanged="@((double? v) => {
+                                    edit.UnLoadWt = v;
+                                    RecalculateEditRow(edit);
+                                    InvokeAsync(StateHasChanged);
+                                })"
+                                ShowSpinButtons="false" />
+                </CellEditTemplate>
+            </DxGridDataColumn>
 
-        {{!-- ✅ Rate --}}
-        <DxGridDataColumn FieldName="RateBill" Caption="Rate" Width="90px">
-            <CellEditTemplate Context="editCtx">
-                @{ var edit = (LrProductRow)editCtx.EditModel; }
-                <DxSpinEdit TValue="double?"
-                            Value="@edit.RateBill"
-                            ValueExpression="@(() => edit.RateBill)"
-                            ValueChanged="@((double? v) => {
-                                edit.RateBill = v;
-                                RecalculateEditRow(edit);
-                                InvokeAsync(StateHasChanged);
-                            })"
-                            ShowSpinButtons="false" />
-            </CellEditTemplate>
-        </DxGridDataColumn>
+            <DxGridDataColumn FieldName="ChargeQty" Caption="Charge Wt" Width="100px">
+                <CellEditTemplate Context="editCtx">
+                    @{ var edit = (LrProductRow)editCtx.EditModel; }
+                    <DxSpinEdit TValue="double?"
+                                Value="@edit.ChargeQty"
+                                ValueExpression="@(() => edit.ChargeQty)"
+                                ValueChanged="@((double? v) => {
+                                    edit.ChargeQty = v;
+                                    RecalculateEditRow(edit);
+                                    InvokeAsync(StateHasChanged);
+                                })"
+                                ShowSpinButtons="false" />
+                </CellEditTemplate>
+            </DxGridDataColumn>
 
-       {{!-- ✅ Freight - AUTO CALCULATED --}}
-<DxGridDataColumn FieldName="GrossFreight"
-                  Caption="Freight"
-                  Width="100px"
-                  ReadOnly="true">
-    <CellDisplayTemplate Context="ctx">
-        @{
-            var row = (LrProductRow)ctx.DataItem;
-            var actualRow = ProductRows?.FirstOrDefault(r => r.SrNo == row.SrNo);
-            var freight = actualRow?.GrossFreight ?? row.GrossFreight;
-        }
-        <span style="color:#2563eb; font-weight:600;">
-            @(freight.HasValue ? freight.Value.ToString("N2") : "0.00")
-        </span>
-    </CellDisplayTemplate>
-    <CellEditTemplate Context="editCtx">
-        @{ var edit = (LrProductRow)editCtx.EditModel; }
-        <span style="padding:4px 8px; display:block; color:#2563eb; font-weight:600;">
-            @(edit.GrossFreight.HasValue
-                ? Convert.ToDecimal(edit.GrossFreight).ToString("N2")
-                : "0.00")
-        </span>
-    </CellEditTemplate>
-</DxGridDataColumn>
+            <DxGridDataColumn FieldName="RateBill" Caption="Rate" Width="90px">
+                <CellEditTemplate Context="editCtx">
+                    @{ var edit = (LrProductRow)editCtx.EditModel; }
+                    <DxSpinEdit TValue="double?"
+                                Value="@edit.RateBill"
+                                ValueExpression="@(() => edit.RateBill)"
+                                ValueChanged="@((double? v) => {
+                                    edit.RateBill = v;
+                                    RecalculateEditRow(edit);
+                                    InvokeAsync(StateHasChanged);
+                                })"
+                                ShowSpinButtons="false" />
+                </CellEditTemplate>
+            </DxGridDataColumn>
 
-       
+            <DxGridDataColumn FieldName="GrossFreight"
+                              Caption="Freight"
+                              Width="100px"
+                              ReadOnly="true">
+                <CellDisplayTemplate Context="ctx">
+                    @{
+                        var row = (LrProductRow)ctx.DataItem;
+                        var actualRow = ProductRows?.FirstOrDefault(r => r.SrNo == row.SrNo);
+                        var freight = actualRow?.GrossFreight ?? row.GrossFreight;
+                    }
+                    <span style="color:#2563eb; font-weight:600;">
+                        @(freight.HasValue ? freight.Value.ToString("N2") : "0.00")
+                    </span>
+                </CellDisplayTemplate>
+                <CellEditTemplate Context="editCtx">
+                    @{ var edit = (LrProductRow)editCtx.EditModel; }
+                    <span style="padding:4px 8px; display:block; color:#2563eb; font-weight:600;">
+                        @(edit.GrossFreight.HasValue
+                            ? Convert.ToDecimal(edit.GrossFreight).ToString("N2")
+                            : "0.00")
+                    </span>
+                </CellEditTemplate>
+            </DxGridDataColumn>
 
-    </Columns>
-</DxGrid>
-                        </div>
-                    </DxTabPage>
-
-                    <!-- ── Advance ── -->
-                    <DxTabPage Text="Advance">
-                        <div class="lr-tab-body">
-                            <DxGrid Data="@AdvanceRows"
-                                    @ref="AdvanceGrid"
-                                    TItem="LRJournalRowVM"
-                                    KeyFieldName="RowId"
-                                    EditMode="GridEditMode.EditCell"
-                                    EditModelSaving="Advance_EditModelSaving">
-                                <Columns>
-                                    <DxGridCommandColumn Width="80px" EditButtonVisible="false"
-                                                         FixedPosition="GridColumnFixedPosition.Left"
-                                                         CancelButtonVisible="false"
-                                                         SaveButtonVisible="false"
-                                                         NewButtonVisible="false">
-                                        <HeaderCaptionTemplate Context="headerCtx">
-                                            <DxButton IconCssClass="bi bi-plus-circle-dotted"
-                                                      RenderStyle="ButtonRenderStyle.Link"
-                                                      Click="@AddNewAdvance" style="padding:1px" />
-                                            <DxButton IconCssClass="bi bi-arrow-clockwise"
-                                                      RenderStyle="ButtonRenderStyle.Link"
-                                                      Click="@RevertAdvanceGrid" style="padding:1px" />
-                                        </HeaderCaptionTemplate>
-                                        <CellDisplayTemplate Context="rowCtx">
-                                            @{
-                                                var row = (LRJournalRowVM)rowCtx.DataItem;
-                                            }
-                                            <DxButton IconCssClass="bi bi-trash"
-                                                      RenderStyle="ButtonRenderStyle.Link"
-                                                      Click="@(() => DeleteAdvanceRow(row))" />
-                                        </CellDisplayTemplate>
-                                    </DxGridCommandColumn>
-                                    <DxGridDataColumn FieldName="Sno" Caption="Sr No" Width="70px" ReadOnly="true" />
-                                    <DxGridDataColumn FieldName="JournalDate" Caption="Date" Width="120px">
-                                        <EditSettings><DxDateEditSettings PickerDisplayMode="DatePickerDisplayMode.ScrollPicker"/></EditSettings>
-                                    </DxGridDataColumn>
-                                    <DxGridDataColumn FieldName="AccountId" Caption="Account" Width="200px">
-                                        <EditSettings>
-                                            <DxComboBoxSettings Data="@BankCashList"
-                                                                TextFieldName="AccountName"
-                                                                ValueFieldName="AccountId"
-                                                                SearchMode="ListSearchMode.AutoSearch"
-                                                                SearchFilterCondition="ListSearchFilterCondition.Contains" />
-                                        </EditSettings>
-                                    </DxGridDataColumn>
-                                    <DxGridDataColumn FieldName="Amount" Caption="Amount">
-                                        <EditSettings><DxSpinEditSettings ShowSpinButtons="false" /></EditSettings>
-                                    </DxGridDataColumn>
-                                    <DxGridDataColumn FieldName="Remarks" Caption="Remarks" Width="200px" />
-                                </Columns>
-                            </DxGrid>
-                        </div>
-                    </DxTabPage>
-
-                    <!-- ── Diesel ── -->
-                    <DxTabPage Text="Diesel">
-                        <div class="lr-tab-body">
-                            <DxGrid Data="@DieselRows"
-                                    TItem="LRJournalRowVM"
-                                    @ref="DieselGrid"
-                                    KeyFieldName="Sno"
-                                    EditMode="GridEditMode.EditCell"
-                                    EditModelSaving="Diesel_EditModelSaving"
-                                    CustomizeEditModel="Diesel_Customize">
-                                <Columns>
-                                    <DxGridCommandColumn Width="80px"
-                                                         EditButtonVisible="false"
-                                                         FixedPosition="GridColumnFixedPosition.Left"
-                                                         CancelButtonVisible="false"
-                                                         SaveButtonVisible="false"
-                                                         NewButtonVisible="false">
-                                        <HeaderCaptionTemplate Context="ctx">
-                                            <DxButton IconCssClass="bi bi-plus-circle-dotted"
-                                                      RenderStyle="ButtonRenderStyle.Link"
-                                                      Click="@AddNewDiesel" style="padding:1px" />
-                                            <DxButton IconCssClass="bi bi-arrow-clockwise"
-                                                      RenderStyle="ButtonRenderStyle.Link"
-                                                      Click="@RevertDieselGrid" style="padding:1px" />
-                                        </HeaderCaptionTemplate>
-                                        <CellEditTemplate Context="editCtx">
-                                            <DxButton Enabled="false" IconCssClass="bi bi-trash" RenderStyle="ButtonRenderStyle.Link" />
-                                        </CellEditTemplate>
-                                        <CellDisplayTemplate Context="dispCtx">
-                                            @{
-                                                var row = (LRJournalRowVM)dispCtx.DataItem;
-                                            }
-                                            <DxButton IconCssClass="bi bi-trash"
-                                                      RenderStyle="ButtonRenderStyle.Link"
-                                                      Click="@(() => DeleteDieselRow(row))" />
-                                        </CellDisplayTemplate>
-                                    </DxGridCommandColumn>
-                                    <DxGridDataColumn FieldName="Sno" Caption="Sr No" Width="70px" ReadOnly="true" />
-                                    <DxGridDataColumn FieldName="JournalDate" Caption="Date">
-                                        <EditSettings><DxDateEditSettings /></EditSettings>
-                                    </DxGridDataColumn>
-                                    <DxGridDataColumn FieldName="PumpBillId" Caption="Petrol Pump">
-                                        <EditSettings>
-                                            <DxComboBoxSettings Data="@PumpList"
-                                                                TextFieldName="AccountName"
-                                                                ValueFieldName="AccountId"
-                                                                SearchMode="ListSearchMode.AutoSearch"
-                                                                SearchFilterCondition="ListSearchFilterCondition.Contains" />
-                                        </EditSettings>
-                                    </DxGridDataColumn>
-                                    <DxGridDataColumn FieldName="UreaRate" Caption="Rate">
-                                        <EditSettings><DxSpinEditSettings ShowSpinButtons="false" /></EditSettings>
-                                    </DxGridDataColumn>
-                                    <DxGridDataColumn FieldName="UreaQty" Caption="Ltr">
-                                        <EditSettings><DxSpinEditSettings ShowSpinButtons="false" /></EditSettings>
-                                    </DxGridDataColumn>
-                                    <DxGridDataColumn FieldName="UreaAmount" Caption="Amount">
-                                        <EditSettings><DxSpinEditSettings ShowSpinButtons="false" /></EditSettings>
-                                    </DxGridDataColumn>
-                                </Columns>
-                            </DxGrid>
-                        </div>
-                    </DxTabPage>
-
-                    <!-- ── Charges ── -->
-                    <DxTabPage Text="Charges">
-                        <div class="lr-tab-body">
-                            <DxGrid Data="@ChargesRows"
-                                    TItem="LRJournalRowVM"
-                                    @ref="ChargesGrid"
-                                    KeyFieldName="Sno"
-                                    EditMode="GridEditMode.EditCell"
-                                    EditModelSaving="Charges_EditModelSaving"
-                                    CustomizeEditModel="Charges_Customize">
-                                <Columns>
-                                    <DxGridCommandColumn Width="80px"
-                                                         EditButtonVisible="false"
-                                                         FixedPosition="GridColumnFixedPosition.Left"
-                                                         CancelButtonVisible="false"
-                                                         SaveButtonVisible="false"
-                                                         NewButtonVisible="false">
-                                        <HeaderCaptionTemplate Context="ctx">
-                                            <DxButton IconCssClass="bi bi-plus-circle-dotted"
-                                                      RenderStyle="ButtonRenderStyle.Link"
-                                                      Click="@AddNewCharges" style="padding:1px" />
-                                            <DxButton IconCssClass="bi bi-arrow-clockwise"
-                                                      RenderStyle="ButtonRenderStyle.Link"
-                                                      Click="@RevertChargesGrid" style="padding:1px" />
-                                        </HeaderCaptionTemplate>
-                                        <CellEditTemplate Context="editCtx">
-                                            <DxButton Enabled="false" IconCssClass="bi bi-trash" RenderStyle="ButtonRenderStyle.Link" />
-                                        </CellEditTemplate>
-                                        <CellDisplayTemplate Context="dispCtx">
-                                            @{
-                                                var row = (LRJournalRowVM)dispCtx.DataItem;
-                                            }
-                                            <DxButton IconCssClass="bi bi-trash"
-                                                      RenderStyle="ButtonRenderStyle.Link"
-                                                      Click="@(() => DeleteChargesRow(row))" />
-                                        </CellDisplayTemplate>
-                                    </DxGridCommandColumn>
-                                    <DxGridDataColumn FieldName="Sno" Caption="Sr No" Width="70px" ReadOnly="true" />
-                                    <DxGridDataColumn FieldName="JournalDate" Caption="Date">
-                                        <EditSettings><DxDateEditSettings /></EditSettings>
-                                    </DxGridDataColumn>
-                                    <DxGridDataColumn FieldName="AccountId" Caption="Account" Width="200px">
-                                        <EditSettings>
-                                            <DxComboBoxSettings Data="@BankCashList"
-                                                                TextFieldName="AccountName"
-                                                                ValueFieldName="AccountId"
-                                                                SearchMode="ListSearchMode.AutoSearch"
-                                                                SearchFilterCondition="ListSearchFilterCondition.Contains" />
-                                        </EditSettings>
-                                    </DxGridDataColumn>
-                                    <DxGridDataColumn FieldName="Amount" Caption="Amount">
-                                        <EditSettings><DxSpinEditSettings ShowSpinButtons="false" /></EditSettings>
-                                    </DxGridDataColumn>
-                                    <DxGridDataColumn FieldName="Remarks" Caption="Remarks" Width="200px" />
-                                </Columns>
-                            </DxGrid>
-                        </div>
-                    </DxTabPage>
-
-                    <!-- ── Expense ── -->
-                    <DxTabPage Text="Expense">
-                        <div class="lr-tab-body">
-                            <DxGrid Data="@ExpenseRows"
-                                    TItem="LRJournalRowVM"
-                                    @ref="ExpenseGrid"
-                                    KeyFieldName="Sno"
-                                    EditMode="GridEditMode.EditCell"
-                                    EditModelSaving="Expense_EditModelSaving"
-                                    CustomizeEditModel="Expense_Customize">
-                                <Columns>
-                                    <DxGridCommandColumn Width="80px"
-                                                         EditButtonVisible="false"
-                                                         FixedPosition="GridColumnFixedPosition.Left"
-                                                         CancelButtonVisible="false"
-                                                         SaveButtonVisible="false"
-                                                         NewButtonVisible="false">
-                                        <HeaderCaptionTemplate Context="ctx">
-                                            <DxButton IconCssClass="bi bi-plus-circle-dotted"
-                                                      RenderStyle="ButtonRenderStyle.Link"
-                                                      Click="@AddNewExpense" style="padding:1px" />
-                                            <DxButton IconCssClass="bi bi-arrow-clockwise"
-                                                      RenderStyle="ButtonRenderStyle.Link"
-                                                      Click="@RevertExpenseGrid" style="padding:1px" />
-                                        </HeaderCaptionTemplate>
-                                        <CellEditTemplate Context="editCtx">
-                                            <DxButton Enabled="false" IconCssClass="bi bi-trash" RenderStyle="ButtonRenderStyle.Link" />
-                                        </CellEditTemplate>
-                                        <CellDisplayTemplate Context="dispCtx">
-                                            @{
-                                                var row = (LRJournalRowVM)dispCtx.DataItem;
-                                            }
-                                            <DxButton IconCssClass="bi bi-trash"
-                                                      RenderStyle="ButtonRenderStyle.Link"
-                                                      Click="@(() => DeleteExpenseRow(row))" />
-                                        </CellDisplayTemplate>
-                                    </DxGridCommandColumn>
-                                    <DxGridDataColumn FieldName="Sno" Caption="Sr No" Width="70px" ReadOnly="true" />
-                                    <DxGridDataColumn FieldName="JournalDate" Caption="Date">
-                                        <EditSettings><DxDateEditSettings /></EditSettings>
-                                    </DxGridDataColumn>
-                                    <DxGridDataColumn FieldName="AccountId" Caption="Account" Width="200px">
-                                        <EditSettings>
-                                            <DxComboBoxSettings Data="@BankCashList"
-                                                                TextFieldName="AccountName"
-                                                                ValueFieldName="AccountId"
-                                                                SearchMode="ListSearchMode.AutoSearch"
-                                                                SearchFilterCondition="ListSearchFilterCondition.Contains" />
-                                        </EditSettings>
-                                    </DxGridDataColumn>
-                                    <DxGridDataColumn FieldName="Amount" Caption="Amount">
-                                        <EditSettings><DxSpinEditSettings ShowSpinButtons="false" /></EditSettings>
-                                    </DxGridDataColumn>
-                                    <DxGridDataColumn FieldName="Remarks" Caption="Remarks" Width="200px" />
-                                </Columns>
-                            </DxGrid>
-                        </div>
-                    </DxTabPage>
-
-                    <!-- ── Advance Received ── -->
-                    <DxTabPage Text="Advance Received">
-                        <div class="lr-tab-body">
-                            <DxGrid Data="@AdvanceReceivedRows"
-                                    TItem="LRJournalRowVM"
-                                    @ref="AdvanceReceivedGrid"
-                                    KeyFieldName="Sno"
-                                    EditMode="GridEditMode.EditCell"
-                                    EditModelSaving="AdvanceReceived_EditModelSaving"
-                                    CustomizeEditModel="AdvanceReceived_Customize">
-                                <Columns>
-                                    <DxGridCommandColumn Width="80px"
-                                                         EditButtonVisible="false"
-                                                         FixedPosition="GridColumnFixedPosition.Left"
-                                                         CancelButtonVisible="false"
-                                                         SaveButtonVisible="false"
-                                                         NewButtonVisible="false">
-                                        <HeaderCaptionTemplate Context="ctx">
-                                            <DxButton IconCssClass="bi bi-plus-circle-dotted"
-                                                      RenderStyle="ButtonRenderStyle.Link"
-                                                      Click="@AddNewAdvanceReceived" style="padding:1px" />
-                                            <DxButton IconCssClass="bi bi-arrow-clockwise"
-                                                      RenderStyle="ButtonRenderStyle.Link"
-                                                      Click="@RevertAdvanceReceivedGrid" style="padding:1px" />
-                                        </HeaderCaptionTemplate>
-                                        <CellEditTemplate Context="editCtx">
-                                            <DxButton Enabled="false" IconCssClass="bi bi-trash" RenderStyle="ButtonRenderStyle.Link" />
-                                        </CellEditTemplate>
-                                        <CellDisplayTemplate Context="dispCtx">
-                                            @{
-                                                var row = (LRJournalRowVM)dispCtx.DataItem;
-                                            }
-                                            <DxButton IconCssClass="bi bi-trash"
-                                                      RenderStyle="ButtonRenderStyle.Link"
-                                                      Click="@(() => DeleteAdvanceReceivedRow(row))" />
-                                        </CellDisplayTemplate>
-                                    </DxGridCommandColumn>
-                                    <DxGridDataColumn FieldName="Sno" Caption="Sr No" Width="70px" ReadOnly="true" />
-                                    <DxGridDataColumn FieldName="JournalDate" Caption="Date">
-                                        <EditSettings><DxDateEditSettings /></EditSettings>
-                                    </DxGridDataColumn>
-                                    <DxGridDataColumn FieldName="AccountId" Caption="Account" Width="200px">
-                                        <EditSettings>
-                                            <DxComboBoxSettings Data="@accountpartylist"
-                                                                TextFieldName="AccountName"
-                                                                ValueFieldName="AccountId"
-                                                                SearchMode="ListSearchMode.AutoSearch"
-                                                                SearchFilterCondition="ListSearchFilterCondition.Contains" />
-                                        </EditSettings>
-                                    </DxGridDataColumn>
-                                    <DxGridDataColumn FieldName="Amount" Caption="Amount">
-                                        <EditSettings><DxSpinEditSettings ShowSpinButtons="false" /></EditSettings>
-                                    </DxGridDataColumn>
-                                    <DxGridDataColumn FieldName="UreaQty" Caption="Qty (Diesel)">
-                                        <EditSettings><DxSpinEditSettings ShowSpinButtons="false" /></EditSettings>
-                                    </DxGridDataColumn>
-                                    <DxGridDataColumn FieldName="Remarks" Caption="Remarks" Width="200px" />
-                                </Columns>
-                            </DxGrid>
-                        </div>
-                    </DxTabPage>
-
-                    <!-- ── Documents ── -->
-                    <DxTabPage Text="Documents">
-                        <div class="lr-tab-body">
-                            <div style="margin-bottom:12px;">
-                                <DxButton Text="Upload Documents"
-                                          IconCssClass="bi bi-upload"
-                                          RenderStyle="ButtonRenderStyle.Primary"
-                                          Click="OpenUploadPopup" />
+        </Columns>
+    </DxGrid>
                             </div>
-                            @if (UploadedDocs?.Any() == true)
-                            {
-                                <DxGrid Data="@UploadedDocs" ShowBorders="true" PageSize="5" ShowFilterRow="true">
+                        </DxTabPage>
+
+                        <!-- ── Advance ── -->
+                        <DxTabPage Text="Advance">
+                            <div class="lr-tab-body">
+                                <DxGrid Data="@AdvanceRows"
+                                        @ref="AdvanceGrid"
+                                        TItem="LRJournalRowVM"
+                                        KeyFieldName="RowId"
+                                        EditMode="GridEditMode.EditCell"
+                                        EditModelSaving="Advance_EditModelSaving">
                                     <Columns>
-                                        <DxGridDataColumn FieldName="FileName" Caption="Document" MinWidth="200" />
-                                        <DxGridDataColumn FieldName="FileSize" Caption="Size (KB)" Width="100px" TextAlignment="GridTextAlignment.Right" />
-                                        <DxGridDataColumn Caption="Actions" Width="120px" AllowSort="false" AllowFilter="false">
-                                            <CellDisplayTemplate Context="doc">
-                                                <div style="display:flex;gap:4px;">
-                                                    <DxButton IconCssClass="bi bi-eye" RenderStyle="ButtonRenderStyle.Secondary"
-                                                              Click="@(async () => await PreviewDoc((UploadedFileInfo)doc.DataItem))" />
-                                                    <DxButton IconCssClass="bi bi-trash" RenderStyle="ButtonRenderStyle.Secondary"
-                                                              Click="@(() => DeleteDoc((UploadedFileInfo)doc.DataItem))" />
-                                                </div>
+                                        <DxGridCommandColumn Width="80px" EditButtonVisible="false"
+                                                             FixedPosition="GridColumnFixedPosition.Left"
+                                                             CancelButtonVisible="false"
+                                                             SaveButtonVisible="false"
+                                                             NewButtonVisible="false">
+                                            <HeaderCaptionTemplate Context="headerCtx">
+                                                <DxButton IconCssClass="bi bi-plus-circle-dotted"
+                                                          RenderStyle="ButtonRenderStyle.Link"
+                                                          Click="@AddNewAdvance" style="padding:1px" />
+                                                <DxButton IconCssClass="bi bi-arrow-clockwise"
+                                                          RenderStyle="ButtonRenderStyle.Link"
+                                                          Click="@RevertAdvanceGrid" style="padding:1px" />
+                                            </HeaderCaptionTemplate>
+                                            <CellDisplayTemplate Context="rowCtx">
+                                                @{
+                                                    var row = (LRJournalRowVM)rowCtx.DataItem;
+                                                }
+                                                <DxButton IconCssClass="bi bi-trash"
+                                                          RenderStyle="ButtonRenderStyle.Link"
+                                                          Click="@(() => DeleteAdvanceRow(row))" />
                                             </CellDisplayTemplate>
+                                        </DxGridCommandColumn>
+                                        <DxGridDataColumn FieldName="Sno" Caption="Sr No" Width="70px" ReadOnly="true" />
+                                        <DxGridDataColumn FieldName="JournalDate" Caption="Date" Width="120px">
+                                            <EditSettings><DxDateEditSettings PickerDisplayMode="DatePickerDisplayMode.ScrollPicker"/></EditSettings>
+                                        </DxGridDataColumn>
+                                        <DxGridDataColumn FieldName="AccountId" Caption="Account" Width="200px">
+                                            <EditSettings>
+                                                <DxComboBoxSettings Data="@BankCashList"
+                                                                    TextFieldName="AccountName"
+                                                                    ValueFieldName="AccountId"
+                                                                    SearchMode="ListSearchMode.AutoSearch"
+                                                                    SearchFilterCondition="ListSearchFilterCondition.Contains" />
+                                            </EditSettings>
+                                        </DxGridDataColumn>
+                                        <DxGridDataColumn FieldName="Amount" Caption="Amount">
+                                            <EditSettings><DxSpinEditSettings ShowSpinButtons="false" /></EditSettings>
+                                        </DxGridDataColumn>
+                                        <DxGridDataColumn FieldName="Remarks" Caption="Remarks" Width="200px" />
+                                    </Columns>
+                                </DxGrid>
+                            </div>
+                        </DxTabPage>
+
+                        <!-- ── Diesel ── -->
+                        <DxTabPage Text="Diesel">
+                            <div class="lr-tab-body">
+                                <DxGrid Data="@DieselRows"
+                                        TItem="LRJournalRowVM"
+                                        @ref="DieselGrid"
+                                        KeyFieldName="Sno"
+                                        EditMode="GridEditMode.EditCell"
+                                        EditModelSaving="Diesel_EditModelSaving"
+                                        CustomizeEditModel="Diesel_Customize">
+                                    <Columns>
+                                        <DxGridCommandColumn Width="80px"
+                                                             EditButtonVisible="false"
+                                                             FixedPosition="GridColumnFixedPosition.Left"
+                                                             CancelButtonVisible="false"
+                                                             SaveButtonVisible="false"
+                                                             NewButtonVisible="false">
+                                            <HeaderCaptionTemplate Context="ctx">
+                                                <DxButton IconCssClass="bi bi-plus-circle-dotted"
+                                                          RenderStyle="ButtonRenderStyle.Link"
+                                                          Click="@AddNewDiesel" style="padding:1px" />
+                                                <DxButton IconCssClass="bi bi-arrow-clockwise"
+                                                          RenderStyle="ButtonRenderStyle.Link"
+                                                          Click="@RevertDieselGrid" style="padding:1px" />
+                                            </HeaderCaptionTemplate>
+                                            <CellEditTemplate Context="editCtx">
+                                                <DxButton Enabled="false" IconCssClass="bi bi-trash" RenderStyle="ButtonRenderStyle.Link" />
+                                            </CellEditTemplate>
+                                            <CellDisplayTemplate Context="dispCtx">
+                                                @{
+                                                    var row = (LRJournalRowVM)dispCtx.DataItem;
+                                                }
+                                                <DxButton IconCssClass="bi bi-trash"
+                                                          RenderStyle="ButtonRenderStyle.Link"
+                                                          Click="@(() => DeleteDieselRow(row))" />
+                                            </CellDisplayTemplate>
+                                        </DxGridCommandColumn>
+                                        <DxGridDataColumn FieldName="Sno" Caption="Sr No" Width="70px" ReadOnly="true" />
+                                        <DxGridDataColumn FieldName="JournalDate" Caption="Date">
+                                            <EditSettings><DxDateEditSettings /></EditSettings>
+                                        </DxGridDataColumn>
+                                        <DxGridDataColumn FieldName="PumpBillId" Caption="Petrol Pump">
+                                            <EditSettings>
+                                                <DxComboBoxSettings Data="@PumpList"
+                                                                    TextFieldName="AccountName"
+                                                                    ValueFieldName="AccountId"
+                                                                    SearchMode="ListSearchMode.AutoSearch"
+                                                                    SearchFilterCondition="ListSearchFilterCondition.Contains" />
+                                            </EditSettings>
+                                        </DxGridDataColumn>
+                                        <DxGridDataColumn FieldName="UreaRate" Caption="Rate">
+                                            <EditSettings><DxSpinEditSettings ShowSpinButtons="false" /></EditSettings>
+                                        </DxGridDataColumn>
+                                        <DxGridDataColumn FieldName="UreaQty" Caption="Ltr">
+                                            <EditSettings><DxSpinEditSettings ShowSpinButtons="false" /></EditSettings>
+                                        </DxGridDataColumn>
+                                        <DxGridDataColumn FieldName="UreaAmount" Caption="Amount">
+                                            <EditSettings><DxSpinEditSettings ShowSpinButtons="false" /></EditSettings>
                                         </DxGridDataColumn>
                                     </Columns>
                                 </DxGrid>
-                            }
-                            else
-                            {
-                                <div style="text-align:center;padding:20px;color:var(--clr-muted);">
-                                    <i class="bi bi-folder-x" style="font-size:2rem;display:block;margin-bottom:8px;"></i>
-                                    <span>No documents uploaded yet</span>
+                            </div>
+                        </DxTabPage>
+
+                        <!-- ── Charges ── -->
+                        <DxTabPage Text="Charges">
+                            <div class="lr-tab-body">
+                                <DxGrid Data="@ChargesRows"
+                                        TItem="LRJournalRowVM"
+                                        @ref="ChargesGrid"
+                                        KeyFieldName="Sno"
+                                        EditMode="GridEditMode.EditCell"
+                                        EditModelSaving="Charges_EditModelSaving"
+                                        CustomizeEditModel="Charges_Customize">
+                                    <Columns>
+                                        <DxGridCommandColumn Width="80px"
+                                                             EditButtonVisible="false"
+                                                             FixedPosition="GridColumnFixedPosition.Left"
+                                                             CancelButtonVisible="false"
+                                                             SaveButtonVisible="false"
+                                                             NewButtonVisible="false">
+                                            <HeaderCaptionTemplate Context="ctx">
+                                                <DxButton IconCssClass="bi bi-plus-circle-dotted"
+                                                          RenderStyle="ButtonRenderStyle.Link"
+                                                          Click="@AddNewCharges" style="padding:1px" />
+                                                <DxButton IconCssClass="bi bi-arrow-clockwise"
+                                                          RenderStyle="ButtonRenderStyle.Link"
+                                                          Click="@RevertChargesGrid" style="padding:1px" />
+                                            </HeaderCaptionTemplate>
+                                            <CellEditTemplate Context="editCtx">
+                                                <DxButton Enabled="false" IconCssClass="bi bi-trash" RenderStyle="ButtonRenderStyle.Link" />
+                                            </CellEditTemplate>
+                                            <CellDisplayTemplate Context="dispCtx">
+                                                @{
+                                                    var row = (LRJournalRowVM)dispCtx.DataItem;
+                                                }
+                                                <DxButton IconCssClass="bi bi-trash"
+                                                          RenderStyle="ButtonRenderStyle.Link"
+                                                          Click="@(() => DeleteChargesRow(row))" />
+                                            </CellDisplayTemplate>
+                                        </DxGridCommandColumn>
+                                        <DxGridDataColumn FieldName="Sno" Caption="Sr No" Width="70px" ReadOnly="true" />
+                                        <DxGridDataColumn FieldName="JournalDate" Caption="Date">
+                                            <EditSettings><DxDateEditSettings /></EditSettings>
+                                        </DxGridDataColumn>
+                                        <DxGridDataColumn FieldName="AccountId" Caption="Account" Width="200px">
+                                            <EditSettings>
+                                                <DxComboBoxSettings Data="@BankCashList"
+                                                                    TextFieldName="AccountName"
+                                                                    ValueFieldName="AccountId"
+                                                                    SearchMode="ListSearchMode.AutoSearch"
+                                                                    SearchFilterCondition="ListSearchFilterCondition.Contains" />
+                                            </EditSettings>
+                                        </DxGridDataColumn>
+                                        <DxGridDataColumn FieldName="Amount" Caption="Amount">
+                                            <EditSettings><DxSpinEditSettings ShowSpinButtons="false" /></EditSettings>
+                                        </DxGridDataColumn>
+                                        <DxGridDataColumn FieldName="Remarks" Caption="Remarks" Width="200px" />
+                                    </Columns>
+                                </DxGrid>
+                            </div>
+                        </DxTabPage>
+
+                        <!-- ── Expense ── -->
+                        <DxTabPage Text="Expense">
+                            <div class="lr-tab-body">
+                                <DxGrid Data="@ExpenseRows"
+                                        TItem="LRJournalRowVM"
+                                        @ref="ExpenseGrid"
+                                        KeyFieldName="Sno"
+                                        EditMode="GridEditMode.EditCell"
+                                        EditModelSaving="Expense_EditModelSaving"
+                                        CustomizeEditModel="Expense_Customize">
+                                    <Columns>
+                                        <DxGridCommandColumn Width="80px"
+                                                             EditButtonVisible="false"
+                                                             FixedPosition="GridColumnFixedPosition.Left"
+                                                             CancelButtonVisible="false"
+                                                             SaveButtonVisible="false"
+                                                             NewButtonVisible="false">
+                                            <HeaderCaptionTemplate Context="ctx">
+                                                <DxButton IconCssClass="bi bi-plus-circle-dotted"
+                                                          RenderStyle="ButtonRenderStyle.Link"
+                                                          Click="@AddNewExpense" style="padding:1px" />
+                                                <DxButton IconCssClass="bi bi-arrow-clockwise"
+                                                          RenderStyle="ButtonRenderStyle.Link"
+                                                          Click="@RevertExpenseGrid" style="padding:1px" />
+                                            </HeaderCaptionTemplate>
+                                            <CellEditTemplate Context="editCtx">
+                                                <DxButton Enabled="false" IconCssClass="bi bi-trash" RenderStyle="ButtonRenderStyle.Link" />
+                                            </CellEditTemplate>
+                                            <CellDisplayTemplate Context="dispCtx">
+                                                @{
+                                                    var row = (LRJournalRowVM)dispCtx.DataItem;
+                                                }
+                                                <DxButton IconCssClass="bi bi-trash"
+                                                          RenderStyle="ButtonRenderStyle.Link"
+                                                          Click="@(() => DeleteExpenseRow(row))" />
+                                            </CellDisplayTemplate>
+                                        </DxGridCommandColumn>
+                                        <DxGridDataColumn FieldName="Sno" Caption="Sr No" Width="70px" ReadOnly="true" />
+                                        <DxGridDataColumn FieldName="JournalDate" Caption="Date">
+                                            <EditSettings><DxDateEditSettings /></EditSettings>
+                                        </DxGridDataColumn>
+                                        <DxGridDataColumn FieldName="AccountId" Caption="Account" Width="200px">
+                                            <EditSettings>
+                                                <DxComboBoxSettings Data="@BankCashList"
+                                                                    TextFieldName="AccountName"
+                                                                    ValueFieldName="AccountId"
+                                                                    SearchMode="ListSearchMode.AutoSearch"
+                                                                    SearchFilterCondition="ListSearchFilterCondition.Contains" />
+                                            </EditSettings>
+                                        </DxGridDataColumn>
+                                        <DxGridDataColumn FieldName="Amount" Caption="Amount">
+                                            <EditSettings><DxSpinEditSettings ShowSpinButtons="false" /></EditSettings>
+                                        </DxGridDataColumn>
+                                        <DxGridDataColumn FieldName="Remarks" Caption="Remarks" Width="200px" />
+                                    </Columns>
+                                </DxGrid>
+                            </div>
+                        </DxTabPage>
+
+                        <!-- ── AdvanceReceived ── -->
+                        <DxTabPage Text="Advance Received">
+                            <div class="lr-tab-body">
+                                <DxGrid Data="@AdvanceReceivedRows"
+                                        TItem="LRJournalRowVM"
+                                        @ref="AdvanceReceivedGrid"
+                                        KeyFieldName="Sno"
+                                        EditMode="GridEditMode.EditCell"
+                                        EditModelSaving="AdvanceReceived_EditModelSaving"
+                                        CustomizeEditModel="AdvanceReceived_Customize">
+                                    <Columns>
+                                        <DxGridCommandColumn Width="80px"
+                                                             EditButtonVisible="false"
+                                                             FixedPosition="GridColumnFixedPosition.Left"
+                                                             CancelButtonVisible="false"
+                                                             SaveButtonVisible="false"
+                                                             NewButtonVisible="false">
+                                            <HeaderCaptionTemplate Context="ctx">
+                                                <DxButton IconCssClass="bi bi-plus-circle-dotted"
+                                                          RenderStyle="ButtonRenderStyle.Link"
+                                                          Click="@AddNewAdvanceReceived" style="padding:1px" />
+                                                <DxButton IconCssClass="bi bi-arrow-clockwise"
+                                                          RenderStyle="ButtonRenderStyle.Link"
+                                                          Click="@RevertAdvanceReceivedGrid" style="padding:1px" />
+                                            </HeaderCaptionTemplate>
+                                            <CellEditTemplate Context="editCtx">
+                                                <DxButton Enabled="false" IconCssClass="bi bi-trash" RenderStyle="ButtonRenderStyle.Link" />
+                                            </CellEditTemplate>
+                                            <CellDisplayTemplate Context="dispCtx">
+                                                @{
+                                                    var row = (LRJournalRowVM)dispCtx.DataItem;
+                                                }
+                                                <DxButton IconCssClass="bi bi-trash"
+                                                          RenderStyle="ButtonRenderStyle.Link"
+                                                          Click="@(() => DeleteAdvanceReceivedRow(row))" />
+                                            </CellDisplayTemplate>
+                                        </DxGridCommandColumn>
+                                        <DxGridDataColumn FieldName="Sno" Caption="Sr No" Width="70px" ReadOnly="true" />
+                                        <DxGridDataColumn FieldName="JournalDate" Caption="Date">
+                                            <EditSettings><DxDateEditSettings /></EditSettings>
+                                        </DxGridDataColumn>
+                                        <DxGridDataColumn FieldName="AccountId" Caption="Account" Width="200px">
+                                            <EditSettings>
+                                                <DxComboBoxSettings Data="@accountpartylist"
+                                                                    TextFieldName="AccountName"
+                                                                    ValueFieldName="AccountId"
+                                                                    SearchMode="ListSearchMode.AutoSearch"
+                                                                    SearchFilterCondition="ListSearchFilterCondition.Contains" />
+                                            </EditSettings>
+                                        </DxGridDataColumn>
+                                        <DxGridDataColumn FieldName="Amount" Caption="Amount">
+                                            <EditSettings><DxSpinEditSettings ShowSpinButtons="false" /></EditSettings>
+                                        </DxGridDataColumn>
+                                        <DxGridDataColumn FieldName="UreaQty" Caption="Qty (Diesel)">
+                                            <EditSettings><DxSpinEditSettings ShowSpinButtons="false" /></EditSettings>
+                                        </DxGridDataColumn>
+                                        <DxGridDataColumn FieldName="Remarks" Caption="Remarks" Width="200px" />
+                                    </Columns>
+                                </DxGrid>
+                            </div>
+                        </DxTabPage>
+
+                        <!-- ── Documents ── -->
+                        <DxTabPage Text="Documents">
+                            <div class="lr-tab-body">
+                                <div style="margin-bottom:12px;">
+                                    <DxButton Text="Upload Documents"
+                                              IconCssClass="bi bi-upload"
+                                              RenderStyle="ButtonRenderStyle.Primary"
+                                              Click="OpenUploadPopup" />
                                 </div>
-                            }
-                        </div>
-                    </DxTabPage>
+                                @if (UploadedDocs?.Any() == true)
+                                {
+                                    <DxGrid Data="@UploadedDocs" ShowBorders="true" PageSize="5" ShowFilterRow="true">
+                                        <Columns>
+                                            <DxGridDataColumn FieldName="FileName" Caption="Document" MinWidth="200" />
+                                            <DxGridDataColumn FieldName="FileSize" Caption="Size (KB)" Width="100px" TextAlignment="GridTextAlignment.Right" />
+                                            <DxGridDataColumn Caption="Actions" Width="120px" AllowSort="false" >
+                                               <CellDisplayTemplate Context="doc">
+                                            <DxButton IconCssClass="bi bi-eye"
+                                                      RenderStyle="ButtonRenderStyle.Secondary"
+                                                      
+                                                      Click="@(async () => await PreviewDoc((UploadedFileInfo)doc.DataItem))" />
 
-                    <!-- ── Policy Details ── -->
-                    <DxTabPage Text="Policy Details">
-                        <div class="lr-tab-body">
-                            <p style="color:var(--clr-muted);font-size:.9rem;">No policy details available</p>
-                        </div>
-                    </DxTabPage>
+                                            <DxButton IconCssClass="bi bi-trash text-danger"
+                                                      RenderStyle="ButtonRenderStyle.Secondary"
+                                                      CssClass="ms-2"
+                                                      Click="@(() => DeleteDoc((UploadedFileInfo)doc.DataItem))" />
+                                        </CellDisplayTemplate>
+                                            </DxGridDataColumn>
+                                        </Columns>
+                                    </DxGrid>
+                                }
+                                else
+                                {
+                                    <div style="text-align:center;padding:20px;color:var(--clr-muted);">
+                                        <i class="bi bi-folder-x" style="font-size:2rem;display:block;margin-bottom:8px;"></i>
+                                        <span>No documents uploaded yet</span>
+                                    </div>
+                                }
+                            </div>
+                        </DxTabPage>
 
-                    <!-- ── Other Details ── -->
- <DxTabPage Text="Other Details">
-    <div class="lr-tab-body">
-        <div class="km-group">
+                        <!-- ── Policy Details ── -->
+                        <DxTabPage Text="Policy Details">
+                            <div class="lr-tab-body">
+                                <p style="color:var(--clr-muted);font-size:.9rem;">No policy details available</p>
+                            </div>
+                        </DxTabPage>
 
-            <div class="field-group">
-                <label>Start KM</label>
-                <DxSpinEdit TValue="decimal?"
-                            @bind-Value="StartKm"
-                            ShowSpinButtons="false" />
-            </div>
+                        <!-- ── Other Details ── -->
+                        <DxTabPage Text="Other Details">
+                            <div class="lr-tab-body">
+                                <div class="km-group">
 
-            <div class="field-group">
-                <label>End KM</label>
-                <DxSpinEdit TValue="decimal?"
-                            @bind-Value="EndKm"
-                            ShowSpinButtons="false" />
-            </div>
+                                    <div class="field-group">
+                                        <label>Start KM</label>
+                                        <DxSpinEdit TValue="decimal?"
+                                                    @bind-Value="StartKm"
+                                                    ShowSpinButtons="false" />
+                                    </div>
 
-            <div class="field-group">
-                <label>Total KM</label>
-                <DxSpinEdit TValue="decimal?"
-                            @bind-Value="TotKm"
-                            ReadOnly="true"
-                            ShowSpinButtons="false" />
-            </div>
+                                    <div class="field-group">
+                                        <label>End KM</label>
+                                        <DxSpinEdit TValue="decimal?"
+                                                    @bind-Value="EndKm"
+                                                    ShowSpinButtons="false" />
+                                    </div>
+
+                                    <div class="field-group">
+                                        <label>Total KM</label>
+                                        <DxSpinEdit TValue="decimal?"
+                                                    @bind-Value="TotKm"
+                                                    ReadOnly="true"
+                                                    ShowSpinButtons="false" />
+                                    </div>
+
+                                </div>
+                            </div>
+                        </DxTabPage>
+                    </DxTabs>
+                </div>
+
+                <!-- ══ FOOTER ══ -->
+                <div class="lr-footer">
+                    <div class="lr-footer-meta">
+                        @if (IsEditMode)
+                        {
+                            <span>Editing: </span>
+                        }
+                        LR No: <strong>@(string.IsNullOrWhiteSpace(model.LrNoStr) ? "—" : model.LrNoStr)</strong>
+                        &nbsp;|&nbsp;
+                        Date: <strong>@(model.LrDate.HasValue? model.LrDate.Value.ToString("dd MMM yyyy") : "—")</strong>
+                    </div>
+                    <button type="button" class="btn-back" style="margin-right:8px;" @onclick="GoBack">Cancel</button>
+                    <button type="submit" class="btn-save">✓ @(IsEditMode ? "Update LR" : "Save LR")</button>
+                </div>
+
+            </EditForm>
 
         </div>
-    </div>
-</DxTabPage>
-                </DxTabs>
-            </div>
-
-            <!-- ══ FOOTER ══ -->
-            <div class="lr-footer">
-                <div class="lr-footer-meta">
-                    LR No: <strong>@(string.IsNullOrWhiteSpace(model.LrNoStr) ? "—" : model.LrNoStr)</strong>
-                    &nbsp;|&nbsp;
-                    Date: <strong>@(model.LrDate.HasValue? model.LrDate.Value.ToString("dd MMM yyyy") : "—")</strong>
-                </div>
-                <button type="submit" class="btn-save">✓ Save LR</button>
-            </div>
-
-        </EditForm>
-
-    </div>
+    }
 </div>
 
 <FileUploadpopup IsVisible="@IsUploadPopupVisible"
@@ -1196,10 +1230,15 @@
 
 @code {
 
-    // ─────────────────────────────────────────────────────────────────
-    // LrProductRow  (UI-only view model for the Products grid)
-    // ─────────────────────────────────────────────────────────────────
+    // ── Route Parameter ───────────────────────────────────────────────
+    [Parameter] public int? LrId { get; set; }
 
+    private bool IsEditMode => LrId.HasValue && LrId.Value > 0;
+    private bool IsLoading = false;
+
+    // ─────────────────────────────────────────────────────────────────
+    // LrProductRow
+    // ─────────────────────────────────────────────────────────────────
     public class LrProductRow
     {
         public int SrNo { get; set; }
@@ -1207,7 +1246,6 @@
         public int ProductId { get; set; }
         public string? NtUnit { get; set; }
         public string? LrBillTypeBill { get; set; }
-
         public double? GrossWt { get; set; }
         public double? TareWt { get; set; }
         public decimal? NetWt { get; set; }
@@ -1223,38 +1261,28 @@
     }
 
     // ─────────────────────────────────────────────────────────────────
-    // LRJournalRowVM  (UI-only view model for all journal grids)
+    // LRJournalRowVM
     // ─────────────────────────────────────────────────────────────────
-
     public class LRJournalRowVM
     {
         public Guid RowId { get; set; } = Guid.NewGuid();
-
-        // Common
         public int Sno { get; set; }
         public DateTime JournalDate { get; set; }
         public int? AccountId { get; set; }
-        public decimal? Amount { get; set; }   // ✅ changed
+        public decimal? Amount { get; set; }
         public string? Remarks { get; set; }
-
-        // Diesel-specific
         public int? PumpBillId { get; set; }
-        public decimal? UreaRate { get; set; }     // ✅ changed
-        public decimal? UreaQty { get; set; }      // ✅ changed
-        public decimal? UreaAmount { get; set; }   // ✅ changed
-
-        // Optional
-        public decimal? Rate { get; set; }     // ✅ changed
-        public decimal? Qty { get; set; }      // ✅ changed
+        public decimal? UreaRate { get; set; }
+        public decimal? UreaQty { get; set; }
+        public decimal? UreaAmount { get; set; }
+        public decimal? Rate { get; set; }
+        public decimal? Qty { get; set; }
         public string? SlipNo { get; set; }
-
-        // Backend tagging
         public string? JournalGroup { get; set; }
         public string? VchType { get; set; }
     }
 
     // ── Model & Lists ─────────────────────────────────────────────────
-
     private Lr model = new();
 
     private List<Notify> notifylist = new();
@@ -1297,38 +1325,146 @@
     {
         InitializeAllGridRows();
 
-        var notifyTask = NotifyService.GetAllAsync();
-        var locationTask = LocationService.GetAllAsync();
-        var accountTask = AccountService.GetAllAsync();
-        var payTypeTask = PayTypeService.GetAllAsync();
-        var cargoTask = CargoService.GetAllAsync();
+        var notifyTask    = NotifyService.GetAllAsync();
+        var locationTask  = LocationService.GetAllAsync();
+        var accountTask   = AccountService.GetAllAsync();
+        var payTypeTask   = PayTypeService.GetAllAsync();
+        var cargoTask     = CargoService.GetAllAsync();
 
         await Task.WhenAll(notifyTask, locationTask, accountTask, payTypeTask, cargoTask);
 
-        notifylist = notifyTask.Result;
-        paytypeList = payTypeTask.Result;
-        ProductList = cargoTask.Result;
-        LocationList = locationTask.Result;
-
-        StationLocationList = LocationList.Where(x => x.LocationType == "STATION").ToList();
-
-        accountpartylist = accountTask.Result;
-        accountSupplierlist = accountpartylist.Where(x => x.AccountTypeId == 14).ToList();
-        DriverList = accountpartylist.Where(x => x.AccountTypeId == 16).ToList();
-        PumpList = accountpartylist.Where(x => x.AccountTypeId == 12).ToList();
-        ChargesList = accountpartylist.Where(x => x.AccountTypeId == 20).ToList();
-        ExpenseAccountList = accountpartylist.Where(x => x.AccountTypeId == 19).ToList();
-        BankCashList = accountpartylist
+        notifylist           = notifyTask.Result;
+        paytypeList          = payTypeTask.Result;
+        ProductList          = cargoTask.Result;
+        LocationList         = locationTask.Result;
+        StationLocationList  = LocationList.Where(x => x.LocationType == "STATION").ToList();
+        accountpartylist     = accountTask.Result;
+        accountSupplierlist  = accountpartylist.Where(x => x.AccountTypeId == 14).ToList();
+        DriverList           = accountpartylist.Where(x => x.AccountTypeId == 16).ToList();
+        PumpList             = accountpartylist.Where(x => x.AccountTypeId == 12).ToList();
+        ChargesList          = accountpartylist.Where(x => x.AccountTypeId == 20).ToList();
+        ExpenseAccountList   = accountpartylist.Where(x => x.AccountTypeId == 19).ToList();
+        BankCashList         = accountpartylist
             .Where(x => x.AccountTypeId == 10 || x.AccountTypeId == 11).ToList();
+
+        // Load existing LR if editing
+        if (IsEditMode)
+            await LoadLrForEdit(LrId!.Value);
     }
+
+    // ── Load for Edit ─────────────────────────────────────────────────
+    private async Task LoadLrForEdit(int lrId)
+    {
+        IsLoading = true;
+        StateHasChanged();
+        try
+        {
+            // GetEntryAsync returns LrEntryDto { Main, Details, Journals }
+            var dto = await LrApiService.GetEntryAsync(lrId);
+            if (dto == null) return;
+
+            model = dto.Main ?? new Lr();
+
+            // ── Map Details → ProductRows ─────────────────────────────
+            if (dto.Details?.Any() == true)
+            {
+                ProductRows = dto.Details.Select((d, i) => new LrProductRow
+                {
+                    SrNo           = i + 1,
+                    ProductId      = d.LrDetailProductId ?? 0,
+                    ProductName    = d.LrDetailCargoName,
+                    NtUnit         = d.LrDetailUnit,
+                    LrBillTypeBill = d.LrDetailBillType,
+                    GrossWt        = d.LrDetailGrossWt.HasValue        ? (double?)Convert.ToDouble(d.LrDetailGrossWt)        : null,
+                    TareWt         = d.LrDetailTareWt.HasValue         ? (double?)Convert.ToDouble(d.LrDetailTareWt)         : null,
+                    NetWt          = d.LrDetailNetWt,
+                    LoadWt         = d.LrDetailLoadWt.HasValue         ? (double?)Convert.ToDouble(d.LrDetailLoadWt)         : null,
+                    UnLoadWt       = d.LrDetailUnloadWt.HasValue       ? (double?)Convert.ToDouble(d.LrDetailUnloadWt)       : null,
+                    ChargeQty      = d.LrDetailChargeQty.HasValue      ? (double?)Convert.ToDouble(d.LrDetailChargeQty)      : null,
+                    RateBill       = d.LrDetailBillRate.HasValue       ? (double?)Convert.ToDouble(d.LrDetailBillRate)       : null,
+                    GrossFreight   = d.LrDetailGrossFreight.HasValue   ? (double?)Convert.ToDouble(d.LrDetailGrossFreight)   : null,
+                    TotalBags      = d.LrDetailTotalBags.HasValue      ? (decimal?)d.LrDetailTotalBags                       : null,
+                    InvoiceNo      = d.LrDetailInvoiceNo,
+                }).ToList();
+
+                // Pad to minimum 5 rows
+                while (ProductRows.Count < 5)
+                    ProductRows.Add(new LrProductRow { SrNo = ProductRows.Count + 1 });
+            }
+
+            // ── Map Journals → grid lists ─────────────────────────────
+            var journals = dto.Journals ?? new List<LRJournal>();
+
+            AdvanceRows         = MapJournals(journals, LrJournalGroup.Advance,     LrJournalVchType.Payment);
+            DieselRows          = MapJournals(journals, LrJournalGroup.Diesel,  LrJournalVchType.Payment);
+            ChargesRows         = MapJournals(journals, LrJournalGroup.Charges,     LrJournalVchType.Payment);
+            ExpenseRows         = MapJournals(journals, LrJournalGroup.Expense,    LrJournalVchType.Payment);
+            AdvanceReceivedRows = MapJournals(journals, LrJournalGroup.AdvanceReceived,     LrJournalVchType.Receipt);
+
+            EnsureMinRows(AdvanceRows,         LrJournalGroup.Advance,     LrJournalVchType.Payment);
+            EnsureMinRows(DieselRows,          LrJournalGroup.Diesel,  LrJournalVchType.Payment);
+            EnsureMinRows(ChargesRows,         LrJournalGroup.Charges,     LrJournalVchType.Payment);
+            EnsureMinRows(ExpenseRows,         LrJournalGroup.Expense,    LrJournalVchType.Payment);
+            EnsureMinRows(AdvanceReceivedRows, LrJournalGroup.AdvanceReceived,     LrJournalVchType.Receipt);
+
+            await LoadDocumentsAsync();
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Failed to load LR: {ex.Message}");
+        }
+        finally
+        {
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private List<LRJournalRowVM> MapJournals(
+        List<LRJournal> journals, LrJournalGroup group, LrJournalVchType vchType)
+    {
+        return journals
+            .Where(j => j.JournalGroup == group && j.VchType == vchType)
+            .Select((j, i) => new LRJournalRowVM
+            {
+                Sno          = i + 1,
+                JournalDate  = j.JournalDate ?? DateTime.Now,   // fix DateTime? → DateTime
+                AccountId    = j.AccountId,
+                Amount       = j.Amount    != null ? (decimal?)Convert.ToDecimal(j.Amount)    : null,
+                Remarks      = j.Remarks,
+                PumpBillId   = j.PumpBillId,
+                UreaRate     = j.UreaRate  != null ? (decimal?)Convert.ToDecimal(j.UreaRate)  : null,
+                UreaQty      = j.UreaQty   != null ? (decimal?)Convert.ToDecimal(j.UreaQty)   : null,
+                UreaAmount   = j.UreaAmount != null ? (decimal?)Convert.ToDecimal(j.UreaAmount) : null,
+                JournalGroup = group.ToString(),
+                VchType      = vchType.ToString(),
+            }).ToList();
+    }
+
+    private void EnsureMinRows(List<LRJournalRowVM> list,
+        LrJournalGroup group, LrJournalVchType vchType, int min = 5)
+    {
+        int start = list.Count;
+        while (list.Count < min)
+            list.Add(new LRJournalRowVM
+            {
+                Sno          = ++start,
+                JournalDate  = DateTime.Now,
+                JournalGroup = group.ToString(),
+                VchType      = vchType.ToString()
+            });
+    }
+
+    // ── Navigation ────────────────────────────────────────────────────
+    private void GoBack() => NavManager.NavigateTo("/lrlist");
 
     // ── Consignor / Consignee ─────────────────────────────────────────
     private void OnConsignorChanged(int? notifyId)
     {
         model.LrConsignorNotifyId = notifyId;
         ApplyNotify(notifyId,
-            addr => model.LrConsignorNotifyAddress = addr,
-            gst => model.LrConsignorNotifyGst = gst,
+            addr  => model.LrConsignorNotifyAddress = addr,
+            gst   => model.LrConsignorNotifyGst = gst,
             state => model.LrConsignorNotifyState = state);
     }
 
@@ -1336,8 +1472,8 @@
     {
         model.LrConsigneeNotifyId = notifyId;
         ApplyNotify(notifyId,
-            addr => model.LrConsigneeNotifyAddress = addr,
-            gst => model.LrConsigneeNotifyGst = gst,
+            addr  => model.LrConsigneeNotifyAddress = addr,
+            gst   => model.LrConsigneeNotifyGst = gst,
             state => model.LrConsigneeNotifyState = state);
     }
 
@@ -1360,22 +1496,21 @@
     DxGrid AdvanceReceivedGrid;
 
     // ── Grid Row Lists ────────────────────────────────────────────────
-    private List<LrProductRow> ProductRows = new();
-    private List<LRJournalRowVM> AdvanceRows = new();
-    private List<LRJournalRowVM> DieselRows = new();
-    private List<LRJournalRowVM> ChargesRows = new();
-    private List<LRJournalRowVM> ExpenseRows = new();
-    private List<LRJournalRowVM> AdvanceReceivedRows = new();
+    private List<LrProductRow>    ProductRows          = new();
+    private List<LRJournalRowVM>  AdvanceRows          = new();
+    private List<LRJournalRowVM>  DieselRows           = new();
+    private List<LRJournalRowVM>  ChargesRows          = new();
+    private List<LRJournalRowVM>  ExpenseRows          = new();
+    private List<LRJournalRowVM>  AdvanceReceivedRows  = new();
 
     private void InitializeAllGridRows()
     {
         if (!ProductRows.Any()) ProductRows = CreateProductRows(5);
-
-        AdvanceRows = CreateJournalRows(LrJournalGroup.Advance, LrJournalVchType.Payment, 5);
-        DieselRows = CreateJournalRows(LrJournalGroup.AdvanceFuel, LrJournalVchType.Payment, 5);
-        ChargesRows = CreateJournalRows(LrJournalGroup.Charges, LrJournalVchType.Payment, 5);
-        ExpenseRows = CreateJournalRows(LrJournalGroup.Payments, LrJournalVchType.Payment, 5);
-        AdvanceReceivedRows = CreateJournalRows(LrJournalGroup.Advance, LrJournalVchType.Receipt, 5);
+        AdvanceRows         = CreateJournalRows(LrJournalGroup.Advance,      LrJournalVchType.Payment, 5);
+        DieselRows          = CreateJournalRows(LrJournalGroup.Diesel,  LrJournalVchType.Payment, 5);
+        ChargesRows         = CreateJournalRows(LrJournalGroup.Charges,      LrJournalVchType.Payment, 5);
+        ExpenseRows         = CreateJournalRows(LrJournalGroup.Expense,     LrJournalVchType.Payment, 5);
+        AdvanceReceivedRows = CreateJournalRows(LrJournalGroup.AdvanceReceived,      LrJournalVchType.Receipt, 5);
     }
 
     private List<LrProductRow> CreateProductRows(int count = 5)
@@ -1393,15 +1528,14 @@
         for (int i = 1; i <= count; i++)
             list.Add(new LRJournalRowVM
             {
-                Sno = i,
-                JournalDate = DateTime.Now,
+                Sno          = i,
+                JournalDate  = DateTime.Now,
                 JournalGroup = group.ToString(),
-                VchType = vchType.ToString()
+                VchType      = vchType.ToString()
             });
         return list;
     }
 
-    // ── Renumber helpers ──────────────────────────────────────────────
     private void RenumberJournal(List<LRJournalRowVM> list)
     {
         for (int i = 0; i < list.Count; i++) list[i].Sno = i + 1;
@@ -1412,21 +1546,14 @@
     }
 
     // ══════════════════════════════════════════════════════════════════
-    // MAPPING HELPERS — UI view models → domain entities
+    // MAPPING HELPERS
     // ══════════════════════════════════════════════════════════════════
-
-    /// <summary>
-    /// Maps every non-empty ProductRow to an LRDetail entity.
-    /// Also updates the Lr main model's summary fields from the first row.
-    /// </summary>
     private List<LRDetail> BuildDetails()
     {
         var details = new List<LRDetail>();
         int srNo = 1;
-
         foreach (var row in ProductRows)
         {
-            // Skip completely blank rows
             if (row.ProductId == 0 &&
                 string.IsNullOrWhiteSpace(row.NtUnit) &&
                 row.GrossWt is null && row.TareWt is null)
@@ -1434,45 +1561,36 @@
 
             details.Add(new LRDetail
             {
-                LrDetailSrNo = srNo++,
-                LrDetailsLrId = model.LrId,                         // 0 for new; server will fill
-                LrDetailProductId = row.ProductId,
-                LrDetailUnit = row.NtUnit,
-                LrDetailBillType = row.LrBillTypeBill,
-                LrDetailGrossWt = row.GrossWt.HasValue ? (decimal?)Convert.ToDecimal(row.GrossWt) : null,
-                LrDetailTareWt = row.TareWt.HasValue ? (decimal?)Convert.ToDecimal(row.TareWt) : null,
-                LrDetailNetWt = row.NetWt,                          // already decimal?
-                LrDetailLoadWt = row.LoadWt.HasValue ? (decimal?)Convert.ToDecimal(row.LoadWt) : null,
-                LrDetailUnloadWt = row.UnLoadWt.HasValue ? (decimal?)Convert.ToDecimal(row.UnLoadWt) : null,
-                LrDetailChargeQty = row.ChargeQty.HasValue ? (decimal?)Convert.ToDecimal(row.ChargeQty) : null,
-                LrDetailBillRate = row.RateBill.HasValue ? (decimal?)Convert.ToDecimal(row.RateBill) : null,
-                LrDetailGrossFreight = row.GrossFreight.HasValue ? (decimal?)Convert.ToDecimal(row.GrossFreight) : null,
-                LrDetailTotalBags = row.TotalBags.HasValue ? (int?)Convert.ToInt32(row.TotalBags) : null,
-                LrDetailCargoName = row.ProductName,
-                LrDetailInvoiceNo = row.InvoiceNo,
+                LrDetailSrNo        = srNo++,
+                LrDetailsLrId       = model.LrId,
+                LrDetailProductId   = row.ProductId,
+                LrDetailUnit        = row.NtUnit,
+                LrDetailBillType    = row.LrBillTypeBill,
+                LrDetailGrossWt     = row.GrossWt.HasValue   ? (decimal?)Convert.ToDecimal(row.GrossWt)   : null,
+                LrDetailTareWt      = row.TareWt.HasValue    ? (decimal?)Convert.ToDecimal(row.TareWt)    : null,
+                LrDetailNetWt       = row.NetWt,
+                LrDetailLoadWt      = row.LoadWt.HasValue    ? (decimal?)Convert.ToDecimal(row.LoadWt)    : null,
+                LrDetailUnloadWt    = row.UnLoadWt.HasValue  ? (decimal?)Convert.ToDecimal(row.UnLoadWt)  : null,
+                LrDetailChargeQty   = row.ChargeQty.HasValue ? (decimal?)Convert.ToDecimal(row.ChargeQty) : null,
+                LrDetailBillRate    = row.RateBill.HasValue  ? (decimal?)Convert.ToDecimal(row.RateBill)  : null,
+                LrDetailGrossFreight= row.GrossFreight.HasValue ? (decimal?)Convert.ToDecimal(row.GrossFreight) : null,
+                LrDetailTotalBags   = row.TotalBags.HasValue ? (int?)Convert.ToInt32(row.TotalBags)       : null,
+                LrDetailCargoName   = row.ProductName,
+                LrDetailInvoiceNo   = row.InvoiceNo,
             });
         }
-
-        // Keep Lr.main summary fields in sync with the first detail row
         ApplyProductRowsToModel();
-
         return details;
     }
 
-    /// <summary>
-    /// Maps all journal grid rows to LRJournal entities, filtering blanks.
-    /// Each group carries its own JournalGroup / VchType tag set during init/add.
-    /// </summary>
     private List<LRJournal> BuildJournals()
     {
         var journals = new List<LRJournal>();
-
         MapJournalGroup(journals, AdvanceRows);
         MapJournalGroup(journals, DieselRows);
         MapJournalGroup(journals, ChargesRows);
         MapJournalGroup(journals, ExpenseRows);
         MapJournalGroup(journals, AdvanceReceivedRows);
-
         return journals;
     }
 
@@ -1480,34 +1598,29 @@
     {
         foreach (var row in rows)
         {
-            // Skip completely blank rows (no account, no amount, no pump)
             bool hasData = (row.AccountId.HasValue && row.AccountId > 0)
                         || (row.PumpBillId.HasValue && row.PumpBillId > 0)
                         || (row.Amount.HasValue && row.Amount != 0)
                         || (row.UreaAmount.HasValue && row.UreaAmount != 0);
-
             if (!hasData) continue;
 
-            // Parse string tags back to typed enums
-            LrJournalGroup? group = Enum.TryParse<LrJournalGroup>(row.JournalGroup, out var g) ? g : (LrJournalGroup?)null;
-            LrJournalVchType? vch = Enum.TryParse<LrJournalVchType>(row.VchType, out var v) ? v : (LrJournalVchType?)null;
+            LrJournalGroup?  group = Enum.TryParse<LrJournalGroup>(row.JournalGroup,  out var g) ? g : (LrJournalGroup?)null;
+            LrJournalVchType? vch  = Enum.TryParse<LrJournalVchType>(row.VchType,     out var v) ? v : (LrJournalVchType?)null;
 
             target.Add(new LRJournal
             {
-                LrId = model.LrId,
-                Sno = row.Sno,
-                JournalDate = row.JournalDate,
-                AccountId = row.AccountId,
-                Amount = (float)row.Amount,
-                Remarks = row.Remarks,
+                LrId         = model.LrId,
+                Sno          = row.Sno,
+                JournalDate  = row.JournalDate,
+                AccountId    = row.AccountId,
+                Amount       = (float)(row.Amount ?? 0),
+                Remarks      = row.Remarks,
                 JournalGroup = group,
-                VchType = vch,
-
-                // Diesel-specific
-                PumpBillId = row.PumpBillId,
-                UreaRate = (double)row.UreaRate,
-                UreaQty = row.UreaQty.HasValue ? (float?)Convert.ToSingle(row.UreaQty) : null,
-                UreaAmount = (double)row.UreaAmount,
+                VchType      = vch,
+                PumpBillId   = row.PumpBillId,
+                UreaRate     = (double)(row.UreaRate ?? 0),
+                UreaQty      = row.UreaQty.HasValue ? (float?)Convert.ToSingle(row.UreaQty) : null,
+                UreaAmount   = (double)(row.UreaAmount ?? 0),
             });
         }
     }
@@ -1517,58 +1630,49 @@
     // ══════════════════════════════════════════════════════════════════
     void Product_CustomizeEditModel(GridCustomizeEditModelEventArgs e)
     {
-        // EditModel ko DataItem ka same reference banao
-        // Taaki CellEditTemplate mein changes turant reflect hon
         if (e.DataItem is LrProductRow original)
         {
-            // Copy current values into edit model
             var edit = (LrProductRow)e.EditModel;
-            edit.ProductId = original.ProductId;
-            edit.ProductName = original.ProductName;
-            edit.NtUnit = original.NtUnit;
+            edit.ProductId      = original.ProductId;
+            edit.ProductName    = original.ProductName;
+            edit.NtUnit         = original.NtUnit;
             edit.LrBillTypeBill = original.LrBillTypeBill;
-            edit.GrossWt = original.GrossWt;
-            edit.TareWt = original.TareWt;
-            edit.NetWt = original.NetWt;
-            edit.LoadWt = original.LoadWt;
-            edit.UnLoadWt = original.UnLoadWt;
-            edit.ChargeQty = original.ChargeQty;
-            edit.RateBill = original.RateBill;
-            edit.GrossFreight = original.GrossFreight;
-            edit.TotalBags = original.TotalBags;
-            edit.NtQty = original.NtQty;
-            edit.InvoiceNo = original.InvoiceNo;
-            edit.EwayBillNo = original.EwayBillNo;
+            edit.GrossWt        = original.GrossWt;
+            edit.TareWt         = original.TareWt;
+            edit.NetWt          = original.NetWt;
+            edit.LoadWt         = original.LoadWt;
+            edit.UnLoadWt       = original.UnLoadWt;
+            edit.ChargeQty      = original.ChargeQty;
+            edit.RateBill       = original.RateBill;
+            edit.GrossFreight   = original.GrossFreight;
+            edit.TotalBags      = original.TotalBags;
+            edit.NtQty          = original.NtQty;
+            edit.InvoiceNo      = original.InvoiceNo;
+            edit.EwayBillNo     = original.EwayBillNo;
         }
     }
+
     void Product_EditModelSaving(GridEditModelSavingEventArgs e)
     {
         var edited = (LrProductRow)e.EditModel;
-        var data = (LrProductRow)e.DataItem;
+        var data   = (LrProductRow)e.DataItem;
 
-        // Copy all editable fields
-        data.ProductId = edited.ProductId;
-        data.ProductName = edited.ProductName;
-        data.NtUnit = edited.NtUnit;
+        data.ProductId      = edited.ProductId;
+        data.ProductName    = edited.ProductName;
+        data.NtUnit         = edited.NtUnit;
         data.LrBillTypeBill = edited.LrBillTypeBill;
-        data.GrossWt = edited.GrossWt;
-        data.TareWt = edited.TareWt;
-        data.LoadWt = edited.LoadWt;
-        data.UnLoadWt = edited.UnLoadWt;
-        data.ChargeQty = edited.ChargeQty;
-        data.RateBill = edited.RateBill;
-        data.NtQty = edited.NtQty;
-        data.InvoiceNo = edited.InvoiceNo;
-        data.EwayBillNo = edited.EwayBillNo;
-        data.TotalBags = edited.TotalBags;
-
-        // Auto-calculate NetWt
-        data.NetWt = Convert.ToDecimal(data.GrossWt ?? 0)
-                   - Convert.ToDecimal(data.TareWt ?? 0);
-
-        // Auto-calculate GrossFreight based on BillType
+        data.GrossWt        = edited.GrossWt;
+        data.TareWt         = edited.TareWt;
+        data.LoadWt         = edited.LoadWt;
+        data.UnLoadWt       = edited.UnLoadWt;
+        data.ChargeQty      = edited.ChargeQty;
+        data.RateBill       = edited.RateBill;
+        data.NtQty          = edited.NtQty;
+        data.InvoiceNo      = edited.InvoiceNo;
+        data.EwayBillNo     = edited.EwayBillNo;
+        data.TotalBags      = edited.TotalBags;
+        data.NetWt          = Convert.ToDecimal(data.GrossWt ?? 0) - Convert.ToDecimal(data.TareWt ?? 0);
         RecalculateRow(data);
-
         StateHasChanged();
     }
 
@@ -1592,42 +1696,38 @@
         ProductRows = CreateProductRows(5);
     }
 
-    /// <summary>Copies first-row data into Lr.main summary fields.</summary>
     private void ApplyProductRowsToModel()
     {
         var first = ProductRows.FirstOrDefault(r =>
             r.GrossWt.HasValue || r.TareWt.HasValue || !string.IsNullOrWhiteSpace(r.ProductName));
-
         if (first is null) return;
 
-        model.LrGrossWt = first.GrossWt;
-        model.LrTareWt = first.TareWt;
-        model.LrNtNetWt = first.NetWt;
-        model.LrLoadWt = first.LoadWt ?? 0;
-        model.LrUnloadWt = first.UnLoadWt ?? 0;
-        model.LrChargeQty = first.ChargeQty ?? 0;
-        model.LrRateBill = first.RateBill ?? 0;
-        model.LrGrossFreightBill = first.GrossFreight ?? 0;
-        model.LrNtQty = first.NtQty;
-        model.LrNtUnit = first.NtUnit;
-        model.LrInvoiceNo = first.InvoiceNo;
-        model.LrEwayBillNo = first.EwayBillNo;
-        model.LrTotalBags = first.TotalBags ?? 0;
-        model.LrRemarks = first.ProductName;
+        model.LrGrossWt           = first.GrossWt;
+        model.LrTareWt            = first.TareWt;
+        model.LrNtNetWt           = first.NetWt;
+        model.LrLoadWt            = first.LoadWt ?? 0;
+        model.LrUnloadWt          = first.UnLoadWt ?? 0;
+        model.LrChargeQty         = first.ChargeQty ?? 0;
+        model.LrRateBill          = first.RateBill ?? 0;
+        model.LrGrossFreightBill  = first.GrossFreight ?? 0;
+        model.LrNtQty             = first.NtQty;
+        model.LrNtUnit            = first.NtUnit;
+        model.LrInvoiceNo         = first.InvoiceNo;
+        model.LrEwayBillNo        = first.EwayBillNo;
+        model.LrTotalBags         = first.TotalBags ?? 0;
+        model.LrRemarks           = first.ProductName;
     }
 
-    // ══════════════════════════════════════════════════════════════════
-    // SHARED JOURNAL ADD / DELETE
-    // ══════════════════════════════════════════════════════════════════
+    // ── Shared journal helpers ────────────────────────────────────────
     void AddJournalRow(List<LRJournalRowVM> list, LrJournalGroup group, LrJournalVchType vchType)
     {
         int next = list.Select(x => x.Sno).DefaultIfEmpty(0).Max() + 1;
         list.Add(new LRJournalRowVM
         {
-            Sno = next,
-            JournalDate = DateTime.Now,
+            Sno          = next,
+            JournalDate  = DateTime.Now,
             JournalGroup = group.ToString(),
-            VchType = vchType.ToString()
+            VchType      = vchType.ToString()
         });
         StateHasChanged();
     }
@@ -1639,135 +1739,108 @@
         StateHasChanged();
     }
 
-    // Add helpers
-    void AddNewAdvance() => AddJournalRow(AdvanceRows, LrJournalGroup.Advance, LrJournalVchType.Payment);
-    void AddNewDiesel() => AddJournalRow(DieselRows, LrJournalGroup.AdvanceFuel, LrJournalVchType.Payment);
-    void AddNewCharges() => AddJournalRow(ChargesRows, LrJournalGroup.Charges, LrJournalVchType.Payment);
-    void AddNewExpense() => AddJournalRow(ExpenseRows, LrJournalGroup.Payments, LrJournalVchType.Payment);
-    void AddNewAdvanceReceived() => AddJournalRow(AdvanceReceivedRows, LrJournalGroup.Advance, LrJournalVchType.Receipt);
+    void AddNewAdvance()         => AddJournalRow(AdvanceRows,         LrJournalGroup.Advance,     LrJournalVchType.Payment);
+    void AddNewDiesel()          => AddJournalRow(DieselRows,          LrJournalGroup.Diesel,  LrJournalVchType.Payment);
+    void AddNewCharges()         => AddJournalRow(ChargesRows,         LrJournalGroup.Charges,     LrJournalVchType.Payment);
+    void AddNewExpense()         => AddJournalRow(ExpenseRows,         LrJournalGroup.Expense,    LrJournalVchType.Payment);
+    void AddNewAdvanceReceived() => AddJournalRow(AdvanceReceivedRows, LrJournalGroup.AdvanceReceived,     LrJournalVchType.Receipt);
 
-    // Delete helpers
-    void DeleteAdvanceRow(LRJournalRowVM row) => DeleteJournalRow(AdvanceRows, row);
-    void DeleteDieselRow(LRJournalRowVM row) => DeleteJournalRow(DieselRows, row);
-    void DeleteChargesRow(LRJournalRowVM row) => DeleteJournalRow(ChargesRows, row);
-    void DeleteExpenseRow(LRJournalRowVM row) => DeleteJournalRow(ExpenseRows, row);
-    void DeleteAdvanceReceivedRow(LRJournalRowVM row) => DeleteJournalRow(AdvanceReceivedRows, row);
+    void DeleteAdvanceRow(LRJournalRowVM row)         => DeleteJournalRow(AdvanceRows,         row);
+    void DeleteDieselRow(LRJournalRowVM row)           => DeleteJournalRow(DieselRows,          row);
+    void DeleteChargesRow(LRJournalRowVM row)          => DeleteJournalRow(ChargesRows,         row);
+    void DeleteExpenseRow(LRJournalRowVM row)          => DeleteJournalRow(ExpenseRows,         row);
+    void DeleteAdvanceReceivedRow(LRJournalRowVM row)  => DeleteJournalRow(AdvanceReceivedRows, row);
 
-    // ══════════════════════════════════════════════════════════════════
-    // ADVANCE
-    // ══════════════════════════════════════════════════════════════════
+    // ── ADVANCE ───────────────────────────────────────────────────────
     void Advance_Customize(GridCustomizeEditModelEventArgs e) { }
-
     void Advance_EditModelSaving(GridEditModelSavingEventArgs e)
     {
         var edited = (LRJournalRowVM)e.EditModel;
-        var row = (LRJournalRowVM)e.DataItem;
-
+        var row    = (LRJournalRowVM)e.DataItem;
         row.JournalDate = edited.JournalDate;
-        row.AccountId = edited.AccountId;
-        row.Amount = edited.Amount;
-        row.Remarks = edited.Remarks;
+        row.AccountId   = edited.AccountId;
+        row.Amount      = edited.Amount;
+        row.Remarks     = edited.Remarks;
         StateHasChanged();
     }
-
     async Task RevertAdvanceGrid()
     {
         await AdvanceGrid.CancelEditAsync();
         AdvanceRows = CreateJournalRows(LrJournalGroup.Advance, LrJournalVchType.Payment);
     }
 
-    // ══════════════════════════════════════════════════════════════════
-    // DIESEL
-    // ══════════════════════════════════════════════════════════════════
+    // ── DIESEL ────────────────────────────────────────────────────────
     void Diesel_Customize(GridCustomizeEditModelEventArgs e) { }
-
     void Diesel_EditModelSaving(GridEditModelSavingEventArgs e)
     {
         var edited = (LRJournalRowVM)e.EditModel;
-        var data = (LRJournalRowVM)e.DataItem;
-
+        var data   = (LRJournalRowVM)e.DataItem;
         data.JournalDate = edited.JournalDate;
-        data.PumpBillId = edited.PumpBillId;
-        data.UreaRate = edited.UreaRate;
-        data.UreaQty = edited.UreaQty;
-        data.UreaAmount = edited.UreaAmount;
+        data.PumpBillId  = edited.PumpBillId;
+        data.UreaRate    = edited.UreaRate;
+        data.UreaQty     = edited.UreaQty;
+        data.UreaAmount  = edited.UreaAmount;
         StateHasChanged();
     }
-
     async Task RevertDieselGrid()
     {
         await DieselGrid.CancelEditAsync();
-        DieselRows = CreateJournalRows(LrJournalGroup.AdvanceFuel, LrJournalVchType.Payment);
+        DieselRows = CreateJournalRows(LrJournalGroup.Diesel, LrJournalVchType.Payment);
     }
 
-    // ══════════════════════════════════════════════════════════════════
-    // CHARGES
-    // ══════════════════════════════════════════════════════════════════
+    // ── CHARGES ───────────────────────────────────────────────────────
     void Charges_Customize(GridCustomizeEditModelEventArgs e) { }
-
     void Charges_EditModelSaving(GridEditModelSavingEventArgs e)
     {
         var edited = (LRJournalRowVM)e.EditModel;
-        var data = (LRJournalRowVM)e.DataItem;
-
+        var data   = (LRJournalRowVM)e.DataItem;
         data.JournalDate = edited.JournalDate;
-        data.AccountId = edited.AccountId;
-        data.Amount = edited.Amount;
-        data.Remarks = edited.Remarks;
+        data.AccountId   = edited.AccountId;
+        data.Amount      = edited.Amount;
+        data.Remarks     = edited.Remarks;
         StateHasChanged();
     }
-
     async Task RevertChargesGrid()
     {
         await ChargesGrid.CancelEditAsync();
         ChargesRows = CreateJournalRows(LrJournalGroup.Charges, LrJournalVchType.Payment);
     }
 
-    // ══════════════════════════════════════════════════════════════════
-    // EXPENSE
-    // ══════════════════════════════════════════════════════════════════
+    // ── EXPENSE ───────────────────────────────────────────────────────
     void Expense_Customize(GridCustomizeEditModelEventArgs e) { }
-
     void Expense_EditModelSaving(GridEditModelSavingEventArgs e)
     {
         var edited = (LRJournalRowVM)e.EditModel;
-        var data = (LRJournalRowVM)e.DataItem;
-
+        var data   = (LRJournalRowVM)e.DataItem;
         data.JournalDate = edited.JournalDate;
-        data.AccountId = edited.AccountId;
-        data.Amount = edited.Amount;
-        data.Remarks = edited.Remarks;
+        data.AccountId   = edited.AccountId;
+        data.Amount      = edited.Amount;
+        data.Remarks     = edited.Remarks;
         StateHasChanged();
     }
-
     async Task RevertExpenseGrid()
     {
         await ExpenseGrid.CancelEditAsync();
-        ExpenseRows = CreateJournalRows(LrJournalGroup.Payments, LrJournalVchType.Payment);
+        ExpenseRows = CreateJournalRows(LrJournalGroup.Expense, LrJournalVchType.Payment);
     }
 
-    // ══════════════════════════════════════════════════════════════════
-    // ADVANCE RECEIVED
-    // ══════════════════════════════════════════════════════════════════
+    // ── ADVANCE RECEIVED ──────────────────────────────────────────────
     void AdvanceReceived_Customize(GridCustomizeEditModelEventArgs e) { }
-
     void AdvanceReceived_EditModelSaving(GridEditModelSavingEventArgs e)
     {
         var edited = (LRJournalRowVM)e.EditModel;
-        var data = (LRJournalRowVM)e.DataItem;
-
+        var data   = (LRJournalRowVM)e.DataItem;
         data.JournalDate = edited.JournalDate;
-        data.AccountId = edited.AccountId;
-        data.Amount = edited.Amount;
-        data.UreaQty = edited.UreaQty;
-        data.Remarks = edited.Remarks;
+        data.AccountId   = edited.AccountId;
+        data.Amount      = edited.Amount;
+        data.UreaQty     = edited.UreaQty;
+        data.Remarks     = edited.Remarks;
         StateHasChanged();
     }
-
     async Task RevertAdvanceReceivedGrid()
     {
         await AdvanceReceivedGrid.CancelEditAsync();
-        AdvanceReceivedRows = CreateJournalRows(LrJournalGroup.Advance, LrJournalVchType.Receipt);
+        AdvanceReceivedRows = CreateJournalRows(LrJournalGroup.AdvanceReceived, LrJournalVchType.Receipt);
     }
 
     // ══════════════════════════════════════════════════════════════════
@@ -1782,15 +1855,15 @@
     public class PendingUploadFile
     {
         public string FileName { get; set; } = "";
-        public byte[] Content { get; set; } = Array.Empty<byte>();
+        public byte[] Content  { get; set; } = Array.Empty<byte>();
     }
 
-    private List<PendingUploadFile> PendingFiles = new();
-    private List<UploadedFileInfo> UploadedDocs = new();
+    private List<PendingUploadFile> PendingFiles  = new();
+    private List<UploadedFileInfo>  UploadedDocs  = new();
 
     private void OpenUploadPopup()
     {
-        SelectedCategory = "LR";
+        SelectedCategory    = "LR";
         SelectedSubCategory = model.LrNoStr;
         SelectedReferenceId = model.LrId.ToString();
         IsUploadPopupVisible = true;
@@ -1811,14 +1884,14 @@
     private async Task LoadDocumentsAsync()
     {
         if (string.IsNullOrEmpty(model.LrNoStr)) return;
-        var docs = await FileUploadService.GetDocumentsAsync("job", model.LrId.ToString());
+        var docs = await FileUploadService.GetDocumentsAsync("LR", model.LrId.ToString());
         UploadedDocs = docs.Select(d => new UploadedFileInfo
         {
             DocumentId = d.DocumentId,
-            FileName = d.OriginalFileName,
-            FileSize = d.FileSizeBytes,
-            Url = d.BlobUrl,
-            Category = d.Category,
+            FileName   = d.OriginalFileName,
+            FileSize   = d.FileSizeBytes,
+            Url        = d.BlobUrl,
+            Category   = d.Category,
         }).ToList();
         StateHasChanged();
     }
@@ -1838,17 +1911,15 @@
     }
 
     // ══════════════════════════════════════════════════════════════════
-    // SAVE  ← updated to use LrEntryDto via SaveAsync(main, details, journals)
+    // SAVE
     // ══════════════════════════════════════════════════════════════════
     private async Task Save()
     {
         try
         {
-            // 1. Build the three payload parts
-            List<LRDetail> details = BuildDetails();   // also calls ApplyProductRowsToModel()
+            List<LRDetail>  details  = BuildDetails();
             List<LRJournal> journals = BuildJournals();
 
-            // 2. Call the updated service method
             var savedLr = await LrApiService.SaveAsync(model, details, journals);
 
             if (savedLr == null)
@@ -1857,22 +1928,23 @@
                 return;
             }
 
-            // 3. Persist returned Id so subsequent saves / uploads reference correct record
             model.LrId = savedLr.LrId;
 
-            // 4. Upload any pending files
             if (PendingFiles.Any())
             {
                 foreach (var file in PendingFiles)
                     await FileUploadService.UploadFileAsync(
                         file.Content, file.FileName, "LR",
                         model.LrNoStr ?? "", model.LrId.ToString());
-
                 PendingFiles.Clear();
             }
 
             await LoadDocumentsAsync();
-            ToastService.Success("LR saved successfully.");
+            ToastService.Success(IsEditMode ? "LR updated successfully." : "LR saved successfully.");
+
+            // After save, update URL to edit mode if it was a new record
+            if (!IsEditMode)
+                NavManager.NavigateTo($"/lrentry/{model.LrId}", replace: true);
         }
         catch (Exception ex)
         {
@@ -1880,103 +1952,89 @@
         }
     }
 
-
     // ══════════════════════════════════════════════════════════════════
-
-    // ✅ EditModel pe real-time calculation — DataItem nahi, EditModel use karo
-
-private void RecalculateEditRow(LrProductRow edit)
-{
-    if (edit == null) return;
-    decimal rate     = Convert.ToDecimal(edit.RateBill  ?? 0);
-    decimal netWt    = Convert.ToDecimal(edit.NetWt     ?? 0); // ✅ LoadWt hata ke NetWt
-    decimal unloadWt = Convert.ToDecimal(edit.UnLoadWt  ?? 0);
-    decimal chargeWt = Convert.ToDecimal(edit.ChargeQty ?? 0);
-    decimal.TryParse(model.LrStartKm, out decimal startKm);
-    decimal.TryParse(model.LrEndKm,   out decimal endKm);
-    decimal km = Math.Max(0, endKm - startKm);
-    decimal total = edit.LrBillTypeBill switch
+    // CALCULATIONS
+    // ══════════════════════════════════════════════════════════════════
+    private void RecalculateEditRow(LrProductRow edit)
     {
-        "Fixed Rate"      => rate,
-        "Rate X Weight"   => rate * netWt,    // ✅ loadWt → netWt
-        "Rate X KM"       => rate * km,
-        "Rate X UnloadWt" => rate * unloadWt,
-        "Rate X ChargeWt" => rate * chargeWt,
-        _                 => 0m
-    };
-    edit.GrossFreight = Convert.ToDouble(total);
+        if (edit == null) return;
+        decimal rate     = Convert.ToDecimal(edit.RateBill  ?? 0);
+        decimal netWt    = Convert.ToDecimal(edit.NetWt     ?? 0);
+        decimal unloadWt = Convert.ToDecimal(edit.UnLoadWt  ?? 0);
+        decimal chargeWt = Convert.ToDecimal(edit.ChargeQty ?? 0);
+        decimal.TryParse(model.LrStartKm, out decimal startKm);
+        decimal.TryParse(model.LrEndKm,   out decimal endKm);
+        decimal km = Math.Max(0, endKm - startKm);
+        decimal total = edit.LrBillTypeBill switch
+        {
+            "Fixed Rate"      => rate,
+            "Rate X Weight"   => rate * netWt,
+            "Rate X KM"       => rate * km,
+            "Rate X UnloadWt" => rate * unloadWt,
+            "Rate X ChargeWt" => rate * chargeWt,
+            _                 => 0m
+        };
+        edit.GrossFreight = Convert.ToDouble(total);
 
-    var existing = ProductRows?.FirstOrDefault(r => r.SrNo == edit.SrNo);
-    if (existing != null)
-    {
-        existing.GrossFreight   = edit.GrossFreight;
-        existing.NetWt          = edit.NetWt;
-        existing.RateBill       = edit.RateBill;
-        existing.LoadWt         = edit.LoadWt;
-        existing.UnLoadWt       = edit.UnLoadWt;
-        existing.ChargeQty      = edit.ChargeQty;
-        existing.LrBillTypeBill = edit.LrBillTypeBill;
-    }
-}
-
-   private void RecalculateRow(LrProductRow row)
-{
-    if (row == null) return;
-    decimal rate     = Convert.ToDecimal(row.RateBill  ?? 0);
-    decimal netWt    = Convert.ToDecimal(row.NetWt     ?? 0); // ✅ LoadWt → NetWt
-    decimal unloadWt = Convert.ToDecimal(row.UnLoadWt  ?? 0);
-    decimal chargeWt = Convert.ToDecimal(row.ChargeQty ?? 0);
-    decimal.TryParse(model.LrStartKm, out decimal startKm);
-    decimal.TryParse(model.LrEndKm,   out decimal endKm);
-    decimal km = Math.Max(0, endKm - startKm);
-    decimal total = row.LrBillTypeBill switch
-    {
-        "Fixed Rate"      => rate,
-        "Rate X Weight"   => rate * netWt,    // ✅ loadWt → netWt
-        "Rate X KM"       => rate * km,
-        "Rate X UnloadWt" => rate * unloadWt,
-        "Rate X ChargeWt" => rate * chargeWt,
-        _                 => 0m
-    };
-    row.GrossFreight = Convert.ToDouble(total);
-}
-
-    private void OnStartKmChanged(decimal? value)
-    {
-        model.LrStartKm = value?.ToString();   // if model property is string
-        UpdateKmAndRecalculate();
+        var existing = ProductRows?.FirstOrDefault(r => r.SrNo == edit.SrNo);
+        if (existing != null)
+        {
+            existing.GrossFreight   = edit.GrossFreight;
+            existing.NetWt          = edit.NetWt;
+            existing.RateBill       = edit.RateBill;
+            existing.LoadWt         = edit.LoadWt;
+            existing.UnLoadWt       = edit.UnLoadWt;
+            existing.ChargeQty      = edit.ChargeQty;
+            existing.LrBillTypeBill = edit.LrBillTypeBill;
+        }
     }
 
-    private void OnEndKmChanged(decimal? value)
+    private void RecalculateRow(LrProductRow row)
     {
-        model.LrEndKm = value?.ToString();     // if model property is string
-        UpdateKmAndRecalculate();
+        if (row == null) return;
+        decimal rate     = Convert.ToDecimal(row.RateBill  ?? 0);
+        decimal netWt    = Convert.ToDecimal(row.NetWt     ?? 0);
+        decimal unloadWt = Convert.ToDecimal(row.UnLoadWt  ?? 0);
+        decimal chargeWt = Convert.ToDecimal(row.ChargeQty ?? 0);
+        decimal.TryParse(model.LrStartKm, out decimal startKm);
+        decimal.TryParse(model.LrEndKm,   out decimal endKm);
+        decimal km = Math.Max(0, endKm - startKm);
+        decimal total = row.LrBillTypeBill switch
+        {
+            "Fixed Rate"      => rate,
+            "Rate X Weight"   => rate * netWt,
+            "Rate X KM"       => rate * km,
+            "Rate X UnloadWt" => rate * unloadWt,
+            "Rate X ChargeWt" => rate * chargeWt,
+            _                 => 0m
+        };
+        row.GrossFreight = Convert.ToDouble(total);
     }
-  private decimal? StartKm
-{
-    get => decimal.TryParse(model.LrStartKm, out var v) ? v : (decimal?)null;
-    set { model.LrStartKm = value?.ToString() ?? "0"; UpdateKmAndRecalculate(); }
-}
 
-private decimal? EndKm
-{
-    get => decimal.TryParse(model.LrEndKm, out var v) ? v : (decimal?)null;
-    set { model.LrEndKm = value?.ToString() ?? "0"; UpdateKmAndRecalculate(); }
-}
+    private decimal? StartKm
+    {
+        get => decimal.TryParse(model.LrStartKm, out var v) ? v : (decimal?)null;
+        set { model.LrStartKm = value?.ToString() ?? "0"; UpdateKmAndRecalculate(); }
+    }
 
-private decimal? TotKm
-{
-    get => decimal.TryParse(model.LrTotKm, out var v) ? v : (decimal?)null;
-    set { }
-}
+    private decimal? EndKm
+    {
+        get => decimal.TryParse(model.LrEndKm, out var v) ? v : (decimal?)null;
+        set { model.LrEndKm = value?.ToString() ?? "0"; UpdateKmAndRecalculate(); }
+    }
+
+    private decimal? TotKm
+    {
+        get => decimal.TryParse(model.LrTotKm, out var v) ? v : (decimal?)null;
+        set { }
+    }
+
     private void UpdateKmAndRecalculate()
     {
         decimal.TryParse(model.LrStartKm?.ToString(), out decimal start);
-        decimal.TryParse(model.LrEndKm?.ToString(), out decimal end);
-
+        decimal.TryParse(model.LrEndKm?.ToString(),   out decimal end);
         decimal total = Math.Max(0, end - start);
-        model.LrTotKm = total.ToString();   // if LrTotKm is string, else just = total
-
+        model.LrTotKm = total.ToString();
         RecalculateAllRows();
         StateHasChanged();
     }
@@ -1984,10 +2042,19 @@ private decimal? TotKm
     private void RecalculateAllRows()
     {
         foreach (var row in ProductRows)
-        {
             RecalculateRow(row);
-        }
-
         StateHasChanged();
+    }
+
+    private void OnStartKmChanged(decimal? value)
+    {
+        model.LrStartKm = value?.ToString();
+        UpdateKmAndRecalculate();
+    }
+
+    private void OnEndKmChanged(decimal? value)
+    {
+        model.LrEndKm = value?.ToString();
+        UpdateKmAndRecalculate();
     }
 }

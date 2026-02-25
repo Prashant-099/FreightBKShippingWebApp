@@ -13,11 +13,10 @@ namespace FreightBKShippingWebApp.Model
 
        
             [Column("lr_journal_addedby_user_id")]
-            [StringLength(30)]
-            public string AddedByUserId { get; set; }
+
+            public string? AddedByUserId { get; set; }
 
             [Column("lr_journal_updatedby_user_id")]
-            [StringLength(30)]
             public string? UpdatedByUserId { get; set; }
 
             [Column("lr_journal_lr_id")]
@@ -154,10 +153,9 @@ namespace FreightBKShippingWebApp.Model
         {
             Advance,
             Charges,
-            Deductions,
-            Payments,
-            AdvanceFuel,
-            Journal
+        Expense,
+        AdvanceReceived,
+        Diesel
         }
 
         public enum LrJournalVchType

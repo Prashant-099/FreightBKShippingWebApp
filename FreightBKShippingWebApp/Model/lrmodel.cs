@@ -582,4 +582,46 @@ namespace FreightBKShippingWebApp.Model
         [InverseProperty(nameof(LRJournal))]
         public List<LRJournal> Journals { get; set; } = new();
     }
+
+    public class LrListVM
+    {
+        public int LrId { get; set; }
+
+        // Basic
+        public string? LrNoStr { get; set; }
+        public DateTime? LrDate { get; set; }
+        public string? LrTripNo { get; set; }
+
+        // Party Info (Names only)
+        public string? PartyName { get; set; }
+        public string? SupplierName { get; set; }
+        public string? VehicleNo { get; set; }
+        public string? DriverName { get; set; }
+
+        // Location (Names only)
+        public string? FromLocationName { get; set; }
+        public string? ToLocationName { get; set; }
+
+        // Weight
+        public double LrLoadWt { get; set; }
+        public double LrUnloadWt { get; set; }
+        public double LrShortWt { get; set; }
+
+        // Billing
+        public string? LrBillTypeBill { get; set; }
+        public double LrRateBill { get; set; }
+        public double LrGrossFreightBill { get; set; }
+        public double LrNetFreightBill { get; set; }
+
+        // Truck
+        public double LrBillRateTruck { get; set; }
+        public double LrNetFreightTruck { get; set; }
+
+        // GST
+        public double LrGstPercentage { get; set; }
+        public double LrGstAmount { get; set; }
+
+        // Status
+        public int LrStatus { get; set; }
+    }
 }

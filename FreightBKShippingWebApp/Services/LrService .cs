@@ -24,7 +24,10 @@ namespace FreightBKShipping.Client.Services
         {
             return await _http.GetFromJsonAsync<Lr>($"api/lr/{id}");
         }
-
+        public async Task<LrEntryDto?> GetEntryAsync(int id)
+        {
+            return await _http.GetFromJsonAsync<LrEntryDto>($"api/lr/entry/{id}");
+        }
         // ✅ SEARCH
         public async Task<List<Lr>> SearchAsync(
             int partyId,
@@ -67,5 +70,13 @@ namespace FreightBKShipping.Client.Services
         {
             return await _http.DeleteAsync<bool>($"api/lr/{id}");
         }
+
+        // ✅ GET ALL FOR GRID (WITH NAMES)
+        public async Task<List<LrListVM>> GetListAsync()
+        {
+            return await _http.GetFromJsonAsync<List<LrListVM>>("api/lr/list")
+                   ?? new List<LrListVM>();
+        }
+
     }
 }
