@@ -144,6 +144,115 @@
         background: #e2e8f0;
     }
 
+    /* ── Column toggle button ── */
+    .btn-columns {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        background: #f1f5f9;
+        color: var(--clr-text);
+        border: 1px solid var(--clr-border);
+        border-radius: 6px;
+        padding: 6px 12px;
+        font-size: .8rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background .15s;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+    .btn-columns:hover { background: #e2e8f0; }
+
+    /* ── Panel backdrop ── */
+    .col-panel-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,.25);
+        z-index: 999;
+    }
+
+    /* ── Slide-in panel ── */
+    .col-panel {
+        position: fixed;
+        top: 0; right: 0;
+        width: 260px;
+        height: 100vh;
+        background: #fff;
+        border-left: 1px solid #e2e8f0;
+        box-shadow: -4px 0 24px rgba(0,0,0,.12);
+        z-index: 1000;
+        display: flex;
+        flex-direction: column;
+        animation: slideIn .2s ease;
+    }
+    @@keyframes slideIn {
+        from { transform: translateX(100%); }
+        to   { transform: translateX(0); }
+    }
+
+    .col-panel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 14px 16px;
+        font-weight: 600;
+        font-size: 13px;
+        border-bottom: 1px solid #f1f5f9;
+        color: #1e293b;
+    }
+    .col-panel-header button {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 16px;
+        color: #64748b;
+        line-height: 1;
+    }
+
+    .col-panel-actions {
+        display: flex;
+        gap: 8px;
+        padding: 10px 16px;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    .col-panel-actions button {
+        flex: 1;
+        padding: 5px 0;
+        border: 1px solid #cbd5e1;
+        border-radius: 5px;
+        background: #f8fafc;
+        font-size: 12px;
+        cursor: pointer;
+        color: #475569;
+    }
+    .col-panel-actions button:hover { background: #e2e8f0; }
+
+    .col-panel-list {
+        flex: 1;
+        overflow-y: auto;
+        padding: 6px 0;
+    }
+
+    .col-toggle-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 16px;
+        cursor: pointer;
+        font-size: 13px;
+        color: #334155;
+        transition: background .1s;
+        user-select: none;
+    }
+    .col-toggle-row:hover { background: #f8fafc; }
+    .col-toggle-row input[type="checkbox"] {
+        width: 15px;
+        height: 15px;
+        accent-color: #3b82f6;
+        cursor: pointer;
+        flex-shrink: 0;
+    }
+
     @@media (max-width: 640px) {
         .lr-header {
             padding: 8px 12px;
@@ -395,7 +504,6 @@
             <span>Lorry Receipt</span>
         </div>
 
-        <!-- Back button -->
         <button type="button" class="btn-back" @onclick="GoBack">
             ← List
         </button>
@@ -403,7 +511,40 @@
         <div class="lr-header-badge @(IsEditMode ? "edit-mode" : "")">
             @(IsEditMode ? "Edit" : "New Entry")
         </div>
+
+        <!-- ── Column Visibility Toggle Button ── -->
+        <button type="button" class="btn-columns" @onclick="() => showPanel = !showPanel">
+            ⚙ Columns
+        </button>
     </div>
+
+    <!-- ══ COLUMN VISIBILITY PANEL ══ -->
+    @if (showPanel)
+    {
+        <div class="col-panel-backdrop" @onclick="() => showPanel = false"></div>
+        <div class="col-panel">
+            <div class="col-panel-header">
+                <span>Show / Hide Fields</span>
+                <button type="button" @onclick="() => showPanel = false">✕</button>
+            </div>
+            <div class="col-panel-actions">
+                <button type="button" @onclick="SelectAll">Select All</button>
+                <button type="button" @onclick="SelectNone">Clear All</button>
+            </div>
+            <div class="col-panel-list">
+                @foreach (var key in Visible.Keys.ToList())
+                {
+                    var capturedKey = key;
+                    <label class="col-toggle-row">
+                        <input type="checkbox"
+                               checked="@Visible[capturedKey]"
+                               @onchange="e => { Visible[capturedKey] = (bool)e.Value!; StateHasChanged(); }" />
+                        <span>@Labels[capturedKey]</span>
+                    </label>
+                }
+            </div>
+        </div>
+    }
 
     @if (IsLoading)
     {
@@ -425,163 +566,222 @@
                     <div class="lr-card-body">
                         <div class="field-grid">
 
-                            <div class="twoinone">
-                                <div class="field-group">
-                                    <label>LR No</label>
-                                    <DxTextBox @bind-Text="model.LrNoStr" />
-                                </div>
-                                <div class="field-group">
-                                    <label>LR Date</label>
-                                    <DxDateEdit @bind-Date="model.LrDate" />
-                                </div>
-                            </div>
-
-                            <div class="field-group">
-                                <label>Vehicle</label>
-                                <DxSpinEdit @bind-Value="model.LrVehicleId" TValue="int?"
-                                            NullText="Enter Trip No" ShowSpinButtons=false/>
-                            </div>
-
-                            <div class="field-group">
-                                <label>Supplier</label>
-                                <DxComboBox Data="@accountSupplierlist"
-                                            TData="Account" TValue="int?"
-                                            TextFieldName="AccountName" ValueFieldName="AccountId"
-                                            @bind-Value="model.LrSupplierAccountId"
-                                            NullText="Select supplier"
-                                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
-                                            AllowUserInput="true"
-                                            SearchMode="ListSearchMode.AutoSearch"
-                                            SearchFilterCondition="ListSearchFilterCondition.Contains" />
-                            </div>
-
-                            <div class="field-group">
-                                <label>Billing Party</label>
-                                <DxComboBox Data="@accountSupplierlist"
-                                            TData="Account" TValue="int"
-                                            TextFieldName="AccountName" ValueFieldName="AccountId"
-                                            @bind-Value="model.LrPartyAccountId"
-                                            NullText="Select billing party"
-                                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
-                                            AllowUserInput="true"
-                                            SearchMode="ListSearchMode.AutoSearch"
-                                            SearchFilterCondition="ListSearchFilterCondition.Contains" />
-                            </div>
-
-                            <div class="field-group">
-                                <label>From Party / Consignor</label>
-                                <DxComboBox Data="@notifylist"
-                                            TData="Notify" TValue="int?"
-                                            Value="@model.LrConsignorNotifyId"
-                                            ValueChanged="@(id => OnConsignorChanged(id))"
-                                            ValueExpression="() => model.LrConsignorNotifyId"
-                                            TextFieldName="NotifyName" ValueFieldName="NotifyId"
-                                            NullText="Select consignor"
-                                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
-                                            AllowUserInput="true"
-                                            SearchMode="ListSearchMode.AutoSearch"
-                                            SearchFilterCondition="ListSearchFilterCondition.Contains" />
-                            </div>
-
-                            <div class="field-group">
-                                <label>To Party / Consignee</label>
-                                <DxComboBox Data="@notifylist"
-                                            TData="Notify" TValue="int?"
-                                            Value="@model.LrConsigneeNotifyId"
-                                            ValueChanged="@((int? id) => OnConsigneeChanged(id))"
-                                            ValueExpression="() => model.LrConsigneeNotifyId"
-                                            TextFieldName="NotifyName" ValueFieldName="NotifyId"
-                                            NullText="Select consignee"
-                                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
-                                            AllowUserInput="true"
-                                            SearchMode="ListSearchMode.AutoSearch"
-                                            SearchFilterCondition="ListSearchFilterCondition.Contains" />
-                            </div>
-
-                            <div class="field-group">
-                                <label>From (Station)</label>
-                                <DxComboBox Data="@StationLocationList"
-                                            TData="Location" TValue="int?"
-                                            TextFieldName="LocationName" ValueFieldName="LocationId"
-                                            @bind-Value="model.LrFromLocationId"
-                                            NullText="Select station"
-                                            AllowUserInput="true"
-                                            SearchMode="ListSearchMode.AutoSearch"
-                                            SearchFilterCondition="ListSearchFilterCondition.Contains" />
-                            </div>
-
-                            <div class="field-group">
-                                <label>To Location</label>
-                                <DxComboBox Data="@LocationList"
-                                            TData="Location" TValue="int?"
-                                            TextFieldName="LocationName" ValueFieldName="LocationId"
-                                            @bind-Value="model.LrToLocationId"
-                                            NullText="Select destination"
-                                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
-                                            AllowUserInput="true"
-                                            SearchMode="ListSearchMode.AutoSearch"
-                                            SearchFilterCondition="ListSearchFilterCondition.Contains" />
-                            </div>
-
-                            <div class="field-group">
-                                <label>Pickup Location</label>
-                                <DxTextBox @bind-Text="model.LrNtPickupLoc" />
-                            </div>
-
-                            <div class="field-group">
-                                <label>Back Location</label>
-                                <DxSpinEdit @bind-Value="model.LrBackLocationId" ShowSpinButtons=false/>
-                            </div>
-                            <div class="field-group">
-                                <label>Driver</label>
-                                <DxComboBox Data="@DriverList"
-                                            TData="Account"
-                                            TValue="int?"
-                                            TextFieldName="AccountName"
-                                            ValueFieldName="AccountId"
-                                            @bind-Value="model.LrDriverId"
-                                            NullText="Select Driver"
-                                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
-                                            SearchMode="ListSearchMode.AutoSearch"
-                                            SearchFilterCondition="ListSearchFilterCondition.Contains"
-                                            AllowUserInput="true">
-                                </DxComboBox>
-                            </div>
-                            <div class="field-group">
-                                <label>Container No</label>
-                                <DxTextBox @bind-Text="model.LrContainer1" />
-                            </div>
-
-                            <div class="field-group">
-                                <label>Container No 2</label>
-                                <DxTextBox @bind-Text="model.LrContainer2" />
-                            </div>
-
-                            <div class="field-group">
-                                <label>Reference No</label>
-                                <DxTextBox @bind-Text="model.LrRefName" />
-                            </div>
-
-                            <div class="field-group">
+                            @if (Visible["LrNo"] || Visible["LrDate"])
+                            {
                                 <div class="twoinone">
-                                    <div>
-                                        <label>Payment Mode</label>
-                                        <DxComboBox Data="@PaymethodList"
-                                                    @bind-Value="model.LrPaymentType"
-                                                    TextFieldName="Text" ValueFieldName="Value"
-                                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
-                                                    SearchMode="ListSearchMode.AutoSearch"
-                                                    SearchFilterCondition="ListSearchFilterCondition.Contains"
-                                                    AllowUserInput="false"
-                                                    NullText="Payment Mode"
-                                                    TData="SelectItem" TValue="string?" />
-                                    </div>
-                                    <div>
-                                        <label>Trip No</label>
-                                        <DxSpinEdit @bind-Value="model.LrTripNo" ShowSpinButtons=false/>
+                                    @if (Visible["LrNo"])
+                                    {
+                                        <div class="field-group">
+                                            <label>LR No</label>
+                                            <DxTextBox @bind-Text="model.LrNoStr" />
+                                        </div>
+                                    }
+                                    @if (Visible["LrDate"])
+                                    {
+                                        <div class="field-group">
+                                            <label>LR Date</label>
+                                            <DxDateEdit @bind-Date="model.LrDate" />
+                                        </div>
+                                    }
+                                </div>
+                            }
+
+                            @if (Visible["Vehicle"])
+                            {
+                                <div class="field-group">
+                                    <label>Vehicle</label>
+                                    <DxSpinEdit @bind-Value="model.LrVehicleId" TValue="int?"
+                                                NullText="Enter Trip No" ShowSpinButtons=false/>
+                                </div>
+                            }
+
+                            @if (Visible["Supplier"])
+                            {
+                                <div class="field-group">
+                                    <label>Supplier</label>
+                                    <DxComboBox Data="@accountSupplierlist"
+                                                TData="Account" TValue="int?"
+                                                TextFieldName="AccountName" ValueFieldName="AccountId"
+                                                @bind-Value="model.LrSupplierAccountId"
+                                                NullText="Select supplier"
+                                                ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                                AllowUserInput="true"
+                                                SearchMode="ListSearchMode.AutoSearch"
+                                                SearchFilterCondition="ListSearchFilterCondition.Contains" />
+                                </div>
+                            }
+
+                            @if (Visible["BillingParty"])
+                            {
+                                <div class="field-group">
+                                    <label>Billing Party</label>
+                                    <DxComboBox Data="@accountSupplierlist"
+                                                TData="Account" TValue="int"
+                                                TextFieldName="AccountName" ValueFieldName="AccountId"
+                                                @bind-Value="model.LrPartyAccountId"
+                                                NullText="Select billing party"
+                                                ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                                AllowUserInput="true"
+                                                SearchMode="ListSearchMode.AutoSearch"
+                                                SearchFilterCondition="ListSearchFilterCondition.Contains" />
+                                </div>
+                            }
+
+                            @if (Visible["Consignor"])
+                            {
+                                <div class="field-group">
+                                    <label>From Party / Consignor</label>
+                                    <DxComboBox Data="@notifylist"
+                                                TData="Notify" TValue="int?"
+                                                Value="@model.LrConsignorNotifyId"
+                                                ValueChanged="@(id => OnConsignorChanged(id))"
+                                                ValueExpression="() => model.LrConsignorNotifyId"
+                                                TextFieldName="NotifyName" ValueFieldName="NotifyId"
+                                                NullText="Select consignor"
+                                                ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                                AllowUserInput="true"
+                                                SearchMode="ListSearchMode.AutoSearch"
+                                                SearchFilterCondition="ListSearchFilterCondition.Contains" />
+                                </div>
+                            }
+
+                            @if (Visible["Consignee"])
+                            {
+                                <div class="field-group">
+                                    <label>To Party / Consignee</label>
+                                    <DxComboBox Data="@notifylist"
+                                                TData="Notify" TValue="int?"
+                                                Value="@model.LrConsigneeNotifyId"
+                                                ValueChanged="@((int? id) => OnConsigneeChanged(id))"
+                                                ValueExpression="() => model.LrConsigneeNotifyId"
+                                                TextFieldName="NotifyName" ValueFieldName="NotifyId"
+                                                NullText="Select consignee"
+                                                ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                                AllowUserInput="true"
+                                                SearchMode="ListSearchMode.AutoSearch"
+                                                SearchFilterCondition="ListSearchFilterCondition.Contains" />
+                                </div>
+                            }
+
+                            @if (Visible["FromStation"])
+                            {
+                                <div class="field-group">
+                                    <label>From (Station)</label>
+                                    <DxComboBox Data="@StationLocationList"
+                                                TData="Location" TValue="int?"
+                                                TextFieldName="LocationName" ValueFieldName="LocationId"
+                                                @bind-Value="model.LrFromLocationId"
+                                                NullText="Select station"
+                                                AllowUserInput="true"
+                                                SearchMode="ListSearchMode.AutoSearch"
+                                                SearchFilterCondition="ListSearchFilterCondition.Contains" />
+                                </div>
+                            }
+
+                            @if (Visible["ToLocation"])
+                            {
+                                <div class="field-group">
+                                    <label>To Location</label>
+                                    <DxComboBox Data="@LocationList"
+                                                TData="Location" TValue="int?"
+                                                TextFieldName="LocationName" ValueFieldName="LocationId"
+                                                @bind-Value="model.LrToLocationId"
+                                                NullText="Select destination"
+                                                ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                                AllowUserInput="true"
+                                                SearchMode="ListSearchMode.AutoSearch"
+                                                SearchFilterCondition="ListSearchFilterCondition.Contains" />
+                                </div>
+                            }
+
+                            @if (Visible["PickupLoc"])
+                            {
+                                <div class="field-group">
+                                    <label>Pickup Location</label>
+                                    <DxTextBox @bind-Text="model.LrNtPickupLoc" />
+                                </div>
+                            }
+
+                            @if (Visible["BackLocation"])
+                            {
+                                <div class="field-group">
+                                    <label>Back Location</label>
+                                    <DxSpinEdit @bind-Value="model.LrBackLocationId" ShowSpinButtons=false/>
+                                </div>
+                            }
+
+                            @if (Visible["Driver"])
+                            {
+                                <div class="field-group">
+                                    <label>Driver</label>
+                                    <DxComboBox Data="@DriverList"
+                                                TData="Account"
+                                                TValue="int?"
+                                                TextFieldName="AccountName"
+                                                ValueFieldName="AccountId"
+                                                @bind-Value="model.LrDriverId"
+                                                NullText="Select Driver"
+                                                ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                                SearchMode="ListSearchMode.AutoSearch"
+                                                SearchFilterCondition="ListSearchFilterCondition.Contains"
+                                                AllowUserInput="true">
+                                    </DxComboBox>
+                                </div>
+                            }
+
+                            @if (Visible["Container1"])
+                            {
+                                <div class="field-group">
+                                    <label>Container No</label>
+                                    <DxTextBox @bind-Text="model.LrContainer1" />
+                                </div>
+                            }
+
+                            @if (Visible["Container2"])
+                            {
+                                <div class="field-group">
+                                    <label>Container No 2</label>
+                                    <DxTextBox @bind-Text="model.LrContainer2" />
+                                </div>
+                            }
+
+                            @if (Visible["RefNo"])
+                            {
+                                <div class="field-group">
+                                    <label>Reference No</label>
+                                    <DxTextBox @bind-Text="model.LrRefName" />
+                                </div>
+                            }
+
+                            @if (Visible["PaymentMode"] || Visible["TripNo"])
+                            {
+                                <div class="field-group">
+                                    <div class="twoinone">
+                                        @if (Visible["PaymentMode"])
+                                        {
+                                            <div>
+                                                <label>Payment Mode</label>
+                                                <DxComboBox Data="@PaymethodList"
+                                                            @bind-Value="model.LrPaymentType"
+                                                            TextFieldName="Text" ValueFieldName="Value"
+                                                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                                            SearchMode="ListSearchMode.AutoSearch"
+                                                            SearchFilterCondition="ListSearchFilterCondition.Contains"
+                                                            AllowUserInput="false"
+                                                            NullText="Payment Mode"
+                                                            TData="SelectItem" TValue="string?" />
+                                            </div>
+                                        }
+                                        @if (Visible["TripNo"])
+                                        {
+                                            <div>
+                                                <label>Trip No</label>
+                                                <DxSpinEdit @bind-Value="model.LrTripNo" ShowSpinButtons=false/>
+                                            </div>
+                                        }
                                     </div>
                                 </div>
-                            </div>
+                            }
 
                         </div>
                     </div>
@@ -1137,7 +1337,6 @@
                                                <CellDisplayTemplate Context="doc">
                                             <DxButton IconCssClass="bi bi-eye"
                                                       RenderStyle="ButtonRenderStyle.Secondary"
-                                                      
                                                       Click="@(async () => await PreviewDoc((UploadedFileInfo)doc.DataItem))" />
 
                                             <DxButton IconCssClass="bi bi-trash text-danger"
@@ -1229,6 +1428,56 @@
                  DefaultReferenceId="@SelectedReferenceId" />
 
 @code {
+
+    // ══════════════════════════════════════════════════════════════════
+    // COLUMN VISIBILITY
+    // ══════════════════════════════════════════════════════════════════
+    private Dictionary<string, bool> Visible = new()
+    {
+        ["LrNo"]         = true,
+        ["LrDate"]       = true,
+        ["Vehicle"]      = true,
+        ["Supplier"]     = true,
+        ["BillingParty"] = true,
+        ["Consignor"]    = true,
+        ["Consignee"]    = true,
+        ["FromStation"]  = true,
+        ["ToLocation"]   = true,
+        ["PickupLoc"]    = true,
+        ["BackLocation"] = true,
+        ["Driver"]       = true,
+        ["Container1"]   = true,
+        ["Container2"]   = true,
+        ["RefNo"]        = true,
+        ["PaymentMode"]  = true,
+        ["TripNo"]       = true,
+    };
+
+    private bool showPanel = false;
+
+    private void SelectAll()  => Visible.Keys.ToList().ForEach(k => Visible[k] = true);
+    private void SelectNone() => Visible.Keys.ToList().ForEach(k => Visible[k] = false);
+
+    private Dictionary<string, string> Labels = new()
+    {
+        ["LrNo"]         = "LR No",
+        ["LrDate"]       = "LR Date",
+        ["Vehicle"]      = "Vehicle",
+        ["Supplier"]     = "Supplier",
+        ["BillingParty"] = "Billing Party",
+        ["Consignor"]    = "From Party / Consignor",
+        ["Consignee"]    = "To Party / Consignee",
+        ["FromStation"]  = "From (Station)",
+        ["ToLocation"]   = "To Location",
+        ["PickupLoc"]    = "Pickup Location",
+        ["BackLocation"] = "Back Location",
+        ["Driver"]       = "Driver",
+        ["Container1"]   = "Container No",
+        ["Container2"]   = "Container No 2",
+        ["RefNo"]        = "Reference No",
+        ["PaymentMode"]  = "Payment Mode",
+        ["TripNo"]       = "Trip No",
+    };
 
     // ── Route Parameter ───────────────────────────────────────────────
     [Parameter] public int? LrId { get; set; }
@@ -1347,7 +1596,6 @@
         BankCashList         = accountpartylist
             .Where(x => x.AccountTypeId == 10 || x.AccountTypeId == 11).ToList();
 
-        // Load existing LR if editing
         if (IsEditMode)
             await LoadLrForEdit(LrId!.Value);
     }
@@ -1359,13 +1607,11 @@
         StateHasChanged();
         try
         {
-            // GetEntryAsync returns LrEntryDto { Main, Details, Journals }
             var dto = await LrApiService.GetEntryAsync(lrId);
             if (dto == null) return;
 
             model = dto.Main ?? new Lr();
 
-            // ── Map Details → ProductRows ─────────────────────────────
             if (dto.Details?.Any() == true)
             {
                 ProductRows = dto.Details.Select((d, i) => new LrProductRow
@@ -1387,25 +1633,23 @@
                     InvoiceNo      = d.LrDetailInvoiceNo,
                 }).ToList();
 
-                // Pad to minimum 5 rows
                 while (ProductRows.Count < 5)
                     ProductRows.Add(new LrProductRow { SrNo = ProductRows.Count + 1 });
             }
 
-            // ── Map Journals → grid lists ─────────────────────────────
             var journals = dto.Journals ?? new List<LRJournal>();
 
-            AdvanceRows         = MapJournals(journals, LrJournalGroup.Advance,     LrJournalVchType.Payment);
-            DieselRows          = MapJournals(journals, LrJournalGroup.Diesel,  LrJournalVchType.Payment);
-            ChargesRows         = MapJournals(journals, LrJournalGroup.Charges,     LrJournalVchType.Payment);
-            ExpenseRows         = MapJournals(journals, LrJournalGroup.Expense,    LrJournalVchType.Payment);
-            AdvanceReceivedRows = MapJournals(journals, LrJournalGroup.AdvanceReceived,     LrJournalVchType.Receipt);
+            AdvanceRows         = MapJournals(journals, LrJournalGroup.Advance,          LrJournalVchType.Payment);
+            DieselRows          = MapJournals(journals, LrJournalGroup.Diesel,            LrJournalVchType.Payment);
+            ChargesRows         = MapJournals(journals, LrJournalGroup.Charges,          LrJournalVchType.Payment);
+            ExpenseRows         = MapJournals(journals, LrJournalGroup.Expense,          LrJournalVchType.Payment);
+            AdvanceReceivedRows = MapJournals(journals, LrJournalGroup.AdvanceReceived,  LrJournalVchType.Receipt);
 
-            EnsureMinRows(AdvanceRows,         LrJournalGroup.Advance,     LrJournalVchType.Payment);
-            EnsureMinRows(DieselRows,          LrJournalGroup.Diesel,  LrJournalVchType.Payment);
-            EnsureMinRows(ChargesRows,         LrJournalGroup.Charges,     LrJournalVchType.Payment);
-            EnsureMinRows(ExpenseRows,         LrJournalGroup.Expense,    LrJournalVchType.Payment);
-            EnsureMinRows(AdvanceReceivedRows, LrJournalGroup.AdvanceReceived,     LrJournalVchType.Receipt);
+            EnsureMinRows(AdvanceRows,         LrJournalGroup.Advance,         LrJournalVchType.Payment);
+            EnsureMinRows(DieselRows,          LrJournalGroup.Diesel,          LrJournalVchType.Payment);
+            EnsureMinRows(ChargesRows,         LrJournalGroup.Charges,         LrJournalVchType.Payment);
+            EnsureMinRows(ExpenseRows,         LrJournalGroup.Expense,         LrJournalVchType.Payment);
+            EnsureMinRows(AdvanceReceivedRows, LrJournalGroup.AdvanceReceived, LrJournalVchType.Receipt);
 
             await LoadDocumentsAsync();
         }
@@ -1428,7 +1672,7 @@
             .Select((j, i) => new LRJournalRowVM
             {
                 Sno          = i + 1,
-                JournalDate  = j.JournalDate ?? DateTime.Now,   // fix DateTime? → DateTime
+                JournalDate  = j.JournalDate ?? DateTime.Now,
                 AccountId    = j.AccountId,
                 Amount       = j.Amount    != null ? (decimal?)Convert.ToDecimal(j.Amount)    : null,
                 Remarks      = j.Remarks,
@@ -1506,11 +1750,11 @@
     private void InitializeAllGridRows()
     {
         if (!ProductRows.Any()) ProductRows = CreateProductRows(5);
-        AdvanceRows         = CreateJournalRows(LrJournalGroup.Advance,      LrJournalVchType.Payment, 5);
-        DieselRows          = CreateJournalRows(LrJournalGroup.Diesel,  LrJournalVchType.Payment, 5);
-        ChargesRows         = CreateJournalRows(LrJournalGroup.Charges,      LrJournalVchType.Payment, 5);
-        ExpenseRows         = CreateJournalRows(LrJournalGroup.Expense,     LrJournalVchType.Payment, 5);
-        AdvanceReceivedRows = CreateJournalRows(LrJournalGroup.AdvanceReceived,      LrJournalVchType.Receipt, 5);
+        AdvanceRows         = CreateJournalRows(LrJournalGroup.Advance,         LrJournalVchType.Payment, 5);
+        DieselRows          = CreateJournalRows(LrJournalGroup.Diesel,          LrJournalVchType.Payment, 5);
+        ChargesRows         = CreateJournalRows(LrJournalGroup.Charges,         LrJournalVchType.Payment, 5);
+        ExpenseRows         = CreateJournalRows(LrJournalGroup.Expense,         LrJournalVchType.Payment, 5);
+        AdvanceReceivedRows = CreateJournalRows(LrJournalGroup.AdvanceReceived, LrJournalVchType.Receipt, 5);
     }
 
     private List<LrProductRow> CreateProductRows(int count = 5)
@@ -1739,11 +1983,11 @@
         StateHasChanged();
     }
 
-    void AddNewAdvance()         => AddJournalRow(AdvanceRows,         LrJournalGroup.Advance,     LrJournalVchType.Payment);
-    void AddNewDiesel()          => AddJournalRow(DieselRows,          LrJournalGroup.Diesel,  LrJournalVchType.Payment);
-    void AddNewCharges()         => AddJournalRow(ChargesRows,         LrJournalGroup.Charges,     LrJournalVchType.Payment);
-    void AddNewExpense()         => AddJournalRow(ExpenseRows,         LrJournalGroup.Expense,    LrJournalVchType.Payment);
-    void AddNewAdvanceReceived() => AddJournalRow(AdvanceReceivedRows, LrJournalGroup.AdvanceReceived,     LrJournalVchType.Receipt);
+    void AddNewAdvance()         => AddJournalRow(AdvanceRows,         LrJournalGroup.Advance,         LrJournalVchType.Payment);
+    void AddNewDiesel()          => AddJournalRow(DieselRows,          LrJournalGroup.Diesel,          LrJournalVchType.Payment);
+    void AddNewCharges()         => AddJournalRow(ChargesRows,         LrJournalGroup.Charges,         LrJournalVchType.Payment);
+    void AddNewExpense()         => AddJournalRow(ExpenseRows,         LrJournalGroup.Expense,         LrJournalVchType.Payment);
+    void AddNewAdvanceReceived() => AddJournalRow(AdvanceReceivedRows, LrJournalGroup.AdvanceReceived, LrJournalVchType.Receipt);
 
     void DeleteAdvanceRow(LRJournalRowVM row)         => DeleteJournalRow(AdvanceRows,         row);
     void DeleteDieselRow(LRJournalRowVM row)           => DeleteJournalRow(DieselRows,          row);
@@ -1942,7 +2186,6 @@
             await LoadDocumentsAsync();
             ToastService.Success(IsEditMode ? "LR updated successfully." : "LR saved successfully.");
 
-            // After save, update URL to edit mode if it was a new record
             if (!IsEditMode)
                 NavManager.NavigateTo($"/lrentry/{model.LrId}", replace: true);
         }
