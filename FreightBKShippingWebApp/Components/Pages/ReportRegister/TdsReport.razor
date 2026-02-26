@@ -1,0 +1,547 @@
+﻿@page "/TdsReport"
+@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Models
+@using FreightBKShippingWebApp.Services
+@using DevExpress.Blazor
+@using Microsoft.AspNetCore.Components.Authorization
+@inject BillService BillService
+@inject JournalService JournalService
+@inject AccountService AccountService
+@inject VoucherService VoucherService
+@inject YearStatechangeService YearStatechangeService
+@inject LoadingService LoadingService
+@inject ToasteService ToastService
+@inject GridLayoutService GridLayoutService
+@inject IJSRuntime JS
+
+<PageTitle>TDS Report</PageTitle>
+
+<style>
+    .grid-size {
+        max-height: 570px;
+    }
+
+    .layout-combobox {
+        border-radius: 6px;
+        width: 185px;
+    }
+
+    .toolbar-title {
+        display: flex;
+        align-items: center;
+    }
+
+    /* Print section ko hide rakho normally */
+    .print-only-section {
+        display: none;
+    }
+
+    /* Print time pe sirf print section dikhao */
+    @@media print {
+        body * {
+            visibility: hidden;
+        }
+
+        .print-only-section,
+        .print-only-section * {
+            visibility: visible;
+        }
+
+        .print-only-section {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            display: block !important;
+        }
+
+        @@page {
+            size: A4 landscape;
+            margin: 1cm;
+        }
+    }
+
+    /* Print table styling */
+    .print-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+        font-size: 12px;
+    }
+
+        .print-table th,
+        .print-table td {
+            border: 1px solid #000;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .print-table th {
+            background-color: #f0f0f0;
+            font-weight: bold;
+        }
+
+        .print-table tfoot td {
+            font-weight: bold;
+            background-color: #e8e8e8;
+        }
+
+    .print-header {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+        .print-header h2 {
+            margin: 5px 0;
+        }
+
+    .print-info {
+        margin-bottom: 15px;
+        font-size: 14px;
+    }
+</style>
+
+<div class="px-3 py-3">
+    <DxGrid TItem="TdsRow"
+            Data="@billList"
+            @ref="MyGrid"
+            KeyFieldName="BillId"
+            ShowSearchBox="true"
+            PageSize="100"
+            PageSizeSelectorVisible="false"
+            ShowGroupPanel="true"
+            FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always"
+            FocusedRowEnabled="true"
+            ColumnResizeMode="GridColumnResizeMode.NextColumn"
+            CssClass="grid-size"
+            AllowColumnReorder="true">
+
+        <ToolbarTemplate Context="gridContext">
+            <DxToolbar>
+                <!-- Title -->
+                <DxToolbarItem Alignment="ToolbarItemAlignment.Left">
+                    <Template Context="t">
+                        <div class="toolbar-title">
+                            <i class="bi bi-receipt-cutoff me-2"></i>
+                            <span class="fs-5">TDS Report</span>
+                        </div>
+                    </Template>
+                </DxToolbarItem>
+
+                <DxToolbarItem Text="Filter"
+                               IconCssClass="bi bi-funnel-fill"
+                               Click="OpenDateFilter"
+                               RenderStyle="ButtonRenderStyle.None"
+                               AdaptivePriority="2" />
+
+                <DxToolbarItem Text="Export"
+                               RenderStyle="ButtonRenderStyle.None"
+                               AdaptivePriority="2">
+                    <Items>
+                        <DxToolbarItem Text="Excel"
+                                       RenderStyle="ButtonRenderStyle.None"
+                                       IconCssClass="bi bi-file-earmark-spreadsheet"
+                                       Click="ExportXlsx" />
+                        <DxToolbarItem Text="PDF"
+                                       RenderStyle="ButtonRenderStyle.None"
+                                       IconCssClass="bi bi-printer"
+                                       Click="PrintGridPage" />
+                    </Items>
+                </DxToolbarItem>
+
+                <DxToolbarItem Alignment="ToolbarItemAlignment.Right"
+                               RenderStyle="ButtonRenderStyle.Secondary"
+                               IconCssClass="bi bi-gear-wide-connected"
+                               Click="ShowLayoutPopup" />
+
+            </DxToolbar>
+        </ToolbarTemplate>
+
+        <Columns>
+
+            <DxGridDataColumn FieldName="BillDate"
+                              Caption="Date"
+                              DisplayFormat="dd/MM/yyyy"
+                              Width="@(layoutManager?.GetColumnWidth("BillDate") ?? "130px")"
+                              Visible="@(layoutManager?.GetColumnVisibility("BillDate") ?? true)" />
+
+            <DxGridDataColumn FieldName="BillNo"
+                              Caption="Bill No"
+                              Width="@(layoutManager?.GetColumnWidth("BillNo") ?? "160px")"
+                              Visible="@(layoutManager?.GetColumnVisibility("BillNo") ?? true)" />
+
+            <DxGridDataColumn FieldName="PartyName"
+                              Caption="Party Name"
+                              Width="@(layoutManager?.GetColumnWidth("PartyName") ?? "410px")"
+                              Visible="@(layoutManager?.GetColumnVisibility("PartyName") ?? true)" />
+
+            <DxGridDataColumn FieldName="VoucherName"
+                              Caption="Voucher Type"
+                              Width="@(layoutManager?.GetColumnWidth("VoucherName") ?? "160px")"
+                              Visible="@(layoutManager?.GetColumnVisibility("VoucherName") ?? true)" />
+
+            <DxGridDataColumn FieldName="BillType"
+                              Caption="TDS Type"
+                              Width="@(layoutManager?.GetColumnWidth("BillType") ?? "140px")"
+                              Visible="@(layoutManager?.GetColumnVisibility("BillType") ?? true)" />
+
+            <DxGridDataColumn FieldName="BillAmount"
+                              Caption="Bill Amount"
+                              DisplayFormat="N2"
+                              Width="@(layoutManager?.GetColumnWidth("BillAmount") ?? "130px")"
+                              Visible="@(layoutManager?.GetColumnVisibility("BillAmount") ?? true)" />
+
+            <DxGridDataColumn FieldName="TdsPer"
+                              Caption="TDS %"
+                              DisplayFormat="N2"
+                              Width="@(layoutManager?.GetColumnWidth("TdsPer") ?? "90px")"
+                              Visible="@(layoutManager?.GetColumnVisibility("TdsPer") ?? true)" />
+
+            <DxGridDataColumn FieldName="TdsAmount"
+                              Caption="TDS Amount"
+                              DisplayFormat="N2"
+                              Width="@(layoutManager?.GetColumnWidth("TdsAmount") ?? "130px")"
+                              Visible="@(layoutManager?.GetColumnVisibility("TdsAmount") ?? true)" />
+
+            <DxGridDataColumn FieldName="NetAmount"
+                              Caption="Net Amount"
+                              DisplayFormat="N2"
+                              Width="@(layoutManager?.GetColumnWidth("NetAmount") ?? "130px")"
+                              Visible="@(layoutManager?.GetColumnVisibility("NetAmount") ?? true)" />
+
+        </Columns>
+
+        <TotalSummary>
+            <DxGridSummaryItem SummaryType="GridSummaryItemType.Count" FieldName="BillId" />
+            <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum"
+                               FieldName="BillAmount"
+                               DisplayText="Total: {0:N2}" />
+            <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum"
+                               FieldName="TdsAmount"
+                               DisplayText="TDS: {0:N2}" />
+            <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum"
+                               FieldName="NetAmount"
+                               DisplayText="Net: {0:N2}" />
+        </TotalSummary>
+    </DxGrid>
+</div>
+
+<!-- PRINT ONLY SECTION -->
+<div class="print-only-section" id="printTdsSection">
+    <div class="print-header">
+        <h2>TDS Report</h2>
+        <div class="print-info">
+            <strong>From:</strong> @FromDate?.ToString("dd/MM/yyyy") &nbsp;&nbsp;
+            <strong>To:</strong> @ToDate?.ToString("dd/MM/yyyy") &nbsp;&nbsp;
+            <strong>Print Date:</strong> @DateTime.Now.ToString("dd/MM/yyyy hh:mm tt")
+        </div>
+    </div>
+
+    <table class="print-table">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Bill No</th>
+                <th>Party Name</th>
+                <th>Voucher Type</th>
+                <th>TDS Type</th>
+                <th>Bill Amount</th>
+                <th>TDS %</th>
+                <th>TDS Amount</th>
+                <th>Net Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (billList != null && billList.Any())
+            {
+                @foreach (var row in billList)
+                {
+                    <tr>
+                        <td>@row.BillDate.ToString("dd/MM/yyyy")</td>
+                        <td>@row.BillNo</td>
+                        <td>@row.PartyName</td>
+                        <td>@row.VoucherName</td>
+                        <td>@row.BillType</td>
+                        <td>@row.BillAmount.ToString("N2")</td>
+                        <td>@row.TdsPer.ToString("N2")%</td>
+                        <td>@row.TdsAmount.ToString("N2")</td>
+                        <td>@row.NetAmount.ToString("N2")</td>
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr>
+                    <td colspan="9" style="text-align:center">No TDS records available</td>
+                </tr>
+            }
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="5"><strong>Total:</strong></td>
+                <td><strong>@billList?.Sum(r => r.BillAmount).ToString("N2")</strong></td>
+                <td></td>
+                <td><strong>@billList?.Sum(r => r.TdsAmount).ToString("N2")</strong></td>
+                <td><strong>@billList?.Sum(r => r.NetAmount).ToString("N2")</strong></td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+
+
+<DateFilterPage @ref="dateFilterPopup" ShowOutstandingTypeFilter="true" OnFilterApplied="HandleFilterApplied" />
+<ConfirmationDialog />
+
+<GridLayoutpPopup @ref="layoutManager"
+                  VoucherType="TdsReport"
+                  Columns="@allColumns"
+                  OnLayoutChanged="HandleLayoutChanged" />
+
+
+@code {
+
+    // Allowed voucher groups for TDS entries
+    private static readonly HashSet<string> AllowedVoucherGroups = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "RECEIPT", "PAYMENT", "PURCHASE", "DEBIT NOTE"
+    };
+
+    public class TdsRow
+    {
+        public int BillId { get; set; }
+        public DateTime BillDate { get; set; }
+        public string BillNo { get; set; } = "";
+        public string PartyName { get; set; } = "";
+        public string VoucherName { get; set; } = "";
+        public double BillAmount { get; set; }
+        public double TdsPer { get; set; }
+        public double TdsAmount { get; set; }
+        public double NetAmount { get; set; }
+        public string BillType { get; set; } = "";
+        public int PartyId { get; set; }
+    }
+
+    private IGrid MyGrid;
+    private List<TdsRow> billList = new();
+    private List<TdsRow> allTdsRows = new();
+
+    // Filter properties
+    private DateTime? FromDate;
+    private DateTime? ToDate;
+    private string? SelectedOutstandingType;
+
+    // Grid Layout Management
+    private GridLayoutpPopup? layoutManager;
+    private List<GridColumnLayout> allColumns = [];
+    private async void ShowLayoutPopup()
+    {
+        await InvokeAsync(() =>
+        {
+            layoutManager?.ShowPopup();
+        });
+    }
+    private async Task HandleLayoutChanged(List<GridColumnLayout> updatedLayout)
+    {
+        allColumns = updatedLayout;
+        // Force the grid to re-render with new layout
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private DateFilterPage dateFilterPopup;
+
+    private void OpenDateFilter()
+    {
+        dateFilterPopup.Show(FromDate, ToDate, null, null, SelectedOutstandingType);
+    }
+
+    private async Task HandleFilterApplied((DateTime? FromDate, DateTime? ToDate, string? JobType, int? SelectedVoucherType, string? OutstandingType) f)
+    {
+        FromDate = f.FromDate;
+        ToDate = f.ToDate;
+        SelectedOutstandingType = f.OutstandingType;
+        OnSearch();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        InitializeColumns();
+        await LoadAllRows();
+    }
+
+    private void InitializeColumns()
+    {
+        allColumns = new List<GridColumnLayout>
+        {
+            new() { FieldName = "BillDate",    Caption = "Date",         Visible = true, Width = 130, DisplayIndex = 0 },
+            new() { FieldName = "BillNo",      Caption = "Bill No",      Visible = true, Width = 160, DisplayIndex = 1 },
+            new() { FieldName = "PartyName",   Caption = "Party Name",   Visible = true, Width = 410, DisplayIndex = 2 },
+            new() { FieldName = "VoucherName", Caption = "Voucher Type", Visible = true, Width = 160, DisplayIndex = 3 },
+            new() { FieldName = "BillType",    Caption = "TDS Type",     Visible = true, Width = 140, DisplayIndex = 4 },
+            new() { FieldName = "BillAmount",  Caption = "Bill Amount",  Visible = true, Width = 130, DisplayIndex = 5 },
+            new() { FieldName = "TdsPer",      Caption = "TDS %",        Visible = true, Width = 90,  DisplayIndex = 6 },
+            new() { FieldName = "TdsAmount",   Caption = "TDS Amount",   Visible = true, Width = 130, DisplayIndex = 7 },
+            new() { FieldName = "NetAmount",   Caption = "Net Amount",   Visible = true, Width = 130, DisplayIndex = 8 },
+        };
+        
+    }
+
+    private async Task LoadAllRows()
+    {
+        try
+        {
+            LoadingService.Show("Loading TDS Report...");
+
+            var allVouchers = await VoucherService.GetAllAsync();
+            var allBills = await BillService.GetAllAsync();
+            var allJournals = await JournalService.GetAllAsync();
+            var allAccounts = await AccountService.GetAllAsync();
+
+            var yearId = YearStatechangeService.SelectedYearId;
+
+            var voucherMap = allVouchers.ToDictionary(v => v.VoucherId, v => v);
+            var accountMap = allAccounts.ToDictionary(a => a.AccountId, a => a.AccountName ?? "");
+
+            var result = new List<TdsRow>();
+
+            // ==========================
+            // 1️⃣ PURCHASE + DEBIT NOTE (From Bill)
+            // ==========================
+            var yearBills = allBills
+                .Where(b => b.BillYearId == yearId && b.BillStatus == true)
+                .ToList();
+
+            foreach (var b in yearBills)
+            {
+                if (!voucherMap.ContainsKey(b.BillVoucherId)) continue;
+
+                var vch = voucherMap[b.BillVoucherId];
+                var group = vch.VoucherGroup?.ToUpperInvariant() ?? "";
+
+                if ((group == "PURCHASE" || group == "DEBIT NOTE") && b.BillTdsAmt > 0)
+                {
+                    accountMap.TryGetValue(b.BillPartyId, out var partyName);
+
+                    result.Add(new TdsRow
+                    {
+                        BillId = b.BillId,
+                        BillDate = b.BillDate,
+                        BillNo = b.BillNo ?? "",
+                        PartyName = partyName ?? "",
+                        VoucherName = vch.VoucherName ?? "",
+                        BillType = "PAYABLE",
+                        BillAmount = b.BillNetAmount + b.BillTdsAmt,
+                        TdsPer = b.BillTdsPer,
+                        TdsAmount = b.BillTdsAmt,
+                        NetAmount = b.BillNetAmount,
+                        PartyId = b.BillPartyId
+                    });
+                }
+            }
+
+            // ==========================
+            // 2️⃣ RECEIPT + PAYMENT (From Journal)
+            // ==========================
+            var yearJournals = allJournals
+                .Where(j => j.JournalYearId == yearId && j.JournalStatus == true)
+                .ToList();
+
+            foreach (var j in yearJournals)
+            {
+                if (!voucherMap.ContainsKey(j.JournalVoucherId)) continue;
+
+                var vch = voucherMap[j.JournalVoucherId];
+                var group = vch.VoucherGroup?.ToUpperInvariant() ?? "";
+
+                if ((group == "RECEIPT" || group == "PAYMENT") && j.JournalTotalTds > 0)
+                {
+                    accountMap.TryGetValue(j.JournalPartyId, out var partyName);
+
+                    result.Add(new TdsRow
+                    {
+                        BillId = j.JournalId,
+                        BillDate = j.JournalDate,
+                        BillNo = j.JournalNoStr ?? "",
+                        PartyName = partyName ?? "",
+                        VoucherName = vch.VoucherName ?? "",
+                        BillType = "RECEIVABLE",
+                        BillAmount = j.JournalAmount + j.JournalTotalTds,
+                        //TdsPer = j.JournalTdsPer,
+                        TdsAmount = j.JournalTotalTds,
+                        NetAmount = j.JournalAmount,
+                        PartyId = j.JournalPartyId
+                    });
+                }
+            }
+
+            allTdsRows = result
+                .OrderByDescending(x => x.BillDate)
+                .ToList();
+
+            billList = allTdsRows;
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Failed to load TDS report: {ex.Message}");
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+
+    private async Task OnSearch()
+    {
+        billList = allTdsRows;
+
+        if (FromDate.HasValue)
+            billList = billList.Where(b => b.BillDate.Date >= FromDate.Value.Date).ToList();
+
+        if (ToDate.HasValue)
+            billList = billList.Where(b => b.BillDate.Date <= ToDate.Value.Date).ToList();
+
+        if (!string.IsNullOrWhiteSpace(SelectedOutstandingType))
+        {
+            if (SelectedOutstandingType.Equals("RECEIVABLE", StringComparison.OrdinalIgnoreCase))
+                billList = billList.Where(b => b.BillType == "RECEIVABLE").ToList();
+            else if (SelectedOutstandingType.Equals("PAYABLE", StringComparison.OrdinalIgnoreCase))
+                billList = billList.Where(b => b.BillType == "PAYABLE").ToList();
+        }
+
+        if (billList.Count == 0)
+            ToastService.Warning("No TDS records found matching the criteria.");
+        else
+            ToastService.Success($"Found {billList.Count} TDS record(s).");
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ExportXlsx()
+    {
+        if (billList == null || !billList.Any())
+        {
+            ToastService.Warning("No data to export.");
+            return;
+        }
+        await MyGrid.ExportToXlsxAsync("TdsReport.xlsx");
+    }
+
+    private async Task PrintGridPage()
+    {
+        if (billList == null || !billList.Any())
+        {
+            ToastService.Warning("No data to print.");
+            return;
+        }
+
+        try
+        {
+            await JS.InvokeVoidAsync("window.print");
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Print error: {ex.Message}");
+        }
+    }
+
+   
+}

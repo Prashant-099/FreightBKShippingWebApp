@@ -354,7 +354,10 @@ verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body"
         }
         else
         {
-            EditModel = account;         // direct same model
+           // EditModel = account;         // direct same model
+            var json = JsonSerializer.Serialize(account);
+            EditModel = JsonSerializer.Deserialize<Account>(json) ?? new Account();
+
             Title = "Edit Account";
         }
         // Create EditContext when showing the form

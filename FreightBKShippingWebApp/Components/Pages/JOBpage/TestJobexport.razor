@@ -75,6 +75,11 @@
                         <DxToolbarItem Text="Preview" IconCssClass="bi bi-printer" Click="@((_) => PreviewReport())"></DxToolbarItem>
                     </Items>
                 </DxToolbarItem>
+                <DxToolbarItem Alignment="ToolbarItemAlignment.Right"
+                               RenderStyle="ButtonRenderStyle.Secondary"
+                               IconCssClass="bi bi-gear-wide-connected"
+                               Click="ShowLayoutPopup" />
+
             </Items>
         </DxToolbar>
 
@@ -86,19 +91,12 @@
         <DxGridSelectionColumn Width="30"
                                FixedPosition="GridColumnFixedPosition.Left" />
 
-        <DxGridCommandColumn CancelButtonVisible="false" Name="Action" 
+        <DxGridCommandColumn CancelButtonVisible="false" Name="Action" Caption="Action"
             DeleteButtonVisible="false" 
             EditButtonVisible="false" 
             SaveButtonVisible="false"
                              NewButtonVisible="false" Width="130">
-
-            <HeaderCaptionTemplate>Actions
-                <DxButton RenderStyle="ButtonRenderStyle.Link"
-                          IconCssClass="bi bi-three-dots"
-                          SizeMode="SizeMode.Small"
-                          Click="ShowLayoutPopup" />
-
-            </HeaderCaptionTemplate>
+           
             <CellDisplayTemplate Context="cellContext">
 
                   <div style="display: flex; align-items: center;">
@@ -160,33 +158,33 @@
 
         <DxGridDataColumn FieldName="BranchName"
                           Caption="Branch"
-                          Width="@(layoutManager?.GetColumnWidth("BranchName") ?? "120px")"
+                          Width="@(layoutManager?.GetColumnWidth("BranchName") ?? "170px")"
                           Visible="@(layoutManager?.GetColumnVisibility("BranchName") ?? true)" />
 
         <DxGridDataColumn FieldName="JobNo"
                           Caption="Job No"
-                          Width="@(layoutManager?.GetColumnWidth("JobNo") ?? "110px")"
+                          Width="@(layoutManager?.GetColumnWidth("JobNo") ?? "100px")"
                           Visible="@(layoutManager?.GetColumnVisibility("JobNo") ?? true)" />
 
         <DxGridDataColumn FieldName="JobDate"
                           Caption="Job Date"
                           DisplayFormat="dd/MM/yyyy"
-                          Width="@(layoutManager?.GetColumnWidth("JobDate") ?? "110px")"
+                          Width="@(layoutManager?.GetColumnWidth("JobDate") ?? "130px")"
                           Visible="@(layoutManager?.GetColumnVisibility("JobDate") ?? true)" />
 
         <DxGridDataColumn FieldName="JobType"
                           Caption="Job Type"
-                          Width="@(layoutManager?.GetColumnWidth("JobType") ?? "110px")"
+                          Width="@(layoutManager?.GetColumnWidth("JobType") ?? "100px")"
                           Visible="@(layoutManager?.GetColumnVisibility("JobType") ?? true)" />
 
         <DxGridDataColumn FieldName="Partyname"
                           Caption="Exporter"
-                          Width="@(layoutManager?.GetColumnWidth("Partyname") ?? "180px")"
+                          Width="@(layoutManager?.GetColumnWidth("Partyname") ?? "260px")"
                           Visible="@(layoutManager?.GetColumnVisibility("Partyname") ?? true)" />
 
         <DxGridDataColumn FieldName="JobBlNo"
                           Caption="B/L No"
-                          Width="@(layoutManager?.GetColumnWidth("JobBlNo") ?? "120px")"
+                          Width="@(layoutManager?.GetColumnWidth("JobBlNo") ?? "110px")"
                           Visible="@(layoutManager?.GetColumnVisibility("JobBlNo") ?? true)" />
 
         <DxGridDataColumn FieldName="JobBlDate"
@@ -197,37 +195,37 @@
 
         <DxGridDataColumn FieldName="VesselName"
                           Caption="Vessel"
-                          Width="@(layoutManager?.GetColumnWidth("VesselName") ?? "150px")"
+                          Width="@(layoutManager?.GetColumnWidth("VesselName") ?? "310px")"
                           Visible="@(layoutManager?.GetColumnVisibility("VesselName") ?? true)" />
 
         <DxGridDataColumn FieldName="Job20Ft"
                           Caption="20ft Count"
-                          Width="@(layoutManager?.GetColumnWidth("Job20Ft") ?? "90px")"
+                          Width="@(layoutManager?.GetColumnWidth("Job20Ft") ?? "100px")"
                           Visible="@(layoutManager?.GetColumnVisibility("Job20Ft") ?? true)" />
 
         <DxGridDataColumn FieldName="Job40Ft"
                           Caption="40ft Count"
-                          Width="@(layoutManager?.GetColumnWidth("Job40Ft") ?? "90px")"
+                          Width="@(layoutManager?.GetColumnWidth("Job40Ft") ?? "100px")"
                           Visible="@(layoutManager?.GetColumnVisibility("Job40Ft") ?? true)" />
 
         <DxGridDataColumn FieldName="PolName"
                           Caption="POL"
-                          Width="@(layoutManager?.GetColumnWidth("PolName") ?? "120px")"
+                          Width="@(layoutManager?.GetColumnWidth("PolName") ?? "220px")"
                           Visible="@(layoutManager?.GetColumnVisibility("PolName") ?? true)" />
 
         <DxGridDataColumn FieldName="PodName"
                           Caption="POD"
-                          Width="@(layoutManager?.GetColumnWidth("PodName") ?? "120px")"
+                          Width="@(layoutManager?.GetColumnWidth("PodName") ?? "220px")"
                           Visible="@(layoutManager?.GetColumnVisibility("PodName") ?? true)" />
 
         <DxGridDataColumn FieldName="JobGrossWt"
                           Caption="Gross Weight"
-                          Width="@(layoutManager?.GetColumnWidth("JobGrossWt") ?? "120px")"
+                          Width="@(layoutManager?.GetColumnWidth("JobGrossWt") ?? "100px")"
                           Visible="@(layoutManager?.GetColumnVisibility("JobGrossWt") ?? true)" />
 
         <DxGridDataColumn FieldName="JobVolume"
                           Caption="Volume / CBM"
-                          Width="@(layoutManager?.GetColumnWidth("JobVolume") ?? "120px")"
+                          Width="@(layoutManager?.GetColumnWidth("JobVolume") ?? "100px")"
                           Visible="@(layoutManager?.GetColumnVisibility("JobVolume") ?? true)" />
 
         <DxGridDataColumn FieldName="JobQty"
@@ -237,7 +235,7 @@
 
         <DxGridDataColumn FieldName="JobRemarks"
                           Caption="Remarks"
-                          Width="@(layoutManager?.GetColumnWidth("JobRemarks") ?? "200px")"
+                          Width="@(layoutManager?.GetColumnWidth("JobRemarks") ?? "210px")"
                           Visible="@(layoutManager?.GetColumnVisibility("JobRemarks") ?? true)" />
 
        
@@ -301,22 +299,22 @@
         allColumns = new List<GridColumnLayout>
         {
              new(){ FieldName = "JobStatus", Caption = "Status", Visible = true, Width = 120, DisplayIndex = 0 },
-             new(){ FieldName = "BranchName", Caption = "Branch", Visible = true, Width = 120, DisplayIndex = 1},
-    new() { FieldName = "JobNo", Caption = "Job No", Visible = true, Width = 120, DisplayIndex = 2 },
+             new(){ FieldName = "BranchName", Caption = "Branch", Visible = true, Width = 170, DisplayIndex = 1},
+    new() { FieldName = "JobNo", Caption = "Job No", Visible = true, Width = 100, DisplayIndex = 2 },
         new() { FieldName = "JobDate", Caption = "Job Date", Visible = true, Width = 130, DisplayIndex = 3 },
-        new() { FieldName = "JobType", Caption = "Job Type", Visible = true, Width = 130, DisplayIndex = 4},
-        new() { FieldName = "Partyname", Caption = "Exporter", Visible = true, Width = 130, DisplayIndex = 5 },
-        new() { FieldName = "JobBlNo", Caption = "B/L No", Visible = true, Width = 150, DisplayIndex = 6 },
+        new() { FieldName = "JobType", Caption = "Job Type", Visible = true, Width = 100, DisplayIndex = 4},
+        new() { FieldName = "Partyname", Caption = "Exporter", Visible = true, Width = 260, DisplayIndex = 5 },
+        new() { FieldName = "JobBlNo", Caption = "B/L No", Visible = true, Width = 110, DisplayIndex = 6 },
         new() { FieldName = "JobBlDate", Caption = "B/L Date", Visible = true, Width = 130, DisplayIndex = 7 },
-        new() { FieldName = "VesselName", Caption = "Vessel", Visible = true, Width = 160, DisplayIndex = 8 },
+        new() { FieldName = "VesselName", Caption = "Vessel", Visible = true, Width = 310, DisplayIndex = 8 },
         new() { FieldName = "Job20Ft", Caption = "20ft Count", Visible = true, Width = 100, DisplayIndex = 9 },
         new() { FieldName = "Job40Ft", Caption = "40ft Count", Visible = true, Width = 100, DisplayIndex = 10},
-         new() { FieldName = "PolName", Caption = "POL", Visible = true, Width = 100, DisplayIndex = 11 },
-          new() { FieldName = "PodName", Caption = "POD", Visible = true, Width = 100, DisplayIndex = 12 },
+         new() { FieldName = "PolName", Caption = "POL", Visible = true, Width = 220, DisplayIndex = 11 },
+          new() { FieldName = "PodName", Caption = "POD", Visible = true, Width = 220, DisplayIndex = 12 },
            new() { FieldName = "JobGrossWt", Caption = "Gross Weight", Visible = true, Width = 100, DisplayIndex = 13 },
             new() { FieldName = "JobVolume", Caption = "Volume / CBM", Visible = true, Width = 100, DisplayIndex = 14 },
              new() { FieldName = "JobQty", Caption = "Quantity", Visible = true, Width = 100, DisplayIndex = 15 },
-              new() { FieldName = "JobRemarks", Caption = "Remarks", Visible = true, Width = 100, DisplayIndex = 16 }
+              new() { FieldName = "JobRemarks", Caption = "Remarks", Visible = true, Width = 210, DisplayIndex = 16 }
     };
 
 
@@ -395,9 +393,10 @@
     {
         try
         {
+            InitializeColumns();
             CurrentYearId = YearStatechangeService.SelectedYearId;
             await LoadJobsAsync();
-            InitializeColumns();
+           
            
 
             var voucherTask = await VoucherService.GetAllAsync(); // ya jo bhi tumhara method hai

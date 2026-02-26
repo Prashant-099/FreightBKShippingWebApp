@@ -5,6 +5,7 @@
 @using FreightBKShippingWebApp.Models
 @using FreightBKShippingWebApp.Services
 @using DevExpress.Blazor
+@using System.Text.Json
 
 @inject BillService BillService
 @inject ToasteService ToastService
@@ -1065,7 +1066,7 @@ width:fit-content;
                                      </div>
                     </DxFormLayoutTabPage>
                             
-                               @*  <DxFormLayoutTabPage Caption="Extra Details">
+                                <DxFormLayoutTabPage Caption="Extra Details">
                                 <div class="popup-content-container">
                                     <!-- Scrollable section -->
                                     <div class="form-scroll-section">
@@ -1165,7 +1166,7 @@ width:fit-content;
 
                                     </div>
                                 </div>
-                            </DxFormLayoutTabPage> *@
+                            </DxFormLayoutTabPage>
 
                             </DxFormLayoutTabPages>
 
@@ -1206,13 +1207,20 @@ width:fit-content;
                         @if(PartyTDSVisible){
                         <div class="right-row">
                             <label class="fw-semibold">TDS</label>
-                        <DxSpinEdit @bind-Value="EditModel.BillTdsPer"
-                                    NullText="PER(%)"
+                                <DxSpinEdit Value="@EditModel.BillTdsPer"
+                                            ValueChanged="@((float value) => OnTdsPerChanged(value))"
+                                            ValueExpression="() => EditModel.BillTdsPer"
+                                            NullText="PER(%)"
+                                             DisplayFormat="N3"
+                                            ShowSpinButtons="false" />
 
-                                    ShowSpinButtons="false"/>
-                        <DxSpinEdit @bind-Value="EditModel.BillTdsAmt"
-                                    DisplayFormat="N4"
-                                    ShowSpinButtons="false"/>
+                                <!-- TDS Amount -->
+                                <DxSpinEdit Value="@EditModel.BillTdsAmt"
+                                            ReadOnly="true"
+                                            ValueChanged="@((float value) => OnTdsAmtChanged(value))"
+                                            ValueExpression="() => EditModel.BillTdsAmt"
+                                            DisplayFormat="N3"
+                                            ShowSpinButtons="false" />
                                     </div>
                                     }
                         <div class="right-row">
@@ -1222,7 +1230,7 @@ width:fit-content;
                                         CheckedExpression="() => EditModel.BillIsRoundOff" />
                             <DxSpinEdit @bind-Value="EditModel.BillRoundAmt"
                                         ReadOnly="true"
-                                        DisplayFormat="N4"
+                                        DisplayFormat="N3"
                                         ShowSpinButtons="false"
                                         CssClass="right-spin roundoff-amt" />
                         </div>
@@ -1379,6 +1387,40 @@ width:fit-content;
     };
 
     }
+    private decimal GetGrossAmount()
+    {
+        var baseAmount = (decimal)BillDetails
+            .Where(d => !UnsavedChanges.ContainsKey(d) || UnsavedChanges[d].Type != DataChangeType.Delete)
+            .Sum(d => d.BillDetailTotal);
+
+        return EditModel.BillIsRoundOff
+            ? Math.Round(baseAmount, 0, MidpointRounding.AwayFromZero)
+            : Math.Round(baseAmount, 2);
+    }
+
+    private void OnTdsPerChanged(float value)
+    {
+        EditModel.BillTdsPer = value;
+        var gross = GetGrossAmount();
+        EditModel.BillTdsAmt = (float)Math.Round((decimal)value / 100m * gross, 2);
+        EditModel.BillNetAmount = (float)(gross - (decimal)EditModel.BillTdsAmt);
+        RecalculateNetAmount(EditModel.BillIsRoundOff);
+        // ConvertNumberToWords((decimal)EditModel.BillNetAmount);
+        StateHasChanged();
+    }
+
+    private void OnTdsAmtChanged(float value)
+    {
+        EditModel.BillTdsAmt = value;
+        var gross = GetGrossAmount();
+        EditModel.BillTdsPer = gross > 0 ? (float)Math.Round((decimal)value / gross * 100m, 2) : 0;
+        EditModel.BillNetAmount = (float)(gross - (decimal)value);
+        RecalculateNetAmount(EditModel.BillIsRoundOff);
+        // ConvertNumberToWords((decimal)EditModel.BillNetAmount);
+        StateHasChanged();
+    }
+
+
     private List<Bill> billList = new();
     // Grid Layout Manager Reference
     private GridLayoutpPopup? layoutManager;
@@ -1976,12 +2018,17 @@ width:fit-content;
         {
 
 
-            EditModel = bill;
+            //EditModel = bill;
+            var json = JsonSerializer.Serialize(bill);
+            EditModel = JsonSerializer.Deserialize<Bill>(json) ?? new Bill();
             OnJobTypeChanged(EditModel.BillJobType);
-            var selectedparty = AccountList.FirstOrDefault(s => s.AccountId == EditModel.BillPartyId);
+            var selectedparty = AccountList.FirstOrDefault(s => s.AccountId == bill.BillPartyId);
             if(selectedparty.AccountTdsApplicable==true)
             {
                 PartyTDSVisible = true;
+            }
+            else{
+            PartyTDSVisible = false;
             }
             BillDetails = new List<BillDetail>();
             BillDetails = bill.BillDetails?
@@ -2327,10 +2374,10 @@ width:fit-content;
             // EditModel.BillPartyId = selectedjobdetails.JobPartyId ?? 0;
             EditModel.BillSupplyType = "B2B";
             EditModel.BillCargoId = selectedjobdetails.JobCargoId ?? 0;
-            EditModel.BillShipPartyId = selectedjobdetails.JobPartyId ?? 0;
+            EditModel.BillShipPartyId = EditModel?.BillPartyId?? selectedjobdetails?.JobPartyId ?? 0;
             EditModel.BillRemarksDefault = selectedjobdetails.JobGoodsDesc;
-            EditModel.BillVesselId = selectedjobdetails.JobVesselId ?? 0;
-            EditModel.BillLineId = selectedjobdetails.JobLineId ?? 0;
+            EditModel.BillVesselId = selectedjobdetails?.JobVesselId ?? 0;
+            EditModel.BillLineId = selectedjobdetails?.JobLineId ?? 0;
             EditModel.BillDefaultCurrencyId = selectedjobdetails.JobDefCurrId ?? 0;
             EditModel.BillHblNo = selectedjobdetails.JobHblNo;
             EditModel.BillShipperInvNo = selectedjobdetails.JobShipperInvNo;
@@ -3087,22 +3134,69 @@ width:fit-content;
             .Where(d => !UnsavedChanges.ContainsKey(d) || UnsavedChanges[d].Type != DataChangeType.Delete)
             .Sum(d => d.BillDetailTotal);
 
-        if (EditModel.BillIsRoundOff)
+            
+
+        // if (EditModel.BillIsRoundOff)
+        // {
+        //     // Round to nearest whole number
+        //     var roundedAmount = Math.Round(baseAmount, 0, MidpointRounding.AwayFromZero);
+
+        //     // Calculate round-off difference
+        //     var roundOffDifference = roundedAmount - baseAmount;
+
+        //     EditModel.BillRoundAmt = (float)roundOffDifference;
+        //     EditModel.BillNetAmount = (float)roundedAmount- EditModel.BillTdsAmt;
+        // }
+        // else
+        // {
+        //     EditModel.BillRoundAmt = 0;
+        //     EditModel.BillNetAmount = (float)Math.Round(baseAmount, 2) - EditModel.BillTdsAmt;
+        // }
+        decimal tdsAmount = 0;
+
+        // 2️⃣ TDS Calculation Logic
+        if (EditModel.BillTdsPer > 0)
         {
-            // Round to nearest whole number
-            var roundedAmount = Math.Round(baseAmount, 0, MidpointRounding.AwayFromZero);
-
-            // Calculate round-off difference
-            var roundOffDifference = roundedAmount - baseAmount;
-
-            EditModel.BillRoundAmt = (float)roundOffDifference;
-            EditModel.BillNetAmount = (float)roundedAmount;
+            // If percentage entered
+            tdsAmount = Math.Round(baseAmount * (decimal)EditModel.BillTdsPer / 100m, 2);
+            EditModel.BillTdsAmt = (float)tdsAmount;
+        }
+        else if (EditModel.BillTdsAmt > 0)
+        {
+            // If amount entered
+            tdsAmount = (decimal)EditModel.BillTdsAmt;
+            EditModel.BillTdsPer = baseAmount > 0
+                ? (float)Math.Round(tdsAmount / baseAmount * 100m, 2)
+                : 0;
         }
         else
         {
-            EditModel.BillRoundAmt = 0;
-            EditModel.BillNetAmount = (float)Math.Round(baseAmount, 2);
+            EditModel.BillTdsAmt = 0;
+            EditModel.BillTdsPer = 0;
         }
+
+
+        EditModel.BillTdsAmt = (float)tdsAmount;
+
+        // Step 3: SubTotal after TDS
+        decimal subTotal = baseAmount - tdsAmount;
+
+        // Step 4: Apply Round Off on subtotal
+        decimal finalAmount;
+
+        if (EditModel.BillIsRoundOff)
+        {
+            finalAmount = Math.Round(subTotal, 0, MidpointRounding.AwayFromZero);
+            EditModel.BillRoundAmt = (float)(finalAmount - subTotal);
+        }
+        else
+        {
+            finalAmount = Math.Round(subTotal, 2);
+            EditModel.BillRoundAmt = 0;
+        }
+
+        // Step 5: Net Amount
+        EditModel.BillNetAmount = (float)finalAmount;
 
         ConvertNumberToWords((decimal)EditModel.BillNetAmount);
     }
@@ -3333,7 +3427,8 @@ width:fit-content;
         try
         {
 
-
+            if (string.Equals(EditModel.BillType, "DEBIT NOTE", StringComparison.OrdinalIgnoreCase))
+            {
              if (EditModel.BillAgainstBillId > 0)
             {
                 var salesBill = billList
@@ -3363,6 +3458,7 @@ width:fit-content;
                     return;
                 }
 
+            }
             }
 
             if (EditModel.BillJobNo == null)

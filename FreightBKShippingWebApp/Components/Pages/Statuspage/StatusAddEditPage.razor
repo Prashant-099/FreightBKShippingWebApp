@@ -1,5 +1,6 @@
 ﻿@using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Services
+@using System.Text.Json
 @inject StatusService StatusService
 @inject ToasteService ToastService
 @inject LoadingService LoadingService
@@ -86,7 +87,9 @@
         if (status.StatusId > 0)
         {
             // Edit mode
-            EditModel = status;
+            //EditModel = status;
+            var json = JsonSerializer.Serialize(status);
+            EditModel = JsonSerializer.Deserialize<Status>(json) ?? new Status();
             Title = "Edit Status";
         }
         else

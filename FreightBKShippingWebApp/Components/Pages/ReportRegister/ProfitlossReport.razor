@@ -156,112 +156,74 @@
                     </Items>
                 </DxToolbarItem>
 
-                <!-- Layout Selector -->
-                <DxToolbarItem IconCssClass="bi bi-gear-wide-connected"
-                               Alignment="ToolbarItemAlignment.Right"
-                               AdaptivePriority="1">
-                    <Template Context="ctx">
-                        <DxComboBox Data="@availableLayouts"
-                                    Value="@selectedLayoutId"
-                                    ValueExpression="@(() => selectedLayoutId)"
-                                    ValueChanged="@((int? value) => OnLayoutSelectedAsync(value))"
-                                    ValueFieldName="GridLayoutId"
-                                    TextFieldName="GridLayoutName"
-                                    NullText="Default View"
-                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
-                                    CssClass="layout-combobox" />
-                    </Template>
-                </DxToolbarItem>
-
-                <!-- Layout Management -->
-                <DxToolbarItem Context="cfdr"
-                               Alignment="ToolbarItemAlignment.Right"
-                               RenderStyleMode="ToolbarItemRenderStyleMode.Contained"
+                <DxToolbarItem Alignment="ToolbarItemAlignment.Right"
                                RenderStyle="ButtonRenderStyle.Secondary"
                                IconCssClass="bi bi-gear-wide-connected"
-                               AdaptivePriority="1">
-                    <Items>
-                        <DxToolbarItem Text="Save Current Layout"
-                                       RenderStyle="ButtonRenderStyle.Primary"
-                                       IconCssClass="bi bi-floppy"
-                                       Click="ShowSaveLayoutDialog" />
+                               Click="ShowLayoutPopup" />
 
-                        <DxToolbarItem Text="Create New Layout"
-                                       RenderStyle="ButtonRenderStyle.Success"
-                                       IconCssClass="bi bi-plus-square"
-                                       Click="ShowNewLayoutDialog" />
-
-                        @if (selectedLayoutId.HasValue)
-                        {
-                            <DxToolbarItem Text="Delete Current Layout"
-                                           RenderStyle="ButtonRenderStyle.Danger"
-                                           IconCssClass="bi bi-trash"
-                                           Click="DeleteCurrentLayout" />
-                        }
-                    </Items>
-                </DxToolbarItem>
             </DxToolbar>
         </ToolbarTemplate>
 
         <Columns>
+
             <DxGridDataColumn FieldName="JobId"
                               Caption="ID"
-                              Visible="@GetColumnVisibility("JobId")"
-                              Width="@GetColumnWidth("JobId")"
                               SortIndex="0"
-                              SortOrder="GridColumnSortOrder.Descending" />
+                              SortOrder="GridColumnSortOrder.Descending"
+                              Width="@(layoutManager?.GetColumnWidth("JobId") ?? "80px")"
+                              Visible="@(layoutManager?.GetColumnVisibility("JobId") ?? false)" />
 
             <DxGridDataColumn FieldName="BranchName"
                               Caption="Branch"
-                              Visible="@GetColumnVisibility("BranchName")"
-                              Width="@GetColumnWidth("BranchName")" />
+                              Width="@(layoutManager?.GetColumnWidth("BranchName") ?? "120px")"
+                              Visible="@(layoutManager?.GetColumnVisibility("BranchName") ?? true)" />
 
             <DxGridDataColumn FieldName="JobNo"
                               Caption="Job No"
-                              Visible="@GetColumnVisibility("JobNo")"
-                              Width="@GetColumnWidth("JobNo")" />
+                              Width="@(layoutManager?.GetColumnWidth("JobNo") ?? "130px")"
+                              Visible="@(layoutManager?.GetColumnVisibility("JobNo") ?? true)" />
 
             <DxGridDataColumn FieldName="JobDate"
                               Caption="Job Date"
                               DisplayFormat="dd/MM/yyyy"
-                              Visible="@GetColumnVisibility("JobDate")"
-                              Width="@GetColumnWidth("JobDate")" />
+                              Width="@(layoutManager?.GetColumnWidth("JobDate") ?? "120px")"
+                              Visible="@(layoutManager?.GetColumnVisibility("JobDate") ?? true)" />
 
             <DxGridDataColumn FieldName="JobType"
                               Caption="Job Type"
-                              Visible="@GetColumnVisibility("JobType")"
-                              Width="@GetColumnWidth("JobType")" />
+                              Width="@(layoutManager?.GetColumnWidth("JobType") ?? "100px")"
+                              Visible="@(layoutManager?.GetColumnVisibility("JobType") ?? true)" />
 
             <DxGridDataColumn FieldName="PartyName"
                               Caption="Customer"
-                              Visible="@GetColumnVisibility("PartyName")"
-                              Width="@GetColumnWidth("PartyName")" />
+                              Width="@(layoutManager?.GetColumnWidth("PartyName") ?? "350px")"
+                              Visible="@(layoutManager?.GetColumnVisibility("PartyName") ?? true)" />
 
             <DxGridDataColumn FieldName="JobBlNo"
                               Caption="BL/BE No"
-                              Visible="@GetColumnVisibility("JobBlNo")"
-                              Width="@GetColumnWidth("JobBlNo")" />
+                              Width="@(layoutManager?.GetColumnWidth("JobBlNo") ?? "140px")"
+                              Visible="@(layoutManager?.GetColumnVisibility("JobBlNo") ?? true)" />
 
             <DxGridDataColumn FieldName="TotalRevenue"
                               Caption="Total Revenue"
                               DisplayFormat="N2"
-                              Visible="@GetColumnVisibility("TotalRevenue")"
-                              Width="@GetColumnWidth("TotalRevenue")" />
+                              Width="@(layoutManager?.GetColumnWidth("TotalRevenue") ?? "140px")"
+                              Visible="@(layoutManager?.GetColumnVisibility("TotalRevenue") ?? true)" />
 
             <DxGridDataColumn FieldName="TotalExpense"
                               Caption="Total Expense"
                               DisplayFormat="N2"
-                              Visible="@GetColumnVisibility("TotalExpense")"
-                              Width="@GetColumnWidth("TotalExpense")" />
+                              Width="@(layoutManager?.GetColumnWidth("TotalExpense") ?? "140px")"
+                              Visible="@(layoutManager?.GetColumnVisibility("TotalExpense") ?? true)" />
 
             <DxGridDataColumn FieldName="ProfitLoss"
                               Caption="Profit / Loss"
                               DisplayFormat="N2"
-                              Visible="@GetColumnVisibility("ProfitLoss")"
-                              Width="@GetColumnWidth("ProfitLoss")">
+                              Width="@(layoutManager?.GetColumnWidth("ProfitLoss") ?? "150px")"
+                              Visible="@(layoutManager?.GetColumnVisibility("ProfitLoss") ?? true)">
                 <CellDisplayTemplate Context="cellContext">
                     @{
-                        var profitLoss = (decimal)cellContext.Value;
+                        var profitLoss = cellContext.Value is decimal d ? d : 0m;
                         var cssClass = profitLoss >= 0 ? "profit-cell" : "loss-cell";
                     }
                     <span class="@cssClass">@profitLoss.ToString("N2")</span>
@@ -271,11 +233,11 @@
             <DxGridDataColumn FieldName="ProfitMargin"
                               Caption="Profit Margin %"
                               DisplayFormat="N2"
-                              Visible="@GetColumnVisibility("ProfitMargin")"
-                              Width="@GetColumnWidth("ProfitMargin")">
+                              Width="@(layoutManager?.GetColumnWidth("ProfitMargin") ?? "140px")"
+                              Visible="@(layoutManager?.GetColumnVisibility("ProfitMargin") ?? true)">
                 <CellDisplayTemplate Context="cellContext">
                     @{
-                        var margin = (decimal)cellContext.Value;
+                        var margin = cellContext.Value is decimal m ? m : 0m;
                         var cssClass = margin >= 0 ? "profit-cell" : "loss-cell";
                     }
                     <span class="@cssClass">@margin.ToString("N2")%</span>
@@ -284,13 +246,14 @@
 
             <DxGridDataColumn FieldName="SalesInvoiceCount"
                               Caption="Sales Count"
-                              Visible="@GetColumnVisibility("SalesInvoiceCount")"
-                              Width="@GetColumnWidth("SalesInvoiceCount")" />
+                              Width="@(layoutManager?.GetColumnWidth("SalesInvoiceCount") ?? "110px")"
+                              Visible="@(layoutManager?.GetColumnVisibility("SalesInvoiceCount") ?? true)" />
 
             <DxGridDataColumn FieldName="PurchaseInvoiceCount"
                               Caption="Purchase Count"
-                              Visible="@GetColumnVisibility("PurchaseInvoiceCount")"
-                              Width="@GetColumnWidth("PurchaseInvoiceCount")" />
+                              Width="@(layoutManager?.GetColumnWidth("PurchaseInvoiceCount") ?? "130px")"
+                              Visible="@(layoutManager?.GetColumnVisibility("PurchaseInvoiceCount") ?? true)" />
+
         </Columns>
 
         <TotalSummary>
@@ -386,133 +349,7 @@
     </table>
 </div>
 
-<!-- Layout Dialog -->
-@if (showLayoutDialog)
-{
-    <div class="modal fade show d-block"
-         style="background-color: rgba(0,0,0,0.5); z-index:1050;">
 
-        <div class="modal-dialog modal-md"
-             @onclick:stopPropagation="true">
-
-            <div class="modal-content">
-
-                <!-- Header -->
-                <div class="modal-header">
-                    <h5 class="modal-title">@dialogTitle</h5>
-                    <button type="button"
-                            class="btn-close"
-                            @onclick="CloseLayoutDialog">
-                    </button>
-                </div>
-
-                <!-- Body -->
-                <div class="modal-body">
-
-                    <!-- Layout Name -->
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">
-                            Layout Name:
-                        </label>
-
-                        <input type="text"
-                               class="form-control"
-                               @bind="newLayoutName"
-                               @bind:event="oninput"
-                               placeholder="Enter layout name..."
-                               maxlength="100" />
-                    </div>
-
-                    <!-- Default Layout -->
-                    <div class="mb-3">
-                        <div class="form-check">
-                            <input class="form-check-input"
-                                   type="checkbox"
-                                   @bind="isDefaultLayout"
-                                   id="defaultLayoutCheck" />
-
-                            <label class="form-check-label"
-                                   for="defaultLayoutCheck">
-                                Set as Default Layout
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- Column Configuration -->
-                    <div class="mt-3">
-                        <label class="form-label fw-bold mb-2">
-                            Column Configuration:
-                        </label>
-
-                        <div class="table-responsive"
-                             style="max-height:400px; overflow-y:auto;">
-
-                            <table class="table table-sm table-bordered">
-                                <thead class="table-light sticky-top">
-                                    <tr>
-                                        <th style="width:50px;">Visible</th>
-                                        <th style="width:200px;">Column Name</th>
-                                        <th style="width:150px;">Width (px)</th>
-                                    </tr>
-                                </thead>
-
-                                <tbody>
-                                    @foreach (var col in allColumns)
-                                    {
-                                        <tr>
-                                            <td class="text-center">
-                                                <input class="form-check-input"
-                                                       type="checkbox"
-                                                       @bind="col.Visible"
-                                                       id="col_@col.FieldName" />
-                                            </td>
-
-                                            <td>
-                                                <label class="mb-0"
-                                                       for="col_@col.FieldName">
-                                                    @col.Caption
-                                                </label>
-                                            </td>
-
-                                            <td>
-                                                <input type="number"
-                                                       class="form-control form-control-sm"
-                                                       @bind="col.Width"
-                                                       @bind:event="oninput"
-                                                       min="50"
-                                                       max="500"
-                                                       step="10" />
-                                            </td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-
-                        </div>
-                    </div>
-
-                </div>
-
-                <!-- Footer -->
-                <div class="modal-footer">
-                    <button type="button"
-                            class="btn btn-secondary"
-                            @onclick="CloseLayoutDialog">
-                        Cancel
-                    </button>
-
-                    <button type="button"
-                            class="btn btn-primary"
-                            @onclick="SaveCurrentLayout">
-                        <i class="bi bi-floppy me-1"></i>
-                        @(isEditMode ? "Update" : "Create") Layout
-                    </button>
-                </div>
-
-            </div>
-        </div>
-    </div>
-}
 @if (showInvoicePopup && selectedJob != null)
 {
     <div class="modal fade show d-block"
@@ -574,6 +411,12 @@
 }
 
 <DateFilterPage @ref="dateFilterPopup" ShowJobTypeFilter="true" OnFilterApplied="HandleFilterApplied" />
+<ConfirmationDialog />
+
+<GridLayoutpPopup @ref="layoutManager"
+                  VoucherType="JobProfitLoss"
+                  Columns="@allColumns"
+                  OnLayoutChanged="HandleLayoutChanged" />
 
 @code {
     // Job Profit Loss Model
@@ -641,16 +484,22 @@
     private string SelectedJobType;
 
     // Grid Layout Management
-    private List<GridLayoutDto> availableLayouts = [];
-    private int? selectedLayoutId;
-    private bool showLayoutDialog = false;
-    private string newLayoutName = "";
-    private string dialogTitle = "";
-    private bool isEditMode = false;
-    private bool isDefaultLayout = false;
-    private const string VOUCHER_TYPE = "JobProfitLoss";
+    private GridLayoutpPopup? layoutManager;
     private List<GridColumnLayout> allColumns = [];
-    private List<GridColumnLayout> currentLayout = [];
+    private async void ShowLayoutPopup()
+    {
+        await InvokeAsync(() =>
+        {
+            layoutManager?.ShowPopup();
+        });
+    }
+    private async Task HandleLayoutChanged(List<GridColumnLayout> updatedLayout)
+    {
+        allColumns = updatedLayout;
+        // Force the grid to re-render with new layout
+        await InvokeAsync(StateHasChanged);
+    }
+
     private DateFilterPage dateFilterPopup;
    
     private void OnRowDoubleClick(GridRowClickEventArgs e)
@@ -700,8 +549,6 @@
     protected override async Task OnInitializedAsync()
     {
         InitializeColumns();
-        await LoadAvailableLayouts();
-        await LoadDefaultLayout();
         await LoadAllData();
     }
 
@@ -714,7 +561,7 @@
             new() { FieldName = "JobNo", Caption = "Job No", Visible = true, Width = 130, DisplayIndex = 2 },
             new() { FieldName = "JobDate", Caption = "Job Date", Visible = true, Width = 120, DisplayIndex = 3 },
             new() { FieldName = "JobType", Caption = "Job Type", Visible = true, Width = 100, DisplayIndex = 4 },
-            new() { FieldName = "PartyName", Caption = "Customer", Visible = true, Width = 200, DisplayIndex = 5 },
+            new() { FieldName = "PartyName", Caption = "Customer", Visible = true, Width = 350, DisplayIndex = 5 },
             new() { FieldName = "JobBlNo", Caption = "BL/BE No", Visible = true, Width = 130, DisplayIndex = 6 },
             new() { FieldName = "TotalRevenue", Caption = "Total Revenue", Visible = true, Width = 140, DisplayIndex = 7 },
             new() { FieldName = "TotalExpense", Caption = "Total Expense", Visible = true, Width = 140, DisplayIndex = 8 },
@@ -723,7 +570,7 @@
             new() { FieldName = "SalesInvoiceCount", Caption = "Sales Count", Visible = true, Width = 110, DisplayIndex = 11 },
             new() { FieldName = "PurchaseInvoiceCount", Caption = "Purchase Count", Visible = true, Width = 130, DisplayIndex = 12 }
         };
-        currentLayout = allColumns.ToList();
+        
     }
 
     private async Task LoadAllData()
@@ -832,190 +679,7 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    // Layout Management Methods
-    private string GetColumnWidth(string fieldName)
-    {
-        var col = currentLayout.FirstOrDefault(x => x.FieldName == fieldName);
-        return $"{col?.Width ?? 100}px";
-    }
-
-    private bool GetColumnVisibility(string fieldName)
-    {
-        var col = currentLayout.FirstOrDefault(x => x.FieldName == fieldName);
-        return col?.Visible ?? true;
-    }
-
-    private async Task LoadAvailableLayouts()
-    {
-        availableLayouts = await GridLayoutService.GetLayoutsByVoucherTypeAsync(VOUCHER_TYPE);
-    }
-
-    private async Task LoadDefaultLayout()
-    {
-        var defaultLayout = await GridLayoutService.GetDefaultLayoutAsync(VOUCHER_TYPE);
-        if (defaultLayout != null)
-        {
-            selectedLayoutId = defaultLayout.GridLayoutId;
-            await ApplyLayout(defaultLayout);
-        }
-    }
-
-    private async Task OnLayoutSelectedAsync(int? layoutId)
-    {
-        selectedLayoutId = layoutId;
-        if (layoutId.HasValue)
-        {
-            var layout = await GridLayoutService.GetByIdAsync(layoutId.Value);
-            if (layout != null) await ApplyLayout(layout);
-        }
-        else
-        {
-            InitializeColumns();
-            await InvokeAsync(StateHasChanged);
-        }
-    }
-
-    private async Task ApplyLayout(GridLayoutDto layout)
-    {
-        if (!string.IsNullOrEmpty(layout.GridLayoutData))
-        {
-            var savedLayout = GridLayoutService.DeserializeColumnLayout(layout.GridLayoutData);
-            if (savedLayout != null && savedLayout.Any())
-            {
-                currentLayout = savedLayout.ToList();
-                foreach (var saved in savedLayout)
-                {
-                    var existing = allColumns.FirstOrDefault(x => x.FieldName == saved.FieldName);
-                    if (existing != null)
-                    {
-                        existing.Visible = saved.Visible;
-                        existing.Width = saved.Width;
-                        existing.DisplayIndex = saved.DisplayIndex;
-                    }
-                }
-                await InvokeAsync(StateHasChanged);
-            }
-        }
-    }
-
-    private void ShowSaveLayoutDialog()
-    {
-        if (selectedLayoutId.HasValue)
-        {
-            var layout = availableLayouts.FirstOrDefault(x => x.GridLayoutId == selectedLayoutId.Value);
-            if (layout != null)
-            {
-                newLayoutName = layout.GridLayoutName ?? "";
-                isDefaultLayout = layout.GridLayoutDefault;
-                isEditMode = true;
-                dialogTitle = "Update Grid Layout";
-                showLayoutDialog = true;
-                return;
-            }
-        }
-        ShowNewLayoutDialog();
-    }
-
-    private void ShowNewLayoutDialog()
-    {
-        newLayoutName = "";
-        isDefaultLayout = false;
-        isEditMode = false;
-        dialogTitle = "Create New Grid Layout";
-        showLayoutDialog = true;
-    }
-
-    private async Task SaveCurrentLayout()
-    {
-        if (string.IsNullOrWhiteSpace(newLayoutName))
-        {
-            ToastService.Warning("Please enter a layout name.");
-            return;
-        }
-
-        LoadingService.Show("Saving layout...");
-        try
-        {
-            foreach (var col in allColumns)
-            {
-                var current = currentLayout.FirstOrDefault(c => c.FieldName == col.FieldName);
-                if (current != null)
-                {
-                    current.Visible = col.Visible;
-                    current.Width = col.Width;
-                }
-            }
-
-            var configJson = GridLayoutService.SerializeColumnLayout(currentLayout);
-            bool success;
-
-            if (isEditMode && selectedLayoutId.HasValue)
-            {
-                success = await GridLayoutService.UpdateAsync(selectedLayoutId.Value, new SaveGridLayoutRequest
-                {
-                    GridLayoutName = newLayoutName,
-                    GridLayoutVoucherType = VOUCHER_TYPE,
-                    GridLayoutData = configJson,
-                    GridLayoutDefault = isDefaultLayout
-                });
-            }
-            else
-            {
-                success = await GridLayoutService.CreateAsync(new SaveGridLayoutRequest
-                {
-                    GridLayoutName = newLayoutName,
-                    GridLayoutVoucherType = VOUCHER_TYPE,
-                    GridLayoutData = configJson,
-                    GridLayoutDefault = isDefaultLayout
-                });
-            }
-
-            if (success)
-            {
-                ToastService.Success($"Layout {(isEditMode ? "updated" : "created")} successfully!");
-                await LoadAvailableLayouts();
-                CloseLayoutDialog();
-            }
-            else
-            {
-                ToastService.Error("Failed to save layout.");
-            }
-        }
-        finally
-        {
-            LoadingService.Hide();
-        }
-    }
-
-    private async Task DeleteCurrentLayout()
-    {
-        if (!selectedLayoutId.HasValue) return;
-
-        LoadingService.Show("Deleting layout...");
-        try
-        {
-            var success = await GridLayoutService.DeleteAsync(selectedLayoutId.Value);
-            if (success)
-            {
-                ToastService.Success("Layout deleted successfully!");
-                selectedLayoutId = null;
-                InitializeColumns();
-                await LoadAvailableLayouts();
-            }
-        }
-        finally
-        {
-            LoadingService.Hide();
-        }
-    }
-
-    private void CloseLayoutDialog()
-    {
-        showLayoutDialog = false;
-        newLayoutName = "";
-        isDefaultLayout = false;
-        isEditMode = false;
-    }
+   
 
     
 }

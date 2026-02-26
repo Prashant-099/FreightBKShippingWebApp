@@ -4,6 +4,7 @@
 @using FreightBKShippingWebApp.Models
 @using FreightBKShippingWebApp.Services
 @using DevExpress.Blazor
+@using System.Text.Json
 
 @inject BillService BillService
 @inject ToasteService ToastService
@@ -993,8 +994,9 @@
 
         if (quotation?.BillId > 0)
         {
-            EditModel = quotation;
-
+           // EditModel = quotation;
+            var json = JsonSerializer.Serialize(quotation);
+            EditModel = JsonSerializer.Deserialize<Bill>(json) ?? new Bill();
             BillDetails = quotation.BillDetails?
                 .Select(d => CloneBillDetail(d))
                 .OrderBy(d => d.BillDetailId)

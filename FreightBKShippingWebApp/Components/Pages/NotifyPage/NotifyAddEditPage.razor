@@ -1,6 +1,7 @@
 ﻿@using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Models
 @using FreightBKShippingWebApp.Services
+@using System.Text.Json
 @inject NotifyService NotifyService
 @inject ToasteService ToastService
 @inject LoadingService LoadingService
@@ -163,7 +164,9 @@
     {
         if (notify.NotifyId>0)
         {
-            EditModel = notify;
+           // EditModel = notify;
+                var json = JsonSerializer.Serialize(notify);
+            EditModel = JsonSerializer.Deserialize<Notify>(json) ?? new Notify();
             Title = "Edit Miscellaneous";
         }
         else

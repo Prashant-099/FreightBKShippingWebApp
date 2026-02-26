@@ -105,9 +105,7 @@
             FocusedRowEnabled="true"
             ColumnResizeMode="GridColumnResizeMode.NextColumn"
             CssClass="grid-size"
-            AllowColumnReorder="true"
-            LayoutAutoSaving="OnLayoutAutoSaving"
-            LayoutAutoLoading="OnLayoutAutoLoading">
+            AllowColumnReorder="true">
 
         <ToolbarTemplate Context="gridContext">
             <DxToolbar>
@@ -131,267 +129,183 @@
                                        RenderStyle="ButtonRenderStyle.None"
                                        IconCssClass="bi bi-file-earmark-spreadsheet"
                                        Click="ExportXlsx" />
-                        
-                   
 
-
-
-
-                @*  <!-- Voucher Type Filter -->
-                <DxToolbarItem BeginGroup="true"
-                               Alignment="ToolbarItemAlignment.Right"
-                               AdaptivePriority="3">
-                    <Template Context="t">
-                        <DxComboBox Data="@voucherTypes" TData="Voucher" TValue="int?"
-                                    @bind-Value="SelectedVoucherType"
-                                    NullText="All Vouchers"
-                                    TextFieldName="VoucherName"
-                                    ValueFieldName="VoucherId"
-                                    AllowUserInput="true"
-                                    SearchMode="ListSearchMode.AutoSearch"
-                                    SearchFilterCondition="ListSearchFilterCondition.Contains"
-                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
-                    </Template>
-                </DxToolbarItem>
-
-                <!-- From Date -->
-                <DxToolbarItem BeginGroup="true"
-                               AdaptivePriority="2"
-                               Alignment="ToolbarItemAlignment.Right">
-                    <Template Context="t">
-                        <DxDateEdit @bind-Date="FromDate"
-                                    NullText="From Date"
-                                    DisplayFormat="dd/MM/yyyy"
-                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
-                    </Template>
-                </DxToolbarItem>
-
-                <!-- To Date -->
-                <DxToolbarItem BeginGroup="true"
-                               AdaptivePriority="2"
-                               Alignment="ToolbarItemAlignment.Right">
-                    <Template Context="t">
-                        <DxDateEdit @bind-Date="ToDate"
-                                    NullText="To Date"
-                                    DisplayFormat="dd/MM/yyyy"
-                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
-                    </Template>
-                </DxToolbarItem>
-
-                <!-- Search Button -->
                 <DxToolbarItem Alignment="ToolbarItemAlignment.Right"
-                               BeginGroup="true"
-                               AdaptivePriority="1">
-                    <Template Context="t">
-                        <DxButton Text="Search"
-                                  IconCssClass="bi bi-search"
-                                  RenderStyle="ButtonRenderStyle.Primary"
-                                  Click="OnSearch" />
-                    </Template>
-                </DxToolbarItem>
-
-                <!-- Reset Button -->
-                <DxToolbarItem Alignment="ToolbarItemAlignment.Right"
-                               AdaptivePriority="1">
-                    <Template Context="t">
-                        <DxButton Text="Reset"
-                                  IconCssClass="bi bi-arrow-counterclockwise"
-                                  RenderStyle="ButtonRenderStyle.Secondary"
-                                  Click="OnReset" />
-                    </Template>
-                </DxToolbarItem> *@
-
-                <!-- Layout Selector -->
-                <DxToolbarItem IconCssClass="bi bi-gear-wide-connected"
-                               Alignment="ToolbarItemAlignment.Right"
-                               AdaptivePriority="1">
-                    <Template Context="ctx">
-                        <DxComboBox Data="@availableLayouts"
-                                    Value="@selectedLayoutId"
-                                    ValueExpression="@(() => selectedLayoutId)"
-                                    ValueChanged="@((int? value) => OnLayoutSelectedAsync(value))"
-                                    ValueFieldName="GridLayoutId"
-                                    TextFieldName="GridLayoutName"
-                                    NullText="Default View"
-                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
-                                    CssClass="layout-combobox" />
-                    </Template>
-                </DxToolbarItem>
-
-                <!-- Layout Management -->
-                <DxToolbarItem Context="cfdr"
-                               Alignment="ToolbarItemAlignment.Right"
-                               RenderStyleMode="ToolbarItemRenderStyleMode.Contained"
                                RenderStyle="ButtonRenderStyle.Secondary"
                                IconCssClass="bi bi-gear-wide-connected"
-                               AdaptivePriority="1">
-                    <Items>
-                        <DxToolbarItem Text="Save Current Layout"
-                                       RenderStyle="ButtonRenderStyle.Primary"
-                                       IconCssClass="bi bi-floppy"
-                                       Click="ShowSaveLayoutDialog" />
-
-                        <DxToolbarItem Text="Create New Layout"
-                                       RenderStyle="ButtonRenderStyle.Success"
-                                       IconCssClass="bi bi-plus-square"
-                                       Click="ShowNewLayoutDialog" />
+                               Click="ShowLayoutPopup" />
 
 
-                        @if (selectedLayoutId.HasValue)
-                        {
-                            <DxToolbarItem Text="Delete Current Layout"
-                                           RenderStyle="ButtonRenderStyle.Danger"
-                                           IconCssClass="bi bi-trash"
-                                           Click="DeleteCurrentLayout" />
-                        }
-                    </Items>
-                </DxToolbarItem>
+
+
+
+
             </DxToolbar>
         </ToolbarTemplate>
 
         <Columns>
+
             <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.VoucherDate)"
                               Caption="Voucher Date"
-                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.VoucherDate))"
-                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.VoucherDate))" />
+                              DisplayFormat="dd/MM/yyyy"
+                              Width="@(layoutManager?.GetColumnWidth(nameof(TallyExcelRowDto.VoucherDate)) ?? "130px")"
+                              Visible="@(layoutManager?.GetColumnVisibility(nameof(TallyExcelRowDto.VoucherDate)) ?? true)" />
 
             <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.VoucherNo)"
                               Caption="Voucher No"
-                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.VoucherNo))"
-                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.VoucherNo))" />
+                              Width="@(layoutManager?.GetColumnWidth(nameof(TallyExcelRowDto.VoucherNo)) ?? "150px")"
+                              Visible="@(layoutManager?.GetColumnVisibility(nameof(TallyExcelRowDto.VoucherNo)) ?? true)" />
 
             <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.VoucherType)"
                               Caption="Voucher Type"
-                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.VoucherType))"
-                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.VoucherType))" />
+                              Width="@(layoutManager?.GetColumnWidth(nameof(TallyExcelRowDto.VoucherType)) ?? "200px")"
+                              Visible="@(layoutManager?.GetColumnVisibility(nameof(TallyExcelRowDto.VoucherType)) ?? true)" />
 
             <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.BuyerSupplier)"
                               Caption="Buyer/Supplier"
-                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.BuyerSupplier))"
-                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.BuyerSupplier))" />
+                              Width="@(layoutManager?.GetColumnWidth(nameof(TallyExcelRowDto.BuyerSupplier)) ?? "270px")"
+                              Visible="@(layoutManager?.GetColumnVisibility(nameof(TallyExcelRowDto.BuyerSupplier)) ?? true)" />
 
             <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.Account)"
                               Caption="Account (DR/CR)"
-                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.Account))"
-                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.Account))" />
+                              Width="@(layoutManager?.GetColumnWidth(nameof(TallyExcelRowDto.Account)) ?? "160px")"
+                              Visible="@(layoutManager?.GetColumnVisibility(nameof(TallyExcelRowDto.Account)) ?? true)" />
 
             <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.BasicAmount)"
                               Caption="Basic Amount"
-                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.BasicAmount))"
-                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.BasicAmount))" />
+                              DisplayFormat="N2"
+                              Width="@(layoutManager?.GetColumnWidth(nameof(TallyExcelRowDto.BasicAmount)) ?? "130px")"
+                              Visible="@(layoutManager?.GetColumnVisibility(nameof(TallyExcelRowDto.BasicAmount)) ?? true)" />
 
             <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.SGST_Amt)"
                               Caption="SGST Amt"
-                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.SGST_Amt))"
-                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.SGST_Amt))" />
+                              DisplayFormat="N2"
+                              Width="@(layoutManager?.GetColumnWidth(nameof(TallyExcelRowDto.SGST_Amt)) ?? "110px")"
+                              Visible="@(layoutManager?.GetColumnVisibility(nameof(TallyExcelRowDto.SGST_Amt)) ?? true)" />
 
             <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.CGST_Amt)"
                               Caption="CGST Amt"
-                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.CGST_Amt))"
-                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.CGST_Amt))" />
+                              DisplayFormat="N2"
+                              Width="@(layoutManager?.GetColumnWidth(nameof(TallyExcelRowDto.CGST_Amt)) ?? "110px")"
+                              Visible="@(layoutManager?.GetColumnVisibility(nameof(TallyExcelRowDto.CGST_Amt)) ?? true)" />
 
             <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.IGST_Amt)"
                               Caption="IGST Amt"
-                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.IGST_Amt))"
-                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.IGST_Amt))" />
+                              DisplayFormat="N2"
+                              Width="@(layoutManager?.GetColumnWidth(nameof(TallyExcelRowDto.IGST_Amt)) ?? "110px")"
+                              Visible="@(layoutManager?.GetColumnVisibility(nameof(TallyExcelRowDto.IGST_Amt)) ?? true)" />
 
-            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.TotalAmount)"
-                              Caption="Total Amount"
-                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.TotalAmount))"
-                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.TotalAmount))" />
+            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.TDS_perc)"
+                              Caption="TDS%"
+                              DisplayFormat="N2"
+                              Width="@(layoutManager?.GetColumnWidth(nameof(TallyExcelRowDto.TDS_perc)) ?? "110px")"
+                              Visible="@(layoutManager?.GetColumnVisibility(nameof(TallyExcelRowDto.TDS_perc)) ?? true)" />
 
-            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.PlaceOfSupply)"
-                              Caption="Place of Supply"
-                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.PlaceOfSupply))"
-                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.PlaceOfSupply))" />
-
-            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.PartyGSTIN)"
-                              Caption="Party GSTIN"
-                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.PartyGSTIN))"
-                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.PartyGSTIN))" />
-
-            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.PartyAddress)"
-                              Caption="Party Address"
-                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.PartyAddress))"
-                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.PartyAddress))" />
-
-            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.ItemName)"
-                              Caption="Item"
-                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.ItemName))"
-                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.ItemName))"/>
-
-
-            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.HSN)"
-                              Caption="HSN"
-                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.HSN))"
-                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.HSN))" />
-
-            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.Unit)"
-                              Caption="Unit"
-                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.Unit))"
-                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.Unit))" />
-
-            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.Qty)"
-                              Caption="Qty"
-                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.Qty))"
-                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.Qty))" />
-
-            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.Rate)"
-                              Caption="Rate"
-                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.Rate))"
-                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.Rate))" />
-
-            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.Amount)"
-                              Caption="Amount"
-                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.Amount))"
-                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.Amount))" />
-
-            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.SGST)"
-                              Caption="SGST"
-                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.SGST))"
-                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.SGST))" />
-
-            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.SGST_Ac)"
-                              Caption="SGST A/c"
-                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.SGST_Ac))"
-                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.SGST_Ac))" />
-
-            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.CGST)"
-                              Caption="CGST"
-                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.CGST))"
-                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.CGST))" />
-
-            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.CGST_Ac)"
-                              Caption="CGST A/c"
-                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.CGST_Ac))"
-                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.CGST_Ac))" />
-
-            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.IGST)"
-                              Caption="IGST"
-                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.IGST))"
-                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.IGST))" />
-
-            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.IGST_Ac)"
-                              Caption="IGST A/c"
-                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.IGST_Ac))"
-                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.IGST_Ac))" />
-
-            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.TaxabilityType)"
-                              Caption="Taxability Type"
-                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.TaxabilityType))"
-                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.TaxabilityType))" />
+            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.TDS_Amt)"
+                              Caption="TDS Amt"
+                              DisplayFormat="N2"
+                              Width="@(layoutManager?.GetColumnWidth(nameof(TallyExcelRowDto.TDS_Amt)) ?? "110px")"
+                              Visible="@(layoutManager?.GetColumnVisibility(nameof(TallyExcelRowDto.TDS_Amt)) ?? true)" />
 
             <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.Roundoff)"
                               Caption="Roundoff"
-                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.Roundoff))"
-                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.Roundoff))" />
+                              DisplayFormat="N2"
+                              Width="@(layoutManager?.GetColumnWidth(nameof(TallyExcelRowDto.Roundoff)) ?? "110px")"
+                              Visible="@(layoutManager?.GetColumnVisibility(nameof(TallyExcelRowDto.Roundoff)) ?? true)" />
+
+            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.TotalAmount)"
+                              Caption="Total Amount"
+                              DisplayFormat="N2"
+                              Width="@(layoutManager?.GetColumnWidth(nameof(TallyExcelRowDto.TotalAmount)) ?? "140px")"
+                              Visible="@(layoutManager?.GetColumnVisibility(nameof(TallyExcelRowDto.TotalAmount)) ?? true)" />
+
+            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.PlaceOfSupply)"
+                              Caption="Place of Supply"
+                              Width="@(layoutManager?.GetColumnWidth(nameof(TallyExcelRowDto.PlaceOfSupply)) ?? "160px")"
+                              Visible="@(layoutManager?.GetColumnVisibility(nameof(TallyExcelRowDto.PlaceOfSupply)) ?? true)" />
+
+            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.PartyGSTIN)"
+                              Caption="Party GSTIN"
+                              Width="@(layoutManager?.GetColumnWidth(nameof(TallyExcelRowDto.PartyGSTIN)) ?? "170px")"
+                              Visible="@(layoutManager?.GetColumnVisibility(nameof(TallyExcelRowDto.PartyGSTIN)) ?? true)" />
+
+            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.PartyAddress)"
+                              Caption="Party Address"
+                              Width="@(layoutManager?.GetColumnWidth(nameof(TallyExcelRowDto.PartyAddress)) ?? "600px")"
+                              Visible="@(layoutManager?.GetColumnVisibility(nameof(TallyExcelRowDto.PartyAddress)) ?? true)" />
+
+            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.ItemName)"
+                              Caption="Item"
+                              Width="@(layoutManager?.GetColumnWidth(nameof(TallyExcelRowDto.ItemName)) ?? "240px")"
+                              Visible="@(layoutManager?.GetColumnVisibility(nameof(TallyExcelRowDto.ItemName)) ?? true)" />
+
+            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.HSN)"
+                              Caption="HSN"
+                              Width="@(layoutManager?.GetColumnWidth(nameof(TallyExcelRowDto.HSN)) ?? "100px")"
+                              Visible="@(layoutManager?.GetColumnVisibility(nameof(TallyExcelRowDto.HSN)) ?? true)" />
+
+            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.Unit)"
+                              Caption="Unit"
+                              Width="@(layoutManager?.GetColumnWidth(nameof(TallyExcelRowDto.Unit)) ?? "80px")"
+                              Visible="@(layoutManager?.GetColumnVisibility(nameof(TallyExcelRowDto.Unit)) ?? true)" />
+
+            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.Qty)"
+                              Caption="Qty"
+                              DisplayFormat="N2"
+                              Width="@(layoutManager?.GetColumnWidth(nameof(TallyExcelRowDto.Qty)) ?? "80px")"
+                              Visible="@(layoutManager?.GetColumnVisibility(nameof(TallyExcelRowDto.Qty)) ?? true)" />
+
+            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.Rate)"
+                              Caption="Rate"
+                              DisplayFormat="N2"
+                              Width="@(layoutManager?.GetColumnWidth(nameof(TallyExcelRowDto.Rate)) ?? "90px")"
+                              Visible="@(layoutManager?.GetColumnVisibility(nameof(TallyExcelRowDto.Rate)) ?? true)" />
+
+            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.Amount)"
+                              Caption="Amount"
+                              DisplayFormat="N2"
+                              Width="@(layoutManager?.GetColumnWidth(nameof(TallyExcelRowDto.Amount)) ?? "120px")"
+                              Visible="@(layoutManager?.GetColumnVisibility(nameof(TallyExcelRowDto.Amount)) ?? true)" />
+
+            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.SGST)"
+                              Caption="SGST"
+                              Width="@(layoutManager?.GetColumnWidth(nameof(TallyExcelRowDto.SGST)) ?? "90px")"
+                              Visible="@(layoutManager?.GetColumnVisibility(nameof(TallyExcelRowDto.SGST)) ?? true)" />
+
+            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.SGST_Ac)"
+                              Caption="SGST A/c"
+                              Width="@(layoutManager?.GetColumnWidth(nameof(TallyExcelRowDto.SGST_Ac)) ?? "120px")"
+                              Visible="@(layoutManager?.GetColumnVisibility(nameof(TallyExcelRowDto.SGST_Ac)) ?? true)" />
+
+            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.CGST)"
+                              Caption="CGST"
+                              Width="@(layoutManager?.GetColumnWidth(nameof(TallyExcelRowDto.CGST)) ?? "90px")"
+                              Visible="@(layoutManager?.GetColumnVisibility(nameof(TallyExcelRowDto.CGST)) ?? true)" />
+
+            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.CGST_Ac)"
+                              Caption="CGST A/c"
+                              Width="@(layoutManager?.GetColumnWidth(nameof(TallyExcelRowDto.CGST_Ac)) ?? "120px")"
+                              Visible="@(layoutManager?.GetColumnVisibility(nameof(TallyExcelRowDto.CGST_Ac)) ?? true)" />
+
+            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.IGST)"
+                              Caption="IGST"
+                              Width="@(layoutManager?.GetColumnWidth(nameof(TallyExcelRowDto.IGST)) ?? "90px")"
+                              Visible="@(layoutManager?.GetColumnVisibility(nameof(TallyExcelRowDto.IGST)) ?? true)" />
+
+            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.IGST_Ac)"
+                              Caption="IGST A/c"
+                              Width="@(layoutManager?.GetColumnWidth(nameof(TallyExcelRowDto.IGST_Ac)) ?? "120px")"
+                              Visible="@(layoutManager?.GetColumnVisibility(nameof(TallyExcelRowDto.IGST_Ac)) ?? true)" />
+
+            <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.TaxabilityType)"
+                              Caption="Taxability Type"
+                              Width="@(layoutManager?.GetColumnWidth(nameof(TallyExcelRowDto.TaxabilityType)) ?? "150px")"
+                              Visible="@(layoutManager?.GetColumnVisibility(nameof(TallyExcelRowDto.TaxabilityType)) ?? true)" />
 
             <DxGridDataColumn FieldName="@nameof(TallyExcelRowDto.Remarks)"
                               Caption="Remarks"
-                              Visible="@GetColumnVisibility(nameof(TallyExcelRowDto.Remarks))"
-                              Width="@GetColumnWidth(nameof(TallyExcelRowDto.Remarks))" />
-
-
+                              Width="@(layoutManager?.GetColumnWidth(nameof(TallyExcelRowDto.Remarks)) ?? "680px")"
+                              Visible="@(layoutManager?.GetColumnVisibility(nameof(TallyExcelRowDto.Remarks)) ?? true)" />
 
         </Columns>
 
@@ -471,135 +385,14 @@
     </table>
 </div>
 
-
-<!-- Layout Dialog -->
-@if (showLayoutDialog)
-{
-    <div class="modal fade show d-block"
-         style="background-color: rgba(0,0,0,0.5); z-index:1050;">
-
-        <div class="modal-dialog modal-md"
-             @onclick:stopPropagation="true">
-
-            <div class="modal-content">
-
-                <!-- Header -->
-                <div class="modal-header">
-                    <h5 class="modal-title">@dialogTitle</h5>
-                    <button type="button"
-                            class="btn-close"
-                            @onclick="CloseLayoutDialog">
-                    </button>
-                </div>
-
-                <!-- Body -->
-                <div class="modal-body">
-
-                    <!-- Layout Name -->
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">
-                            Layout Name:
-                        </label>
-
-                        <input type="text"
-                               class="form-control"
-                               @bind="newLayoutName"
-                               @bind:event="oninput"
-                               placeholder="Enter layout name..."
-                               maxlength="100" />
-                    </div>
-
-                    <!-- Default Layout -->
-                    <div class="mb-3">
-                        <div class="form-check">
-                            <input class="form-check-input"
-                                   type="checkbox"
-                                   @bind="isDefaultLayout"
-                                   id="defaultLayoutCheck" />
-
-                            <label class="form-check-label"
-                                   for="defaultLayoutCheck">
-                                Set as Default Layout
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- Column Configuration -->
-                    <div class="mt-3">
-                        <label class="form-label fw-bold mb-2">
-                            Column Configuration:
-                        </label>
-
-                        <div class="table-responsive"
-                             style="max-height:400px; overflow-y:auto;">
-
-                            <table class="table table-sm table-bordered">
-                                <thead class="table-light sticky-top">
-                                    <tr>
-                                        <th style="width:50px;">Visible</th>
-                                        <th style="width:200px;">Column Name</th>
-                                        <th style="width:150px;">Width (px)</th>
-                                    </tr>
-                                </thead>
-
-                                <tbody>
-                                    @foreach (var col in allColumns)
-                                    {
-                                        <tr>
-                                            <td class="text-center">
-                                                <input class="form-check-input"
-                                                       type="checkbox"
-                                                       @bind="col.Visible"
-                                                       id="col_@col.FieldName" />
-                                            </td>
-
-                                            <td>
-                                                <label class="mb-0"
-                                                       for="col_@col.FieldName">
-                                                    @col.Caption
-                                                </label>
-                                            </td>
-
-                                            <td>
-                                                <input type="number"
-                                                       class="form-control form-control-sm"
-                                                       @bind="col.Width"
-                                                       @bind:event="oninput"
-                                                       min="50"
-                                                       max="500"
-                                                       step="10" />
-                                            </td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-
-                        </div>
-                    </div>
-
-                </div>
-
-                <!-- Footer -->
-                <div class="modal-footer">
-                    <button type="button"
-                            class="btn btn-secondary"
-                            @onclick="CloseLayoutDialog">
-                        Cancel
-                    </button>
-
-                    <button type="button"
-                            class="btn btn-primary"
-                            @onclick="SaveCurrentLayout">
-                        <i class="bi bi-floppy me-1"></i>
-                        @(isEditMode ? "Update" : "Create") Layout
-                    </button>
-                </div>
-
-            </div>
-        </div>
-    </div>
-}
 <DateFilterPage @ref="dateFilterPopup" ShowVoucherTypeFilter="true" OnFilterApplied="HandleFilterApplied" />
+<ConfirmationDialog />
+
+<GridLayoutpPopup @ref="layoutManager"
+                  VoucherType="InvoiceExportTally"
+                  Columns="@allColumns"
+                  OnLayoutChanged="HandleLayoutChanged" />
+
 @code {
     // private async Task ExportTallyExcel(List<TallyExcelRowDto> rows)
     // {
@@ -627,6 +420,8 @@
         public double SGST_Amt { get; set; }
     public double CGST_Amt { get; set; }
     public double IGST_Amt { get; set; }
+    public float TDS_perc { get; set; }
+        public float TDS_Amt { get; set; }
         public double TotalAmount { get; set; }
 
     public string PlaceOfSupply { get; set; }
@@ -683,6 +478,8 @@
                     CGST_Amt = d.BillDetailCgst,
                     SGST_Amt = d.BillDetailSgst,
                     IGST_Amt =d.BillDetailIgst,
+                    TDS_perc = bill.BillTdsPer,
+                    TDS_Amt = bill.BillTdsAmt,
                     TotalAmount = bill.BillNetAmount,
 
                     PlaceOfSupply = bill.posname,
@@ -764,16 +561,22 @@
     private int? SelectedVoucherType;
 
     // Grid Layout Management
-    private List<GridLayoutDto> availableLayouts = [];
-    private int? selectedLayoutId;
-    private bool showLayoutDialog = false;
-    private string newLayoutName = "";
-    private string dialogTitle = "";
-    private bool isEditMode = false;
-    private bool isDefaultLayout = false;
-    private const string VOUCHER_TYPE = "InvoiceExportTally";
+    private GridLayoutpPopup? layoutManager;
     private List<GridColumnLayout> allColumns = [];
-    private List<GridColumnLayout> currentLayout = [];
+    private async void ShowLayoutPopup()
+    {
+        await InvokeAsync(() =>
+        {
+            layoutManager?.ShowPopup();
+        });
+    }
+    private async Task HandleLayoutChanged(List<GridColumnLayout> updatedLayout)
+    {
+        allColumns = updatedLayout;
+        // Force the grid to re-render with new layout
+        await InvokeAsync(StateHasChanged);
+    }
+
     private DateFilterPage dateFilterPopup;
     private void OpenDateFilter()
     {
@@ -790,8 +593,6 @@
     protected override async Task OnInitializedAsync()
     {
         InitializeColumns();
-        await LoadAvailableLayouts();
-        await LoadDefaultLayout();
         // await LoadVoucherTypes();
         await LoadAllBills();
 
@@ -804,40 +605,43 @@
         {
              new() { FieldName = nameof(TallyExcelRowDto.VoucherDate), Caption = "Voucher Date", Visible = true, Width = 130, DisplayIndex = 0 },
     new() { FieldName = nameof(TallyExcelRowDto.VoucherNo), Caption = "Voucher No", Visible = true, Width = 150, DisplayIndex = 1 },
-    new() { FieldName = nameof(TallyExcelRowDto.VoucherType), Caption = "Voucher Type", Visible = true, Width = 150, DisplayIndex = 2 },
-    new() { FieldName = nameof(TallyExcelRowDto.BuyerSupplier), Caption = "Buyer / Supplier", Visible = true, Width = 220, DisplayIndex = 3 },
+    new() { FieldName = nameof(TallyExcelRowDto.VoucherType), Caption = "Voucher Type", Visible = true, Width = 200, DisplayIndex = 2 },
+    new() { FieldName = nameof(TallyExcelRowDto.BuyerSupplier), Caption = "Buyer / Supplier", Visible = true, Width = 270, DisplayIndex = 3 },
     new() { FieldName = nameof(TallyExcelRowDto.Account), Caption = "Account (DR/CR)", Visible = true, Width = 160, DisplayIndex = 4 },
 
     new() { FieldName = nameof(TallyExcelRowDto.BasicAmount), Caption = "Basic Amount", Visible = true, Width = 130, DisplayIndex = 5 },
     new() { FieldName = nameof(TallyExcelRowDto.SGST_Amt), Caption = "SGST Amt", Visible = true, Width = 110, DisplayIndex = 6 },
     new() { FieldName = nameof(TallyExcelRowDto.CGST_Amt), Caption = "CGST Amt", Visible = true, Width = 110, DisplayIndex = 7 },
     new() { FieldName = nameof(TallyExcelRowDto.IGST_Amt), Caption = "IGST Amt", Visible = true, Width = 110, DisplayIndex = 8 },
-    new() { FieldName = nameof(TallyExcelRowDto.TotalAmount), Caption = "Total Amount", Visible = true, Width = 140, DisplayIndex = 9 },
+    new() { FieldName = nameof(TallyExcelRowDto.TDS_perc), Caption = "TDS%", Visible = true, Width = 110, DisplayIndex = 9 },
+    new() { FieldName = nameof(TallyExcelRowDto.TDS_Amt), Caption = "TDS Amt", Visible = true, Width = 110, DisplayIndex = 10 },
 
-    new() { FieldName = nameof(TallyExcelRowDto.PlaceOfSupply), Caption = "Place of Supply", Visible = true, Width = 160, DisplayIndex = 10 },
-    new() { FieldName = nameof(TallyExcelRowDto.PartyGSTIN), Caption = "Party GSTIN", Visible = true, Width = 170, DisplayIndex = 11 },
-    new() { FieldName = nameof(TallyExcelRowDto.PartyAddress), Caption = "Party Address", Visible = true, Width = 280, DisplayIndex = 12 },
+    new() { FieldName = nameof(TallyExcelRowDto.TotalAmount), Caption = "Total Amount", Visible = true, Width = 140, DisplayIndex = 11 },
 
-   new() { FieldName = nameof(TallyExcelRowDto.ItemName), Caption = "Item", Visible = true, Width = 240, DisplayIndex = 13 },
+    new() { FieldName = nameof(TallyExcelRowDto.PlaceOfSupply), Caption = "Place of Supply", Visible = true, Width = 160, DisplayIndex = 12 },
+    new() { FieldName = nameof(TallyExcelRowDto.PartyGSTIN), Caption = "Party GSTIN", Visible = true, Width = 170, DisplayIndex = 13 },
+    new() { FieldName = nameof(TallyExcelRowDto.PartyAddress), Caption = "Party Address", Visible = true, Width = 600, DisplayIndex = 14 },
 
-    new() { FieldName = nameof(TallyExcelRowDto.HSN), Caption = "HSN", Visible = true, Width = 100, DisplayIndex = 14 },
-    new() { FieldName = nameof(TallyExcelRowDto.Unit), Caption = "Unit", Visible = true, Width = 80, DisplayIndex = 15 },
-    new() { FieldName = nameof(TallyExcelRowDto.Qty), Caption = "Qty", Visible = true, Width = 80, DisplayIndex = 16 },
-    new() { FieldName = nameof(TallyExcelRowDto.Rate), Caption = "Rate", Visible = true, Width = 90, DisplayIndex = 17 },
-    new() { FieldName = nameof(TallyExcelRowDto.Amount), Caption = "Amount", Visible = true, Width = 120, DisplayIndex = 18 },
+   new() { FieldName = nameof(TallyExcelRowDto.ItemName), Caption = "Item", Visible = true, Width = 240, DisplayIndex = 15 },
 
-    new() { FieldName = nameof(TallyExcelRowDto.SGST), Caption = "SGST", Visible = true, Width = 90, DisplayIndex = 19 },
-    new() { FieldName = nameof(TallyExcelRowDto.SGST_Ac), Caption = "SGST A/c", Visible = true, Width = 120, DisplayIndex = 20 },
-    new() { FieldName = nameof(TallyExcelRowDto.CGST), Caption = "CGST", Visible = true, Width = 90, DisplayIndex = 21 },
-    new() { FieldName = nameof(TallyExcelRowDto.CGST_Ac), Caption = "CGST A/c", Visible = true, Width = 120, DisplayIndex = 22 },
-    new() { FieldName = nameof(TallyExcelRowDto.IGST), Caption = "IGST", Visible = true, Width = 90, DisplayIndex = 23 },
-    new() { FieldName = nameof(TallyExcelRowDto.IGST_Ac), Caption = "IGST A/c", Visible = true, Width = 120, DisplayIndex = 24 },
+    new() { FieldName = nameof(TallyExcelRowDto.HSN), Caption = "HSN", Visible = true, Width = 100, DisplayIndex = 16 },
+    new() { FieldName = nameof(TallyExcelRowDto.Unit), Caption = "Unit", Visible = true, Width = 80, DisplayIndex = 17 },
+    new() { FieldName = nameof(TallyExcelRowDto.Qty), Caption = "Qty", Visible = true, Width = 80, DisplayIndex = 18 },
+    new() { FieldName = nameof(TallyExcelRowDto.Rate), Caption = "Rate", Visible = true, Width = 90, DisplayIndex = 19 },
+    new() { FieldName = nameof(TallyExcelRowDto.Amount), Caption = "Amount", Visible = true, Width = 120, DisplayIndex = 20 },
 
-    new() { FieldName = nameof(TallyExcelRowDto.TaxabilityType), Caption = "Taxability Type", Visible = true, Width = 150, DisplayIndex = 25 },
-    new() { FieldName = nameof(TallyExcelRowDto.Roundoff), Caption = "Roundoff", Visible = true, Width = 100, DisplayIndex = 26 },
-    new() { FieldName = nameof(TallyExcelRowDto.Remarks), Caption = "Remarks", Visible = true, Width = 200, DisplayIndex = 27 }
+    new() { FieldName = nameof(TallyExcelRowDto.SGST), Caption = "SGST", Visible = true, Width = 90, DisplayIndex = 21 },
+    new() { FieldName = nameof(TallyExcelRowDto.SGST_Ac), Caption = "SGST A/c", Visible = true, Width = 120, DisplayIndex = 22 },
+    new() { FieldName = nameof(TallyExcelRowDto.CGST), Caption = "CGST", Visible = true, Width = 90, DisplayIndex = 23 },
+    new() { FieldName = nameof(TallyExcelRowDto.CGST_Ac), Caption = "CGST A/c", Visible = true, Width = 120, DisplayIndex = 24 },
+    new() { FieldName = nameof(TallyExcelRowDto.IGST), Caption = "IGST", Visible = true, Width = 90, DisplayIndex = 25 },
+    new() { FieldName = nameof(TallyExcelRowDto.IGST_Ac), Caption = "IGST A/c", Visible = true, Width = 120, DisplayIndex = 26 },
+
+    new() { FieldName = nameof(TallyExcelRowDto.TaxabilityType), Caption = "Taxability Type", Visible = true, Width = 150, DisplayIndex = 27 },
+    new() { FieldName = nameof(TallyExcelRowDto.Roundoff), Caption = "Roundoff", Visible = true, Width = 100, DisplayIndex = 28 },
+    new() { FieldName = nameof(TallyExcelRowDto.Remarks), Caption = "Remarks", Visible = true, Width = 680, DisplayIndex = 29 }
       };
-        currentLayout = allColumns.ToList();
+       
     }
 
     // private async Task LoadVoucherTypes()
@@ -926,213 +730,5 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    // Layout Management Methods
-    private string GetColumnWidth(string fieldName)
-    {
-        var col = currentLayout.FirstOrDefault(x => x.FieldName == fieldName);
-        return $"{col?.Width ?? 100}px";
-    }
-
-    private bool GetColumnVisibility(string fieldName)
-    {
-        var col = currentLayout.FirstOrDefault(x => x.FieldName == fieldName);
-        return col?.Visible ?? true;
-    }
-
-    private async Task LoadAvailableLayouts()
-    {
-        availableLayouts = await GridLayoutService.GetLayoutsByVoucherTypeAsync(VOUCHER_TYPE);
-    }
-
-    private async Task LoadDefaultLayout()
-    {
-        var defaultLayout = await GridLayoutService.GetDefaultLayoutAsync(VOUCHER_TYPE);
-        if (defaultLayout != null)
-        {
-            selectedLayoutId = defaultLayout.GridLayoutId;
-            await ApplyLayout(defaultLayout);
-        }
-    }
-
-    private async Task OnLayoutSelectedAsync(int? layoutId)
-    {
-        selectedLayoutId = layoutId;
-        if (layoutId.HasValue)
-        {
-            var layout = await GridLayoutService.GetByIdAsync(layoutId.Value);
-            if (layout != null) await ApplyLayout(layout);
-        }
-        else
-        {
-            InitializeColumns();
-            await InvokeAsync(StateHasChanged);
-        }
-    }
-
-    private async Task ApplyLayout(GridLayoutDto layout)
-    {
-        if (!string.IsNullOrEmpty(layout.GridLayoutData))
-        {
-            var savedLayout = GridLayoutService.DeserializeColumnLayout(layout.GridLayoutData);
-            if (savedLayout != null && savedLayout.Any())
-            {
-                currentLayout = savedLayout.ToList();
-                foreach (var saved in savedLayout)
-                {
-                    var existing = allColumns.FirstOrDefault(x => x.FieldName == saved.FieldName);
-                    if (existing != null)
-                    {
-                        existing.Visible = saved.Visible;
-                        existing.Width = saved.Width;
-                        existing.DisplayIndex = saved.DisplayIndex;
-                    }
-                }
-                await InvokeAsync(StateHasChanged);
-            }
-        }
-    }
-
-    private void ShowSaveLayoutDialog()
-    {
-        if (selectedLayoutId.HasValue)
-        {
-            var layout = availableLayouts.FirstOrDefault(x => x.GridLayoutId == selectedLayoutId.Value);
-            if (layout != null)
-            {
-                newLayoutName = layout.GridLayoutName ?? "";
-                isDefaultLayout = layout.GridLayoutDefault;
-                isEditMode = true;
-                dialogTitle = "Update Grid Layout";
-                showLayoutDialog = true;
-                return;
-            }
-        }
-        ShowNewLayoutDialog();
-    }
-
-    private void ShowNewLayoutDialog()
-    {
-        newLayoutName = "";
-        isDefaultLayout = false;
-        isEditMode = false;
-        dialogTitle = "Create New Grid Layout";
-        showLayoutDialog = true;
-    }
-
-    private async Task SaveCurrentLayout()
-    {
-        if (string.IsNullOrWhiteSpace(newLayoutName))
-        {
-            ToastService.Warning("Please enter a layout name.");
-            return;
-        }
-
-        LoadingService.Show("Saving layout...");
-        try
-        {
-            foreach (var col in allColumns)
-            {
-                var current = currentLayout.FirstOrDefault(c => c.FieldName == col.FieldName);
-                if (current != null)
-                {
-                    current.Visible = col.Visible;
-                    current.Width = col.Width;
-                }
-            }
-
-            var configJson = GridLayoutService.SerializeColumnLayout(currentLayout);
-            bool success;
-
-            if (isEditMode && selectedLayoutId.HasValue)
-            {
-                success = await GridLayoutService.UpdateAsync(selectedLayoutId.Value, new SaveGridLayoutRequest
-                {
-                    GridLayoutName = newLayoutName,
-                    GridLayoutVoucherType = VOUCHER_TYPE,
-                    GridLayoutData = configJson,
-                    GridLayoutDefault = isDefaultLayout
-                });
-            }
-            else
-            {
-                success = await GridLayoutService.CreateAsync(new SaveGridLayoutRequest
-                {
-                    GridLayoutName = newLayoutName,
-                    GridLayoutVoucherType = VOUCHER_TYPE,
-                    GridLayoutData = configJson,
-                    GridLayoutDefault = isDefaultLayout
-                });
-            }
-
-            if (success)
-            {
-                ToastService.Success($"Layout {(isEditMode ? "updated" : "created")} successfully!");
-                await LoadAvailableLayouts();
-                CloseLayoutDialog();
-            }
-            else
-            {
-                ToastService.Error("Failed to save layout.");
-            }
-        }
-        finally
-        {
-            LoadingService.Hide();
-        }
-    }
-
-    private async Task DeleteCurrentLayout()
-    {
-        if (!selectedLayoutId.HasValue) return;
-
-        LoadingService.Show("Deleting layout...");
-        try
-        {
-            var success = await GridLayoutService.DeleteAsync(selectedLayoutId.Value);
-            if (success)
-            {
-                ToastService.Success("Layout deleted successfully!");
-                selectedLayoutId = null;
-                InitializeColumns();
-                await LoadAvailableLayouts();
-            }
-        }
-        finally
-        {
-            LoadingService.Hide();
-        }
-    }
-
-    private void CloseLayoutDialog()
-    {
-        showLayoutDialog = false;
-        newLayoutName = "";
-        isDefaultLayout = false;
-        isEditMode = false;
-    }
-
-    const string LayoutKey = "InvoiceRegisterLayout";
-    
-    async Task OnLayoutAutoSaving(GridPersistentLayoutEventArgs e)
-    {
-        try
-        {
-            var json = JsonSerializer.Serialize(e.Layout);
-            await JS.InvokeVoidAsync("localStorage.setItem", LayoutKey, json);
-        }
-        catch { }
-    }
-
-    async Task OnLayoutAutoLoading(GridPersistentLayoutEventArgs e)
-    {
-        try
-        {
-            var json = await JS.InvokeAsync<string>("localStorage.getItem", LayoutKey);
-            if (!string.IsNullOrEmpty(json))
-            {
-                e.Layout = JsonSerializer.Deserialize<GridPersistentLayout>(json);
-            }
-        }
-        catch { }
-    }
+   
 }

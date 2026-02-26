@@ -1,6 +1,7 @@
 ﻿  
 @using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Services
+@using System.Text.Json
 @inject GstSlabService GstSlabService
 @inject ToasteService ToastService
 @inject LoadingService LoadingService
@@ -247,7 +248,10 @@
             //     GstSlabPcgstAccountId = slab.GstSlabPcgstAccountId,
             //     GstSlabPigstAccountId = slab.GstSlabPigstAccountId
             // };
-            EditModel = slab;
+
+           // EditModel = slab;
+            var json = JsonSerializer.Serialize(slab);
+            EditModel = JsonSerializer.Deserialize<GstSlab>(json) ?? new GstSlab();
             Title = "Edit GST Slab";
         }
         else

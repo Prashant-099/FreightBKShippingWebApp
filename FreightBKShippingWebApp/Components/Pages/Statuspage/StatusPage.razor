@@ -18,6 +18,7 @@
         KeyFieldName="StatusId"
         ShowSearchBox="true"
         PageSize="10"
+        ShowGroupPanel="true"
         PageSizeSelectorVisible="true"
         FocusedRowEnabled="true"
         SelectionMode="GridSelectionMode.Multiple"
@@ -51,6 +52,12 @@
                 <DxToolbarItem Text="Refresh"
                                IconCssClass="bi bi-arrow-clockwise"
                                Click="LoadStatusAsync" />
+
+                <DxToolbarItem Alignment="ToolbarItemAlignment.Right"
+                               RenderStyle="ButtonRenderStyle.Secondary"
+                               IconCssClass="bi bi-gear-wide-connected"
+                               Click="ShowLayoutPopup" />
+
             </Items>
         </DxToolbar>
     </ToolbarTemplate>
@@ -59,21 +66,33 @@
         <DxGridSelectionColumn Width="40" />
 
         <DxGridDataColumn FieldName="StatusId"
-                          Caption="ID" Visible="false"/>
+                          Caption="ID"
+                          Width="@(layoutManager?.GetColumnWidth("StatusId") ?? "80px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("StatusId") ?? false)" />
 
         <DxGridDataColumn FieldName="StatusName"
-                          Caption="Status Name"/>
+                          Caption="Status Name"
+                          Width="@(layoutManager?.GetColumnWidth("StatusName") ?? "370px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("StatusName") ?? true)" />
+
+        <DxGridDataColumn FieldName="Status_code"
+                          Caption="Status Code"
+                          Width="@(layoutManager?.GetColumnWidth("Status_code") ?? "370px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("Status_code") ?? true)" />
 
         <DxGridDataColumn FieldName="StatusCreated"
                           Caption="Created"
-                          DisplayFormat="dd-MM-yyyy"/>
+                          DisplayFormat="dd-MM-yyyy"
+                          Width="@(layoutManager?.GetColumnWidth("StatusCreated") ?? "360px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("StatusCreated") ?? true)" />
 
         <DxGridDataColumn FieldName="StatusUpdated"
                           Caption="Updated"
-                          DisplayFormat="dd-MM-yyyy"/>
-        <DxGridDataColumn FieldName="Status_code"
-                          Caption="Status Code"
-                         />
+                          DisplayFormat="dd-MM-yyyy"
+                          Width="@(layoutManager?.GetColumnWidth("StatusUpdated") ?? "360px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("StatusUpdated") ?? true)" />
+
+       
     </Columns>
 
 </DxGrid>
@@ -81,6 +100,10 @@
 <StatusAddEditPage @ref="popup" OnSaved="LoadStatusAsync" />
 <ConfirmationDialog />
 
+<GridLayoutpPopup @ref="layoutManager"
+                  VoucherType="StatusPage"
+                  Columns="@allColumns"
+                  OnLayoutChanged="HandleLayoutChanged" />
 @code {
 
     DxGrid MyGrid;
@@ -88,11 +111,40 @@
     private IReadOnlyList<object> SelectedStatuses = new List<object>();
     private StatusAddEditPage popup;
 
-    protected override async Task OnInitializedAsync()
+    private GridLayoutpPopup? layoutManager;
+    private List<GridColumnLayout> allColumns = [];
+    private async void ShowLayoutPopup()
     {
-        await LoadStatusAsync();
+        await InvokeAsync(() =>
+        {
+            layoutManager?.ShowPopup();
+        });
+    }
+    private async Task HandleLayoutChanged(List<GridColumnLayout> updatedLayout)
+    {
+        allColumns = updatedLayout;
+        // Force the grid to re-render with new layout
+        await InvokeAsync(StateHasChanged);
     }
 
+
+    protected override async Task OnInitializedAsync()
+    {
+        InitializeColumns();
+        await LoadStatusAsync();
+    }
+    private void InitializeColumns()
+    {
+        allColumns = new List<GridColumnLayout>
+    {
+        new() { FieldName = "StatusId", Caption = "ID", Visible = false, Width = 80, DisplayIndex = 0 },
+        new() { FieldName = "StatusName", Caption = "Status Name", Visible = true, Width = 370, DisplayIndex = 1 },
+          new() { FieldName = "Status_code", Caption = "Status Code", Visible = true, Width = 360, DisplayIndex = 2},
+        new() { FieldName = "StatusCreated", Caption = "Created", Visible = true, Width =370, DisplayIndex = 3 },
+        new() { FieldName = "StatusUpdated", Caption = "Updated", Visible = true, Width = 360, DisplayIndex = 4}
+      
+    };
+    }
     private async Task LoadStatusAsync()
     {
         LoadingService.Show();

@@ -185,7 +185,9 @@
         if (model !=null)
         {
             // Edit mode – bind directly to the selected object
-            EditModel = model;
+            //EditModel = model;
+            var json = JsonSerializer.Serialize(model);
+            EditModel = JsonSerializer.Deserialize<EinvConfig>(json) ?? new EinvConfig();
             popupTitle = "Edit E-Invoice Config";
         }
         else

@@ -1,5 +1,6 @@
 ﻿@using FreightBKShippingWebApp.Models
 @using FreightBKShippingWebApp.Services
+@using System.Text.Json
 @inject UnitService UnitService
 @inject ToasteService ToastService
 @inject LoadingService LoadingService
@@ -113,7 +114,10 @@
     {
         if (unit.UnitId > 0)
         {
-            EditModel = unit;
+            //EditModel = unit;
+            var json = JsonSerializer.Serialize(unit);
+            EditModel = JsonSerializer.Deserialize<Unit>(json) ?? new Unit();
+
             Title = "Edit Unit";
         }
         else

@@ -2,6 +2,7 @@
 @using FreightBKShippingWebApp.Models
 @using FreightBKShippingWebApp.Services
 @using Microsoft.AspNetCore.Components.Authorization
+@using System.Text.Json
 @inject AuthenticationStateProvider AuthStateProvider
 @inject CompanyService CompanyService
 @inject ToasteService ToastService
@@ -250,7 +251,9 @@
     {
         if (company != null && company.CompanyId > 0)
         {
-            EditModel = company;
+           // EditModel = company;
+            var json = JsonSerializer.Serialize(company);
+            EditModel = JsonSerializer.Deserialize<Company>(json) ?? new Company();
             Title = "Edit Company";
         }
         else

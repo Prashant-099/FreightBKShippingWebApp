@@ -88,11 +88,15 @@ SelectedDataItemsChanged="OnSelectedBillsChanged"
                   <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="@(async (_) => await LoadBillsAsync())" />
              
                 <DxToolbarItem Text="Clear Selection" IconCssClass="bi bi-x-circle" Click="@(async (_) => await ClearSelectionManual())" Visible="@(SelectedBills?.Count > 0)" />
-       
-                   
-               
-                   
-               
+
+
+
+
+
+                <DxToolbarItem Alignment="ToolbarItemAlignment.Right"
+                               RenderStyle="ButtonRenderStyle.Secondary"
+                               IconCssClass="bi bi-gear-wide-connected"
+                               Click="ShowLayoutPopup" />
 
 
             </Items>
@@ -102,20 +106,13 @@ SelectedDataItemsChanged="OnSelectedBillsChanged"
     <Columns>
         <DxGridSelectionColumn Width="30"
                                FixedPosition="GridColumnFixedPosition.Left" />
-        <DxGridCommandColumn CancelButtonVisible="false" Name="Action"
+        <DxGridCommandColumn CancelButtonVisible="false" Name="Action" Caption="Action"
                              DeleteButtonVisible="false"
                              EditButtonVisible="false"
                              SaveButtonVisible="false"
                              NewButtonVisible="false" Width="120">
 
-            <HeaderCaptionTemplate>
-                Actions
-                <DxButton RenderStyle="ButtonRenderStyle.Link"
-                          IconCssClass="bi bi-three-dots"
-                          SizeMode="SizeMode.Small"
-                          Click="ShowLayoutPopup" />
-
-            </HeaderCaptionTemplate>
+           
             <CellDisplayTemplate Context="cellContext">
                 <div style="display: flex; align-items: center;">
                     <DxButton RenderStyle="ButtonRenderStyle.Link"
@@ -193,12 +190,12 @@ SelectedDataItemsChanged="OnSelectedBillsChanged"
 
         <DxGridDataColumn FieldName="partyname"
                           Caption="Customer"
-                          Width="@(layoutManager?.GetColumnWidth("partyname") ?? "180px")"
+                          Width="@(layoutManager?.GetColumnWidth("partyname") ?? "270px")"
                           Visible="@(layoutManager?.GetColumnVisibility("partyname") ?? true)" />
 
         <DxGridDataColumn FieldName="Vouchname"
                           Caption="Voucher Type"
-                          Width="@(layoutManager?.GetColumnWidth("Vouchname") ?? "130px")"
+                          Width="@(layoutManager?.GetColumnWidth("Vouchname") ?? "170px")"
                           Visible="@(layoutManager?.GetColumnVisibility("Vouchname") ?? true)" />
 
         <DxGridDataColumn FieldName="BillBlNo"
@@ -226,10 +223,40 @@ SelectedDataItemsChanged="OnSelectedBillsChanged"
                           Width="@(layoutManager?.GetColumnWidth("Bill40Ft") ?? "80px")"
                           Visible="@(layoutManager?.GetColumnVisibility("Bill40Ft") ?? true)" />
 
-        <DxGridDataColumn FieldName="BillTotal"
+        <DxGridDataColumn FieldName="BillTaxableAmt"
                           Caption="Basic Amount"
-                          Width="@(layoutManager?.GetColumnWidth("BillTotal") ?? "120px")"
-                          Visible="@(layoutManager?.GetColumnVisibility("BillTotal") ?? true)" />
+                          Width="@(layoutManager?.GetColumnWidth("BillTaxableAmt") ?? "120px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("BillTaxableAmt") ?? true)" />
+
+        <DxGridDataColumn FieldName="BillCgst"
+                          Caption="CGST"
+                          Width="@(layoutManager?.GetColumnWidth("BillCgst") ?? "120px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("BillCgst") ?? true)" />
+
+        <DxGridDataColumn FieldName="BillSgst"
+                          Caption="SGST"
+                          Width="@(layoutManager?.GetColumnWidth("BillSgst") ?? "120px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("BillSgst") ?? true)" />
+
+        <DxGridDataColumn FieldName="BillIgst"
+                          Caption="IGST"
+                          Width="@(layoutManager?.GetColumnWidth("BillIgst") ?? "120px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("BillIgst") ?? true)" />
+
+        <DxGridDataColumn FieldName="BillTdsPer"
+                          Caption="TDS%"
+                          Width="@(layoutManager?.GetColumnWidth("BillTdsPer") ?? "120px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("BillTdsPer") ?? true)" />
+
+        <DxGridDataColumn FieldName="BillTdsAmt"
+                          Caption="TDS Amount"
+                          Width="@(layoutManager?.GetColumnWidth("BillTdsAmt") ?? "120px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("BillTdsAmt") ?? true)" />
+
+        <DxGridDataColumn FieldName="BillRoundAmt"
+                          Caption="Roundoff"
+                          Width="@(layoutManager?.GetColumnWidth("BillRoundAmt") ?? "120px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("BillRoundAmt") ?? true)" />
 
         <DxGridDataColumn FieldName="BillNetAmount"
                           Caption="Total Amount"
@@ -288,7 +315,7 @@ DefaultFileUrl="@PendingFileUrl"
 DefaultFileName="@PendingFileName"
 @ref="sendMsgPopup" />
 <GridLayoutpPopup @ref="layoutManager"
-                  VoucherType="Bill"
+                  VoucherType="Purchase"
                   Columns="@allColumns"
                   OnLayoutChanged="HandleLayoutChanged" />
 <PaymentAddEditPage @ref="Popup" OnSaved="LoadBillsAsync" />
@@ -416,18 +443,24 @@ DefaultFileName="@PendingFileName"
         new() { FieldName = "BillDueDate", Caption = "Due Date", Visible = true, Width = 120, DisplayIndex = 6 },
         new() { FieldName = "BillJobNo", Caption = "Job No", Visible = true, Width = 120, DisplayIndex = 7},
         new() { FieldName = "BillJobType", Caption = "Job Type", Visible = true, Width = 120, DisplayIndex = 8 },
-        new() { FieldName = "partyname", Caption = "Customer", Visible = true, Width = 180, DisplayIndex = 9},
-        new() { FieldName = "Vouchname", Caption = "Voucher Type", Visible = true, Width = 120, DisplayIndex = 10 },
+        new() { FieldName = "partyname", Caption = "Customer", Visible = true, Width = 270, DisplayIndex = 9},
+        new() { FieldName = "Vouchname", Caption = "Voucher Type", Visible = true, Width = 170, DisplayIndex = 10 },
         new() { FieldName = "BillBlNo", Caption = "BL No", Visible = true, Width = 120, DisplayIndex = 11 },
         new() { FieldName = "BillGstNo", Caption = "GST No", Visible = true, Width = 120, DisplayIndex = 12 },
         new() { FieldName = "posname", Caption = "Place of Supply", Visible = true, Width = 140, DisplayIndex = 13 },
         new() { FieldName = "Bill20Ft", Caption = "C_20FT", Visible = true, Width = 100, DisplayIndex = 14 },
         new() { FieldName = "Bill40Ft", Caption = "C_40FT", Visible = true, Width = 100, DisplayIndex = 15 },
-        new() { FieldName = "BillTotal", Caption = "Basic Amount", Visible = true, Width = 120, DisplayIndex = 16 },
-        new() { FieldName = "BillNetAmount", Caption = "Total Amount", Visible = true, Width = 140, DisplayIndex = 17 },
-        new() { FieldName = "BillCreated", Caption = "Created At", Visible = true, Width = 140, DisplayIndex = 18 },
-        new() { FieldName = "BillUpdated", Caption = "Updated At", Visible = true, Width = 140, DisplayIndex = 19 },
-        new() { FieldName = "BillStatus", Caption = "Status", Visible = true, Width = 140, DisplayIndex = 20 }
+ new() { FieldName = "BillTaxableAmt", Caption = "Basic Amount", Visible = true, Width = 120, DisplayIndex = 16 },
+         new() { FieldName = "BillCgst", Caption = "CGST", Visible = true, Width = 120, DisplayIndex = 17 },
+          new() { FieldName = "BillSgst", Caption = "SGST", Visible = true, Width = 120, DisplayIndex = 18 },
+           new() { FieldName = "BillIgst", Caption = "IGST", Visible = true, Width = 120, DisplayIndex = 19 },
+            new() { FieldName = "BillTdsPer", Caption = "TDS%", Visible = true, Width = 120, DisplayIndex = 20 },
+             new() { FieldName = "BillTdsAmt", Caption = "TDS Amount", Visible = true, Width = 120, DisplayIndex = 21 },
+            new() { FieldName = "BillRoundAmt", Caption = "Roundoff", Visible = true, Width = 120, DisplayIndex = 22 },
+        new() { FieldName = "BillNetAmount", Caption = "Total Amount", Visible = true, Width = 140, DisplayIndex = 23 },
+        new() { FieldName = "BillCreated", Caption = "Created At", Visible = true, Width = 140, DisplayIndex = 24 },
+        new() { FieldName = "BillUpdated", Caption = "Updated At", Visible = true, Width = 140, DisplayIndex = 25 },
+        new() { FieldName = "BillStatus", Caption = "Status", Visible = true, Width = 140, DisplayIndex = 26 }
      };
         
     }
@@ -462,20 +495,7 @@ DefaultFileName="@PendingFileName"
             ToastService.Warning("It is  Not Sale Invoices.");
         }
     }
-    private int ParseWidth(string width)
-    {
-        if (string.IsNullOrEmpty(width))
-            return 100;
-
-        width = width.Replace("px", "").Trim();
-
-        if (int.TryParse(width, out int result))
-            return result;
-
-        return 100;
-    }
-
-    
+  
     // ✅ FIXED: Proper selection change handler with immediate state update
     private async Task OnSelectedBillsChanged(IReadOnlyList<object> newSelection)
     {

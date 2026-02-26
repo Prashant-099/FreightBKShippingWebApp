@@ -1,6 +1,7 @@
 ﻿  
 @using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Services
+@using System.Text.Json
 
 @inject LocationService LocationService
 @inject ToasteService ToastService
@@ -140,7 +141,9 @@
         if (location.LocationId > 0)
         {
             // Edit mode – bind directly to the selected object
-            EditModel = location;
+            //EditModel = location;
+            var json = JsonSerializer.Serialize(location);
+            EditModel = JsonSerializer.Deserialize<Location>(json) ?? new Location();
             Title = "Edit Location";
         }
         else
