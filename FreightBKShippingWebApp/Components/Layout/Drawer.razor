@@ -1,0 +1,26 @@
+﻿@inherits LayoutComponentBase
+
+<DxDrawer PanelWidth="@Width" CssClass="@CssClass" Mode="@DrawerMode.Shrink" IsOpen="@true">
+    <BodyTemplate>
+        @DrawerBody
+    </BodyTemplate>
+    <TargetContent>
+        <DxDrawer PanelWidth="@Width" CssClass="@(CssClass + " mobile")" Mode="@DrawerMode.Overlap" IsOpen="@true" ApplyBackgroundShading="false">
+            <BodyTemplate>
+                @DrawerBody
+            </BodyTemplate>
+            <TargetContent>
+                <div class="shading-copy" />
+                @DrawerTarget
+            </TargetContent>
+        </DxDrawer>
+    </TargetContent>
+</DxDrawer>
+
+@code {
+    string Width => "240px";
+    string CssClass => "navigation-drawer";
+
+    [Parameter] public RenderFragment DrawerTarget { get; set; }
+    [Parameter] public RenderFragment DrawerBody { get; set; }
+}

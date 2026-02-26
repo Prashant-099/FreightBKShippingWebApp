@@ -1,0 +1,515 @@
+@page "/login"
+@using System.ComponentModel.DataAnnotations
+@using FreightBKShippingWebApp.Authentication
+@using FreightBKShippingWebApp.Components.Layout
+@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@layout EmptyLayout
+@inject ApiClient ApiClient
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
+@inject ToasteService ToastService
+@rendermode InteractiveServer
+
+<style>
+    @* ── Google Font ── *@
+    @@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    .login-page {
+        min-height: 100vh;
+        display: flex;
+        font-family: 'Sora', sans-serif;
+        background: #0a0f1e;
+        overflow: hidden;
+        position: relative;
+    }
+
+    /* ── Animated background ── */
+    .login-bg {
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        overflow: hidden;
+    }
+    .login-bg::before {
+        content: '';
+        position: absolute;
+        width: 800px; height: 800px;
+        background: radial-gradient(circle, rgba(21,101,192,.35) 0%, transparent 70%);
+        top: -200px; left: -200px;
+        animation: drift1 12s ease-in-out infinite alternate;
+    }
+    .login-bg::after {
+        content: '';
+        position: absolute;
+        width: 600px; height: 600px;
+        background: radial-gradient(circle, rgba(66,165,245,.2) 0%, transparent 70%);
+        bottom: -100px; right: -100px;
+        animation: drift2 15s ease-in-out infinite alternate;
+    }
+    @@keyframes drift1 {
+        from { transform: translate(0,0) scale(1); }
+        to   { transform: translate(80px,60px) scale(1.15); }
+    }
+    @@keyframes drift2 {
+        from { transform: translate(0,0) scale(1); }
+        to   { transform: translate(-60px,-40px) scale(1.2); }
+    }
+
+    /* Grid dots */
+    .login-grid {
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        background-image:
+            radial-gradient(circle, rgba(255,255,255,.06) 1px, transparent 1px);
+        background-size: 32px 32px;
+    }
+
+    /* ── Left panel ── */
+    .login-left {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 60px 80px;
+        position: relative;
+        z-index: 1;
+    }
+
+    .brand-wrap {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 56px;
+        animation: fadeUp .6s ease both;
+    }
+    .brand-logo {
+        width: 52px; height: 52px;
+        border-radius: 14px;
+        object-fit: contain;
+        box-shadow: 0 0 0 1px rgba(255,255,255,.1), 0 8px 24px rgba(21,101,192,.4);
+    }
+    .brand-name {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: #fff;
+        letter-spacing: -.3px;
+    }
+    .brand-tag {
+        font-size: .72rem;
+        color: rgba(255,255,255,.4);
+        letter-spacing: .8px;
+        text-transform: uppercase;
+        font-family: 'JetBrains Mono', monospace;
+    }
+
+    .hero-text {
+        animation: fadeUp .6s .1s ease both;
+    }
+    .hero-eyebrow {
+        font-size: .72rem;
+        font-family: 'JetBrains Mono', monospace;
+        color: #42a5f5;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .hero-eyebrow::before {
+        content: '';
+        display: block;
+        width: 28px; height: 2px;
+        background: #42a5f5;
+        border-radius: 2px;
+    }
+    .hero-title {
+        font-size: 3.2rem;
+        font-weight: 800;
+        color: #fff;
+        line-height: 1.1;
+        letter-spacing: -1px;
+        margin-bottom: 20px;
+    }
+    .hero-title span {
+        background: linear-gradient(90deg, #42a5f5, #90caf9);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    .hero-sub {
+        font-size: .95rem;
+        color: rgba(255,255,255,.45);
+        line-height: 1.7;
+        max-width: 340px;
+    }
+
+    /* Stats */
+    .stats-row {
+        display: flex;
+        gap: 32px;
+        margin-top: 48px;
+        animation: fadeUp .6s .2s ease both;
+    }
+    .stat-item { }
+    .stat-num {
+        font-size: 1.8rem;
+        font-weight: 800;
+        color: #fff;
+        font-family: 'JetBrains Mono', monospace;
+    }
+    .stat-label {
+        font-size: .72rem;
+        color: rgba(255,255,255,.35);
+        text-transform: uppercase;
+        letter-spacing: .8px;
+        margin-top: 2px;
+    }
+    .stat-div {
+        width: 1px;
+        background: rgba(255,255,255,.1);
+        align-self: stretch;
+    }
+
+    /* ── Right panel ── */
+    .login-right {
+        width: 480px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 48px;
+        position: relative;
+        z-index: 1;
+    }
+
+    .login-card {
+        width: 100%;
+        background: rgba(255,255,255,.035);
+        border: 1px solid rgba(255,255,255,.08);
+        border-radius: 24px;
+        padding: 44px 40px;
+        backdrop-filter: blur(24px);
+        -webkit-backdrop-filter: blur(24px);
+        box-shadow: 0 32px 80px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.06);
+        animation: fadeUp .6s .15s ease both;
+    }
+
+    .card-header-text {
+        margin-bottom: 36px;
+    }
+    .card-title {
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: #fff;
+        letter-spacing: -.4px;
+        margin-bottom: 6px;
+    }
+    .card-sub {
+        font-size: .83rem;
+        color: rgba(255,255,255,.38);
+    }
+
+    /* Form */
+    .fb-form-group {
+        margin-bottom: 20px;
+    }
+    .fb-label {
+        display: block;
+        font-size: .72rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: .8px;
+        color: rgba(255,255,255,.4);
+        margin-bottom: 8px;
+        font-family: 'JetBrains Mono', monospace;
+    }
+    .fb-input-wrap {
+        position: relative;
+    }
+    .fb-input-icon {
+        position: absolute;
+        left: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: rgba(255,255,255,.25);
+        font-size: .9rem;
+        pointer-events: none;
+        z-index: 2;
+    }
+
+    /* Override DevExpress textbox inside our wrapper */
+    .fb-input-wrap .dxbl-textbox,
+    .fb-input-wrap .dxbl-text-edit {
+        background: rgba(255,255,255,.06) !important;
+        border: 1px solid rgba(255,255,255,.1) !important;
+        border-radius: 12px !important;
+        color: #fff !important;
+        font-size: .9rem !important;
+        height: 48px !important;
+        padding-left: 42px !important;
+        transition: all .2s !important;
+    }
+    .fb-input-wrap .dxbl-textbox:focus-within,
+    .fb-input-wrap .dxbl-text-edit:focus-within {
+        border-color: #42a5f5 !important;
+        background: rgba(66,165,245,.08) !important;
+        box-shadow: 0 0 0 3px rgba(66,165,245,.15) !important;
+    }
+    .fb-input-wrap .dxbl-text-edit-input-container input {
+        background: transparent !important;
+        color: #fff !important;
+        padding-left: 42px !important;
+    }
+    .fb-input-wrap .dxbl-text-edit-input-container input::placeholder {
+        color: rgba(255,255,255,.2) !important;
+    }
+
+    .forgot-link {
+        display: block;
+        text-align: right;
+        font-size: .78rem;
+        color: #42a5f5;
+        text-decoration: none;
+        margin-top: -12px;
+        margin-bottom: 28px;
+        transition: color .15s;
+    }
+    .forgot-link:hover { color: #90caf9; }
+
+    /* Login button */
+    .fb-login-btn {
+        width: 100%;
+        height: 52px;
+        background: linear-gradient(135deg, #1565c0, #1976d2);
+        color: #fff;
+        border: none;
+        border-radius: 14px;
+        font-size: .95rem;
+        font-weight: 700;
+        font-family: 'Sora', sans-serif;
+        cursor: pointer;
+        transition: all .2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        letter-spacing: .2px;
+        box-shadow: 0 4px 20px rgba(21,101,192,.5);
+        position: relative;
+        overflow: hidden;
+    }
+    .fb-login-btn::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(135deg, rgba(255,255,255,.12), transparent);
+        border-radius: inherit;
+    }
+    .fb-login-btn:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 32px rgba(21,101,192,.65);
+    }
+    .fb-login-btn:active:not(:disabled) {
+        transform: translateY(0);
+    }
+    .fb-login-btn:disabled {
+        opacity: .65;
+        cursor: not-allowed;
+    }
+
+    /* Divider */
+    .card-footer-text {
+        text-align: center;
+        margin-top: 28px;
+        font-size: .78rem;
+        color: rgba(255,255,255,.25);
+    }
+    .card-footer-text span {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .card-footer-text span::before,
+    .card-footer-text span::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: rgba(255,255,255,.08);
+    }
+
+    /* Validation */
+    .validation-message { color: #f87171; font-size: .75rem; margin-top: 4px; }
+
+    /* Fade up animation */
+    @@keyframes fadeUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Mobile responsive */
+    @@media (max-width: 768px) {
+        .login-page { flex-direction: column; }
+        .login-left  { display: none; }
+        .login-right {
+            width: 100%;
+            padding: 24px 20px;
+            align-items: flex-start;
+            padding-top: 60px;
+        }
+        .login-card { padding: 32px 24px; }
+    }
+</style>
+
+<div class="login-page">
+    <!-- Background -->
+    <div class="login-bg"></div>
+    <div class="login-grid"></div>
+
+    <!-- LEFT: Hero Panel -->
+    <div class="login-left">
+        <div class="brand-wrap">
+            <img src="images/freightbook.jpg" alt="FreightBook" class="brand-logo" />
+            <div>
+                <div class="brand-name">FreightBook</div>
+                <div class="brand-tag">Shipping Management</div>
+            </div>
+        </div>
+
+        <div class="hero-text">
+            <div class="hero-eyebrow">Freight Operations</div>
+            <h1 class="hero-title">
+                Manage Your<br />
+                <span>Shipments</span><br />
+                Smarter
+            </h1>
+            <p class="hero-sub">
+                Complete freight management — imports, exports,
+                invoicing, and real-time analytics in one place.
+            </p>
+        </div>
+
+        <div class="stats-row">
+            <div class="stat-item">
+                <div class="stat-num">100%</div>
+                <div class="stat-label">Uptime</div>
+            </div>
+            <div class="stat-div"></div>
+            <div class="stat-item">
+                <div class="stat-num">GST</div>
+                <div class="stat-label">Ready</div>
+            </div>
+            <div class="stat-div"></div>
+            <div class="stat-item">
+                <div class="stat-num">Fast</div>
+                <div class="stat-label">Reports</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- RIGHT: Login Card -->
+    <div class="login-right">
+        <div class="login-card">
+
+            <div class="card-header-text">
+                <div class="card-title">Welcome back 👋</div>
+                <div class="card-sub">Sign in to your account to continue</div>
+            </div>
+
+            <EditForm Model="@user" OnValidSubmit="@HandleLogin">
+                <DataAnnotationsValidator />
+
+                <!-- Email -->
+                <div class="fb-form-group">
+                    <label class="fb-label">Email Address</label>
+                    <div class="fb-input-wrap">
+                        <i class="bi bi-envelope fb-input-icon"></i>
+                        <DxTextBox @bind-Text="user.UserEmail"
+                                   CssClass="w-100"
+                                   NullText="you@company.com" />
+                    </div>
+                    <ValidationMessage For="@(() => user.UserEmail)" />
+                </div>
+
+                <!-- Password -->
+                <div class="fb-form-group">
+                    <label class="fb-label">Password</label>
+                    <div class="fb-input-wrap">
+                        <i class="bi bi-lock fb-input-icon"></i>
+                        <DxTextBox @bind-Text="user.UserPassword"
+                                   Password="true"
+                                   CssClass="w-100"
+                                   NullText="••••••••" />
+                    </div>
+                    <ValidationMessage For="@(() => user.UserPassword)" />
+                </div>
+
+                <!-- Forgot -->
+                <a href="/forgot" class="forgot-link">Forgot password?</a>
+
+                <!-- Submit -->
+                <button type="submit" class="fb-login-btn" disabled="@isloading">
+                    @if (isloading)
+                    {
+                        <span class="spinner-border spinner-border-sm"></span>
+                        <span>Signing in...</span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-box-arrow-in-right"></i>
+                        <span>Sign In</span>
+                    }
+                </button>
+
+            </EditForm>
+
+            <div class="card-footer-text">
+                <span>FreightBook &copy; @DateTime.Now.Year</span>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@code {
+    private bool isloading = false;
+    private LoginModel user = new LoginModel();
+
+    private async Task HandleLogin()
+    {
+        isloading = true;
+
+        try
+        {
+            var result = await AuthService.LoginAsync(new LoginModel
+            {
+                UserEmail    = user.UserEmail,
+                UserPassword = user.UserPassword
+            });
+
+            if (result?.Token != null)
+            {
+                await ((CustomAuthStateProvider)AuthStateProvider).MarkUserAsAuthenticated(result);
+                Navigation.NavigateTo("/?login=success", forceLoad: false);
+            }
+            else
+            {
+                ToastService.Error("Login failed", "Please check your credentials and try again.");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"🛑 Error: {ex.Message}", "Login Failed");
+        }
+        finally
+        {
+            isloading = false;
+        }
+    }
+}

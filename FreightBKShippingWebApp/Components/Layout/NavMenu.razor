@@ -1,598 +1,311 @@
 ﻿@using FreightBKShippingWebApp.Authentication
-@inject NavigationManager NavigationManager
 @using FreightBKShippingWebApp.Model
-@inject HttpClient Http
-@using FreightBKShippingWebApp.Components.Pages
 @using FreightBKShippingWebApp.Services
-@* @using Blazored.Toast
-@using Blazored.Toast.Configuration *@
-@using FreightBKShippingWebApp.Authentication
 @using Microsoft.AspNetCore.Components.Authorization
-@using System.Security.Claims
-
+@inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthStateProvider
-@inject LoadingService LoadingService
-@inject YearService YearService
-@inject ToasteService ToasteService
 @inject YearStatechangeService YearStatechangeService
-@using FreightBKShippingWebApp.Components.Layout
-@inject JobService JobService
-@inject BillService BillService
-@inject StatusService StatusService
-@inject AuditLogService AuditLogService 
-<style>
-    .user-profile-popup-modern {
-        width: 250px;
-        max-width: 90vw;
-        padding: 16px;
-        background: #ffffff;
-        border-radius: 16px;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-        display: flex;
-        flex-direction: column;
-    }
 
-    .profile-header {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-    }
+<div class="sb-inner">
 
-    .profile-avatar {
-        font-size: 3rem;
-        color: #6f42c1;
-    }
+    <!-- Search -->
+    <div class="sb-search-wrap">
+        <i class="bi bi-search sb-search-icon"></i>
+        <input class="sb-search-input"
+               type="text"
+               placeholder="Find menu by keyword"
+               @bind="_q"
+               @bind:event="oninput" />
+    </div>
 
-    .profile-info {
-        flex: 1;
-    }
+    <!-- Nav -->
+    <nav class="sb-nav">
 
-    .profile-name {
-        font-weight: 600;
-        font-size: 1rem;
-        color: #212529;
-    }
+        <!-- Home -->
+        <NavLink class="sb-item" href="/" Match="NavLinkMatch.All"
+                 ActiveClass="sb-item-active" @onclick="NavClicked">
+            <i class="bi bi-house-door-fill sb-icon"></i>
+            <span>Home</span>
+        </NavLink>
 
-    .profile-email {
-        font-size: 0.85rem;
-        color: #6c757d;
-        word-break: break-word;
-    }
-
-    .profile-divider {
-        margin: 12px 0;
-        border: 0;
-        border-top: 1px solid #e9ecef;
-    }
-
-    .profile-section {
-        margin-bottom: 12px;
-    }
-
-    .logout-btn {
-        width: 100%;
-        border-radius: 10px !important;
-        font-weight: 500;
-    }
-
-    .year {
-        padding: 0;
-        width: 140px;
-    }
-
-    .dxbl-btn.dxbl-btn-text-none {
-        padding: 4px 5px !important;
-    }
-
-    .activity-item {
-       
-        border-left: 4px solid #667eea;
-        margin-top: 0.5rem;
-        margin-bottom: 0.5rem;
-        background: #f8f9fa;
-        border-radius: 0 10px 10px 0;
-       /*  transition: all 0.3s ease; */
-
-         width: 250px;
-        max-width: 90vw;
-        padding: 16px;
-      /*   background: #ffffff; */
-       /*  border-radius: 16px; */
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-        display: flex;
-        flex-direction: column;
-    }
-
-       /*  .activity-item:hover {
-            background: #e9ecef;
-            transform: translateX(5px);
-        } */
-
-    .activity-time {
-        font-size: 0.85rem;
-        color: #6c757d;
-    }
-
-    .status-badge {
-        padding: 0.4rem 0.9rem;
-        border-radius: 20px;
-        font-size: 0.85rem;
-        font-weight: 600;
-        display: inline-block;
-    }
-
-    .badge-insert {
-        background: #d1e7dd;
-        color: #0f5132;
-    }
-
-    .badge-update {
-        background: #cff4fc;
-        color: #055160;
-    }
-
-    .badge-delete {
-        background: #f8d7da;
-        color: #842029;
-    }
-
-    .badge-approve {
-        background: #e2e3ff;
-        color: #383d7a;
-    }
-
-    .badge-cancel {
-        background: #fff3cd;
-        color: #664d03;
-    }
-
-
-   
-
-
-</style>
-
-<DxGridLayout CssClass="page-layout px-2" RowSpacing="0.1rem">
-    <Items>
-        <DxGridLayoutItem Area="menu-button" CssClass="sidebar-header menu-button-container">
-            <Template>
-                <div class="menu-button"
-                     onclick="(document.getElementById('sidebar').classList.toggle('auto-expanded'),
-                               document.getElementById('menu-top').classList.toggle('hidden'))"></div>
-            </Template>
-        </DxGridLayoutItem>
-
-        <DxGridLayoutItem Area="navigation" CssClass="layout-item">
-            <Template>
-                <DxMenu CollapseItemsToHamburgerMenu="true"
-                        CollapseItemToIconMode="MenuCollapseItemToIconMode.Sequentially"
-                        CssClass="compact-menu"
-                        DisplayMode="MenuDisplayMode.Desktop">
-                    <TitleTemplate>
-                        <div class="d-flex align-items-center">
-                            <img src="images/freightbook.jpg"
-                                 alt="Fumicerti Logo"
-                                 style="max-height: 25px; margin-right: 6px;" />
-                            <span style="font-weight: bold; font-size: 1.2rem;">FreightBook</span>
-                        </div>
-                    </TitleTemplate>
-
-                    <Items>
-                        <DxMenuItem Text="Home" NavigateUrl="/" IconCssClass="bi bi-house-door-fill" />
-                        @* <DxMenuItem Text="extractdetailgetfromfile" NavigateUrl="/extractdatafromfile" IconCssClass="bi bi-house-door-fill" /> *@
-                        @* <DxMenuItem Text="" NavigateUrl="/" IconCssClass="bi bi-house-door-fill" /> *@
-
-                        <!-- Admin -->
-                        <DxMenuItem Text="Admin" IconCssClass="bi bi-shield-lock-fill" >
-                            <Items>
-                                <DxMenuItem Text="Company" NavigateUrl="/company" IconCssClass="bi bi-buildings" />
-                                <DxMenuItem Text="Branch" NavigateUrl="/branch" IconCssClass="bi bi-diagram-3" />
-                                <DxMenuItem Text="Year" NavigateUrl="/year" IconCssClass="bi bi-calendar3" />
-                                <DxMenuItem Text="Voucher Type" NavigateUrl="/voucher" IconCssClass="bi bi-receipt" />
-                                <DxMenuItem Text="User" NavigateUrl="/user" IconCssClass="bi bi-person-circle" />
-                                <DxMenuItem Text="GST Slab" NavigateUrl="/gstslabs" IconCssClass="bi bi-cash-coin" />
-                                <DxMenuItem Text="Users Activity" NavigateUrl="/audit-logs" IconCssClass="bi bi-person-video2" />
-
-                               @*  <DxMenuItem NavigateUrl="/company-config" Text="Company Config" IconCssClass="bi bi-gear"/>
-                                <DxMenuItem NavigateUrl="/send-file" Text="send"></DxMenuItem> *@
-                            </Items>
-                        </DxMenuItem>
-
-                        <!-- Masters -->
-                        <DxMenuItem Text="Masters" IconCssClass="bi bi-collection-fill" >
-                            <Items>
-                               @*  <DxMenuItem NavigateUrl="/party" Text="Party" IconCssClass="bi bi-person" />
-                                <DxMenuItem NavigateUrl="/accounttype" Text="AccountType" IconCssClass="bi bi-person" />
-                                <DxMenuItem NavigateUrl="/productt" Text="Supplier" IconCssClass="bi bi-truck" />
-                                <DxMenuItem NavigateUrl="/Bank" Text="Bank" IconCssClass="bi bi-bank" /> *@
-                                <DxMenuItem NavigateUrl="/account" Text="Accounts" IconCssClass="bi bi-journal-text" IconUrl=""/>
-                                <DxMenuItem NavigateUrl="/service" Text="Service" IconCssClass="bi bi-gear" />
-                                <DxMenuItem NavigateUrl="/servicegroup" Text="Service Group" IconCssClass="bi bi-diagram-3" />
-                                <DxMenuItem NavigateUrl="/hsnsac" Text="HSN/SAC" IconCssClass="bi bi-card-list" />
-                                <DxMenuItem NavigateUrl="/cargo" Text="Cargo" IconCssClass="bi bi-box-seam" />
-                                <DxMenuItem NavigateUrl="/location" Text="Station/Port" IconCssClass="bi bi-geo" />
-                                <DxMenuItem NavigateUrl="/notify" Text="Miscellaneous Master" IconCssClass="bi bi-grid" />
-                                <DxMenuItem NavigateUrl="/vessels" Text="Vessel" IconCssClass="bi bi-truck" />
-                                <DxMenuItem NavigateUrl="/currency" Text="Currency" IconCssClass="bi bi-currency-exchange" />
-                                <DxMenuItem NavigateUrl="/country" Text="Country" IconCssClass="bi bi-globe" />
-                                <DxMenuItem NavigateUrl="/Unit" Text="Unit" IconCssClass="bi bi-rulers" /> <!-- alt: bi-bounding-box -->
-                                <DxMenuItem NavigateUrl="/ratemaster" Text="Rate" IconCssClass="bi bi-currency-exchange" /> <!-- alt: bi-bounding-box -->
-                                <DxMenuItem NavigateUrl="/status" Text="Staus" IconCssClass="bi bi-flag" />
-
-                            </Items>
-                        </DxMenuItem>
-
-                        <DxMenuItem Text="Shipments" IconCssClass="bi bi-truck-front-fill">
-                            <Items>
-                                <DxMenuItem NavigateUrl="/jobimport" Text="Import Job" IconCssClass="bi bi-box-arrow-in-down" />
-                                <DxMenuItem NavigateUrl="/jobexport" Text="Export Job" IconCssClass="bi bi-box-arrow-up" />
-                                <DxMenuItem NavigateUrl="/quotation" Text="Quotation" IconCssClass="bi-file-earmark-text" />
-
-                            </Items>
-                        </DxMenuItem>
-                        <DxMenuItem Text="Transport" IconCssClass="bi bi-truck-front-fill">
-                            <Items>
-                                <DxMenuItem NavigateUrl="/partybill" Text="Party Bill" IconCssClass="bi bi-box-arrow-in-down" />                              
-                                <DxMenuItem NavigateUrl="/lrentry" Text="Lr Entry" IconCssClass="bi bi-box-arrow-in-down" />
-                            </Items>
-                        </DxMenuItem>
-
-
-                        <!-- Voucher Entry -->
-                        <DxMenuItem Text="Voucher" IconCssClass="bi bi-journal-bookmark-fill">
-                            <Items>
-                                @* <DxMenuItem NavigateUrl="/jobimport" Text="Import Job" IconCssClass="bi bi-briefcase-fill" />
-                                <DxMenuItem NavigateUrl="/jobexport" Text="Export Job" IconCssClass="bi bi-briefcase-fill" /> *@
-                                <DxMenuItem NavigateUrl="/bill" Text="Sale Invoice" IconCssClass="bi bi-receipt" />
-                                <DxMenuItem NavigateUrl="/purchase" Text="Purchase Invoice" IconCssClass="bi bi-bag-check" />
-                                <DxMenuItem NavigateUrl="/Receipt" Text="Receipt" IconCssClass="bi-cash-coin" />
-                                <DxMenuItem NavigateUrl="/Payment" Text="Payment" IconCssClass="bi-credit-card-2-front" />
-                            </Items>
-                        </DxMenuItem>
-                        <DxMenuItem Text="Reports" IconCssClass="bi bi-bar-chart-line-fill">
-                            <Items>
-                               
-                                <DxMenuItem NavigateUrl="/jobregister" Text="Job Register" IconCssClass="bi bi-book" />
-                                <DxMenuItem NavigateUrl="/invoiceregister" Text="Invoice Register" IconCssClass="bi bi-file-earmark-spreadsheet" />
-
-                                <DxMenuItem NavigateUrl="/InvoiceExporttally" Text="Invoice Export Tally" IconCssClass="bi bi-arrow-left-right" />
-                                <DxMenuItem NavigateUrl="/outstandingregister" Text="Oustanding Report" IconCssClass="bi bi-hourglass-split" />
-                                <DxMenuItem NavigateUrl="/jobprofitloss" Text="Profit&Loss Report" IconCssClass="bi bi-graph-up" />
-                                @* <DxMenuItem NavigateUrl="/gstr1" Text="GSTR1" IconCssClass="bi bi-graph-up" />
-                                <DxMenuItem NavigateUrl="/gstr2" Text="GSTR2" IconCssClass="bi bi-graph-up" />
-                                <DxMenuItem NavigateUrl="/gstr3b" Text="GSTR3" IconCssClass="bi bi-graph-up" /> *@
-                                <DxMenuItem Text="GSTR Reports"
-                                            IconCssClass="bi bi-receipt">
-                                    <Items>
-                                        <DxMenuItem NavigateUrl="/gstr1"
-                                                    Text="GSTR-1"
-                                                    IconCssClass="bi bi-file-earmark-text" />
-
-                                        <DxMenuItem NavigateUrl="/gstr2"
-                                                    Text="GSTR-2"
-                                                    IconCssClass="bi bi-file-earmark-text" />
-
-                                        <DxMenuItem NavigateUrl="/gstr3b"
-                                                    Text="GSTR-3B"
-                                                    IconCssClass="bi bi-file-earmark-text" />
-                                    </Items>
-                                </DxMenuItem>
-                            </Items>
-                        </DxMenuItem>
-                        <DxMenuItem Text="About" NavigateUrl="/about" IconCssClass="bi bi-info-square-fill">
-
-                        </DxMenuItem>
-                        <!-- Certificate Entry -->
-                       @*  <DxMenuItem Text="Certificate Entry" IconCssClass="bi bi-check-circle-fill" >
-                            <Items>
-                                <DxMenuItem NavigateUrl="/ALPcerti" Text="Certificate (ALP)" IconCssClass="bi bi-clipboard-check"/>
-                                <DxMenuItem NavigateUrl="/certi" Text="Certificate (MBR)" IconCssClass="bi bi-clipboard-check"/>
-                                <DxMenuItem NavigateUrl="/AFAScerti" Text="Certificate (AFAS)" IconCssClass="bi bi-clipboard-check"/>
-                            </Items>
-                        </DxMenuItem> *@
-
-                        <!-- Reports -->
-                       @*  <DxMenuItem Text="Reports" IconCssClass="bi bi-clipboard-check-fill" >
-                            <Items>
-                                <DxMenuItem NavigateUrl="/certiReport" Text="Certi Report" IconCssClass="bi bi-clipboard-check"/>
-                            </Items>
-                        </DxMenuItem> *@
-
-                        <!-- About -->
-                     @*    <DxMenuItem NavigateUrl="/about" Text="About" IconCssClass="bi bi-info-square-fill"  /> *@
-                        @if (IsAdmin)
+        <!-- ── ADMINISTRATION ─────────────────── -->
+        @if (ShowGroup("Administration", adminItems))
+        {
+            <div class="sb-label">Administration</div>
+            <div class="sb-group">
+                <button class="sb-group-btn" @onclick="@(() => Toggle(ref _admin))">
+                    <i class="bi bi-shield-lock-fill sb-icon" style="color:#f59e0b"></i>
+                    <span>Admin</span>
+                    <i class="bi bi-chevron-right sb-chevron @(_admin ? "sb-chevron-open" : "")"></i>
+                </button>
+                @if (_admin)
+                {
+                    <div class="sb-sub">
+                        @foreach (var x in Filter(adminItems))
                         {
-                        <DxMenuItem 
-                                    IconCssClass="bi bi-bell-fill"
-                                    Position="ItemPosition.End" CssClass="notoggle">
-                            <TextTemplate>
-                                <div class="menu-icon-person-circle menu-icon"></div>
-                            </TextTemplate>
-
-                            <SubMenuTemplate>
-                                <div style="max-height: 260px; overflow-y: auto;">
-                                @if (recentActivities.Any())
-                                {
-                                    @foreach (var activity in recentActivities)
-                                    {
-                                        <div class="activity-item">
-                                            <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
-                                                <div class="flex-grow-1">
-                                                    <strong>@activity.Title</strong>
-                                                    <p class="mb-1 text-muted small">@activity.Description</p>
-                                                    <span class="status-badge badge-@activity.Status.ToLower()">
-                                                            @activity.Status - @activity.Time.ToString("dd MMM, hh:mm tt")
-                                                    </span>
-                                                </div>
-                                               
-                                            </div>
-                                        </div>
-                                    }
-                                }
-                                else
-                                {
-                                    <div class="text-center text-muted py-5">
-                                        <i class="bi bi-inbox" style="font-size: 3rem; opacity: 0.4;"></i>
-                                        <p class="mt-3">No recent activity</p>
-                                    </div>
-                                }
-                                </div>
-                            </SubMenuTemplate>
-                        </DxMenuItem>
+                            <NavLink class="sb-sub-item" href="@x.Url"
+                                     ActiveClass="sb-sub-active" @onclick="NavClicked">
+                                <i class="@x.Icon sb-sub-icon"></i>
+                                <span>@x.Label</span>
+                            </NavLink>
                         }
-                        <!-- User Profile -->
-                        <DxMenuItem Text="User"
-                                    IconCssClass="bi bi-people-fill"
-                                    Position="ItemPosition.End"
-                                    CssClass="notoggle">
-                            <TextTemplate>
-                                <div class="menu-icon-person-circle menu-icon"></div>
-                            </TextTemplate>
+                    </div>
+                }
+            </div>
+        }
 
-                            <SubMenuTemplate>
-                                <div class="user-profile-popup-modern">
-                                    <!-- Profile Header -->
-                                    <div class="profile-header">
-                                        <i class="bi bi-person-circle profile-avatar"></i>
-                                        <div class="profile-info">
-                                            <div class="profile-name">@UserName</div>
-                                            <div class="profile-email">@UserEmail</div>
-                                        </div>
-                                    </div>
+        <!-- ── MASTERS ───────────────────────── -->
+        @if (ShowGroup("Masters", masterItems))
+        {
+            <div class="sb-label">Masters</div>
+            <div class="sb-group">
+                <button class="sb-group-btn" @onclick="@(() => Toggle(ref _masters))">
+                    <i class="bi bi-collection-fill sb-icon" style="color:#06b6d4"></i>
+                    <span>Masters</span>
+                    <i class="bi bi-chevron-right sb-chevron @(_masters ? "sb-chevron-open" : "")"></i>
+                </button>
+                @if (_masters)
+                {
+                    <div class="sb-sub">
+                        @foreach (var x in Filter(masterItems))
+                        {
+                            <NavLink class="sb-sub-item" href="@x.Url"
+                                     ActiveClass="sb-sub-active" @onclick="NavClicked">
+                                <i class="@x.Icon sb-sub-icon"></i>
+                                <span>@x.Label</span>
+                            </NavLink>
+                        }
+                    </div>
+                }
+            </div>
+        }
 
-                                    <hr class="profile-divider" />
+        <!-- ── OPERATIONS ────────────────────── -->
+        @if (ShowGroup("Operations", shipItems) || ShowGroup("Transport", transportItems))
+        {
+            <div class="sb-label">Operations</div>
 
-                                    <!-- Year Dropdown -->
-                                    <div class="profile-section">
-                                        <label class="form-label small mb-1">Active Year</label>
-                                        <DxComboBox Data="@(YearStatechangeService.Years ?? new List<YearModel>())"
-                                                    TextFieldName="YearName"
-                                                    ValueFieldName="YearId"
-                                                    Value="@YearStatechangeService.SelectedYearId"
-                                                    ValueChanged="@((int? v) => YearStatechangeService.ChangeYear(v ?? 0))"
-                                                    CssClass="form-select w-100 year-dropdown" />
-                                    </div>
-                                    <div class="profile-section">
-                                        <label class="form-label small mb-1">Branch</label>
-                                        <BranchSelection></BranchSelection>
-                                    </div>
+            @if (ShowGroup("Shipments", shipItems))
+            {
+                <div class="sb-group">
+                    <button class="sb-group-btn" @onclick="@(() => Toggle(ref _ship))">
+                        <i class="bi bi-truck-front-fill sb-icon" style="color:#3b82f6"></i>
+                        <span>Shipments</span>
+                        <i class="bi bi-chevron-right sb-chevron @(_ship ? "sb-chevron-open" : "")"></i>
+                    </button>
+                    @if (_ship)
+                    {
+                        <div class="sb-sub">
+                            @foreach (var x in Filter(shipItems))
+                            {
+                                <NavLink class="sb-sub-item" href="@x.Url"
+                                         ActiveClass="sb-sub-active" @onclick="NavClicked">
+                                    <i class="@x.Icon sb-sub-icon"></i>
+                                    <span>@x.Label</span>
+                                </NavLink>
+                            }
+                        </div>
+                    }
+                </div>
+            }
 
-                                    <!-- Logout -->
-                                    <div class="profile-section">
-                                        <DxButton Text="Log Off"
-                                                  RenderStyle="@ButtonRenderStyle.Danger"
-                                                  CssClass="logout-btn"
-                                                  Click="Logout" />
-                                    </div>
-                                </div>
-                            </SubMenuTemplate>
-                        </DxMenuItem>
-                    </Items>
-                </DxMenu>
-            </Template>
-        </DxGridLayoutItem>
+            @if (ShowGroup("Transport", transportItems))
+            {
+                <div class="sb-group">
+                    <button class="sb-group-btn" @onclick="@(() => Toggle(ref _transport))">
+                        <i class="bi bi-truck sb-icon" style="color:#3b82f6"></i>
+                        <span>Transport</span>
+                        <i class="bi bi-chevron-right sb-chevron @(_transport ? "sb-chevron-open" : "")"></i>
+                    </button>
+                    @if (_transport)
+                    {
+                        <div class="sb-sub">
+                            @foreach (var x in Filter(transportItems))
+                            {
+                                <NavLink class="sb-sub-item" href="@x.Url"
+                                         ActiveClass="sb-sub-active" @onclick="NavClicked">
+                                    <i class="@x.Icon sb-sub-icon"></i>
+                                    <span>@x.Label</span>
+                                </NavLink>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+        }
 
-        <DxGridLayoutItem Area="footer" CssClass="footer">
-            <Template></Template>
-        </DxGridLayoutItem>
-    </Items>
-</DxGridLayout>
+        <!-- ── ACCOUNTING ────────────────────── -->
+        @if (ShowGroup("Accounting", voucherItems))
+        {
+            <div class="sb-label">Accounting</div>
+            <div class="sb-group">
+                <button class="sb-group-btn" @onclick="@(() => Toggle(ref _voucher))">
+                    <i class="bi bi-journal-bookmark-fill sb-icon" style="color:#10b981"></i>
+                    <span>Voucher</span>
+                    <i class="bi bi-chevron-right sb-chevron @(_voucher ? "sb-chevron-open" : "")"></i>
+                </button>
+                @if (_voucher)
+                {
+                    <div class="sb-sub">
+                        @foreach (var x in Filter(voucherItems))
+                        {
+                            <NavLink class="sb-sub-item" href="@x.Url"
+                                     ActiveClass="sb-sub-active" @onclick="NavClicked">
+                                <i class="@x.Icon sb-sub-icon"></i>
+                                <span>@x.Label</span>
+                            </NavLink>
+                        }
+                    </div>
+                }
+            </div>
+        }
+
+        <!-- ── ANALYTICS ─────────────────────── -->
+        @if (ShowGroup("Analytics", reportItems))
+        {
+            <div class="sb-label">Analytics</div>
+            <div class="sb-group">
+                <button class="sb-group-btn" @onclick="@(() => Toggle(ref _reports))">
+                    <i class="bi bi-bar-chart-line-fill sb-icon" style="color:#ef4444"></i>
+                    <span>Reports</span>
+                    <i class="bi bi-chevron-right sb-chevron @(_reports ? "sb-chevron-open" : "")"></i>
+                </button>
+                @if (_reports)
+                {
+                    <div class="sb-sub">
+                        @foreach (var x in Filter(reportItems))
+                        {
+                            <NavLink class="sb-sub-item" href="@x.Url"
+                                     ActiveClass="sb-sub-active" @onclick="NavClicked">
+                                <i class="@x.Icon sb-sub-icon"></i>
+                                <span>@x.Label</span>
+                            </NavLink>
+                        }
+
+                        <!-- GSTR sub-group -->
+                        <button class="sb-group-btn sb-sub-group-btn"
+                                @onclick="@(() => Toggle(ref _gstr))">
+                            <i class="bi bi-receipt sb-sub-icon"></i>
+                            <span>GSTR Reports</span>
+                            <i class="bi bi-chevron-right sb-chevron @(_gstr ? "sb-chevron-open" : "")"></i>
+                        </button>
+                        @if (_gstr)
+                        {
+                            <div class="sb-sub sb-nested">
+                                <NavLink class="sb-sub-item" href="/gstr1" ActiveClass="sb-sub-active" @onclick="NavClicked">
+                                    <i class="bi bi-file-earmark-text sb-sub-icon"></i><span>GSTR-1</span>
+                                </NavLink>
+                                <NavLink class="sb-sub-item" href="/gstr2" ActiveClass="sb-sub-active" @onclick="NavClicked">
+                                    <i class="bi bi-file-earmark-text sb-sub-icon"></i><span>GSTR-2</span>
+                                </NavLink>
+                                <NavLink class="sb-sub-item" href="/gstr3b" ActiveClass="sb-sub-active" @onclick="NavClicked">
+                                    <i class="bi bi-file-earmark-text sb-sub-icon"></i><span>GSTR-3B</span>
+                                </NavLink>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+
+        <!-- About -->
+        <NavLink class="sb-item" href="/about"
+                 ActiveClass="sb-item-active" @onclick="NavClicked">
+            <i class="bi bi-info-square-fill sb-icon" style="color:#64748b"></i>
+            <span>About</span>
+        </NavLink>
+
+    </nav>
+
+    <!-- Footer -->
+    <div class="sb-footer">
+        <i class="bi bi-headset"></i>&nbsp;Support: 9409309616
+    </div>
+
+</div>
 
 @code {
-    private List<ActivityItem> recentActivities = new();
-    public class ActivityItem
+    [Parameter] public EventCallback OnNavClick { get; set; }
+
+    private string _q = "";
+
+    private bool _admin = false;
+    private bool _masters = false;
+    private bool _ship = false;
+    private bool _transport = false;
+    private bool _voucher = false;
+    private bool _reports = false;
+    private bool _gstr = false;
+
+    private void Toggle(ref bool val) => val = !val;
+
+    private record M(string Label, string Url, string Icon);
+
+    private List<M> adminItems = new()
     {
-        public string Title { get; set; }
-        public string Description { get; set; }
-        public string Status { get; set; }
-        public DateTime Time { get; set; }
-    }
-    private async Task LoadRecentActivities()
+        new("Company",        "/company",    "bi bi-buildings"),
+        new("Branch",         "/branch",     "bi bi-diagram-3"),
+        new("Year",           "/year",       "bi bi-calendar3"),
+        new("Voucher Type",   "/voucher",    "bi bi-receipt"),
+        new("User",           "/user",       "bi bi-person-circle"),
+        new("GST Slab",       "/gstslabs",   "bi bi-cash-coin"),
+        new("Users Activity", "/audit-logs", "bi bi-person-video2"),
+    };
+    private List<M> masterItems = new()
     {
-
-        var CurrentYearId = YearStatechangeService.SelectedYearId;
-        var logs = (await AuditLogService.GetLatestAsync())
-            .Where(a => a.YearId == CurrentYearId)
-            .Take(10)
-            .ToList();
-       
-        recentActivities = MapAuditLogsToActivities(logs);
-    }
-    private List<ActivityItem> MapAuditLogsToActivities(List<AuditLog> logs)
+        new("Accounts",      "/account",      "bi bi-journal-text"),
+        new("Service",       "/service",      "bi bi-gear"),
+        new("Service Group", "/servicegroup", "bi bi-diagram-3"),
+        new("HSN/SAC",       "/hsnsac",       "bi bi-card-list"),
+        new("Cargo",         "/cargo",        "bi bi-box-seam"),
+        new("Station/Port",  "/location",     "bi bi-geo"),
+        new("Miscellaneous", "/notify",       "bi bi-grid"),
+        new("Vessel",        "/vessels",      "bi bi-truck"),
+        new("Currency",      "/currency",     "bi bi-currency-exchange"),
+        new("Country",       "/country",      "bi bi-globe"),
+        new("Unit",          "/Unit",         "bi bi-rulers"),
+        new("Rate",          "/ratemaster",   "bi bi-currency-exchange"),
+        new("Status",        "/status",       "bi bi-flag"),
+    };
+    private List<M> shipItems = new()
     {
-        logs ??= new();
-
-        return logs
-            .OrderByDescending(l => l.DateTime)
-            .Select(l => new ActivityItem
-            {
-                Title = $"{l.TableName}",
-
-                Description = $"{(!string.IsNullOrEmpty(l.Remarks) ? $"  {l.Remarks}" : "")}",
-
-                Status = l.Operations, // INSERT / UPDATE / DELETE
-                Time = l.DateTime
-            })
-            .Take(10)
-            .ToList();
-    }
-
-    private List<Status> statuslist = new();
-    // private string GetStatusName(int? statusId)
-    // {
-    //     if (statusId == null) return "Pending";
-
-    //     var item = statuslist.FirstOrDefault(s => s.StatusId == statusId.Value);
-    //     return item?.StatusName ?? "Pending";
-    // }
-
-    // private void PrepareRecentActivity(List<Job> jobs, List<Bill> bills)
-    // {
-    //     jobs ??= new();
-    //     bills ??= new();
-
-    //     // Jobs
-    //     var recentJobs = jobs
-    //         .Where(j => j != null)
-    //         .OrderByDescending(j => j.JobCreated)
-    //         .Take(5)
-    //         .Select(j => new ActivityItem
-    //         {
-    //             Title = $"Job {j.JobNo} - {j.JobType}",
-    //             Description = $"B/L No: {j.JobBlNo ?? "-"}",
-
-    //             // convert status id -> name
-    //             Status = GetStatusName(j.JobStatus),
-
-    //             Time = j.JobCreated
-    //         });
-
-    //     // Bills
-    //     var recentBills = bills
-    //         .Where(b => b != null)
-    //         .OrderByDescending(b => b.BillCreated)
-    //         .Take(5)
-    //         .Select(b => new ActivityItem
-    //         {
-    //             Title = $"Invoice {b.BillNo}",
-    //             Description = $"Amount: ₹{(b.BillNetAmount):N2}",
-
-    //             // bool → Active / Inactive
-    //             Status = b.BillStatus ? "Active" : "Inactive",
-
-    //             Time = b.BillCreated 
-    //         });
-
-    //     recentActivities = recentJobs
-    //         .Concat(recentBills)
-    //         .OrderByDescending(a => a.Time)
-    //         .Take(10)
-    //         .ToList();
-    // }
-
-    [Inject] IJSRuntime JS { get; set; }
-    [Inject] private AuthService AuthService { get; set; }
-    // [Inject] private CompanyConfigService CompanyConfigService { get; set; }
-
-    private string UserName { get; set; } = "User Name";
-    private string UserEmail { get; set; } = "user@example.com";
-
-    // Visibility flags
-    // private bool ShowAdmin, ShowMasters, ShowVoucherEntry, ShowCertificateEntry;
-    // private bool ShowCompany, ShowBranch, ShowUser, ShowYear, ShowVoucherConfig,ShowCompanyConfig;
-    // private bool ShowAFO, ShowProduct, ShowNotify, ShowLocation, ShowContainerList;
-    // private bool ShowPurchaseInvoice, ShowSellInvoice;
-    // private bool ShowCertImbr, ShowCertIalp, ShowCertIafas;
-    // private bool ShowAllCerti, ShowAbout, ShowReport, ShowIndex, ShowGroupHome;
-
-
-    private async Task Logout()
+        new("Import Job", "/jobimport", "bi bi-box-arrow-in-down"),
+        new("Export Job", "/jobexport", "bi bi-box-arrow-up"),
+        new("Quotation",  "/quotation", "bi bi-file-earmark-text"),
+    };
+    private List<M> transportItems = new()
     {
-        // if (AuthStateProvider is CustomAuthStateProvider customProvider)
-        //     await customProvider.MarkUserAsLoggedOut();
-
-        // NavigationManager.NavigateTo("/login", true);
-        await AuthService.LogoutAsync();
-    }
-    private bool IsAdmin = false;
-    protected override async Task OnInitializedAsync()
+        new("Party Bill", "/partybill", "bi bi-box-arrow-in-down"),
+        new("Lr Entry",   "/lrentry",   "bi bi-box-arrow-in-down"),
+    };
+    private List<M> voucherItems = new()
     {
-        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-        var user = authState.User;
+        new("Sale Invoice",     "/bill",     "bi bi-receipt"),
+        new("Purchase Invoice", "/purchase", "bi bi-bag-check"),
+        new("Receipt",          "/Receipt",  "bi bi-cash-coin"),
+        new("Payment",          "/Payment",  "bi bi-credit-card-2-front"),
+    };
+    private List<M> reportItems = new()
+    {
+        new("Job Register",       "/jobregister",         "bi bi-book"),
+        new("Invoice Register",   "/invoiceregister",     "bi bi-file-earmark-spreadsheet"),
+        new("Invoice Tally",      "/InvoiceExporttally",  "bi bi-arrow-left-right"),
+        new("Outstanding Report", "/outstandingregister", "bi bi-hourglass-split"),
+        new("Profit & Loss",      "/jobprofitloss",       "bi bi-graph-up"),
+    };
 
-        var token = await AuthService.GetTokenAsync();
-        string userId = BaseService.JwtHelper.GetUserIdFromToken(token);
-        string companyId = BaseService.JwtHelper.GetCompanyIdFromToken(token);
-
-        // var configs = await CompanyConfigService.GetAllAsync();
-        // var config = configs.FirstOrDefault(c => c.CompanyId.ToString() == companyId && c.UserId == userId)
-        //              ?? configs.FirstOrDefault(c => c.CompanyId.ToString() == companyId && string.IsNullOrEmpty(c.UserId));
-
-        // UpdateVisibilityFlags(config);
-
-        if (user.Identity?.IsAuthenticated == true)
-        {
-            UserName = user.FindFirst(ClaimTypes.GivenName)?.Value
-                       ?? user.Identity.Name
-                       ?? "Unknown User";
-
-            UserEmail = user.FindFirst(c =>
-                            c.Type == "email" ||
-                            c.Type == ClaimTypes.Email ||
-                            c.Type.ToLower() == "emails" ||
-                            c.Type.ToLower() == "upn")?.Value ?? "No Email";
-            IsAdmin = user.IsInRole("Admin");
-            await YearStatechangeService.LoadYearsAsync();
-            await InvokeAsync(StateHasChanged);
-
-            // var allJobs = await JobService.GetAllAsync();
-            // var allBills = await BillService.GetAllAsync();
-            // statuslist = await StatusService.GetAllAsync();
-            // var yearJobs = allJobs.Where(j => j.JobYearId == YearStatechangeService.SelectedYearId.ToString()).ToList();
-            // var yearBills = allBills.Where(b => b.BillYearId == YearStatechangeService.SelectedYearId).ToList();
-            // PrepareRecentActivity(yearJobs, yearBills);
-            await LoadRecentActivities();
-        }
+    private bool ShowGroup(string groupName, List<M> items)
+    {
+        if (string.IsNullOrWhiteSpace(_q)) return true;
+        var q = _q.ToLower();
+        return groupName.ToLower().Contains(q) || items.Any(i => i.Label.ToLower().Contains(q));
     }
 
-    // private void UpdateVisibilityFlags(CompanyConfig config)
-    // {
-    //     if (config == null) return;
+    private IEnumerable<M> Filter(List<M> items)
+    {
+        if (string.IsNullOrWhiteSpace(_q)) return items;
+        return items.Where(i => i.Label.ToLower().Contains(_q.ToLower()));
+    }
 
-    //     ShowAFO = config.AfoVisible ?? false;
-    //     ShowBranch = config.BranchVisible ?? false;
-    //     ShowProduct = config.ProductVisible ?? false;
-    //     ShowNotify = config.NotifyVisible ?? false;
-    //     ShowLocation = config.LocationVisible ?? false;
-    //     ShowContainerList = config.ContainerListVisible ?? false;
-    //     ShowUser = config.UserVisible ?? false;
-    //     ShowCompany = config.CompanyVisible ?? false;
-    //     ShowYear = config.YearVisible ?? false;
-    //     ShowVoucherConfig = config.VoucherConfigVisible ?? false;
-
-
-
-    //     ShowPurchaseInvoice = config.PurchaseInvoiceVisible ?? false;
-    //     ShowSellInvoice = config.SellInvoiceVisible ?? false;
-
-    //     ShowCertImbr = config.CertImbrVisible ?? false;
-    //     ShowCertIalp = config.CertIalpVisible ?? false;
-    //     ShowCertIafas = config.CertIafasVisible ?? false;
-
-    //     ShowAllCerti = config.AllCertiVisible ?? false;
-    //     ShowAbout = config.AboutVisible ?? false;
-
-    //     ShowAdmin = config.GroupAdminVisible ?? (ShowCompany || ShowBranch || ShowUser || ShowYear || ShowVoucherConfig);
-    //     ShowMasters = config.MasterVisible ?? (ShowAFO || ShowProduct || ShowNotify || ShowLocation || ShowContainerList);
-    //     ShowVoucherEntry = config.VoucherEntryVisible ?? (ShowPurchaseInvoice || ShowSellInvoice);
-    //     ShowCertificateEntry = config.CertificateEntryVisible ?? (ShowCertImbr || ShowCertIalp || ShowCertIafas);
-
-    //     ShowReport = config.ReportVisible ?? false;
-    //     ShowIndex = config.IndexVisible ?? false;
-    //     ShowGroupHome = config.GroupHomeVisible ?? false;
-    //     ShowCompanyConfig = config.CompanyConfigVisible ?? false;
-
-    // }
-
-    //private bool CanShow(bool parentVisible, bool childVisible = true) => parentVisible && childVisible;
+    private async Task NavClicked() => await OnNavClick.InvokeAsync();
 }
