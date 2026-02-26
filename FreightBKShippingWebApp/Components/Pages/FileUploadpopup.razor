@@ -176,7 +176,7 @@
     [Parameter] public bool IsVisible { get; set; }
     [Parameter] public EventCallback<bool> IsVisibleChanged { get; set; }
     [Parameter] public EventCallback<List<UploadedFileInfo>> OnFilesUploaded { get; set; }
-
+    [Parameter] public EventCallback<List<IBrowserFile>> OnFilesSelected { get; set; }
     [Parameter] public string? DefaultCategory { get; set; }
     [Parameter] public string? DefaultSubCategory { get; set; }
     [Parameter] public string? DefaultReferenceId { get; set; }
@@ -225,52 +225,61 @@
         private void RemoveSelectedFile(IBrowserFile file)
         => SelectedFiles.Remove(file);
 
+    // private async Task UploadFilesAsync()
+    // {
+    //     IsUploading = true;
+    //     UploadProgress = 0;
+
+    //     foreach (var file in SelectedFiles.ToList())
+    //     {
+    //         using var ms = new MemoryStream();
+    //         await file.OpenReadStream(MaxFileSize).CopyToAsync(ms);
+
+    //         var result = await FileUploadService.UploadFileAsync(
+    //             ms.ToArray(),
+    //             file.Name,
+    //             SelectedCategory!,
+    //             SubCategory,
+    //             ReferenceId);
+
+    //         if (result?.Success == true)
+    //         {
+    //             UploadedFiles.Add(new UploadedFileInfo
+    //             {
+    //                 DocumentId = result.DocumentId,
+    //                 FileName = result.FileName,
+    //                 Url = result.Url,
+    //                 FileSize = result.FileSize,
+    //                 Category = result.Category!
+    //             });
+
+    //             UploadProgress++;
+    //         }
+    //     }
+
+    //     SelectedFiles.Clear();
+    //     IsUploading = false;
+
+    //     Send uploaded files to parent page
+    //     await OnFilesUploaded.InvokeAsync(UploadedFiles);
+
+    //     Show success toast 
+    //     ToasteService.Success("Files uploaded successfully");
+
+    //     🔵 Close the popup automatically
+    //     IsVisible = false;
+    //     await IsVisibleChanged.InvokeAsync(false);
+    // }
+
     private async Task UploadFilesAsync()
     {
-        IsUploading = true;
-        UploadProgress = 0;
+        await OnFilesSelected.InvokeAsync(SelectedFiles.ToList());
 
-        foreach (var file in SelectedFiles.ToList())
-        {
-            using var ms = new MemoryStream();
-            await file.OpenReadStream(MaxFileSize).CopyToAsync(ms);
+        ToasteService.Success("Files added successfully. They will upload after Save.");
 
-            var result = await FileUploadService.UploadFileAsync(
-                ms.ToArray(),
-                file.Name,
-                SelectedCategory!,
-                SubCategory,
-                ReferenceId);
-
-            if (result?.Success == true)
-            {
-                UploadedFiles.Add(new UploadedFileInfo
-                {
-                    DocumentId = result.DocumentId,
-                    FileName = result.FileName,
-                    Url = result.Url,
-                    FileSize = result.FileSize,
-                    Category = result.Category!
-                });
-
-                UploadProgress++;
-            }
-        }
-
-        SelectedFiles.Clear();
-        IsUploading = false;
-
-        // Send uploaded files to parent page
-        await OnFilesUploaded.InvokeAsync(UploadedFiles);
-
-        // Show success toast 
-        ToasteService.Success("Files uploaded successfully");
-
-        // 🔵 Close the popup automatically
         IsVisible = false;
         await IsVisibleChanged.InvokeAsync(false);
     }
-
 
     // 🔵 ADDED: Preview open logic
     public async Task OpenPreview(UploadedFileInfo file)
@@ -296,7 +305,7 @@
 
         UploadedFiles.RemoveAll(x => x.DocumentId == documentId);
 
-        await OnFilesUploaded.InvokeAsync(UploadedFiles);
+        // await OnFilesUploaded.InvokeAsync(UploadedFiles);
         await InvokeAsync(StateHasChanged);
     }
 

@@ -314,13 +314,14 @@ namespace FreightBKShippingWebApp
         // ✅ Clear cache (call on logout or data changes)
         public void ClearCache()
         {
-            _cache.Clear();
+            _cache.Clear(); 
         }
 
         public void ClearCache(string path)
         {
             _cache.Remove(path);
         }
+
         public async Task<T1?> PostAsync<T1, T2>(string path, T2 postModel)
         {
             await SetAuthorizeHeader();

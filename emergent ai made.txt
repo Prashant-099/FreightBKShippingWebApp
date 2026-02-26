@@ -1,0 +1,1015 @@
+Here's the complete FIXED Blazor Razor file with all mobile responsiveness issues resolved:
+
+@page "/lrentry"
+@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Services
+@using DevExpress.Blazor
+@inject ToasteService ToastService
+@inject PayTypeService PayTypeService
+@inject LocationService LocationService
+@inject NotifyService NotifyService
+@inject AccountService AccountService
+@inject ContainerAddServices ContainerAddServices
+@inject CargoService CargoService
+@inject ReportDataService ReportDataService
+
+<style>
+    :root {
+        --clr-bg: #f4f6fb;
+        --clr-surface: #ffffff;
+        --clr-border: #e2e8f0;
+        --clr-primary: #2563eb;
+        --clr-primary-dk: #1d4ed8;
+        --clr-accent: #0ea5e9;
+        --clr-text: #1e293b;
+        --clr-muted: #64748b;
+        --clr-danger: #ef4444;
+        --radius-card: 12px;
+        --radius-inner: 8px;
+        --shadow-card: 0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.06);
+        --shadow-footer: 0 -2px 12px rgba(0,0,0,.08);
+        --font-main: 'Sora', 'Segoe UI', sans-serif;
+    }
+
+    /* ══ MAIN PAGE - SCROLLABILITY FIXED ══ */
+    .lr-page {
+        position: relative;
+        min-height: 100vh;
+        max-height: 100vh;
+        overflow-y: auto;
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+        padding: 16px 22px 120px; /* Increased bottom padding */
+        font-family: var(--font-main);
+        color: var(--clr-text);
+        background: var(--clr-bg);
+    }
+
+    /* ── HEADER ── */
+    .lr-header {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 16px;
+        background: var(--clr-surface);
+        border-top: 4px solid var(--clr-primary);
+        border-radius: var(--radius-inner);
+        padding: 14px 20px;
+        box-shadow: var(--shadow-card);
+        flex-wrap: nowrap;
+        overflow: hidden;
+    }
+
+    .lr-header-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 8px;
+        background: #eff4ff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--clr-primary);
+        flex-shrink: 0;
+    }
+
+    .lr-header-divider {
+        width: 1px;
+        height: 36px;
+        background: var(--clr-border);
+        flex-shrink: 0;
+    }
+
+    .lr-header-text {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+    }
+
+    .lr-header h1 {
+        font-size: 1.1rem;
+        font-weight: 700;
+        letter-spacing: -.02em;
+        margin: 0;
+        line-height: 1.3;
+        white-space: nowrap;
+        color: var(--clr-text);
+    }
+
+    .lr-header span {
+        font-size: .8rem;
+        color: var(--clr-muted);
+        white-space: nowrap;
+    }
+
+    .lr-header-badge {
+        margin-left: auto;
+        background: #eff4ff;
+        color: var(--clr-primary);
+        font-size: 0.65rem;
+        font-weight: 600;
+        letter-spacing: .08em;
+        padding: 4px 10px;
+        border-radius: 4px;
+        text-transform: uppercase;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    /* ── CARDS ── */
+    .lr-card {
+        background: var(--clr-surface);
+        border: 1px solid var(--clr-border);
+        border-radius: var(--radius-card);
+        box-shadow: var(--shadow-card);
+        margin-bottom: 20px;
+        overflow: hidden;
+    }
+
+    .lr-card-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 14px 20px;
+        border-bottom: 1px solid var(--clr-border);
+        background: linear-gradient(90deg, #f8faff 0%, #fff 100%);
+    }
+
+    .lr-card-header h2 {
+        font-size: .875rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: .08em;
+        color: var(--clr-primary);
+        margin: 0;
+    }
+
+    .lr-card-body {
+        padding: 20px;
+    }
+
+    /* ── GRIDS ── */
+    .field-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px 20px;
+    }
+
+    .field-grid.cols-3 {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .field-grid.cols-2 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .field-group {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .field-group label {
+        font-size: .75rem;
+        font-weight: 600;
+        color: var(--clr-muted);
+        text-transform: uppercase;
+        letter-spacing: .06em;
+    }
+
+    .km-group {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 16px 20px;
+        margin-top: 16px;
+    }
+
+    /* ── TABS ── */
+    .lr-tabs-wrapper {
+        background: var(--clr-surface);
+        border: 1px solid var(--clr-border);
+        border-radius: var(--radius-card);
+        box-shadow: var(--shadow-card);
+        overflow: hidden;
+        margin-bottom: 20px;
+    }
+
+    .lr-tab-body {
+        padding: 24px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .sub-section-label {
+        margin-bottom: 8px;
+        font-size: .75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .08em;
+        color: var(--clr-muted);
+    }
+
+    /* ── VALIDATION ── */
+    .validation-summary-errors {
+        background: #fff5f5;
+        border: 1px solid #fca5a5;
+        border-radius: var(--radius-inner);
+        padding: 12px 16px;
+        margin-bottom: 16px;
+        color: var(--clr-danger);
+        font-size: .85rem;
+    }
+
+    .validation-summary-errors ul {
+        margin: 0;
+        padding-left: 16px;
+    }
+
+    /* ── FOOTER - FIXED ── */
+    .lr-footer {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: var(--clr-surface);
+        border-top: 1px solid var(--clr-border);
+        box-shadow: var(--shadow-footer);
+        padding: 12px 32px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        z-index: 1000;
+        gap: 12px;
+    }
+
+    .lr-footer-meta {
+        font-size: .8rem;
+        color: var(--clr-muted);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .lr-footer-meta strong {
+        color: var(--clr-text);
+        font-weight: 600;
+    }
+
+    .btn-save {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: linear-gradient(135deg, var(--clr-primary) 0%, var(--clr-accent) 100%);
+        color: #fff !important;
+        border: none;
+        border-radius: 8px;
+        padding: 10px 28px;
+        font-size: .9rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: opacity .15s, transform .1s;
+        letter-spacing: .02em;
+        flex-shrink: 0;
+        min-height: 44px; /* Touch-friendly */
+    }
+
+    .btn-save:hover {
+        opacity: .9;
+        transform: translateY(-1px);
+    }
+
+    .btn-save:active {
+        transform: translateY(0);
+    }
+
+    /* ── READONLY FIELD ── */
+    .field-readonly {
+        padding: 7px 10px;
+        background: #f8fafc;
+        border: 1px solid var(--clr-border);
+        border-radius: 6px;
+        font-size: .875rem;
+        color: var(--clr-muted);
+        min-height: 36px;
+    }
+
+    /* ══════════════════════════════════════════ */
+    /* ══ RESPONSIVE / MOBILE FIXES ══ */
+    /* ══════════════════════════════════════════ */
+
+    @media (max-width: 1100px) {
+        .field-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .field-grid.cols-2 {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .lr-page {
+            padding: 12px 16px 140px; /* More bottom space */
+        }
+
+        .lr-header {
+            padding: 12px 14px;
+            gap: 10px;
+        }
+
+        .lr-header h1 {
+            font-size: .95rem;
+        }
+
+        .lr-header span {
+            font-size: .72rem;
+        }
+
+        .lr-header-divider {
+            display: none;
+        }
+
+        .lr-header-badge {
+            font-size: .6rem;
+            padding: 3px 8px;
+        }
+
+        .lr-card-body {
+            padding: 16px;
+        }
+
+        .lr-tab-body {
+            padding: 16px;
+        }
+
+        .field-grid.cols-3 {
+            grid-template-columns: 1fr;
+        }
+
+        .lr-footer {
+            padding: 12px 16px;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 10px;
+        }
+
+        .lr-footer-meta {
+            justify-content: center;
+            font-size: .8rem;
+        }
+
+        .btn-save {
+            width: 100%;
+            justify-content: center;
+            padding: 12px 20px;
+        }
+    }
+
+    @media (max-width: 640px) {
+        /* CRITICAL FIX: More padding for sticky footer */
+        .lr-page {
+            padding: 12px 12px 160px !important;
+        }
+
+        /* All grids become single column */
+        .field-grid,
+        .field-grid.cols-3,
+        .field-grid.cols-2 {
+            grid-template-columns: 1fr !important;
+        }
+
+        .km-group {
+            grid-template-columns: 1fr !important;
+        }
+
+        .lr-header-badge {
+            display: none;
+        }
+
+        /* Touch-friendly form controls */
+        .dxbl-edit, 
+        .dxbl-textbox,
+        .dxbl-combobox,
+        .dxbl-date-edit,
+        .dxbl-spin-edit {
+            min-height: 44px !important;
+            font-size: .9rem !important;
+        }
+    }
+
+    /* Fix for very small screens */
+    @media (max-width: 400px) {
+        .lr-page {
+            padding: 8px 8px 180px !important;
+        }
+
+        .lr-header {
+            padding: 10px 12px;
+        }
+
+        .lr-card-body,
+        .lr-tab-body {
+            padding: 12px;
+        }
+
+        .field-grid {
+            gap: 12px;
+        }
+    }
+
+    /* ══ ENSURE SCROLLING WORKS ══ */
+    body, html {
+        height: 100%;
+        overflow: hidden;
+    }
+
+    #blazor-root,
+    .app-container {
+        height: 100%;
+        overflow: hidden;
+    }
+</style>
+
+<div class="lr-page">
+
+    <!-- ══ HEADER ══ -->
+    <div class="lr-header">
+        <div class="lr-header-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="1.75"
+                 stroke-linecap="round" stroke-linejoin="round">
+                <rect x="1" y="3" width="15" height="13" rx="1" />
+                <path d="M16 8h4l3 4v4h-7V8z" />
+                <circle cx="5.5" cy="18.5" r="2.5" />
+                <circle cx="18.5" cy="18.5" r="2.5" />
+            </svg>
+        </div>
+        <div class="lr-header-divider"></div>
+        <div class="lr-header-text">
+            <h1>LR Entry</h1>
+            <span>Lorry Receipt / Consignment Note</span>
+        </div>
+        <div class="lr-header-badge">New Entry</div>
+    </div>
+
+    <EditForm Model="@model" OnValidSubmit="@Save">
+        <DataAnnotationsValidator />
+        <ValidationSummary class="validation-summary-errors" />
+
+        <!-- ══ CORE DETAILS ══ -->
+        <div class="lr-card">
+            <div class="lr-card-header">
+                <h2>Core Details</h2>
+            </div>
+            <div class="lr-card-body">
+                <div class="field-grid">
+
+                    <div class="field-group">
+                        <label>LR No</label>
+                        <DxTextBox @bind-Text="model.LrNoStr" />
+                    </div>
+
+                    <div class="field-group">
+                        <label>LR Date</label>
+                        <DxDateEdit @bind-Date="model.LrDate" />
+                    </div>
+
+                    <div class="field-group">
+                        <label>From (Station)</label>
+                        <DxComboBox Data="@StationLocationList"
+                                    TData="Location" TValue="int?"
+                                    TextFieldName="LocationName"
+                                    ValueFieldName="LocationId"
+                                    @bind-Value="model.LrFromLocationId"
+                                    NullText="Select station"
+                                    AllowUserInput="true"
+                                    SearchMode="ListSearchMode.AutoSearch"
+                                    SearchFilterCondition="ListSearchFilterCondition.Contains" />
+                    </div>
+
+                    <div class="field-group">
+                        <label>To Location</label>
+                        <DxComboBox Data="@LocationList"
+                                    TData="Location" TValue="int?"
+                                    TextFieldName="LocationName"
+                                    ValueFieldName="LocationId"
+                                    @bind-Value="model.LrToLocationId"
+                                    NullText="Select destination"
+                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                    AllowUserInput="true"
+                                    SearchMode="ListSearchMode.AutoSearch"
+                                    SearchFilterCondition="ListSearchFilterCondition.Contains" />
+                    </div>
+
+                    <div class="field-group">
+                        <label>Vehicle</label>
+                        <DxSpinEdit @bind-Value="model.LrVehicleId" />
+                    </div>
+
+                    <div class="field-group">
+                        <label>Payment Mode</label>
+                        <DxComboBox Data="@PaymethodList"
+                                    @bind-Value="model.LrPaymentType"
+                                    TextFieldName="Text"
+                                    ValueFieldName="Value"
+                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                    AllowUserInput="false"
+                                    NullText="Select payment mode"
+                                    TData="SelectItem" TValue="string?" />
+                    </div>
+
+                    <div class="field-group">
+                        <label>Trip No</label>
+                        <DxSpinEdit @bind-Value="model.LrTripNo" />
+                    </div>
+
+                </div>
+
+                <!-- KM Row -->
+                <div class="km-group">
+                    <div class="field-group">
+                        <label>Start KM</label>
+                        <DxTextBox @bind-Text="model.LrStartKm" />
+                    </div>
+                    <div class="field-group">
+                        <label>End KM</label>
+                        <DxTextBox @bind-Text="model.LrEndKm" />
+                    </div>
+                    <div class="field-group">
+                        <label>Total KM</label>
+                        <DxTextBox @bind-Text="model.LrTotKm" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══ TABBED SECTIONS ══ -->
+        <div class="lr-tabs-wrapper">
+            <DxTabs>
+
+                <!-- Products -->
+                <DxTabPage Text="Products">
+                    <div class="lr-tab-body">
+                        <DxGrid AllowSort="false"
+                                Data="@Rows"
+                                ShowFilterRow="false"
+                                ShowGroupPanel="false"
+                                TItem="LrProductRow"
+                                @ref="Grid"
+                                EditMode="GridEditMode.EditCell"
+                                EditModelSaving="Grid_EditModelSaving"
+                                CustomizeEditModel="Grid_CustomizeEditModel"
+                                KeyFieldName="SrNo"
+                                ColumnResizeMode="GridColumnResizeMode.ColumnsContainer">
+                            <Columns>
+                                <DxGridCommandColumn Width="90px" EditButtonVisible="false"
+                                                     FixedPosition="GridColumnFixedPosition.Left"
+                                                     CancelButtonVisible="false"
+                                                     SaveButtonVisible="false" NewButtonVisible="false">
+
+                                    <HeaderCaptionTemplate Context="dendercaptioncontext">
+                                        <DxButton IconCssClass="bi bi-plus-circle-dotted"
+                                                  RenderStyle="ButtonRenderStyle.Link"
+                                                  Click="@(() => AddNew())" style="padding:2px" />
+
+                                        <DxButton IconCssClass="bi bi-arrow-clockwise"
+                                                  RenderStyle="ButtonRenderStyle.Link"
+                                                  Click="@RevertGridtransport_Click" style="padding:2px" />
+
+                                        <DxButton RenderStyle="ButtonRenderStyle.Link"
+                                                  IconCssClass="bi bi-three-dots"
+                                                  SizeMode="SizeMode.Medium" style="padding:2px" />
+                                    </HeaderCaptionTemplate>
+
+                                    <CellEditTemplate Context="editContext">
+                                        <DxButton Enabled="false"
+                                                  CssClass="grid-disabled-button"
+                                                  IconCssClass="bi bi-trash"
+                                                  RenderStyle="ButtonRenderStyle.Link" />
+                                    </CellEditTemplate>
+
+                                    <CellDisplayTemplate Context="displayContext">
+                                        @{
+                                            var row = (LrProductRow)displayContext.DataItem;
+                                        }
+                                        <DxButton IconCssClass="bi bi-trash"
+                                                  CssClass="grid-delete-btn"
+                                                  RenderStyle="ButtonRenderStyle.Link"
+                                                  Click="@(() => DeleteDataItem(row))" />
+
+                                        <DxButton IconCssClass="bi bi-printer"
+                                                  RenderStyle="ButtonRenderStyle.Link"
+                                                  Click="@(() => PrintPage(row))" />
+                                    </CellDisplayTemplate>
+
+                                </DxGridCommandColumn>
+
+                                <DxGridDataColumn FieldName="SrNo" Caption="Sr No" Width="60px" ReadOnly="true" />
+                                <DxGridDataColumn FieldName="Product" Caption="Product" />
+                                <DxGridDataColumn FieldName="Unit" Caption="Unit" Width="80px">
+                                    <EditSettings>
+                                        <DxSpinEditSettings ShowSpinButtons="false" />
+                                    </EditSettings>
+                                </DxGridDataColumn>
+                                <DxGridDataColumn FieldName="GrossWt" Caption="Gross Wt" />
+                                <DxGridDataColumn FieldName="TareWt" Caption="Tare Wt" />
+                                <DxGridDataColumn FieldName="NetWt" Caption="Net Wt" />
+                                <DxGridDataColumn FieldName="LoadWt" Caption="Load Wt" />
+                                <DxGridDataColumn FieldName="UnLoadWt" Caption="UnLoad Wt" />
+                                <DxGridDataColumn FieldName="ChargeWt" Caption="Charge Wt" />
+                                <DxGridDataColumn FieldName="BillingRate" Caption="Billing Rate" />
+                                <DxGridDataColumn FieldName="GrossFreight" Caption="Gross Freight" />
+                                <DxGridDataColumn FieldName="Amount" Caption="Amount" />
+                                <DxGridDataColumn FieldName="InvNo" Caption="Inv No" />
+                                <DxGridDataColumn FieldName="InvDate" Caption="Inv Date" />
+                                <DxGridDataColumn FieldName="InvValue" Caption="Inv Value" />
+                                <DxGridDataColumn FieldName="EWayBillNo" Caption="E-Way Bill No" />
+                                <DxGridDataColumn FieldName="EWayBillDate" Caption="E-Way Bill Date" />
+                                <DxGridDataColumn FieldName="GpBeNo" Caption="GP/BE No" />
+                            </Columns>
+                        </DxGrid>
+                    </div>
+                </DxTabPage>
+
+                <!-- Transporter -->
+                <DxTabPage Text="Transporter">
+                    <div class="lr-tab-body">
+                        <div class="field-grid cols-3">
+
+                            <div class="field-group">
+                                <label>Supplier</label>
+                                <DxComboBox Data="@accountSupplierlist"
+                                            TData="Account" TValue="int?"
+                                            TextFieldName="AccountName"
+                                            ValueFieldName="AccountId"
+                                            @bind-Value="model.LrSupplierAccountId"
+                                            NullText="Select supplier"
+                                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                            AllowUserInput="true"
+                                            SearchMode="ListSearchMode.AutoSearch"
+                                            SearchFilterCondition="ListSearchFilterCondition.Contains" />
+                            </div>
+
+                            <div class="field-group">
+                                <label>Billing Type</label>
+                                <DxComboBox Data="paytypeList"
+                                            @bind-Value="model.LrBillTypeBill"
+                                            ValueFieldName="PayTypeName"
+                                            TextFieldName="PayTypeName" />
+                            </div>
+
+                            <div class="field-group">
+                                <label>Driver</label>
+                                <DxComboBox Data="@DriverList"
+                                            TData="Account" TValue="int?"
+                                            TextFieldName="AccountName"
+                                            ValueFieldName="AccountId"
+                                            @bind-Value="model.LrDriverId"
+                                            NullText="Select driver"
+                                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                            AllowUserInput="true"
+                                            SearchMode="ListSearchMode.AutoSearch"
+                                            SearchFilterCondition="ListSearchFilterCondition.Contains" />
+                            </div>
+
+                            <div class="field-group">
+                                <label>Taxable Freight</label>
+                                <DxSpinEdit @bind-Value="model.LrTdsPerBill" T="float" />
+                            </div>
+
+                            <div class="field-group">
+                                <label>TDS Amount (Bill)</label>
+                                <DxSpinEdit @bind-Value="model.LrTdsAmtBill" />
+                            </div>
+
+                        </div>
+                    </div>
+                </DxTabPage>
+
+                <!-- Bill To Party -->
+                <DxTabPage Text="Bill To Party">
+                    <div class="lr-tab-body">
+
+                        <div class="sub-section-label">Consignor</div>
+                        <div class="field-grid" style="margin-bottom:24px;">
+
+                            <div class="field-group">
+                                <label>Name</label>
+                                <DxComboBox Data="@notifylist"
+                                            TData="Notify" TValue="int?"
+                                            Value="@model.LrConsignorNotifyId"
+                                            ValueChanged="@(id => OnConsignorChanged(id))"
+                                            ValueExpression="() => model.LrConsignorNotifyId"
+                                            TextFieldName="NotifyName"
+                                            ValueFieldName="NotifyId"
+                                            NullText="Select consignor"
+                                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                            AllowUserInput="true"
+                                            SearchMode="ListSearchMode.AutoSearch"
+                                            SearchFilterCondition="ListSearchFilterCondition.Contains" />
+                            </div>
+
+                            <div class="field-group">
+                                <label>Address</label>
+                                <DxMemo @bind-Text="model.LrConsignorNotifyAddress" Rows="2" />
+                            </div>
+
+                            <div class="field-group">
+                                <label>GSTIN</label>
+                                <DxTextBox @bind-Text="model.LrConsignorNotifyGst" />
+                            </div>
+
+                            <div class="field-group">
+                                <label>State</label>
+                                <DxTextBox @bind-Text="model.LrConsignorNotifyState" />
+                            </div>
+
+                        </div>
+
+                        <div class="sub-section-label">Consignee</div>
+
+                        <div class="field-grid">
+
+                            <div class="field-group">
+                                <label>Name</label>
+                                <DxComboBox Data="@notifylist"
+                                            TData="Notify" TValue="int?"
+                                            Value="@model.LrConsigneeNotifyId"
+                                            ValueChanged="@((int? id) => OnConsigneeChanged(id))"
+                                            ValueExpression="() => model.LrConsigneeNotifyId"
+                                            TextFieldName="NotifyName"
+                                            ValueFieldName="NotifyId"
+                                            NullText="Select consignee"
+                                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                            AllowUserInput="true"
+                                            SearchMode="ListSearchMode.AutoSearch"
+                                            SearchFilterCondition="ListSearchFilterCondition.Contains" />
+                            </div>
+
+                            <div class="field-group">
+                                <label>Address</label>
+                                <DxMemo @bind-Text="model.LrConsigneeNotifyAddress" Rows="2" />
+                            </div>
+
+                            <div class="field-group">
+                                <label>GSTIN</label>
+                                <DxTextBox @bind-Text="model.LrConsigneeNotifyGst" />
+                            </div>
+
+                            <div class="field-group">
+                                <label>State</label>
+                                <DxTextBox @bind-Text="model.LrConsigneeNotifyState" />
+                            </div>
+
+                        </div>
+                    </div>
+                </DxTabPage>
+
+                <!-- Billing Part -->
+                <DxTabPage Text="Billing Part">
+                    <div class="lr-tab-body">
+                        <div class="field-grid">
+
+                            <div class="field-group">
+                                <label>Pickup Location</label>
+                                <DxTextBox @bind-Text="model.LrNtPickupLoc" />
+                            </div>
+
+                            <div class="field-group">
+                                <label>Back Location</label>
+                                <DxSpinEdit @bind-Value="model.LrBackLocationId" />
+                            </div>
+
+                            <div class="field-group">
+                                <label>Rate (Bill)</label>
+                                <DxSpinEdit @bind-Value="model.LrRateBill" />
+                            </div>
+
+                            <div class="field-group">
+                                <label>Gross Freight (Bill)</label>
+                                <DxSpinEdit @bind-Value="model.LrGrossFreightBill" />
+                            </div>
+
+                            <div class="field-group">
+                                <label>Trip Charge (Bill)</label>
+                                <DxSpinEdit @bind-Value="model.LrTripChargeBill" />
+                            </div>
+
+                            <div class="field-group">
+                                <label>Advance (Bill)</label>
+                                <DxSpinEdit @bind-Value="model.LrAdvanceBill" />
+                            </div>
+
+                            <div class="field-group">
+                                <label>Net Freight (Bill)</label>
+                                <DxSpinEdit @bind-Value="model.LrNetFreightBill" />
+                            </div>
+
+                        </div>
+                    </div>
+                </DxTabPage>
+
+            </DxTabs>
+        </div>
+
+        <!-- ══ STICKY FOOTER ══ -->
+        <div class="lr-footer">
+            <div class="lr-footer-meta">
+                LR No: <strong>@(string.IsNullOrWhiteSpace(model.LrNoStr) ? "—" : model.LrNoStr)</strong>
+                &nbsp;|&nbsp;
+                Date: <strong>@(model.LrDate.HasValue? model.LrDate.Value.ToString("dd MMM yyyy") : "—")</strong>
+            </div>
+            <button type="submit" class="btn-save">&#10003;&nbsp; Save LR</button>
+        </div>
+
+    </EditForm>
+</div>
+
+@code {
+
+    private Lr model = new();
+    DxGrid Grid;
+    private List<Notify> notifylist = new();
+    private List<Account> accountpartylist = new();
+    private List<Account> accountSupplierlist = new();
+    private List<Account> DriverList = new();
+    private List<Location> LocationList = new();
+    private List<Location> StationLocationList = new();
+    private List<PayType> paytypeList = new();
+    private List<Cargo> ProductList = new();
+
+    public class SelectItem
+    {
+        public string Text { get; set; } = "";
+        public string Value { get; set; } = "";
+    }
+
+    private readonly List<SelectItem> PaymethodList = new()
+    {
+        new SelectItem { Text = "To be Billed", Value = "To be Billed" },
+        new SelectItem { Text = "To Pay",        Value = "To Pay"        },
+        new SelectItem { Text = "Paid",          Value = "Paid"          },
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        var notifyTask = NotifyService.GetAllAsync();
+        var locationTask = LocationService.GetAllAsync();
+        var accountTask = AccountService.GetAllAsync();
+        var payTypeTask = PayTypeService.GetAllAsync();
+        var cargoTask = CargoService.GetAllAsync();
+
+        await Task.WhenAll(notifyTask, locationTask, accountTask, payTypeTask, cargoTask);
+
+        notifylist = notifyTask.Result;
+        paytypeList = payTypeTask.Result;
+        ProductList = cargoTask.Result;
+
+        LocationList = locationTask.Result;
+        StationLocationList = LocationList
+            .Where(x => string.Equals(x.LocationType, "STATION", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        accountpartylist = accountTask.Result;
+        accountSupplierlist = accountpartylist.Where(x => x.AccountTypeId == 14).ToList();
+        DriverList = accountpartylist.Where(x => x.AccountTypeId == 16).ToList();
+
+        AssignDefaultImportRows();
+    }
+
+    private void OnConsignorChanged(int? notifyId)
+    {
+        model.LrConsignorNotifyId = notifyId;
+        ApplyNotify(notifyId,
+            addr => model.LrConsignorNotifyAddress = addr,
+            gst => model.LrConsignorNotifyGst = gst,
+            state => model.LrConsignorNotifyState = state);
+    }
+
+    private void OnConsigneeChanged(int? notifyId)
+    {
+        model.LrConsigneeNotifyId = notifyId;
+        ApplyNotify(notifyId,
+            addr => model.LrConsigneeNotifyAddress = addr,
+            gst => model.LrConsigneeNotifyGst = gst,
+            state => model.LrConsigneeNotifyState = state);
+    }
+
+    private void ApplyNotify(int? notifyId,
+        Action<string> setAddress,
+        Action<string?> setGst,
+        Action<string?> setState)
+    {
+        var n = notifylist.FirstOrDefault(x => x.NotifyId == notifyId);
+        setAddress(n is null ? string.Empty
+            : $"{n.NotifyAddress1} {n.NotifyAddress2} {n.NotifyAddress3}".Trim());
+        setGst(n?.GstNo);
+        setState(n?.NotifyState);
+    }
+
+    List<LrProductRow> Rows = new();
+    private LrProductRow? editingRow;
+
+    void Grid_CustomizeEditModel(GridCustomizeEditModelEventArgs e)
+    {
+        editingRow = e.EditModel as LrProductRow;
+    }
+
+    void Grid_EditModelSaving(GridEditModelSavingEventArgs e)
+    {
+        var editedRow = (LrProductRow)e.EditModel;
+        var dataRow = (LrProductRow)e.DataItem;
+
+        dataRow.Product = editedRow.Product;
+        dataRow.Unit = editedRow.Unit;
+        dataRow.GrossWt = editedRow.GrossWt;
+        dataRow.TareWt = editedRow.TareWt;
+        dataRow.NetWt = editedRow.NetWt;
+        dataRow.LoadWt = editedRow.LoadWt;
+        dataRow.UnLoadWt = editedRow.UnLoadWt;
+        dataRow.ChargeWt = editedRow.ChargeWt;
+        dataRow.BillingRate = editedRow.BillingRate;
+        dataRow.GrossFreight = editedRow.GrossFreight;
+        dataRow.Amount = editedRow.Amount;
+        dataRow.InvNo = editedRow.InvNo;
+        dataRow.InvDate = editedRow.InvDate;
+        dataRow.InvValue = editedRow.InvValue;
+        dataRow.EWayBillNo = editedRow.EWayBillNo;
+        dataRow.EWayBillDate = editedRow.EWayBillDate;
+        dataRow.GpBeNo = editedRow.GpBeNo;
+    }
+
+    private void AssignDefaultImportRows()
+    {
+        Rows = new List<LrProductRow>(5);
+        for (int i = 1; i <= 5; i++)
+            Rows.Add(new LrProductRow { SrNo = i });
+    }
+
+    private void AddNew()
+    {
+        int nextSrNo = Rows.Count > 0 ? Rows.Max(r => r.SrNo) + 1 : 1;
+        Rows.Add(new LrProductRow { SrNo = nextSrNo });
+    }
+
+    private void DeleteDataItem(object dataItem)
+    {
+        if (dataItem is LrProductRow row)
+        {
+            Rows.Remove(row);
+            for (int i = 0; i < Rows.Count; i++)
+                Rows[i].SrNo = i + 1;
+        }
+    }
+
+    private void PrintPage(LrProductRow row)
+    {
+        // TODO: implement print / report logic for the selected row
+    }
+
+    private async Task Save()
+    {
+        try
+        {
+            // TODO: await LrService.SaveAsync(model);
+            ToastService.Success("LR saved successfully.");
+            model = new Lr();
+            AssignDefaultImportRows();
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Save failed: {ex.Message}");
+        }
+    }
+
+    async Task RevertGridtransport_Click()
+    {
+        await Grid.CancelEditAsync();
+        AssignDefaultImportRows();
+    }
+
+    public class LrProductRow
+    {
+        public int SrNo { get; set; }
+        public string? Product { get; set; }
+        public int? Unit { get; set; }
+        public decimal? GrossWt { get; set; }
+        public decimal? TareWt { get; set; }
+        public decimal? NetWt { get; set; }
+        public decimal? LoadWt { get; set; }
+        public decimal? UnLoadWt { get; set; }
+        public decimal? ChargeWt { get; set; }
+        public decimal? BillingRate { get; set; }
+        public decimal? GrossFreight { get; set; }
+        public decimal? Amount { get; set; }
+        public string? InvNo { get; set; }
+        public DateTime? InvDate { get; set; }
+        public decimal? InvValue { get; set; }
+        public string? EWayBillNo { get; set; }
+        public DateTime? EWayBillDate { get; set; }
+        public string? GpBeNo { get; set; }
+    }
+}

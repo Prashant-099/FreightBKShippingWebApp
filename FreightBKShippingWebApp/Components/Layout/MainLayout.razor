@@ -7,309 +7,375 @@
 @inject IBranchContext BranchContext
 @inject AuthService AuthService
 @inject CompanyService CompanyService
-
 @using Microsoft.AspNetCore.Components.Authorization
 @inject AuthenticationStateProvider AuthStateProvider
 @inject LoadingService LoadingService
 @inject YearService YearService
 @inject YearStatechangeService YearStatechangeService
+@inject IJSRuntime JS
+@inject AuditLogService AuditLogService
 <DxLoadingPanel Visible="@LoadingService.IsLoading"
                 PositionTarget="body"
                 ApplyBackgroundShading="true"
                 IsContentBlocked="true"
-                CssClass="custom-loading-panel"
                 IndicatorAreaVisible="false"
-                IndicatorAnimationType="WaitIndicatorAnimationType.Spin">
+                IndicatorAnimationType="WaitIndicatorAnimationType.Spin" />
 
-</DxLoadingPanel>
 @if (IsShowContent)
 {
     <CascadingValue Value="this">
-    <div class="page">
         <DxToastProvider Name="GlobalToast"
                          HorizontalAlignment="HorizontalAlignment.Right"
                          VerticalAlignment="VerticalEdge.Top"
                          Width="300px"
                          ThemeMode="ToastThemeMode.Saturated" />
 
-        <DxGridLayout CssClass="page-layout px-0">
-            <Rows>
-                <DxGridLayoutRow Areas="sidebar header" Height="auto"></DxGridLayoutRow>
-                <DxGridLayoutRow Areas="sidebar content"></DxGridLayoutRow>
-            </Rows>
-            <Columns>
-                <DxGridLayoutColumn Width="auto" />
-                <DxGridLayoutColumn />
-            </Columns>
-            <Items>
-                <DxGridLayoutItem Area="sidebar" CssClass="layout-sidebar">
-                    <Template>
-                        @* <NavMenu /> *@
-                    </Template>
-                </DxGridLayoutItem>
-                <DxGridLayoutItem Area="content" CssClass="content px-0">
-                    <Template>
-                        <div class="w-100 d-flex justify-content-between align-items-center flex-wrap">
-                            <div style="display: flex; justify-content: center; background: linear-gradient(90deg, white -1%, #62cdf8 49%, #ffffff 87%); width: 100%; padding: 5px 0; color: black;">
-                                <div class="marquee-container">
+        <div class="fb-shell" @onclick="HandleShellClick">
 
+            <!-- ══════════════ TOP HEADER ══════════════ -->
+            <header class="fb-header">
 
-                                    <div class="marquee">
-                                            @(string.IsNullOrEmpty(CompanyName)
-                                                                                    ? "Unknown Company"
-                                                                                    : (string.IsNullOrEmpty(finYear) ? CompanyName : $"{CompanyName} - {finYear}"))
+                <!-- LEFT: Hamburger + Logo + Brand -->
+                <div class="fb-header-left">
+                    <button class="fb-hamburger" @onclick="ToggleDrawer">
+                        <span class="hb-line"></span>
+                        <span class="hb-line"></span>
+                        <span class="hb-line"></span>
+                    </button>
 
-                                            <span style="margin: 0 50px;"></span>
+                    <img src="images/freightbook.jpg" alt="FB" class="fb-logo" />
 
-                                                <!-- Support Icon + Text -->
-                                           
-                                                <span style="margin-left: 8px; font-weight: 600;">
-                                                    <i class="bi bi-headset"></i> 9409309616
-                                                </span>
+                    <div class="fb-brand-text">
+                        <span class="fb-brand-name">FreightBook</span>
+                        <span class="fb-brand-sub">Shipping Management</span>
+                    </div>
+                </div>
+
+                <!-- CENTER: Marquee -->
+                <div class="fb-marquee-box">
+                    <div class="fb-marquee-inner">
+                        <span class="fb-marquee-span">
+                            @CompanyName
+                            @(string.IsNullOrEmpty(finYear) ? "" : $"— {finYear}")
+                            &nbsp;&nbsp;&nbsp;
+                            <i class="bi bi-headset"></i> 9409309616
+                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                            @CompanyName
+                            @(string.IsNullOrEmpty(finYear) ? "" : $"— {finYear}")
+                            &nbsp;&nbsp;&nbsp;
+                            <i class="bi bi-headset"></i> 9409309616
+                            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                        </span>
+                    </div>
+                </div>
+               
+                <!-- RIGHT: User Profile -->
+                <div class="fb-header-right">
+                    <!-- ══ BELL NOTIFICATION ══ -->
+                    @if (_isAdmin)
+                    {
+                        <div class="fb-bell-wrap">
+                            <button class="fb-bell-btn @(_bellOpen ? "bell-active" : "")"
+                                    @onclick="ToggleBell"
+                                    @onclick:stopPropagation="true"
+                                    title="Recent Activity">
+                                <i class="bi bi-bell-fill"></i>
+                                @if (_recentActivities.Any())
+                                {
+                                    <span class="fb-bell-badge">
+                                        @(_recentActivities.Count > 9 ? "9+" : _recentActivities.Count.ToString())
+                                    </span>
+                                }
+                            </button>
+
+                            @if (_bellOpen)
+                            {
+                                <div class="fb-bell-popup" @onclick:stopPropagation="true">
+                                    <div class="bell-popup-header">
+                                        <span><i class="bi bi-bell-fill me-1"></i> Recent Activity</span>
+                                        <span class="bell-count-badge">@_recentActivities.Count</span>
                                     </div>
-
-
+                                    <div class="bell-popup-list">
+                                        @if (_recentActivities.Any())
+                                        {
+                                            @foreach (var a in _recentActivities)
+                                            {
+                                                <div class="bell-item">
+                                                    <div class="bell-item-dot dot-@a.Status.ToLower()"></div>
+                                                    <div class="bell-item-body">
+                                                        <div class="bell-item-title">@a.Title</div>
+                                                        @if (!string.IsNullOrEmpty(a.Description))
+                                                        {
+                                                            <div class="bell-item-desc">@a.Description</div>
+                                                        }
+                                                        <div class="bell-item-meta">
+                                                            <span class="bell-badge badge-@a.Status.ToLower()">@a.Status</span>
+                                                            <span class="bell-time">@a.Time.ToString("dd MMM, hh:mm tt")</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <div class="bell-empty">
+                                                <i class="bi bi-inbox bell-empty-icon"></i>
+                                                <p>No recent activity</p>
+                                            </div>
+                                        }
+                                    </div>
                                 </div>
+                            }
 
 
-                            </div>
-
-                            @* <div class="marquee">
-                                <div class="marquee-content">
-                                    @CompanyName – @finYear
-                                </div>
-                                <div class="marquee-content" aria-hidden="true">
-                                    @CompanyName – @finYear
-                                </div>
-                            </div> *@
-
-                            
-                            <div class="w-100 ">
-                                    <div class="fixed-navbar-wrapper">
-                                @* <NavLink id="menu-top" class="button-link hidden" onclick="(document.getElementById('sidebar').classList.toggle('auto-expanded'), document.getElementById('menu-top').classList.toggle('hidden'))">
-                            <DxButton RenderStyle="@ButtonRenderStyle.Dark" RenderStyleMode="@ButtonRenderStyleMode.Text" CssClass="menu-button" IconCssClass="icon icon-menu"></DxButton>
-
-                        </NavLink>
-                        @if (!string.IsNullOrEmpty(NavigationManager.ToBaseRelativePath(NavigationManager.Uri)))
-                        {
-                            <NavLink href="/" class="button-link">
-                                <DxButton RenderStyle="@ButtonRenderStyle.Dark" Text="Back to Home" RenderStyleMode="@ButtonRenderStyleMode.Text" CssClass="menu-button" IconCssClass="icon icon-back"></DxButton>
-                            </NavLink>
-                        } *@
-
-                                <AuthorizeView Context="auth">
-                                    <Authorized>
-                               
-                                        <NavMenu />
-                                  
-
-                                        <AntiforgeryToken />
-                                  
-
-                                    </Authorized>
-
-                                </AuthorizeView>
-                            </div>
-                                </div>
                         </div>
-                        @Body
-                           
-                    </Template>
-                </DxGridLayoutItem>
-            </Items>
-        </DxGridLayout>
-    </div>
+                    }
+                    <!-- YE BLOCK ADD KARO _drawerOpen backdrop ke baad -->
+                    @if (_bellOpen || _profileOpen)
+                    {
+                        <div class="fb-overlay-backdrop" @onclick="CloseAllPopups"></div>
+                    }
+                    <div class="fb-user-container">
+                        <!-- User Button -->
+                        <button class="fb-user-btn @(_profileOpen ? "is-open" : "")"
+                                @onclick="ToggleProfile"
+                                @onclick:stopPropagation="true">
+                            <div class="fb-avatar">
+                                <i class="bi bi-person-fill"></i>
+                            </div>
+                            @* <div class="fb-user-meta">
+                                <span class="fb-user-name">@_userName</span>
+                                <span class="fb-user-email">@_userEmail</span>
+                            </div> *@
+                            <i class="bi bi-chevron-down fb-caret @(_profileOpen ? "caret-up" : "")"></i>
+                        </button>
+
+                        <!-- Dropdown -->
+                        @if (_profileOpen)
+                        {
+                            <div class="fb-user-popup" @onclick:stopPropagation="true">
+
+                                <!-- Popup Header -->
+                                <div class="popup-head">
+                                    <div class="popup-avatar">
+                                        <i class="bi bi-person-fill"></i>
+                                    </div>
+                                    <div class="popup-info">
+                                        <div class="popup-name">@_userName</div>
+                                        <div class="popup-email">@_userEmail</div>
+                                    </div>
+                                </div>
+
+                                <div class="popup-hr"></div>
+
+                                <!-- Year -->
+                                <div class="popup-row">
+                                    <label class="popup-lbl">
+                                        <i class="bi bi-calendar3"></i>&nbsp;Active Year
+                                    </label>
+                                    <DxComboBox Data="@(YearStatechangeService.Years ?? new List<YearModel>())"
+                                                TextFieldName="YearName"
+                                                ValueFieldName="YearId"
+                                                Value="@YearStatechangeService.SelectedYearId"
+                                                ValueChanged="@((int? v) => YearStatechangeService.ChangeYear(v ?? 0))"
+                                                CssClass="w-100" />
+                                </div>
+
+                                <!-- Branch -->
+                                <div class="popup-row">
+                                    <label class="popup-lbl">
+                                        <i class="bi bi-diagram-3"></i>&nbsp;Branch
+                                    </label>
+                                    <BranchSelection />
+                                </div>
+
+                                <div class="popup-hr"></div>
+
+                                <!-- Logout -->
+                                <button class="popup-logout" @onclick="Logout">
+                                    <i class="bi bi-box-arrow-right"></i>&nbsp;Log Off
+                                </button>
+
+                            </div>
+                        }
+                    </div>
+                </div>
+
+            </header>
+
+            <!-- ══════════════ BODY ══════════════ -->
+            <div class="fb-body">
+
+                <!-- Mobile backdrop (sidebar) -->
+                @if (_drawerOpen)
+                {
+                    <div class="fb-backdrop" @onclick="CloseDrawer"></div>
+                }
+
+                <!-- Mobile profile backdrop (closes popup when tapping outside) -->
+                @if (_profileOpen)
+                {
+                    <div class="fb-profile-backdrop" @onclick="CloseProfile"></div>
+                }
+
+                <!-- Sidebar -->
+                <aside class="fb-sidebar @(_drawerOpen ? "sb-open" : "sb-closed")">
+                    <AuthorizeView Context="navCtx">
+                        <Authorized>
+                            <NavMenu OnNavClick="OnNavClicked" />
+                        </Authorized>
+                    </AuthorizeView>
+                </aside>
+
+                <!-- Page Content -->
+                <main class="fb-main">
+                    @Body
+                </main>
+
+            </div>
+        </div>
     </CascadingValue>
 }
+
 @code {
     public bool IsShowContent { get; set; }
-    private bool _shouldRedirect = false;
-    private string? CompanyName { get; set; }
-    private string? Yearname { get; set; }
-    private string finYear => YearStatechangeService.Years.FirstOrDefault(y => y.YearId == YearStatechangeService.SelectedYearId)?.YearName ?? Yearname ;
+    private bool _shouldRedirect;
+    private string? CompanyName;
+    private string? _yearnameFallback;
+
+    private string finYear =>
+        YearStatechangeService.Years
+            .FirstOrDefault(y => y.YearId == YearStatechangeService.SelectedYearId)?.YearName
+        ?? _yearnameFallback ?? "";
+
     private bool _branchInitialized;
+    private bool _drawerOpen = true;
+    private bool _profileOpen = false;
+    private string _userName = "User";
+    private string _userEmail = "";
+
+    private void ToggleDrawer() => _drawerOpen = !_drawerOpen;
+    private void CloseDrawer() => _drawerOpen = false;
+    // private void ToggleProfile() => _profileOpen _profileOpen;
+
+    private void HandleShellClick() => CloseAllPopups();
+
+    private void CloseProfile() => _profileOpen = false;
+
+    private async Task OnNavClicked()
+    {
+        var w = await JS.InvokeAsync<int>("eval", "window.innerWidth");
+        if (w < 768) _drawerOpen = false;
+    }
 
     protected override async Task OnInitializedAsync()
     {
         LoadingService.OnChange += StateHasChanged;
-        YearStatechangeService.OnYearChanged += StateHasChanged; // <-- listen for year changes
+        YearStatechangeService.OnYearChanged += StateHasChanged;
 
-        if (_branchInitialized)
-            return;
+        if (_branchInitialized) return;
         _branchInitialized = true;
 
-        // 🔥 restore from storage / token
-        // var storedBranchId = await AuthService.GetSelectedBranchAsync();
-        int? storedBranchId = null;
-        try
-        {
-            storedBranchId = await AuthService.GetSelectedBranchAsync();
-        }
-        catch (System.Security.Cryptography.CryptographicException ex)
-        {
-            // Log for monitoring
-            Console.WriteLine($"⚠️ Could not decrypt branch: {ex.Message}");
-            storedBranchId = null;
-
-            // Optionally: clear storage if needed
-            
-        }
-        if (storedBranchId.HasValue && storedBranchId.Value > 0)
-        {
-            BranchContext.SetBranch(storedBranchId.Value);
-            Console.WriteLine($"🌿 Branch restored: {storedBranchId}");
-        }
-
+        int? branchId = null;
+        try { branchId = await AuthService.GetSelectedBranchAsync(); }
+        catch (System.Security.Cryptography.CryptographicException) { }
+        if (branchId is > 0) BranchContext.SetBranch(branchId.Value);
 
         var authState = await ((CustomAuthStateProvider)AuthStateProvider).GetAuthenticationStateAsync();
         var user = authState.User;
 
-        if (!user.Identity.IsAuthenticated)
+        if (!user.Identity!.IsAuthenticated)
         {
             _shouldRedirect = true;
-            return; // 🚨 Don't call APIs if not logged in
+            return;
         }
-        // var allYears = await YearService.GetYearsAsync();
-        // Yearname = allYears.FirstOrDefault(y => y.YearIsDefault)?.YearName ?? "No Year Selected";
-        // ✅ Safe to call API now
+        _isAdmin = user.IsInRole("Admin");
+        _userName = user.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value
+                     ?? user.Identity.Name ?? "User";
+        _userEmail = user.FindFirst(c =>
+                         c.Type == "email" ||
+                         c.Type == System.Security.Claims.ClaimTypes.Email)?.Value ?? "";
+
         var companies = await CompanyService.GetAllAsync();
-        CompanyName = companies.FirstOrDefault()?.Name ?? "Unknown Company";
-        // load years globally
-
-         await YearStatechangeService.LoadYearsAsync();
-
-
+        CompanyName = companies.FirstOrDefault()?.Name ?? "Unknown";
+        if (_isAdmin)
+            await LoadRecentActivities();
+        await YearStatechangeService.LoadYearsAsync();
         IsShowContent = true;
-
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender && _shouldRedirect)
-        {
             NavigationManager.NavigateTo("/login", forceLoad: true);
-        }
     }
 
     private async Task Logout()
     {
-        if (AuthStateProvider is CustomAuthStateProvider customProvider)
-        {
-            await customProvider.MarkUserAsLoggedOut();
-        }
-        RedirectToLogin(forceReload: true);
+        _profileOpen = false;
+        if (AuthStateProvider is CustomAuthStateProvider cp)
+            await cp.MarkUserAsLoggedOut();
+        NavigationManager.NavigateTo("/login", true);
     }
-
-
-
-
-    //\/\/\/\for year-------------------------------
-    // public int SelectedYearId { get; set; }
-    // public List<YearModel> Years { get; set; } = new();
-
-    // public async Task<IEnumerable<YearModel>> LoadYears(CancellationToken token)
-    // {
-    //     var allYears = await YearService.GetYearsAsync();
-    //     Years = allYears.Where(y => y.YearStatus == true).ToList();
-    //     var defaultYear = Years.FirstOrDefault(y => y.YearIsDefault);
-    //     if (defaultYear != null)
-    //         SelectedYearId = defaultYear.YearId;
-    //     return Years;
-    // }
-    // public string finYear => Years.FirstOrDefault(y => y.YearId == SelectedYearId)?.YearName ?? "";
-
-    // public void OnYearChanged(int newYearId)
-    // {
-    //     SelectedYearId = newYearId;
-    //     var selected = Years.FirstOrDefault(y => y.YearId == newYearId);
-    //     InvokeAsync(StateHasChanged);
-    //     Console.WriteLine($"Year changed to: {selected?.YearName}");
-    // }
-
-    // Always computed from the current selection
-
-    //\/\/\/\---------------------------
-
-
-
-    private void RedirectToLogin(bool forceReload = false)
-    {
-        var currentUri = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
-        if (!currentUri.StartsWith("login", StringComparison.OrdinalIgnoreCase))
-        {
-            NavigationManager.NavigateTo("/login", forceReload);
-        }
-    }
-
-    // loadingservice
 
     public void Dispose()
     {
         LoadingService.OnChange -= StateHasChanged;
-    }
-}
-
-        <style>
-.marquee-container {
-    background: linear-gradient(90deg, white -1%, #62cdf8 50%, #ffffff 87%);
-    width: 100%;
-    /* padding: 2px 0; */
-    color: black;
-    font-weight: bold;
-    overflow: hidden;
-    position: relative;
-}
-
-.marquee {
-    display: inline-block;
-    white-space: nowrap;
-    padding-left: 100%;
-        animation: marquee 20s linear infinite;
+        YearStatechangeService.OnYearChanged -= StateHasChanged;
     }
 
-@@keyframes scroll-left {
-    from { transform: translateX(0%); }
-    to { transform: translateX(-100%); }
-}
 
-    .marquee:hover {
-        animation-play-state: paused;
-    }
+    // Variables
+    private bool _bellOpen = false;
+    private bool _isAdmin = false;
 
-    
-</style>
-
-
-@* <style>
-    .marquee {
-        display: flex;
-        overflow: hidden;
-        white-space: nowrap;
-        width: 100%;
-        background: linear-gradient(90deg, white -1%, #62cdf8 49%, white 87%);
-    }
-
-    .marquee-content {
-        display: inline-block;
-        padding: 0 2rem;
-        animation: marquee 15s linear infinite;
-    }
-
-    @@keyframes marquee {
-        from
-
+    public class ActivityItem
     {
-        transform: translateX(0%);
+        public string Title { get; set; } = "";
+        public string Description { get; set; } = "";
+        public string Status { get; set; } = "";
+        public DateTime Time { get; set; }
+    }
+    private List<ActivityItem> _recentActivities = new();
+
+    // Methods
+    private void ToggleBell()
+    {
+        _profileOpen = false;      // profile band karo
+        _bellOpen = !_bellOpen;
     }
 
-    to {
-        transform: translateX(-100%);
+    private void CloseAllPopups()
+    {
+        _profileOpen = false;
+        _bellOpen = false;
     }
 
+    private async Task LoadRecentActivities()
+    {
+        try
+        {
+            var currentYearId = YearStatechangeService.SelectedYearId;
+            var logs = (await AuditLogService.GetLatestAsync())
+                .Where(a => a.YearId == currentYearId)
+                .OrderByDescending(l => l.DateTime)
+                .Take(10)
+                .ToList();
+
+            _recentActivities = logs.Select(l => new ActivityItem
+            {
+                Title = l.TableName ?? "",
+                Description = l.Remarks ?? "",
+                Status = l.Operations ?? "update",
+                Time = l.DateTime
+            }).ToList();
+        }
+        catch { _recentActivities = new(); }
     }
 
-    .marquee:hover .marquee-content {
-        animation-play-state: paused;
+    private void ToggleProfile()
+    {
+        _bellOpen = false;   // ← ye line add karo
+        _profileOpen = !_profileOpen;
     }
-
-</style> *@
+}

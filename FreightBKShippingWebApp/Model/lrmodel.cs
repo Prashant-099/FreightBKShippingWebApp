@@ -36,10 +36,10 @@ namespace FreightBKShippingWebApp.Model
         public int? LrProductId { get; set; }
 
         [Column("lr_vehicle_id")]
-        public int LrVehicleId { get; set; }
+        public int? LrVehicleId { get; set; }
 
         [Column("lr_supplier_account_id")]
-        public int LrSupplierAccountId { get; set; }
+        public int? LrSupplierAccountId { get; set; }
 
         [Column("lr_driver_id")]
         public int? LrDriverId { get; set; }
@@ -60,10 +60,10 @@ namespace FreightBKShippingWebApp.Model
         public int? LrTripNo { get; set; }
 
         [Column("lr_from_location_id")]
-        public int LrFromLocationId { get; set; }
+        public int? LrFromLocationId { get; set; }
 
         [Column("lr_to_location_id")]
-        public int LrToLocationId { get; set; }
+        public int? LrToLocationId { get; set; }
 
         [Column("lr_back_location_id")]
         public int? LrBackLocationId { get; set; }
@@ -223,7 +223,7 @@ namespace FreightBKShippingWebApp.Model
 
         // 🔹 Consignee Notify Address
         [Column("lr_consignee_notify_address")]
-        [StringLength(45)]
+        [StringLength(500)]
         public string? LrConsigneeNotifyAddress { get; set; }
 
         // 🔹 Consignor Notify GST
@@ -572,5 +572,56 @@ namespace FreightBKShippingWebApp.Model
         public bool IsNew { get; set; }
         public bool IsDirty { get; set; }
         public bool IsDeleted { get; set; }
+    }
+
+    public class LrEntryDto
+    {
+        public Lr Main { get; set; } = new();
+        [InverseProperty(nameof(LRDetail))]
+        public List<LRDetail> Details { get; set; } = new();
+        [InverseProperty(nameof(LRJournal))]
+        public List<LRJournal> Journals { get; set; } = new();
+    }
+
+    public class LrListVM
+    {
+        public int LrId { get; set; }
+
+        // Basic
+        public string? LrNoStr { get; set; }
+        public DateTime? LrDate { get; set; }
+        public string? LrTripNo { get; set; }
+
+        // Party Info (Names only)
+        public string? PartyName { get; set; }
+        public string? SupplierName { get; set; }
+        public string? VehicleNo { get; set; }
+        public string? DriverName { get; set; }
+
+        // Location (Names only)
+        public string? FromLocationName { get; set; }
+        public string? ToLocationName { get; set; }
+
+        // Weight
+        public double LrLoadWt { get; set; }
+        public double LrUnloadWt { get; set; }
+        public double LrShortWt { get; set; }
+
+        // Billing
+        public string? LrBillTypeBill { get; set; }
+        public double LrRateBill { get; set; }
+        public double LrGrossFreightBill { get; set; }
+        public double LrNetFreightBill { get; set; }
+
+        // Truck
+        public double LrBillRateTruck { get; set; }
+        public double LrNetFreightTruck { get; set; }
+
+        // GST
+        public double LrGstPercentage { get; set; }
+        public double LrGstAmount { get; set; }
+
+        // Status
+        public int LrStatus { get; set; }
     }
 }

@@ -400,6 +400,7 @@ MinWidth="200"
                             <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="CBM" ColSpanMd="12">
                                 <DxSpinEdit @bind-Value="EditModel.JobCbm"  ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" ShowSpinButtons=false CssClass="editor-smooth" />
                             </DxFormLayoutItem>
+
                             <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="POL" ColSpanMd="12">
                                 <div style="position: relative; display: inline-block; width: 100%;">
                                     <DxButton Click="@(()=>newpopuplocation())"
@@ -840,7 +841,8 @@ MinWidth="200"
 <CurrencyAddEditPage @ref="popupcurrency" OnSaved="LoadCurrenciesAsync" />
 <StatusAddEditPage @ref="popupStatus" OnSaved="LoadStatusAsync" />
 
-<FileUploadpopup IsVisible="@IsUploadPopupVisible"
+<FileUploadpopup IsVisible="@IsUploadPopupVisible" 
+                    OnFilesSelected="HandleSelectedFiles"
                  @ref="uploadPopup"
                  IsVisibleChanged="@(v => IsUploadPopupVisible = v)"
                  DefaultCategory="@SelectedCategory"
@@ -862,7 +864,27 @@ MinWidth="200"
     private UploadedFileInfo? PreviewFile;
     private FileUploadpopup? uploadPopup;
     private List<ReportData> ReportDataList = new();
+
+    public class PendingUploadFile
+    {
+        public string FileName { get; set; } = "";
+        public byte[] Content { get; set; } = Array.Empty<byte>();
+    }
+
+    private List<PendingUploadFile> PendingFiles = new();
+    private List<UploadedFileInfo> UploadedDocs = new();
     // private List<UploadedFileInfo> UploadedDocs = new();
+    private async Task HandleSelectedFiles(List<IBrowserFile> files)
+    {
+        PendingFiles.Clear();
+        foreach (var file in files)
+        {
+            using var ms = new MemoryStream();
+            await file.OpenReadStream(10 * 1024 * 1024).CopyToAsync(ms);
+            PendingFiles.Add(new PendingUploadFile { FileName = file.Name, Content = ms.ToArray() });
+        }
+        ToastService.Success($"{PendingFiles.Count} file(s) ready to upload.");
+    }
 
     private async Task LoadDocumentsAsync()
     {
@@ -912,7 +934,7 @@ MinWidth="200"
     }
 
 
-    private List<FileUploadpopup.UploadedFileInfo> UploadedDocs = new();
+    // private List<FileUploadpopup.UploadedFileInfo> UploadedDocs = new();
 
     private async Task HandleUploadedDocs(List<FileUploadpopup.UploadedFileInfo> _)
     {
@@ -2280,6 +2302,19 @@ MinWidth="200"
     private async Task HandleValidSubmit()
     {
         LoadingService.Show();
+
+        if (PendingFiles.Any())
+        {
+            foreach (var file in PendingFiles)
+                await FileUploadService.UploadFileAsync(
+                    file.Content, file.FileName, "job",
+                    EditModel.JobNo ?? "", EditModel.JobId.ToString());
+            PendingFiles.Clear();
+        }
+
+        await LoadDocumentsAsync();
+
+
         try
         {
             EditModel.JobType = JobType;
