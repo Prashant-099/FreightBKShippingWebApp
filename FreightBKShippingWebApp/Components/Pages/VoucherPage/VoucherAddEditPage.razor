@@ -1,5 +1,6 @@
 ﻿@using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Services
+@using System.Text.Json
 
 @inject VoucherService VoucherService
 @inject ToasteService ToastService
@@ -300,7 +301,9 @@ horizontalAlignment="HorizontalAlignment.Center"
     {
         if (voucher.VoucherId >0)
         {
-            EditModel = voucher;
+            //EditModel = voucher;
+            var json = JsonSerializer.Serialize(voucher);
+            EditModel = JsonSerializer.Deserialize<Voucher>(json) ?? new Voucher();
             _ = LoadVoucherDetails(voucher.VoucherId);
             Title = "Edit Voucher";
         }

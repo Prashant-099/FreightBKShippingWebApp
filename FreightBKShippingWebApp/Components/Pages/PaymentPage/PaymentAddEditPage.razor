@@ -2,6 +2,7 @@
 @using FreightBKShippingWebApp.Models
 @using FreightBKShippingWebApp.Services
 @using DevExpress.Blazor
+@using System.Text.Json
 @inject JournalService JournalService
 @inject BillService BillService
 @inject ToasteService ToastService
@@ -578,7 +579,7 @@
             var allAccounts = accountTask.Result;
 
             CustomerList = allAccounts.Where(a => a.AccountTypeId == 18).ToList();
-            BankAccountList = allAccounts.Where(a => a.AccountTypeId == 10).ToList();
+            BankAccountList = allAccounts.Where(a => a.AccountTypeId == 10 || a.AccountTypeId == 11).ToList();
         }
         catch (Exception ex)
         {
@@ -604,6 +605,8 @@
             SelectedCustomer = CustomerList.FirstOrDefault(a => a.AccountId == EditModel.JournalPartyId);
             ShowBillSettlementGrid = SelectedCustomer?.AccountMethod?.Equals("BILL TO BILL", StringComparison.OrdinalIgnoreCase) == true;
 
+            var json = JsonSerializer.Serialize(journal);
+            EditModel = JsonSerializer.Deserialize<Journal>(json) ?? new Journal();
             Title = "Edit Payment";
             await LoadJournalDetails();
         }

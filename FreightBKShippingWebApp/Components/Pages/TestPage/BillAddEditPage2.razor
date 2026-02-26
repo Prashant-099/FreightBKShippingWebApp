@@ -5,6 +5,7 @@
 @using FreightBKShippingWebApp.Models
 @using FreightBKShippingWebApp.Services
 @using DevExpress.Blazor
+@using System.Text.Json
 
 @inject BillService BillService
 @inject ToasteService ToastService
@@ -1524,8 +1525,8 @@
         EditModel.BillDefaultCurrencyId = selectedBill.BillDefaultCurrencyId;
 
         EditModel.BillPolId = selectedBill.BillPolId;
-    EditModel.BillPodId = selectedBill.BillPodId;
-    EditModel.BillLineId = selectedBill.BillLineId;
+        EditModel.BillPodId = selectedBill.BillPodId;
+        EditModel.BillLineId = selectedBill.BillLineId;
 
         EditModel.BillIsRcm = selectedBill.BillIsRcm;
         EditModel.BillIsRoundOff = selectedBill.BillIsRoundOff;
@@ -2018,7 +2019,9 @@
         // editContext = new EditContext(EditModel);
         if (bill?.BillId > 0)
         {
-            EditModel = bill;
+            //EditModel = bill;
+            var json = JsonSerializer.Serialize(bill);
+            EditModel = JsonSerializer.Deserialize<Bill>(json) ?? new Bill();
             OnJobTypeChanged(EditModel.BillJobType);
 
             BillDetails = bill.BillDetails?
@@ -2372,9 +2375,9 @@
         }
         if (selectedjobno != null)
         {
-            
+
             EditModel.BillJobId = selectedjobdetails.JobId;
-           // EditModel.BillPartyId = selectedjobdetails.JobPartyId ?? 0;
+            // EditModel.BillPartyId = selectedjobdetails.JobPartyId ?? 0;
             EditModel.BillSupplyType = "B2B";
             EditModel.BillCargoId = selectedjobdetails.JobCargoId ?? 0;
             EditModel.BillShipPartyId = EditModel.BillPartyId;
@@ -2469,7 +2472,7 @@
         {
             model.BillReportId = voucher?.VoucherReportId ?? voucher?.VoucherReportId2 ?? 0;
             model.BillBankId = voucher?.VoucherBank1 ?? voucher?.VoucherBank2 ?? 0;
-
+            model.BillType = voucher.VoucherGroup;
             // Example property name: change "VoucherMethod" to your real field
             if (string.Equals(voucher.VoucherMethod, "Manual", StringComparison.OrdinalIgnoreCase))
             {
@@ -2486,51 +2489,51 @@
 
 
 
-            var finYearId = YearStatechangeService.SelectedYearId;
-            try
-            {
-                var result = await YearStatechangeService.GeneratebillNoAsync(voucherId, finYearId , BranchContext.BranchId);
+        var finYearId = YearStatechangeService.SelectedYearId;
+        try
+        {
+            var result = await YearStatechangeService.GeneratebillNoAsync(voucherId, finYearId , BranchContext.BranchId);
 
-                model.BillPrefix = result.prefix;
-                model.BillNo = result.prefix + result.number + result.suffix;
-                model.BillPostfix = result.suffix;
-                model.BillVchNo = int.Parse(result.number);
-                StateHasChanged();
-            }
-            catch (Exception ex)
-            {   
-                ToastService.Error("Error: " + ex.Message);
-            }
-            // if (voucher.VoucherGroup?.Equals("CREDIT NOTE", StringComparison.OrdinalIgnoreCase) == true)
-            // {
-            //     IsCreditnote = true;
-            //     var salesVoucherIds = VoucherList
-            //         .Where(v => v.VoucherGroup?.Equals("SALES", StringComparison.OrdinalIgnoreCase) == true)
-            //         .Select(v => v.VoucherId)
-            //         .ToList();
+            model.BillPrefix = result.prefix;
+            model.BillNo = result.prefix + result.number + result.suffix;
+            model.BillPostfix = result.suffix;
+            model.BillVchNo = int.Parse(result.number);
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {   
+            ToastService.Error("Error: " + ex.Message);
+        }
+        // if (voucher.VoucherGroup?.Equals("CREDIT NOTE", StringComparison.OrdinalIgnoreCase) == true)
+        // {
+        //     IsCreditnote = true;
+        //     var salesVoucherIds = VoucherList
+        //         .Where(v => v.VoucherGroup?.Equals("SALES", StringComparison.OrdinalIgnoreCase) == true)
+        //         .Select(v => v.VoucherId)
+        //         .ToList();
 
-            //     billList = (billList)
-            //         .Where(b =>
-            //             b.BillYearId == YearStatechangeService.SelectedYearId &&
-            //             salesVoucherIds.Contains(b.BillVoucherId))
-            //         .ToList();
-            // }
-            // else
-            // {
+        //     billList = (billList)
+        //         .Where(b =>
+        //             b.BillYearId == YearStatechangeService.SelectedYearId &&
+        //             salesVoucherIds.Contains(b.BillVoucherId))
+        //         .ToList();
+        // }
+        // else
+        // {
 
-            //     IsCreditnote = false;
-            //     QuotationList = (billList)
-            //        .Where(b =>
-            //            b.BillYearId == YearStatechangeService.SelectedYearId &&
-            //             string.Equals(b.BillType, "QUOTATION", StringComparison.OrdinalIgnoreCase))
-            //        .ToList();
-            // }
-             if (voucher != null)
+        //     IsCreditnote = false;
+        //     QuotationList = (billList)
+        //        .Where(b =>
+        //            b.BillYearId == YearStatechangeService.SelectedYearId &&
+        //             string.Equals(b.BillType, "QUOTATION", StringComparison.OrdinalIgnoreCase))
+        //        .ToList();
+        // }
+        if (voucher != null)
         {
             await LoadBillListBasedOnVoucherType(voucher);
         }
         // }
-       
+
     }
 
     private void Hide()
@@ -2917,7 +2920,7 @@
                 var vouchergroup = VoucherList.FirstOrDefault(v => v.VoucherId == EditModel.BillVoucherId);
                 if (vouchergroup == null)
                 {
-                   
+
                     return;
                 }
                 if (item.BillDetailRate == 0 || item.BillDetailRate == null || item.BillDetailRate == default(double))
@@ -2955,7 +2958,7 @@
 
                     }
                 }
-               
+
                 else
                 {
                     if (vouchergroup.VoucherGroup == "SALES")
@@ -2986,7 +2989,7 @@
                 // ✅ Apply IGST or CGST+SGST based on Place of Supply vs Company State
                 if (selectedCompany != null && selectedpos != null)
                 {
-                   
+
                     // Convert string StateId → int for safe comparison
                     var companyState = StateList?
       .FirstOrDefault(s =>
@@ -3304,13 +3307,13 @@
                 .OrderBy(d => d.BillDetailSno)
                 .ToList();
 
-                // ✅ Reindex sequentially
-        int sequentialSno = 1;
+            // ✅ Reindex sequentially
+            int sequentialSno = 1;
 
-        foreach (var detail in activeDetails)
-        {
-            detail.BillDetailSno = sequentialSno++;
-        }
+            foreach (var detail in activeDetails)
+            {
+                detail.BillDetailSno = sequentialSno++;
+            }
             // --- STEP 3: Recalculate Bill Totals ---
             //EditModel.BillNetAmount = (float)activeDetails.Sum(d => d.BillDetailTotal);
             EditModel.BillAmount = activeDetails.Sum(d => d.BillDetailAmount);
@@ -3323,9 +3326,9 @@
             EditModel.BillNo = EditModel.BillNo;
 
             //after copy null the e-invoice details
-             EditModel.BillIrnNo = "";
-              EditModel.BillAckNo = "";
-               EditModel.BillAckDate = "";
+            EditModel.BillIrnNo = "";
+            EditModel.BillAckNo = "";
+            EditModel.BillAckDate = "";
 
             // --- STEP 4: Filter only valid detail lines ---
             var validDetails = activeDetails
@@ -3385,35 +3388,38 @@
         LoadingService.Show();
         try
         {
-            if (EditModel.BillAgainstBillId > 0)
+            if (string.Equals(EditModel.BillType, "CREDIT NOTE", StringComparison.OrdinalIgnoreCase))
             {
-                var salesBill = billList
-                    .FirstOrDefault(b => b.BillId == EditModel.BillAgainstBillId);
-
-                if (salesBill == null)
-                    return;
-
-                decimal salesAmount = Convert.ToDecimal(salesBill.BillNetAmount);
-                decimal currentEditAmount = Convert.ToDecimal(EditModel.BillNetAmount);
-
-                decimal otherCreditNotesTotal = billList
-                    .Where(b =>
-                        b.BillAgainstBillId == salesBill.BillId &&
-                        b.BillType?.Equals("CREDIT NOTE", StringComparison.OrdinalIgnoreCase) == true &&
-                        b.BillId != EditModel.BillId)
-                    .Sum(b => Convert.ToDecimal(b.BillNetAmount));
-
-                decimal maxAllowedCreditNote =
-                    salesAmount - otherCreditNotesTotal;
-
-                if (currentEditAmount > maxAllowedCreditNote)
+                if (EditModel.BillAgainstBillId > 0)
                 {
-                    ToastService.Error(
-                        $"Credit Note cannot exceed available amount ({maxAllowedCreditNote:N2})"
-                    );
-                    return;
-                }
+                    var salesBill = billList
+                        .FirstOrDefault(b => b.BillId == EditModel.BillAgainstBillId);
 
+                    if (salesBill == null)
+                        return;
+
+                    decimal salesAmount = Convert.ToDecimal(salesBill.BillNetAmount);
+                    decimal currentEditAmount = Convert.ToDecimal(EditModel.BillNetAmount);
+
+                    decimal otherCreditNotesTotal = billList
+                        .Where(b =>
+                            b.BillAgainstBillId == salesBill.BillId &&
+                            b.BillType?.Equals("CREDIT NOTE", StringComparison.OrdinalIgnoreCase) == true &&
+                            b.BillId != EditModel.BillId)
+                        .Sum(b => Convert.ToDecimal(b.BillNetAmount));
+
+                    decimal maxAllowedCreditNote =
+                        salesAmount - otherCreditNotesTotal;
+
+                    if (currentEditAmount > maxAllowedCreditNote)
+                    {
+                        ToastService.Error(
+                            $"Credit Note cannot exceed available amount ({maxAllowedCreditNote:N2})"
+                        );
+                        return;
+                    }
+
+                }
             }
 
 

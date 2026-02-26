@@ -1,6 +1,7 @@
 ﻿  
 @using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Services
+@using System.Text.Json
 @inject HsnSacService HsnSacService
 @inject ToasteService ToastService
 @inject LoadingService LoadingService
@@ -99,7 +100,9 @@
         if (hsn.HsnId > 0)
         {
             // Edit mode – bind directly to the selected object
-            EditModel = hsn;
+           // EditModel = hsn;
+            var json = JsonSerializer.Serialize(hsn);
+            EditModel = JsonSerializer.Deserialize<HsnSac>(json) ?? new HsnSac();
             Title = "Edit HSN/SAC";
         }
         else

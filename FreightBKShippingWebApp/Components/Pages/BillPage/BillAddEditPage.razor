@@ -5,6 +5,7 @@
 @using FreightBKShippingWebApp.Models
 @using FreightBKShippingWebApp.Services
 @using DevExpress.Blazor
+@using System.Text.Json
 
 @inject BillService BillService
 @inject ToasteService ToastService
@@ -2320,7 +2321,10 @@ value
         // editContext = new EditContext(EditModel);
         if (bill?.BillId > 0)
         {
-            EditModel = bill;
+           // EditModel = bill;
+            var json = JsonSerializer.Serialize(bill);
+            EditModel = JsonSerializer.Deserialize<Bill>(json) ?? new Bill();
+
             OnJobTypeChanged(EditModel.BillJobType);
 
             BillDetails = bill.BillDetails?

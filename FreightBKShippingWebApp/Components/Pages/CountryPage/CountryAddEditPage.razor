@@ -1,5 +1,6 @@
 ﻿@using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Services
+@using System.Text.Json
 @inject CountryService CountryService
 @inject ToasteService ToastService
 @inject LoadingService LoadingService
@@ -60,6 +61,8 @@
         {
             // Edit mode – bind directly to the selected object
             EditModel = country;
+            var json = JsonSerializer.Serialize(country);
+            EditModel = JsonSerializer.Deserialize<Country>(json) ?? new Country();
             Title = "Edit Country";
         }
         else

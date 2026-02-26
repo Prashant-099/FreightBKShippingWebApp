@@ -1,6 +1,7 @@
 ﻿  
 @using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Services
+@using System.Text.Json
 @inject CargoService CargoService
 @inject ToasteService ToastService
 @inject HsnSacService HsnSacService
@@ -120,7 +121,9 @@
         if (cargo.CargoId > 0)
         {
             // Edit mode – bind directly to the selected object
-            EditModel = cargo;
+           // EditModel = cargo;
+            var json = JsonSerializer.Serialize(cargo);
+            EditModel = JsonSerializer.Deserialize<Cargo>(json) ?? new Cargo();
             Title = "Edit Cargo";
         }
         else

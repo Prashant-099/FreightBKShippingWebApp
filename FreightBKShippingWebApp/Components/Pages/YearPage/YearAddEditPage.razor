@@ -1,5 +1,6 @@
 ﻿@using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Services
+@using System.Text.Json
 @inject YearService YearService
 @inject ToasteService ToastService
 @inject LoadingService LoadingService
@@ -68,7 +69,10 @@
         if (year.YearId > 0)
         {
             // Edit mode – bind directly to the selected object
-            EditModel = year;
+            //EditModel = year;
+            var json = JsonSerializer.Serialize(year);
+            EditModel = JsonSerializer.Deserialize<YearModel>(json) ?? new YearModel();
+
             Title = "Edit Year";
         }
         else

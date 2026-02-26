@@ -71,23 +71,20 @@
                 <DxToolbarItem Text="Refresh"
                                IconCssClass="bi bi-arrow-clockwise"
                                Click="@(async (_) => await LoadReceipts())" />
+
+                <DxToolbarItem Alignment="ToolbarItemAlignment.Right"
+                               RenderStyle="ButtonRenderStyle.Secondary"
+                               IconCssClass="bi bi-gear-wide-connected"
+                               Click="ShowLayoutPopup" />
+
             </Items>
         </DxToolbar>
     </ToolbarTemplate>
                 <Columns>
                     <DxGridSelectionColumn Width="40" />
-        <DxGridDataColumn FieldName="JournalLockedByUsername" 
-            Width="@(layoutManager?.GetColumnWidth("JournalLockedByUsername") ?? "120px")">
-            <HeaderCaptionTemplate>
-
-                Locked By
-
-                <DxButton RenderStyle="ButtonRenderStyle.Link"
-                          IconCssClass="bi bi-three-dots"
-                          SizeMode="SizeMode.Small"
-                          Click="ShowLayoutPopup" />
-
-            </HeaderCaptionTemplate>
+        <DxGridDataColumn FieldName="JournalLockedByUsername" Caption="  Locked By"
+            Width="@(layoutManager?.GetColumnWidth("JournalLockedByUsername") ?? "150px")">
+      
             <CellDisplayTemplate>
                 @{
                     var j = context.DataItem as Journal;
@@ -116,13 +113,13 @@
         <DxGridDataColumn FieldName="JournalDate" Caption="Date" DisplayFormat="dd/MM/yyyy" Width="@(layoutManager?.GetColumnWidth("JournalDate") ?? "120px")"
                           Visible="@(layoutManager?.GetColumnVisibility("JournalDate") ?? true)" />
 
-        <DxGridDataColumn FieldName="PartyName" Caption="Customer" Width="@(layoutManager?.GetColumnWidth("PartyName") ?? "180px")"
+        <DxGridDataColumn FieldName="PartyName" Caption="Customer" Width="@(layoutManager?.GetColumnWidth("PartyName") ?? "270px")"
                           Visible="@(layoutManager?.GetColumnVisibility("PartyName") ?? true)" />
 
         <DxGridDataColumn FieldName="AccountName" Caption="Cash / Bank" Width="@(layoutManager?.GetColumnWidth("AccountName") ?? "160px")"
                           Visible="@(layoutManager?.GetColumnVisibility("AccountName") ?? true)" />
 
-        <DxGridDataColumn FieldName="JournalAmount" Caption="Received Amount" Width="@(layoutManager?.GetColumnWidth("JournalAmount") ?? "140px")"
+        <DxGridDataColumn FieldName="JournalAmount" Caption="Received Amount" Width="@(layoutManager?.GetColumnWidth("JournalAmount") ?? "170px")"
                           Visible="@(layoutManager?.GetColumnVisibility("JournalAmount") ?? true)" />
 
         <DxGridDataColumn FieldName="JournalTotalDiscount" Caption="Discount" Width="@(layoutManager?.GetColumnWidth("JournalTotalDiscount") ?? "120px")"
@@ -140,11 +137,11 @@
         <DxGridDataColumn FieldName="JournalTotal" Caption="Total" Width="@(layoutManager?.GetColumnWidth("JournalTotal") ?? "130px")"
                           Visible="@(layoutManager?.GetColumnVisibility("JournalTotal") ?? true)" />
 
-        <DxGridDataColumn FieldName="JournalChqNo" Caption="Chq. No" Width="@(layoutManager?.GetColumnWidth("JournalChqNo") ?? "120px")"
+       @*  <DxGridDataColumn FieldName="JournalChqNo" Caption="Chq. No" Width="@(layoutManager?.GetColumnWidth("JournalChqNo") ?? "120px")"
                           Visible="@(layoutManager?.GetColumnVisibility("JournalChqNo") ?? true)" />
 
         <DxGridDataColumn FieldName="JournalChqDate" Caption="Chq Date" DisplayFormat="dd/MM/yyyy" Width="@(layoutManager?.GetColumnWidth("JournalChqDate") ?? "120px")"
-                          Visible="@(layoutManager?.GetColumnVisibility("JournalChqDate") ?? true)" />
+                          Visible="@(layoutManager?.GetColumnVisibility("JournalChqDate") ?? true)" /> *@
 
         <DxGridDataColumn FieldName="JournalRemarks" Caption="Remarks" Width="@(layoutManager?.GetColumnWidth("JournalRemarks") ?? "200px")"
                           Visible="@(layoutManager?.GetColumnVisibility("JournalRemarks") ?? true)" />
@@ -194,7 +191,7 @@
     {
         allColumns = new List<GridColumnLayout>
 {
-    new() { FieldName = "JournalLockedByUsername", Caption = "Lockby", Visible = true, Width = 120, DisplayIndex = 0 },
+    new() { FieldName = "JournalLockedByUsername", Caption = "Lockby", Visible = true, Width = 150, DisplayIndex = 0 },
 
     new() { FieldName = "VoucherName", Caption = "Voucher Type", Visible = true, Width = 140, DisplayIndex = 1 },
 
@@ -202,11 +199,11 @@
 
     new() { FieldName = "JournalDate", Caption = "Date", Visible = true, Width = 120, DisplayIndex = 3 },
 
-    new() { FieldName = "PartyName", Caption = "Customer", Visible = true, Width = 180, DisplayIndex = 4 },
+    new() { FieldName = "PartyName", Caption = "Customer", Visible = true, Width = 270, DisplayIndex = 4 },
 
     new() { FieldName = "AccountName", Caption = "Cash / Bank", Visible = true, Width = 160, DisplayIndex = 5 },
 
-    new() { FieldName = "JournalAmount", Caption = "Received Amount", Visible = true, Width = 140, DisplayIndex = 6 },
+    new() { FieldName = "JournalAmount", Caption = "Received Amount", Visible = true, Width = 170, DisplayIndex = 6 },
 
     new() { FieldName = "JournalTotalDiscount", Caption = "Discount", Visible = true, Width = 120, DisplayIndex = 7 },
 
@@ -218,19 +215,20 @@
 
     new() { FieldName = "JournalTotal", Caption = "Total", Visible = true, Width = 130, DisplayIndex = 11 },
 
-    new() { FieldName = "JournalChqNo", Caption = "Chq. No", Visible = true, Width = 120, DisplayIndex = 12 },
+    // new() { FieldName = "JournalChqNo", Caption = "Chq. No", Visible = true, Width = 120, DisplayIndex = 12 },
 
-    new() { FieldName = "JournalChqDate", Caption = "Chq Date", Visible = true, Width = 120, DisplayIndex = 13 },
+    // new() { FieldName = "JournalChqDate", Caption = "Chq Date", Visible = true, Width = 120, DisplayIndex = 13 },
 
-    new() { FieldName = "JournalRemarks", Caption = "Remarks", Visible = true, Width = 200, DisplayIndex = 14 }
+    new() { FieldName = "JournalRemarks", Caption = "Remarks", Visible = true, Width = 200, DisplayIndex = 12}
 };
 
     }
     protected override async Task OnInitializedAsync()
     {
+        InitializeColumns();
         await CheckRole();
         await LoadReceipts();
-        InitializeColumns();
+       
     }
 
     private async Task LoadReceipts()

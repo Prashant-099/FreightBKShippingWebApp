@@ -1,5 +1,6 @@
 ﻿@using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Services
+@using System.Text.Json
 @inject VesselService VesselService
 @inject ToasteService ToastService
 @inject LoadingService LoadingService
@@ -111,7 +112,9 @@
         if (vessel.VesselId > 0)
         {
             // Edit mode – bind directly to the selected object
-            EditModel = vessel;
+           // EditModel = vessel;
+            var json = JsonSerializer.Serialize(vessel);
+            EditModel = JsonSerializer.Deserialize<Vessel>(json) ?? new Vessel();
             Title = "Edit Vessel";
         }
         else

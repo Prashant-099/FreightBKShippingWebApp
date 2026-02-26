@@ -1,5 +1,6 @@
 ﻿@using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Services
+@using System.Text.Json
 @inject CurrencyService CurrencyService
 @inject ToasteService ToastService
 @inject LoadingService LoadingService
@@ -54,7 +55,9 @@
         if (currency.CurrencyId > 0)
         {
             // Edit mode – bind directly to the selected object
-            EditModel = currency;
+           // EditModel = currency;
+            var json = JsonSerializer.Serialize(currency);
+            EditModel = JsonSerializer.Deserialize<Currency>(json) ?? new Currency();
             Title = "Edit Currency";
         }
         else

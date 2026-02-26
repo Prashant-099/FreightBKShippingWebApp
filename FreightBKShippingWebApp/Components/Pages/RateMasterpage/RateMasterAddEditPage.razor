@@ -1,5 +1,6 @@
 ﻿@using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Services
+@using System.Text.Json
 @inject RateMasterService RateMasterService
 @inject ToasteService ToastService
 @inject LoadingService LoadingService
@@ -75,7 +76,9 @@
         }
         else
         {
-            EditModel = rate;
+            //EditModel = rate;
+            var json = JsonSerializer.Serialize(rate);
+            EditModel = JsonSerializer.Deserialize<RateMaster>(json) ?? new RateMaster();
             Title = "Edit Rate";
         }
         Visible = true;

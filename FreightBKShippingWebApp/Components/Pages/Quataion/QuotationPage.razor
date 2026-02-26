@@ -68,6 +68,12 @@
                 
                 <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="@(async (_) => await LoadQuotationsAsync())" />
                 <DxToolbarItem Text="Clear Selection" IconCssClass="bi bi-x-circle" Click="@(async (_) => await ClearSelectionManual())" Visible="@(SelectedQuotations?.Count > 0)" />
+
+                <DxToolbarItem Alignment="ToolbarItemAlignment.Right"
+                               RenderStyle="ButtonRenderStyle.Secondary"
+                               IconCssClass="bi bi-gear-wide-connected"
+                               Click="ShowLayoutPopup" />
+
             </Items>
         </DxToolbar>
     </ToolbarTemplate>
@@ -75,19 +81,13 @@
     <Columns>
         <DxGridSelectionColumn Width="30" FixedPosition="GridColumnFixedPosition.Left" />
 
-        <DxGridCommandColumn CancelButtonVisible="false" Name="Action"
+       @*  <DxGridCommandColumn CancelButtonVisible="false" Name="Action" Caption="Action"
                             DeleteButtonVisible="false"
                             EditButtonVisible="false"
                             SaveButtonVisible="false"
                             NewButtonVisible="false" Width="120">
-            <HeaderCaptionTemplate>
-                Actions
-                <DxButton RenderStyle="ButtonRenderStyle.Link"
-                         IconCssClass="bi bi-three-dots"
-                         SizeMode="SizeMode.Small"
-                         Click="ShowLayoutPopup" />
-            </HeaderCaptionTemplate>
-        </DxGridCommandColumn>
+            
+        </DxGridCommandColumn> *@
 
         <DxGridDataColumn FieldName="BillId" Caption="ID" Width="@(layoutManager?.GetColumnWidth("BillId") ?? "80px")"
                          Visible="@(layoutManager?.GetColumnVisibility("BillId") ?? true)" />
@@ -95,7 +95,7 @@
         <DxGridDataColumn FieldName="branchname" Caption="Branch" Width="@(layoutManager?.GetColumnWidth("branchname") ?? "120px")"
                          Visible="@(layoutManager?.GetColumnVisibility("branchname") ?? true)" />
 
-        <DxGridDataColumn FieldName="BillNo" Caption="Quotation No" Width="@(layoutManager?.GetColumnWidth("BillNo") ?? "120px")"
+        <DxGridDataColumn FieldName="BillNo" Caption="Quotation No" Width="@(layoutManager?.GetColumnWidth("BillNo") ?? "150px")"
                          Visible="@(layoutManager?.GetColumnVisibility("BillNo") ?? true)" />
 
         <DxGridDataColumn FieldName="BillDate" Caption="Date" DisplayFormat="dd/MM/yyyy" Width="@(layoutManager?.GetColumnWidth("BillDate") ?? "110px")"
@@ -104,19 +104,19 @@
         <DxGridDataColumn FieldName="BillDueDate" DisplayFormat="dd/MM/yyyy" Caption="Valid Until" Width="@(layoutManager?.GetColumnWidth("BillDueDate") ?? "110px")"
                          Visible="@(layoutManager?.GetColumnVisibility("BillDueDate") ?? true)" />
 
-        <DxGridDataColumn FieldName="partyname" Caption="Customer" Width="@(layoutManager?.GetColumnWidth("partyname") ?? "180px")"
+        <DxGridDataColumn FieldName="partyname" Caption="Customer" Width="@(layoutManager?.GetColumnWidth("partyname") ?? "260px")"
                          Visible="@(layoutManager?.GetColumnVisibility("partyname") ?? true)" />
 
-        <DxGridDataColumn FieldName="Vouchname" Caption="Voucher Type" Width="@(layoutManager?.GetColumnWidth("Vouchname") ?? "130px")"
+        <DxGridDataColumn FieldName="Vouchname" Caption="Voucher Type" Width="@(layoutManager?.GetColumnWidth("Vouchname") ?? "150px")"
                          Visible="@(layoutManager?.GetColumnVisibility("Vouchname") ?? true)" />
 
         <DxGridDataColumn FieldName="BillGstNo" Caption="GST No" Width="@(layoutManager?.GetColumnWidth("BillGstNo") ?? "130px")"
                          Visible="@(layoutManager?.GetColumnVisibility("BillGstNo") ?? true)" />
 
-        <DxGridDataColumn FieldName="posname" Caption="Place of Supply" Width="@(layoutManager?.GetColumnWidth("posname") ?? "160px")"
+        <DxGridDataColumn FieldName="posname" Caption="Place of Supply" Width="@(layoutManager?.GetColumnWidth("posname") ?? "190px")"
                          Visible="@(layoutManager?.GetColumnVisibility("posname") ?? true)" />
 
-        <DxGridDataColumn FieldName="BillTotal" Caption="Basic Amount" Width="@(layoutManager?.GetColumnWidth("BillTotal") ?? "120px")"
+        <DxGridDataColumn FieldName="BillTotal" Caption="Basic Amount" Width="@(layoutManager?.GetColumnWidth("BillTotal") ?? "150px")"
                          Visible="@(layoutManager?.GetColumnVisibility("BillTotal") ?? true)" />
 
         <DxGridDataColumn FieldName="BillNetAmount" Caption="Total Amount" Width="@(layoutManager?.GetColumnWidth("BillNetAmount") ?? "130px")"
@@ -181,14 +181,14 @@
         {
             new() { FieldName = "BillId", Caption = "ID", Visible = false, Width = 80, DisplayIndex = 0 },
             new() { FieldName = "branchname", Caption = "Branch", Visible = true, Width = 120, DisplayIndex = 1 },
-            new() { FieldName = "BillNo", Caption = "Quotation No", Visible = true, Width = 120, DisplayIndex = 2 },
+            new() { FieldName = "BillNo", Caption = "Quotation No", Visible = true, Width = 150, DisplayIndex = 2 },
             new() { FieldName = "BillDate", Caption = "Date", Visible = true, Width = 120, DisplayIndex = 3 },
             new() { FieldName = "BillDueDate", Caption = "Valid Until", Visible = true, Width = 120, DisplayIndex = 4 },
-            new() { FieldName = "partyname", Caption = "Customer", Visible = true, Width = 180, DisplayIndex = 5 },
-            new() { FieldName = "Vouchname", Caption = "Voucher Type", Visible = true, Width = 120, DisplayIndex = 6 },
+            new() { FieldName = "partyname", Caption = "Customer", Visible = true, Width = 260, DisplayIndex = 5 },
+            new() { FieldName = "Vouchname", Caption = "Voucher Type", Visible = true, Width = 150, DisplayIndex = 6 },
             new() { FieldName = "BillGstNo", Caption = "GST No", Visible = true, Width = 120, DisplayIndex = 7 },
-            new() { FieldName = "posname", Caption = "Place of Supply", Visible = true, Width = 140, DisplayIndex = 8 },
-            new() { FieldName = "BillTotal", Caption = "Basic Amount", Visible = true, Width = 120, DisplayIndex = 9 },
+            new() { FieldName = "posname", Caption = "Place of Supply", Visible = true, Width = 190, DisplayIndex = 8 },
+            new() { FieldName = "BillTotal", Caption = "Basic Amount", Visible = true, Width = 150, DisplayIndex = 9 },
             new() { FieldName = "BillNetAmount", Caption = "Total Amount", Visible = true, Width = 140, DisplayIndex = 10 },
             new() { FieldName = "BillCreated", Caption = "Created At", Visible = true, Width = 140, DisplayIndex = 11 },
             new() { FieldName = "BillStatus", Caption = "Status", Visible = true, Width = 140, DisplayIndex = 12 }

@@ -1,5 +1,6 @@
 ﻿@using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Services
+@using System.Text.Json
 @inject BranchService BranchService
 @inject ToasteService ToastService
 @inject LoadingService LoadingService
@@ -169,7 +170,9 @@
         if (branch != null && branch.BranchId > 0)
         {
             // Edit mode – bind directly to the selected branch
-            EditModel = branch;
+           // EditModel = branch;
+            var json = JsonSerializer.Serialize(branch);
+            EditModel = JsonSerializer.Deserialize<Branch>(json) ?? new Branch();
             Title = "Edit Branch";
         }
         else

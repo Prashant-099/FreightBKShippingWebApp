@@ -5,6 +5,7 @@
 @using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Models
 @using FreightBKShippingWebApp.Services
+@using System.Text.Json
 @inject ServiceService ServiceService
 @inject ToasteService ToastService
 @inject LoadingService LoadingService
@@ -277,7 +278,9 @@
         if (model.ServiceId > 0)
         {
             // Edit mode – bind directly to the selected object
-            EditModel = model;
+           // EditModel = model;
+            var json = JsonSerializer.Serialize(model);
+            EditModel = JsonSerializer.Deserialize<Service>(json) ?? new Service();
             Title = "Edit Service";
         }
         else
