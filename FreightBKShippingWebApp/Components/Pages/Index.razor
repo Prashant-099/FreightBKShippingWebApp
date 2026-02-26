@@ -1,7 +1,5 @@
 ﻿@page "/"
-
-
-
+@implements IDisposable
 @using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Services
 @using Microsoft.AspNetCore.Components.Authorization
@@ -22,943 +20,864 @@
 <PageTitle>Dashboard - Freight BK Shipping</PageTitle>
 
 <style>
-    .dashboard-container {
-        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-        min-height: 100vh;
-        padding: 1rem;
-        height: auto;
-        /* overflow-x: auto;
-            overflow-y: auto; */
+    @@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=JetBrains+Mono:wght@500&display=swap');
+
+    /* ── Base ── */
+    .dash-wrap {
+        font-family: 'Sora', sans-serif;
+        background: #f0f4f9;
+        min-height: 100%;
+        padding: 16px;
     }
 
-    .welcome-header {
-        background: linear-gradient(135deg, #67cef8 0%, #ffffff 100%);
-        border-radius: 20px;
-        padding: 1rem;
-        color: black;
-        margin-bottom: 0.5rem;
-        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
-    }
-
-    .year-indicator {
-        background: rgba(255,255,255,0.2);
-        padding: 0.5rem 1rem;
-        border-radius: 10px;
-        font-size: 0.9rem;
-        margin-top: 0.5rem;
-        white-space: nowrap;
-    }
-
-    .swiper-container {
-        position: relative;
-        width: 100%;
-        height: 100%;
-        overflow-x: hidden;
-        overflow-y: hidden;
-        border-radius: 15px;
-        background: transparent;
-    }
-
-    .swiper-wrapper {
+    /* ── Welcome Banner ── */
+    .dash-banner {
+        background: linear-gradient(120deg, #1565c0 0%, #1976d2 60%, #42a5f5 100%);
+        border-radius: 18px;
+        padding: 18px 24px;
         display: flex;
-        transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 18px;
+        box-shadow: 0 4px 20px rgba(21,101,192,.3);
+        animation: fadeUp .4s ease both;
+    }
+
+    .dash-banner-left h2 {
+        font-size: 1.35rem;
+        font-weight: 800;
+        color: #fff;
+        margin: 0 0 2px;
+        letter-spacing: -.3px;
+    }
+
+    .dash-banner-left p {
+        font-size: .78rem;
+        color: rgba(255,255,255,.7);
+        margin: 0;
+    }
+
+    .dash-banner-right {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .dash-fy-badge {
+        background: rgba(255,255,255,.18);
+        border: 1px solid rgba(255,255,255,.3);
+        color: #fff;
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: .8rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background .18s;
+        white-space: nowrap;
+        backdrop-filter: blur(4px);
+    }
+
+        .dash-fy-badge:hover {
+            background: rgba(255,255,255,.28);
+        }
+
+    /* ── Skeleton loading ── */
+    .skel {
+        background: linear-gradient(90deg, #e8edf4 25%, #d4dce8 50%, #e8edf4 75%);
+        background-size: 200% 100%;
+        animation: shimmer 1.4s infinite;
+        border-radius: 10px;
+    }
+
+    @@keyframes shimmer {
+        0% {
+            background-position: 200% 0;
+        }
+
+        100% {
+            background-position: -200% 0;
+        }
+    }
+
+    .skel-card {
+        height: 72px;
+        border-radius: 14px;
+        margin-bottom: 0;
+    }
+
+    .skel-chart {
+        height: 300px;
+        border-radius: 16px;
+    }
+
+    /* ── Stat Cards ── */
+    .stat-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        margin-bottom: 16px;
+        animation: fadeUp .4s .05s ease both;
+    }
+
+    .stat-card {
+        background: #fff;
+        border-radius: 14px;
+        padding: 14px 16px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,.06);
+        border: 1px solid rgba(0,0,0,.04);
+        cursor: pointer;
+        transition: all .2s;
+        text-decoration: none;
+    }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,.1);
+        }
+
+    .stat-icon-wrap {
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        flex-shrink: 0;
+        color: #fff;
+    }
+
+    .si-import {
+        background: linear-gradient(135deg,#1565c0,#42a5f5);
+    }
+
+    .si-export {
+        background: linear-gradient(135deg,#e91e63,#f06292);
+    }
+
+    .si-pending {
+        background: linear-gradient(135deg,#f59e0b,#fbbf24);
+    }
+
+    .si-done {
+        background: linear-gradient(135deg,#10b981,#34d399);
+    }
+
+    .si-cancel {
+        background: linear-gradient(135deg,#ef4444,#f87171);
+    }
+
+    .si-bill {
+        background: linear-gradient(135deg,#6366f1,#818cf8);
+    }
+
+    .si-rev {
+        background: linear-gradient(135deg,#0891b2,#22d3ee);
+    }
+
+    .stat-body {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .stat-label {
+        font-size: .72rem;
+        font-weight: 600;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: .5px;
+        margin-bottom: 2px;
+    }
+
+    .stat-value {
+        font-size: 1.45rem;
+        font-weight: 800;
+        color: #1e293b;
+        line-height: 1;
+        font-family: 'JetBrains Mono', monospace;
+    }
+
+    .stat-sub {
+        font-size: .68rem;
+        color: #94a3b8;
+        margin-top: 2px;
+    }
+
+    /* Revenue card full-width */
+    .stat-card.stat-wide {
+        grid-column: span 2;
+    }
+
+    /* ── Chart Cards ── */
+    .chart-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+        margin-bottom: 16px;
+        animation: fadeUp .4s .1s ease both;
+    }
+
+    .chart-card {
+        background: #fff;
+        border-radius: 16px;
+        padding: 16px;
+        box-shadow: 0 2px 8px rgba(0,0,0,.06);
+        border: 1px solid rgba(0,0,0,.04);
+    }
+
+    .chart-card-full {
+        grid-column: span 2;
+    }
+
+    .chart-title {
+        font-size: .82rem;
+        font-weight: 700;
+        color: #475569;
+        text-transform: uppercase;
+        letter-spacing: .6px;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+    }
+
+        .chart-title i {
+            color: #1565c0;
+        }
+
+    /* ── SuperAdmin Cards ── */
+    .sa-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        margin-bottom: 18px;
+        animation: fadeUp .4s ease both;
+    }
+
+    .sa-card {
+        background: #fff;
+        border-radius: 14px;
+        padding: 16px 18px;
+        box-shadow: 0 2px 8px rgba(0,0,0,.06);
+        border: 1px solid rgba(0,0,0,.04);
+        transition: transform .2s;
+    }
+
+        .sa-card:hover {
+            transform: translateY(-2px);
+        }
+
+    .sa-card-label {
+        font-size: .72rem;
+        font-weight: 600;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: .5px;
+        margin-bottom: 6px;
+    }
+
+    .sa-card-val {
+        font-size: 2rem;
+        font-weight: 800;
+        font-family: 'JetBrains Mono', monospace;
+        line-height: 1;
+    }
+
+    .sa-primary {
+        color: #1565c0;
+    }
+
+    .sa-danger {
+        color: #ef4444;
+    }
+
+    .sa-success {
+        color: #10b981;
+    }
+
+    .sa-info {
+        color: #0891b2;
+    }
+
+    .sa-grid-divider {
+        grid-column: span 4;
+        height: 1px;
+        background: #e2e8f0;
+        margin: 2px 0;
+    }
+
+    /* SA Grid Table */
+    .sa-table-card {
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 2px 8px rgba(0,0,0,.06);
+        border: 1px solid rgba(0,0,0,.04);
+        overflow: hidden;
+        animation: fadeUp .4s .05s ease both;
+    }
+
+    .sa-table-header {
+        padding: 14px 18px;
+        border-bottom: 1px solid #f1f5f9;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .sa-table-title {
+        font-size: .88rem;
+        font-weight: 700;
+        color: #1e293b;
+    }
+
+    .sa-table-count {
+        font-size: .75rem;
+        background: #e8f0fe;
+        color: #1565c0;
+        padding: 3px 10px;
+        border-radius: 10px;
+        font-weight: 600;
+    }
+
+    /* ── Swiper ── */
+    .swiper-outer {
+        position: relative;
+        overflow: hidden;
+        border-radius: 16px;
+    }
+
+    .swiper-track {
+        display: flex;
+        transition: transform .45s cubic-bezier(.4,0,.2,1);
         will-change: transform;
     }
 
     .swiper-slide {
         flex-shrink: 0;
         width: 100%;
-        height: auto;
     }
 
-    /* Navigation Arrows */
-    .swiper-nav {
+    .swiper-btn {
         position: absolute;
         top: 50%;
         transform: translateY(-50%);
-        z-index: 100;
-        background: white;
-        border: none;
-        width: 45px;
-        height: 45px;
+        z-index: 10;
+        width: 36px;
+        height: 36px;
         border-radius: 50%;
+        background: #fff;
+        border: 1.5px solid #e2e8f0;
+        box-shadow: 0 2px 8px rgba(0,0,0,.12);
         display: flex;
         align-items: center;
         justify-content: center;
         cursor: pointer;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        transition: all 0.3s ease;
-        color: #667eea;
-        font-size: 1.2rem;
+        color: #1565c0;
+        transition: all .2s;
+        font-size: .9rem;
     }
 
-        .swiper-nav:hover {
-            background: #667eea;
-            color: white;
-            transform: translateY(-50%) scale(1.1);
+        .swiper-btn:hover:not(:disabled) {
+            background: #1565c0;
+            color: #fff;
+            border-color: #1565c0;
         }
 
-        .swiper-nav.swiper-prev {
-            left: 10px;
-            top: 220px;
-        }
-
-        .swiper-nav.swiper-next {
-            right: 10px;
-            top: 220px;
-        }
-
-        .swiper-nav:disabled {
-            opacity: 0.3;
+        .swiper-btn:disabled {
+            opacity: .35;
             cursor: not-allowed;
         }
 
-    .stat-card {
-        background: white;
-        border-radius: 16px;
-        padding: 0.5rem;
-        height: 100%;
-        transition: all 0.3s ease;
-        border: 1px solid rgba(0,0,0,0.05);
-        box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-        cursor: pointer;
-        display: flex;
-        /* flex-direction: column; */
-        justify-content: space-between;
-        max-height: 71px;
+    .swiper-prev {
+        left: 8px;
     }
 
-    .stat-icon {
-        width: 2.5rem;
-        height: 40px;
-        border-radius: 14px;
+    .swiper-next {
+        right: 8px;
+    }
+
+    /* Dots */
+    .swiper-dots {
         display: flex;
-        align-items: center;
         justify-content: center;
-        font-size: 2rem;
-        /*  margin-bottom: 1rem; */
+        gap: 6px;
+        margin-top: 10px;
     }
 
-    .stat-value {
-        font-size: 25px;
-        font-weight: 700;
-        /*   margin: 0.5rem 0; */
-        line-height: 1;
-        padding-right: 15px;
+    .swiper-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #cbd5e1;
+        border: none;
+        cursor: pointer;
+        transition: all .2s;
+        padding: 0;
     }
 
-    .stat-label {
-        color: black;
-        font-size: 0.89rem;
-        font-weight: 500;
-        /*  text-transform: uppercase; */
-        letter-spacing: 0.5px;
-    }
-
-    .stat-change {
-        font-size: 0.85rem;
-        /* margin-top: 0.5rem; */
-        color: #6c757d;
-    }
-
-    .chart-card {
-        background: white;
-        border-radius: 16px;
-        /*  padding: 1.5rem; */
-        /*  box-shadow: 0 4px 15px rgba(0,0,0,0.08); */
-        height: 379px;
-    }
-
-    .chart-title {
-        padding-left: 1rem;
-        font-size: 0.89rem;
-        font-weight: 500;
-        /*  margin-bottom: 1.5rem; */
-        color: black;
-    }
-
-
-    .stat-import {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    }
-
-    .stat-export {
-        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-    }
-
-    .stat-pending {
-        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-    }
-
-    .stat-complete {
-        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-    }
-
-    .stat-cancelled {
-        background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-    }
-
-    .stat-bills {
-        background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);
-    }
-
-    .stat-revenue {
-        background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
-    }
-
-
-
-    .touch-indicator {
-        display: none;
-        position: absolute;
-        bottom: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        color: rgba(102, 126, 234, 0.6);
-        font-size: 2rem;
-        animation: swipeHint 2s infinite;
-    }
-
-    .chart-card-sale {
-        background: white;
-        border-radius: 16px;
-        /*  padding: 1.5rem; */
-        /*  box-shadow: 0 4px 15px rgba(0,0,0,0.08); */
-        height: 530px;
-    }
-
-    .swiper-slide1 {
-        flex-shrink: 0;
-        width: 100%;
-        height: auto;
-    }
-
-    @@media (max-width: 576px) { /* mobile screens */
-        .swiper-slide1 {
-            max-height: 515px;
-            overflow-y: auto;
+        .swiper-dot.active {
+            width: 18px;
+            border-radius: 4px;
+            background: #1565c0;
         }
 
-        .swiper-slide {
-            max-width: 576px;
-            max-height: 410px;
-            overflow-y: auto;
+    /* ── Empty / Loading ── */
+    .dash-empty {
+        text-align: center;
+        padding: 48px 16px;
+        color: #94a3b8;
+    }
+
+        .dash-empty i {
+            font-size: 3rem;
+            opacity: .3;
+            display: block;
+            margin-bottom: 10px;
         }
 
-        .stat-change {
-            font-size: 0rem;
+    /* ── Animation ── */
+    @@keyframes fadeUp {
+        from {
+            opacity: 0;
+            transform: translateY(14px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* ── Mobile ── */
+    @@media (max-width: 768px) {
+        .dash-wrap {
+            padding: 10px;
+        }
+
+        .stat-grid {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .stat-card.stat-wide {
+            grid-column: span 2;
+        }
+
+        .chart-row {
+            grid-template-columns: 1fr;
+        }
+
+        .chart-card-full {
+            grid-column: span 1;
+        }
+
+        .sa-grid {
+            grid-template-columns: repeat(2,1fr);
+        }
+
+        .sa-grid-divider {
+            grid-column: span 2;
+        }
+
+        .dash-banner-left h2 {
+            font-size: 1.1rem;
+        }
+    }
+
+    @@media (max-width: 480px) {
+        .stat-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .stat-card.stat-wide {
+            grid-column: span 1;
+        }
+
+        .sa-grid {
+            grid-template-columns: 1fr 1fr;
         }
     }
 </style>
 
-<div class="dashboard-container">
-    <!-- Welcome Header -->
-    <div class="welcome-header">
-        <div class="d-flex justify-content-between align-items-center flex-wrap">
-            <div>
-                <h1 class="fw-bold mb-2">
-                    <i class="bi bi-speedometer2 me-2"></i>Welcome, @UserName!
-                </h1>
+<div class="dash-wrap">
 
-            </div>
-            <div class="year-indicator" @onclick="OpenDateFilter">
-                <i class="bi bi-calendar3 me-2"></i>
-                <strong>FY @CurrentYearName</strong>
+    @if (!authReady)
+    {
+        <!-- Loading skeleton while auth state resolves -->
+        <div style="padding:16px">
+            <div class="skel" style="height:80px;border-radius:18px;margin-bottom:16px"></div>
+            <div class="sa-grid">
+                <div class="skel skel-card"></div>
+                <div class="skel skel-card"></div>
+                <div class="skel skel-card"></div>
+                <div class="skel skel-card"></div>
             </div>
         </div>
-    </div>
-
-    @if (isSuperAdmin)
-            { 
-                @if (superAdminData == null)
-                {
-                    <div class="text-center py-5">
-                        <span class="spinner-border text-primary"></span>
-                        <p class="mt-2">Loading dashboard…</p>
-                    </div>
-                } 
-                else
-                {
-                    <div class="swiper-slide1">
-                        <!-- 🔥 SUPER ADMIN DASHBOARD -->
-                        <div class="row g-3 swiper-container">
-
-                            <div class="col-md-3">
-                                <div class="stat-card">
-                                    <div>
-                                        <div class="stat-label">Total Companies</div>
-                                        <div class="stat-value text-primary">@superAdminData?.TotalCompanies</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="col-md-3">
-                                <div class="stat-card">
-                                    <div>
-                                        <div class="stat-label">Expired Companies</div>
-                                        <div class="stat-value text-danger">@superAdminData?.ExpiredCompanies</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="col-md-3">
-                                <div class="stat-card">
-                                    <div>
-                                        <div class="stat-label">Online Companies</div>
-                                        <div class="stat-value text-success">@superAdminData?.OnlineCompanies</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="col-md-3">
-                                <div class="stat-card">
-                                    <div>
-                                        <div class="stat-label">Today's Logins</div>
-                                        <div class="stat-value text-info">@superAdminData?.TodayLogins</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                        </div>
-
-                        <hr />
-
-                        <!-- Company Wise Table -->
-                        <div class="card mt-4 shadow-sm border-0">
-                            <div class="card-header bg-white fw-semibold d-flex justify-content-between align-items-center">
-                                <span>Company Login & User Stats</span>
-                                <span class="text-muted small">
-                                    @superAdminData?.CompanyLoginCounts?.Count() Companies
-                                </span>
-                            </div>
-
-                            <div class="table-wrapper">
-                                <div class="table-responsive">
-                                    @*     <table class="table custom-table mb-0">
-
-                                    <thead>
-                                        <tr>
-                                            <th>Company</th>
-                                            <th>Total Users</th>
-                                            <th>Max Users</th>
-                                            <th>Remaining</th>
-                                            <th>Online</th>
-                                            <th>Total Success</th>
-                                            <th>Total Failed</th>
-                                            <th>Monthly Success</th>
-                                            <th>Expiry</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach (var c in superAdminData?.CompanyLoginCounts ?? new())
-                                        {
-                                            var expiry = superAdminData.CompanyExpiryList
-                                            .FirstOrDefault(x => x.CompanyId == c.CompanyId);
-
-                                            var online = superAdminData.OnlineCompaniesList
-                                            .FirstOrDefault(x => x.CompanyId == c.CompanyId);
-
-                                            <tr>
-                                                <td>@c.CompanyName</td>
-                                                <td>@c.TotalUsers</td>
-                                                <td>@c.MaxUsersAllowed</td>
-                                                <td>@c.RemainingUserSlots</td>
-                                                <td>@(online?.OnlineUsers ?? 0)</td>
-                                                <td>@c.TotalSuccessfulLogins</td>
-                                                <td>@c.TotalFailedLogins</td>
-                                                <td>@c.MonthlySuccessfulLogins</td>
-                                                <td>
-                                                    @if (expiry != null)
-                                                    {
-                                                        <div class="d-flex flex-column">
-                                                            <span class="fw-semibold">
-                                                                @expiry.FinalExpiryDate?.ToString("dd MMM yyyy")
-                                                            </span>
-
-                                                            @if (expiry.IsExpired)
-                                                            {
-                                                                <span class="badge rounded-pill bg-danger-subtle text-danger mt-1">
-                                                                    Expired
-                                                                </span>
-                                                            }
-                                                            else if (expiry.DaysRemaining <= 7)
-                                                            {
-                                                                <span class="badge rounded-pill bg-warning-subtle text-warning mt-1">
-                                                                    @expiry.DaysRemaining days left
-                                                                </span>
-                                                            }
-                                                            else
-                                                            {
-                                                                <span class="badge rounded-pill bg-success-subtle text-success mt-1">
-                                                                    @expiry.DaysRemaining days left
-                                                                </span>
-                                                            }
-                                                        </div>
-                                                    }
-                                                </td>
-
-                                            </tr>
-                                        }
-                                    </tbody>
-                                </table> *@
-
-                                    <DxGrid Data="@superAdminData.CompanyLoginCounts"
-                                            CssClass="dashboard-grid"
-                                            ShowSearchBox="true"
-                                            PageSize="10"
-                                            PageSizeSelectorVisible="true"
-                                            ShowGroupPanel="true"
-                                            FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always"
-                                            FocusedRowEnabled="false"
-                                            ColumnResizeMode="GridColumnResizeMode.ColumnsContainer">
-
-                                        <Columns>
-
-                                            <!-- Company -->
-                                            <DxGridDataColumn Caption="Company" FixedPosition="GridColumnFixedPosition.Left" MinWidth="200">
-                                                <CellDisplayTemplate Context="c">
-                                                    @{
-                                                        var row = (CompanyLoginCountDto)c.DataItem;
-                                                    }
-                                                    <strong class="text-primary">@row.CompanyName</strong>
-                                                </CellDisplayTemplate>
-                                            </DxGridDataColumn>
-                                            @* <DxGridDataColumn Caption="Company"
-                                                              MinWidth="200"
-                                                              Visible="@( IsMobile )">
-                                                <CellDisplayTemplate Context="c">
-                                                    @{
-                                                        var row = (CompanyLoginCountDto)c.DataItem;
-                                                    }
-                                                    <strong class="text-primary">@row.CompanyName</strong>
-                                                </CellDisplayTemplate>
-                                            </DxGridDataColumn> *@
-                                            <!-- Total Users -->
-                                            <DxGridDataColumn Caption="Total Users">
-                                                <CellDisplayTemplate Context="c">
-                                                    @{
-                                                        var row = (CompanyLoginCountDto)c.DataItem;
-                                                    }
-                                                    <span class="badge bg-info-subtle text-info">
-                                                        @row.TotalUsers
-                                                    </span>
-                                                </CellDisplayTemplate>
-                                            </DxGridDataColumn>
-
-                                            <!-- Max Users -->
-                                            <DxGridDataColumn FieldName="MaxUsersAllowed" Caption="Max Users" />
-
-                                            <!-- Remaining -->
-                                            <DxGridDataColumn Caption="Remaining">
-                                                <CellDisplayTemplate Context="c">
-                                                    @{
-                                                        var row = (CompanyLoginCountDto)c.DataItem;
-                                                    }
-                                                    <span class="badge bg-success-subtle text-success">
-                                                        @row.RemainingUserSlots
-                                                    </span>
-                                                </CellDisplayTemplate>
-                                            </DxGridDataColumn>
-
-                                            <!-- Online -->
-                                            <DxGridDataColumn Caption="Online">
-                                                <CellDisplayTemplate Context="c">
-                                                    @{
-                                                        var row = (CompanyLoginCountDto)c.DataItem;
-                                                        var online = superAdminData.OnlineCompaniesList
-                                                        .FirstOrDefault(x => x.CompanyId == row.CompanyId);
-                                                    }
-
-                                                    <span class="badge bg-primary-subtle text-primary">
-                                                        @(online?.OnlineUsers ?? 0)
-                                                    </span>
-                                                </CellDisplayTemplate>
-                                            </DxGridDataColumn>
-
-                                            <!-- Total Success -->
-                                            <DxGridDataColumn Caption="Total Success">
-                                                <CellDisplayTemplate Context="c">
-                                                    @{
-                                                        var row = (CompanyLoginCountDto)c.DataItem;
-                                                    }
-                                                    <span class="fw-semibold text-success">
-                                                        @row.TotalSuccessfulLogins
-                                                    </span>
-                                                </CellDisplayTemplate>
-                                            </DxGridDataColumn>
-
-                                            <!-- Total Failed -->
-                                            <DxGridDataColumn Caption="Total Failed">
-                                                <CellDisplayTemplate Context="c">
-                                                    @{
-                                                        var row = (CompanyLoginCountDto)c.DataItem;
-                                                    }
-                                                    <span class="fw-semibold text-danger">
-                                                        @row.TotalFailedLogins
-                                                    </span>
-                                                </CellDisplayTemplate>
-                                            </DxGridDataColumn>
-
-                                            <!-- Monthly Success -->
-                                            <DxGridDataColumn FieldName="MonthlySuccessfulLogins"
-                                                              Caption="Monthly Success" />
-
-                                            <!-- Expiry -->
-                                            <DxGridDataColumn Caption="Expiry" FixedPosition="GridColumnFixedPosition.Left" MinWidth="150" FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always">
-                                                <CellDisplayTemplate Context="c">
-                                                    @{
-                                                        var row = (CompanyLoginCountDto)c.DataItem;
-                                                        var expiry = superAdminData.CompanyExpiryList
-                                                        .FirstOrDefault(x => x.CompanyId == row.CompanyId);
-                                                    }
-
-                                                    @if (expiry != null)
-                                                    {
-                                                        <div class="d-flex flex-column">
-                                                            <span class="fw-semibold">
-                                                                @expiry.FinalExpiryDate?.ToString("dd MMM yyyy")
-                                                            </span>
-
-                                                            @if (expiry.IsExpired)
-                                                            {
-                                                                <span class="badge bg-danger-subtle text-danger mt-1">
-                                                                    Expired
-                                                                </span>
-                                                            }
-                                                            else if (expiry.DaysRemaining <= 7)
-                                                            {
-                                                                <span class="badge bg-warning-subtle text-warning mt-1">
-                                                                    @expiry.DaysRemaining days left
-                                                                </span>
-                                                            }
-                                                            else
-                                                            {
-                                                                <span class="badge bg-success-subtle text-success mt-1">
-                                                                    @expiry.DaysRemaining days left
-                                                                </span>
-                                                            }
-                                                        </div>
-                                                    }
-                                                </CellDisplayTemplate>
-                                            </DxGridDataColumn>
-
-                                        </Columns>
-                                    </DxGrid>
-
-
-                                </div>
-                        </div>
-                    </div>
-                </div>
-                }
-       }     
+    }
     else
     {
-
-        <!-- Swiper Container -->
-        <div class="swiper-container" @ref="swiperRef" @ontouchstart="HandleTouchStart" @ontouchmove="HandleTouchMove" @ontouchend="HandleTouchEnd">
-            <button class="swiper-nav swiper-prev" @onclick="PreviousSlide" disabled="@(currentSlide == 0)">
-                <i class="bi bi-chevron-left"></i>
-            </button>
-            <button class="swiper-nav swiper-next" @onclick="NextSlide" disabled="@(currentSlide == 1)">
-                <i class="bi bi-chevron-right"></i>
-            </button>
-
-            <div class="swiper-wrapper" style="transform: translateX(-@(currentSlide * 100)%)">
-
-                <!-- Slide 1: Statistics Cards -->
-                <div class="swiper-slide1">
-
-                    <div class="row g-3 g-md-4">
-                        <!-- Import Jobs -->
-                        <div class="col-12 col-sm-3">
-                            <div class="stat-card d-flex align-items-center"
-                                 @onclick="@(() => Navigation.NavigateTo("/jobimport"))">
-
-                                <!-- Column 1: Icon -->
-                                <div class="stat-icon stat-import me-3">
-                                    <i class="bi bi-box-arrow-in-down text-white"></i>
-                                </div>
-
-                                <!-- Column 2: Details -->
-                                <div class="flex-grow-1">
-                                    <div class="stat-label">Import Active</div>
-
-                                    <div class="stat-change">
-                                        <i class="bi bi-arrow-up"></i> @stats.ImportJobsThisMonth this month
-                                    </div>
-                                </div>
-                                <div class="stat-value text-primary ms-3" style="min-width: 5ch; text-align:right; font-variant-numeric: tabular-nums;">@stats.TotalImportJobs</div>
-                            </div>
-                        </div>
-
-
-                        <!-- Export Jobs -->
-                        <div class="col-12 col-sm-3 ">
-                            <div class="stat-card d-flex align-items-center" @onclick="@(() => Navigation.NavigateTo("/jobexport"))">
-                                <div class="stat-icon stat-export me-3">
-                                    <i class="bi bi-box-arrow-up text-white"></i>
-
-                                </div>
-                                <div class="flex-grow-1">
-                                    <div class="stat-label">Export Active</div>
-                                    <div class="stat-change">
-                                        <i class="bi bi-arrow-up"></i> @stats.ExportJobsThisMonth this month
-                                    </div>
-                                </div>
-
-                                <div class="stat-value text-danger ms-3" style="min-width: 5ch; text-align:right; font-variant-numeric: tabular-nums;">@stats.TotalExportJobs</div>
-
-                            </div>
-                        </div>
-
-                        <!-- Pending Jobs -->
-                        <div class="col-12 col-sm-3">
-                            <div class="stat-card d-flex align-items-center" @onclick="@(() => Navigation.NavigateTo("/jobregister"))">
-                                <div class="stat-icon stat-pending me-3">
-                                    <i class="bi bi-clock-history text-white"></i>
-                                </div>
-                                <div class="flex-grow-1">
-                                    <div class="stat-label">Pending</div>
-                                    <div class="stat-change text-warning">
-                                        <i class="bi bi-exclamation-triangle"></i> Requires attention
-                                    </div>
-                                </div>
-
-                                <div class="stat-value text-infoms-3 ms-3" style="min-width: 5ch; text-align:right; font-variant-numeric: tabular-nums;">@stats.PendingJobs</div>
-
-                            </div>
-                        </div>
-
-                        <!-- Completed Jobs -->
-                        <div class="col-12 col-sm-3 ">
-                            <div class="stat-card d-flex align-items-center" @onclick="@(() => Navigation.NavigateTo("/jobregister"))">
-                                <div class="stat-icon stat-complete  me-3">
-                                    <i class="bi bi-check-circle text-white"></i>
-                                </div>
-                                <div class="flex-grow-1">
-                                    <div class="stat-label">Completed</div>
-                                    <div class="stat-change">
-                                        <i class="bi bi-graph-up"></i> @stats.CompletionRate% rate
-                                    </div>
-                                </div>
-
-                                <div class="stat-value text-success ms-3" style="min-width: 5ch; text-align:right; font-variant-numeric: tabular-nums;">@stats.CompletedJobs</div>
-
-                            </div>
-                        </div>
-                        <!-- Cancelled -->
-                        <div class="col-12 col-sm-3 mt-2">
-                            <div class="stat-card  d-flex align-items-center" @onclick="@(() => Navigation.NavigateTo("/jobregister"))">
-                                <div class="stat-icon stat-cancelled me-3">
-                                    <i class="bi bi-x-circle text-white"></i>
-                                </div>
-                                <div class="flex-grow-1">
-                                    <div class="stat-label">Cancelled</div>
-                                    <div class="stat-change">
-                                        <i class="bi bi-arrow-down"></i> @stats.CancellationRate% rate
-                                    </div>
-                                </div>
-                                <div class="stat-value text-danger  ms-3" style="min-width: 5ch; text-align:right; font-variant-numeric: tabular-nums;">@stats.CancelledJobs</div>
-
-                            </div>
-                        </div>
-                        <!-- Total Bills -->
-                        <div class="col-12 col-sm-3 mt-2 ">
-                            <div class="stat-card  d-flex align-items-center" @onclick="@(() => Navigation.NavigateTo("/bill"))">
-                                <div class="stat-icon stat-bills me-3">
-                                    <i class="bi bi-receipt text-white "></i>
-                                </div>
-                                <div class="flex-grow-1">
-                                    <div class="stat-label">Total Invoices</div>
-                                    <div class="stat-change">
-                                        <i class="bi bi-arrow-up"></i> @stats.BillsThisMonth this month
-                                    </div>
-                                </div>
-
-                                <div class="stat-value text-info ms-3" style="min-width: 5ch; text-align:right; font-variant-numeric: tabular-nums;">@stats.TotalBills</div>
-
-                            </div>
-                        </div>
-
-                        <!-- Revenue -->
-                        <div class="col-12 col-sm-6 mt-2">
-                            <div class="stat-card  d-flex align-items-center" @onclick="@(() => Navigation.NavigateTo("/invoiceregister"))">
-                                <div class="stat-icon stat-revenue me-3">
-                                    <i class="bi bi-currency-rupee text-white"></i>
-                                </div>
-                                <div class="flex-grow-1">
-                                    <div class="stat-label">Total Revenue</div>
-                                    <div class="stat-change">
-                                        <i class="bi bi-graph-up"></i> ₹@stats.RevenueThisMonth.ToString("N0") this month
-                                    </div>
-                                </div>
-                                <div class="stat-value text-success ms-3" style="min-width: 5ch; text-align:right; font-variant-numeric: tabular-nums;">₹@stats.TotalRevenue.ToString("N0")</div>
-
-                            </div>
-                        </div>
-
-                        <!-- Job Status Chart -->
-                        <div class="col-12 col-md-6 mt-2">
-                            <div class="chart-card">
-                                <div class="chart-title pt-2">
-                                    <i class="bi bi-pie-chart-fill me-2"></i>Job Status Distribution
-                                </div>
-                                @if (jobStatusData != null && jobStatusData.Any(x => !string.IsNullOrWhiteSpace(x.Label)))
-                                {
-                                    <DxChart Data="@jobStatusData">
-                                        <DxChartLegend Visible="true"
-                                                       Position="RelativePosition.Outside"
-                                                       HorizontalAlignment="HorizontalAlignment.Center" />
-
-                                        <DxChartPieSeries ArgumentField="@((JobTypeData s) => s.Label)"
-                                                          ValueField="@((JobTypeData s) => s.Count)"
-                                                          Name="Jobs">
-                                            <DxChartSeriesLabel Visible="true">
-                                                <DxChartSeriesLabelConnector Visible="true" />
-                                            </DxChartSeriesLabel>
-                                        </DxChartPieSeries>
-                                    </DxChart>
-                                }
-                                else
-                                {
-                                    <div class="text-center py-5 text-muted">
-                                        <i class="bi bi-pie-chart" style="font-size:3rem;"></i>
-                                        <p>No job status data available</p>
-                                    </div>
-                                }
-
-                            </div>
-                        </div>
-
-                        <!-- Job Type Chart -->
-                        <div class="col-12 col-md-6 mt-2">
-                            <div class="chart-card">
-                                <div class="chart-title pt-2">
-                                    <i class="bi bi-bar-chart-fill me-2"></i>Import vs Export Jobs
-                                </div>
-                                <DxChart Data="@jobTypeData" Width="100%" Height="320px">
-                                    <DxChartLegend Visible="true" Position="RelativePosition.Outside" />
-
-                                    <!-- Import Series -->
-                                    <DxChartBarSeries T="JobTypeData"
-                                                      TArgument="string"
-                                                      TValue="int"
-                                                      Name="Import"
-                                                      ArgumentField="@(j => j.Label)"
-                                                      ValueField="@(j => j.Count)"
-                                                      Filter="@(j => j.Label == "IMPORT")">
-                                    </DxChartBarSeries>
-
-                                    <!-- Export Series -->
-                                    <DxChartBarSeries T="JobTypeData"
-                                                      TArgument="string"
-                                                      TValue="int"
-                                                      Name="Export"
-                                                      ArgumentField="@(j => j.Label)"
-                                                      ValueField="@(j => j.Count)"
-                                                      Filter="@(j => j.Label == "EXPORT")">
-                                    </DxChartBarSeries>
-                                </DxChart>
-                            </div>
-                        </div>
-
-
+        <!-- ══ BANNER ══ -->
+        <div class="dash-banner">
+            <div class="dash-banner-left">
+                <h2>⚡ Welcome, @UserName!</h2>
+                <p>@DateTime.Now.ToString("dddd, dd MMMM yyyy")</p>
+            </div>
+            <div class="dash-banner-right">
+                @if (!isSuperAdmin)
+                {
+                    <div class="dash-fy-badge" @onclick="OpenDateFilter">
+                        <i class="bi bi-calendar3 me-1"></i> FY @CurrentYearName
                     </div>
+                }
+            </div>
+        </div>
 
-
+        <!-- ══ SUPERADMIN DASHBOARD ══ -->
+        @if (isSuperAdmin)
+        {
+            @if (superAdminData == null)
+            {
+                <!-- Skeleton -->
+                <div class="sa-grid">
+                    <div class="skel skel-card"></div>
+                    <div class="skel skel-card"></div>
+                    <div class="skel skel-card"></div>
+                    <div class="skel skel-card"></div>
+                </div>
+                <div class="skel skel-chart"></div>
+            }
+            else
+            {
+                <!-- SA Stat Cards -->
+                <div class="sa-grid">
+                    <div class="sa-card">
+                        <div class="sa-card-label"><i class="bi bi-buildings me-1"></i>Total Companies</div>
+                        <div class="sa-card-val sa-primary">@superAdminData.TotalCompanies</div>
+                    </div>
+                    <div class="sa-card">
+                        <div class="sa-card-label"><i class="bi bi-exclamation-triangle me-1"></i>Expired</div>
+                        <div class="sa-card-val sa-danger">@superAdminData.ExpiredCompanies</div>
+                    </div>
+                    <div class="sa-card">
+                        <div class="sa-card-label"><i class="bi bi-wifi me-1"></i>Online Now</div>
+                        <div class="sa-card-val sa-success">@superAdminData.OnlineCompanies</div>
+                    </div>
+                    <div class="sa-card">
+                        <div class="sa-card-label"><i class="bi bi-person-check me-1"></i>Today's Logins</div>
+                        <div class="sa-card-val sa-info">@superAdminData.TodayLogins</div>
+                    </div>
                 </div>
 
-
-
-
-                <div class="swiper-slide">
-
-                    <div class="row g-1">
-
-                        <!-- Revenue Chart -->
-                        <div class="col-12">
-                            <div class="chart-card-sale">
-                                <h5 class="chart-title d-flex align-items-center justify-content-center pt-2">
-                                    <i class="bi bi-graph-up me-2"></i>Monthly Revenue Trend - FY @CurrentYearName
-                                </h5>
-
-                                @if (revenueData != null && revenueData.Any())
-                                {
-                                    <DxChart Data="@revenueData.OrderBy(x => x.MonthOrder)" Width="100%" Height="480px">
-                                        <DxChartLegend Visible="false" />
-
-                                        <!-- Use MonthName for X-axis display -->
-                                        <DxChartLineSeries ArgumentField="@((MonthlyRevenueDto r) => r.MonthName)"
-                                                           ValueField="@((MonthlyRevenueDto r) => Math.Round((decimal)r.Amount, 3))"
-                                                           Name="Revenue">
-                                            <DxChartSeriesPoint Symbol="ChartPointSymbol.Circle" Size="8" />
-                                            @* <DxChartSeriesLabel Visible="true"
-                                                                Format="ChartElementFormat.ShortDate"
-                                                                Position="RelativePosition.Outside" /> *@
-                                        </DxChartLineSeries>
-
-                                        @* <DxChartArgumentAxis>
-                                            <DxChartAxisLabel />
-                                        </DxChartArgumentAxis> *@
-
-                                        @* <DxChartValueAxis>
-                                            <DxChartAxisLabel Format="ChartElementFormat.ShortDate" />
-                                            <DxChartAxisTitle Text="Revenue (₹)" />
-                                        </DxChartValueAxis> *@
-
-                                        <DxChartTooltip Enabled="true">
-                                            <div class="p-2">
-                                                <strong>@context.Point.Argument</strong><br />
-                                                Revenue: ₹@(((decimal)context.Point.Value).ToString("N0"))
-                                            </div>
-                                        </DxChartTooltip>
-                                    </DxChart>
-                                }
-                                else
-                                {
-                                    <div class="text-center py-5">
-                                        <i class="bi bi-graph-up" style="font-size: 4rem; opacity: 0.3;"></i>
-                                        <p class="mt-3 text-muted">No revenue data available for FY @CurrentYearName</p>
-                                    </div>
-                                }
-                            </div>
+                <!-- SA Table -->
+                <div class="sa-table-card">
+                    <div class="sa-table-header">
+                        <div class="sa-table-title">
+                            <i class="bi bi-table me-2" style="color:#1565c0"></i>Company Login & User Stats
                         </div>
+                        <span class="sa-table-count">@(superAdminData.CompanyLoginCounts?.Count() ?? 0) Companies</span>
+                    </div>
 
-
-                        @*   <!-- Recent Activity -->
-                        <div class="col-6 col-md-3">
-                            <div class="chart-card">
-                                <h5 class="chart-title">
-                                    <i class="bi bi-activity me-2"></i>Recent Activity
-                                </h5>
-                                <div style="max-height: 320px; overflow-y: auto; overflow-x: hidden;">
-                                    @if (recentActivities.Any())
-                                    {
-                                        @foreach (var activity in recentActivities)
-                                        {
-                                            <div class="activity-item">
-                                                <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
-                                                    <div class="flex-grow-1">
-                                                        <strong>@activity.Title</strong>
-                                                        <p class="mb-1 text-muted small">@activity.Description</p>
-                                                        <span class="status-badge badge-@activity.Status.ToLower()">
-                                                            @activity.Status
-                                                        </span>
-                                                    </div>
-                                                    <div class="activity-time text-end">
-                                                        @activity.Time.ToString("dd MMM, hh:mm tt")
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        }
+                    <DxGrid Data="@superAdminData.CompanyLoginCounts"
+                            ShowSearchBox="true"
+                            PageSize="10"
+                            PageSizeSelectorVisible="true"
+                            ShowGroupPanel="false"
+                            FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always"
+                            FocusedRowEnabled="false"
+                            ColumnResizeMode="GridColumnResizeMode.ColumnsContainer">
+                        <Columns>
+                            <DxGridDataColumn Caption="Company" FixedPosition="GridColumnFixedPosition.Left" MinWidth="180">
+                                <CellDisplayTemplate Context="c">
+                                    @{
+                                        var r = (CompanyLoginCountDto)c.DataItem;
                                     }
-                                    else
+                                    <strong style="color:#1565c0">@r.CompanyName</strong>
+                                </CellDisplayTemplate>
+                            </DxGridDataColumn>
+
+                            <DxGridDataColumn Caption="Users">
+                                <CellDisplayTemplate Context="c">
+                                    @{
+                                        var r = (CompanyLoginCountDto)c.DataItem;
+                                    }
+                                    <span class="badge bg-info-subtle text-info">@r.TotalUsers / @r.MaxUsersAllowed</span>
+                                </CellDisplayTemplate>
+                            </DxGridDataColumn>
+
+                            <DxGridDataColumn Caption="Remaining">
+                                <CellDisplayTemplate Context="c">
+                                    @{
+                                        var r = (CompanyLoginCountDto)c.DataItem;
+                                    }
+                                    <span class="badge bg-success-subtle text-success">@r.RemainingUserSlots</span>
+                                </CellDisplayTemplate>
+                            </DxGridDataColumn>
+
+                            <DxGridDataColumn Caption="Online">
+                                <CellDisplayTemplate Context="c">
+                                    @{
+                                        var r = (CompanyLoginCountDto)c.DataItem;
+                                        var o = superAdminData.OnlineCompaniesList.FirstOrDefault(x => x.CompanyId == r.CompanyId);
+                                    }
+                                    <span class="badge bg-primary-subtle text-primary">@(o?.OnlineUsers ?? 0)</span>
+                                </CellDisplayTemplate>
+                            </DxGridDataColumn>
+
+                            <DxGridDataColumn Caption="Success Logins">
+                                <CellDisplayTemplate Context="c">
+                                    @{
+                                        var r = (CompanyLoginCountDto)c.DataItem;
+                                    }
+                                    <span style="color:#10b981;font-weight:600">@r.TotalSuccessfulLogins</span>
+                                </CellDisplayTemplate>
+                            </DxGridDataColumn>
+
+                            <DxGridDataColumn Caption="Failed">
+                                <CellDisplayTemplate Context="c">
+                                    @{
+                                        var r = (CompanyLoginCountDto)c.DataItem;
+                                    }
+                                    <span style="color:#ef4444;font-weight:600">@r.TotalFailedLogins</span>
+                                </CellDisplayTemplate>
+                            </DxGridDataColumn>
+
+                            <DxGridDataColumn FieldName="MonthlySuccessfulLogins" Caption="Monthly" />
+
+                            <DxGridDataColumn Caption="Expiry" MinWidth="130">
+                                <CellDisplayTemplate Context="c">
+                                    @{
+                                        var r = (CompanyLoginCountDto)c.DataItem;
+                                        var exp = superAdminData.CompanyExpiryList.FirstOrDefault(x => x.CompanyId == r.CompanyId);
+                                    }
+                                    @if (exp != null)
                                     {
-                                        <div class="text-center text-muted py-5">
-                                            <i class="bi bi-inbox" style="font-size: 3rem; opacity: 0.4;"></i>
-                                            <p class="mt-3">No recent activity</p>
+                                        <div>
+                                            <div style="font-size:.8rem;font-weight:600">@exp.FinalExpiryDate?.ToString("dd MMM yyyy")</div>
+                                            @if (exp.IsExpired)
+                                            {
+                                                <span class="badge bg-danger-subtle text-danger">Expired</span>
+                                            }
+                                            else if (exp.DaysRemaining <= 7)
+                                            {
+                                                <span class="badge bg-warning-subtle text-warning">@exp.DaysRemaining days left</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-success-subtle text-success">@exp.DaysRemaining days left</span>
+                                            }
                                         </div>
                                     }
-                                </div>
-                            </div>
-                        </div> *@
+                                </CellDisplayTemplate>
+                            </DxGridDataColumn>
+                        </Columns>
+                    </DxGrid>
+                </div>
+            }
+        }
+        else
+        {
+            <!-- ══ NORMAL USER DASHBOARD ══ -->
+            @if (isLoading)
+            {
+                <!-- Skeleton Loading -->
+                <div class="stat-grid">
+                    @for (int i = 0; i < 7; i++)
+                    {
+                        <div class="skel skel-card @(i == 5 ? "stat-wide" : "")"></div>
+                    }
+                </div>
+                <div class="chart-row">
+                    <div class="skel skel-chart"></div>
+                    <div class="skel skel-chart"></div>
+                </div>
+            }
+            else
+            {
+                <!-- Stat Cards -->
+                <div class="stat-grid">
+
+                    <div class="stat-card" @onclick="@(() => Navigation.NavigateTo("/jobimport"))">
+                        <div class="stat-icon-wrap si-import"><i class="bi bi-box-arrow-in-down"></i></div>
+                        <div class="stat-body">
+                            <div class="stat-label">Import Active</div>
+                            <div class="stat-value">@stats.TotalImportJobs</div>
+                            <div class="stat-sub">↑ @stats.ImportJobsThisMonth this month</div>
+                        </div>
                     </div>
 
+                    <div class="stat-card" @onclick="@(() => Navigation.NavigateTo("/jobexport"))">
+                        <div class="stat-icon-wrap si-export"><i class="bi bi-box-arrow-up"></i></div>
+                        <div class="stat-body">
+                            <div class="stat-label">Export Active</div>
+                            <div class="stat-value" style="color:#e91e63">@stats.TotalExportJobs</div>
+                            <div class="stat-sub">↑ @stats.ExportJobsThisMonth this month</div>
+                        </div>
+                    </div>
 
+                    <div class="stat-card" @onclick="@(() => Navigation.NavigateTo("/jobregister"))">
+                        <div class="stat-icon-wrap si-pending"><i class="bi bi-clock-history"></i></div>
+                        <div class="stat-body">
+                            <div class="stat-label">Pending</div>
+                            <div class="stat-value" style="color:#f59e0b">@stats.PendingJobs</div>
+                            <div class="stat-sub" style="color:#f59e0b">⚠ Requires attention</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card" @onclick="@(() => Navigation.NavigateTo("/jobregister"))">
+                        <div class="stat-icon-wrap si-done"><i class="bi bi-check-circle"></i></div>
+                        <div class="stat-body">
+                            <div class="stat-label">Completed</div>
+                            <div class="stat-value" style="color:#10b981">@stats.CompletedJobs</div>
+                            <div class="stat-sub">@stats.CompletionRate% rate</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card" @onclick="@(() => Navigation.NavigateTo("/jobregister"))">
+                        <div class="stat-icon-wrap si-cancel"><i class="bi bi-x-circle"></i></div>
+                        <div class="stat-body">
+                            <div class="stat-label">Cancelled</div>
+                            <div class="stat-value" style="color:#ef4444">@stats.CancelledJobs</div>
+                            <div class="stat-sub">@stats.CancellationRate% rate</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card" @onclick="@(() => Navigation.NavigateTo("/bill"))">
+                        <div class="stat-icon-wrap si-bill"><i class="bi bi-receipt"></i></div>
+                        <div class="stat-body">
+                            <div class="stat-label">Total Invoices</div>
+                            <div class="stat-value" style="color:#6366f1">@stats.TotalBills</div>
+                            <div class="stat-sub">↑ @stats.BillsThisMonth this month</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card stat-wide" @onclick="@(() => Navigation.NavigateTo("/invoiceregister"))">
+                        <div class="stat-icon-wrap si-rev"><i class="bi bi-currency-rupee"></i></div>
+                        <div class="stat-body">
+                            <div class="stat-label">Total Revenue</div>
+                            <div class="stat-value" style="color:#0891b2">₹@stats.TotalRevenue.ToString("N0")</div>
+                            <div class="stat-sub">↑ ₹@stats.RevenueThisMonth.ToString("N0") this month</div>
+                        </div>
+                    </div>
 
                 </div>
-            </div>
 
-        </div>
-        <div class="touch-indicator">
-            <i class="bi bi-chevron-compact-right"></i>
-        </div>
+                <!-- Charts — Slide 1: Pie + Bar -->
+                <div class="chart-row">
+                    <div class="chart-card">
+                        <div class="chart-title"><i class="bi bi-pie-chart-fill"></i> Job Status Distribution</div>
+                        @if (jobStatusData?.Any(x => !string.IsNullOrWhiteSpace(x.Label)) == true)
+                        {
+                            <DxChart Data="@jobStatusData" Height="260px">
+                                <DxChartLegend Visible="true" Position="RelativePosition.Outside" HorizontalAlignment="HorizontalAlignment.Center" />
+                                <DxChartPieSeries ArgumentField="@((JobTypeData s) => s.Label)"
+                                                  ValueField="@((JobTypeData s) => s.Count)" Name="Jobs">
+                                    <DxChartSeriesLabel Visible="true">
+                                        <DxChartSeriesLabelConnector Visible="true" />
+                                    </DxChartSeriesLabel>
+                                </DxChartPieSeries>
+                            </DxChart>
+                        }
+                        else
+                        {
+                            <div class="dash-empty"><i class="bi bi-pie-chart"></i><p>No data</p></div>
+                        }
+                    </div>
 
-    }
+                    <div class="chart-card">
+                        <div class="chart-title"><i class="bi bi-bar-chart-fill"></i> Import vs Export</div>
+                        <DxChart Data="@jobTypeData" Width="100%" Height="260px">
+                            <DxChartLegend Visible="true" Position="RelativePosition.Outside" />
+                            <DxChartBarSeries T="JobTypeData" TArgument="string" TValue="int"
+                                              Name="Import"
+                                              ArgumentField="@(j => j.Label)"
+                                              ValueField="@(j => j.Count)"
+                                              Filter="@(j => j.Label == "IMPORT")" />
+                            <DxChartBarSeries T="JobTypeData" TArgument="string" TValue="int"
+                                              Name="Export"
+                                              ArgumentField="@(j => j.Label)"
+                                              ValueField="@(j => j.Count)"
+                                              Filter="@(j => j.Label == "EXPORT")" />
+                        </DxChart>
+                    </div>
+                </div>
 
-    <!-- Pagination Dots -->
-    @* <div class="swiper-pagination">
-            <button class="swiper-dot @(currentSlide == 0 ? "active" : "")" @onclick="@(() => GoToSlide(0))" aria-label="Go to slide 1"></button>
-            <button class="swiper-dot @(currentSlide == 1 ? "active" : "")" @onclick="@(() => GoToSlide(1))" aria-label="Go to slide 2"></button>
-            <button class="swiper-dot @(currentSlide == 2 ? "active" : "")" @onclick="@(() => GoToSlide(2))" aria-label="Go to slide 3"></button>
-        </div> *@
-    
-</div>
+                <!-- Chart — Slide 2: Revenue Trend -->
+                <div class="chart-row">
+                    <div class="chart-card chart-card-full">
+                        <div class="chart-title"><i class="bi bi-graph-up"></i> Monthly Revenue Trend — FY @CurrentYearName</div>
+                        @if (revenueData?.Any() == true)
+                        {
+                            <DxChart Data="@revenueData.OrderBy(x => x.MonthOrder)" Width="100%" Height="280px">
+                                <DxChartLegend Visible="false" />
+                                <DxChartLineSeries ArgumentField="@((MonthlyRevenueDto r) => r.MonthName)"
+                                                   ValueField="@((MonthlyRevenueDto r) => Math.Round((decimal)r.Amount, 2))"
+                                                   Name="Revenue">
+                                    <DxChartSeriesPoint Symbol="ChartPointSymbol.Circle" Size="7" />
+                                </DxChartLineSeries>
+                                <DxChartTooltip Enabled="true">
+                                    <div style="padding:8px 12px;font-size:.82rem">
+                                        <strong>@context.Point.Argument</strong><br />
+                                        ₹@(((decimal)context.Point.Value).ToString("N0"))
+                                    </div>
+                                </DxChartTooltip>
+                            </DxChart>
+                        }
+                        else
+                        {
+                            <div class="dash-empty">
+                                <i class="bi bi-graph-up"></i>
+                                <p>No revenue data for FY @CurrentYearName</p>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        }
+
+    } 
+    @* < !--end authReady else --> *@
+</div> <!-- /.dash-wrap -->
+
 <DateFilterPage @ref="dateFilterPopup" OnFilterApplied="HandleFilterApplied" />
-@code {
-    // bool IsMobile;
 
-    // protected override void OnAfterRender(bool firstRender)
-    // {
-    //     if (firstRender)
-    //     {
-    //         IsMobile = JSRuntime.InvokeAsync<bool>(
-    //             "eval", "window.innerWidth < 768").Result;
-    //         StateHasChanged();
-    //     }
-    // }
-    private List<Status> statusList = new();
-    private DateFilterPage dateFilterPopup;
+@code {
+    // ── State ────────────────────────────────────────────
     private string UserName { get; set; } = "User";
     private string CurrentYearName { get; set; } = "";
     private bool isLoading = true;
-    private int currentSlide = 0;
-    private ElementReference swiperRef;
-
-    // Touch/Swipe handling
-    private double touchStartX = 0;
-    private double touchEndX = 0;
-    private const double SWIPE_THRESHOLD = 50;
+    private bool isSuperAdmin = false;
+    private bool authReady = false;  // ✅ prevents flash before role is known
 
     private DashboardStats stats = new();
     private List<JobTypeData> jobStatusData = new();
     private List<JobTypeData> jobTypeData = new();
     private List<MonthlyRevenueDto> revenueData = new();
+    private SuperAdminDashboardDto? superAdminData;
     private DateTime? filterFromDate;
     private DateTime? filterToDate;
 
-    private bool isSuperAdmin = false;
-    private SuperAdminDashboardDto? superAdminData;
+    private DateFilterPage dateFilterPopup = default!;
 
-
-
-    private void OpenDateFilter()
-    {
-        dateFilterPopup.Show(filterFromDate, filterToDate, null, null, null);
-    }
-
-    // Handle Filter Applied
-    private async Task HandleFilterApplied((DateTime? FromDate, DateTime? ToDate, string? JobType, int? vouchertype, string? OutstandingType) f)
-    {
-        filterFromDate = f.FromDate;
-        filterToDate = f.ToDate;
-
-        await LoadDashboardData();
-    }
-
-    // Clear Date Filter
-    private async Task ClearDateFilter()
-    {
-        filterFromDate = null;
-        filterToDate = null;
-
-        await LoadDashboardData();
-        ToastService.Info("Date filter cleared.");
-    }
-
+    // ── Init — role check FIRST, then load correct data ──
     protected override async Task OnInitializedAsync()
     {
         try
         {
             var authState = await AuthStateProvider.GetAuthenticationStateAsync();
             var user = authState.User;
-            if (user.Identity != null && user.Identity.IsAuthenticated)
-            {
-                UserName = user.Identity.Name ?? "User";
-                isSuperAdmin = user.IsInRole("SuperAdmin");
 
-            }
+            if (user.Identity?.IsAuthenticated != true)
+                return;
+
+            UserName = user.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value
+                          ?? user.Identity.Name ?? "User";
+            isSuperAdmin = user.IsInRole("SuperAdmin");
+            authReady = true;   // ✅ role confirmed, now safe to render
+            StateHasChanged();
 
             if (isSuperAdmin)
             {
@@ -967,11 +886,10 @@
             else
             {
                 CurrentYearName = YearStatechangeService.Years
-                    .FirstOrDefault(y => y.YearId == YearStatechangeService.SelectedYearId)?
-                    .YearName ?? DateTime.Now.Year.ToString();
+                    .FirstOrDefault(y => y.YearId == YearStatechangeService.SelectedYearId)?.YearName
+                    ?? DateTime.Now.Year.ToString();
 
                 YearStatechangeService.OnYearChanged += HandleYearChanged;
-
                 await LoadDashboardData();
             }
         }
@@ -979,247 +897,93 @@
         {
             ToastService.Error($"Error loading dashboard: {ex.Message}");
         }
-        // finally
-        // {
-        //     isLoading = false;
-        // }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
     }
 
+    // ── SuperAdmin Load ───────────────────────────────────
     private async Task LoadSuperAdminDashboard()
     {
         try
         {
-            isLoading = true;
             superAdminData = await DashboardService.GetSuperAdminDashboardAsync();
         }
         catch (Exception ex)
         {
-            ToastService.Error($"Error loading super admin dashboard: {ex.Message}");
-        }
-        finally
-        {
-            isLoading = false;
-            StateHasChanged();
+            ToastService.Error($"SuperAdmin dashboard error: {ex.Message}");
         }
     }
 
-
-    // Carousel Navigation
-    private void NextSlide()
-    {
-        if (currentSlide < 1)
-        {
-            currentSlide++;
-            StateHasChanged();
-        }
-    }
-
-    private void PreviousSlide()
-    {
-        if (currentSlide > 0)
-        {
-            currentSlide--;
-            StateHasChanged();
-        }
-    }
-
-    private void GoToSlide(int slideIndex)
-    {
-        if (slideIndex >= 0 && slideIndex <= 1)
-        {
-            currentSlide = slideIndex;
-            StateHasChanged();
-        }
-    }
-
-    // Touch/Swipe Handlers
-    private void HandleTouchStart(TouchEventArgs e)
-    {
-        if (e.Touches.Length > 0)
-        {
-            touchStartX = e.Touches[0].ClientX;
-        }
-    }
-
-    private void HandleTouchMove(TouchEventArgs e)
-    {
-        if (e.Touches.Length > 0)
-        {
-            touchEndX = e.Touches[0].ClientX;
-        }
-    }
-
-    private void HandleTouchEnd(TouchEventArgs e)
-    {
-        if (touchStartX - touchEndX > SWIPE_THRESHOLD)
-        {
-            // Swipe left - next slide
-            NextSlide();
-        }
-        else if (touchEndX - touchStartX > SWIPE_THRESHOLD)
-        {
-            // Swipe right - previous slide
-            PreviousSlide();
-        }
-    }
-
+    // ── Normal User Load ──────────────────────────────────
     private async Task LoadDashboardData()
     {
-        StateHasChanged();
+        isLoading = true;
+        StateHasChanged();   // show skeleton immediately
 
         try
         {
-            var yearid = YearStatechangeService.SelectedYearId;
-            isLoading = true;
-            var result = await DashboardService.GetDashboardAsync(
-           yearid,
-           filterFromDate,
-           filterToDate);
-            isLoading = false;
-            if (result == null)
-            {
-                ToastService.Warning("No dashboard data available.");
-                return;
-            }
+            var yearId = YearStatechangeService.SelectedYearId;
+            var result = await DashboardService.GetDashboardAsync(yearId, filterFromDate, filterToDate);
+
+            if (result == null) { ToastService.Warning("No dashboard data."); return; }
 
             stats = result.Stats;
             jobStatusData = result.JobStatusChart?
                 .Where(x => !string.IsNullOrWhiteSpace(x.Label))
-                .Select(x => new JobTypeData
-                {
-                    Label = x.Label!,
-                    Count = x.Count
-                })
-                .ToList()
-                ?? new();
-            jobTypeData = result.JobTypeChart;
-            revenueData = result.MonthlyRevenue;
-            if (result != null && result.MonthlyRevenue != null)
+                .Select(x => new JobTypeData { Label = x.Label!, Count = x.Count })
+                .ToList() ?? new();
+            jobTypeData = result.JobTypeChart ?? new();
+
+            revenueData = result.MonthlyRevenue?.Select(r => new MonthlyRevenueDto
             {
-                revenueData = result.MonthlyRevenue.Select(r => new MonthlyRevenueDto
-                {
-                    Month = r.Month,
-                    MonthName = CultureInfo.CurrentCulture
-        .DateTimeFormat.GetAbbreviatedMonthName(r.Month),
-                    Amount = r.Amount,
-                    MonthOrder = r.Month >= 4 ? r.Month - 3 : r.Month + 9
-                }).ToList();
-            }
+                Month = r.Month,
+                MonthName = CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedMonthName(r.Month),
+                Amount = r.Amount,
+                MonthOrder = r.Month >= 4 ? r.Month - 3 : r.Month + 9
+            }).ToList() ?? new();
         }
         catch (Exception ex)
         {
-            ToastService.Error($"Error loading data: {ex.Message}");
+            ToastService.Error($"Dashboard error: {ex.Message}");
         }
         finally
         {
+            isLoading = false;
             StateHasChanged();
         }
     }
 
-    // private void PrepareJobStatusData(List<Job> jobs)
-    // {
-    //     jobStatusData = new List<JobStatusData>
-    //     {
-    //         new() { Status = "Pending", Count = jobs.Count(j => pendingIds.Contains(j.JobStatus ?? 0) },
-    //         new() { Status = "Complete", Count = jobs.Count(j => j.JobState?.ToUpper() == "COMPLETE") },
-    //         new() { Status = "Cancelled", Count = jobs.Count(j => j.JobState?.ToUpper() == "CANCELLED") }
-    //     };
-    // }
-    // private void PrepareJobStatusData(List<Job> jobs,
-    //                               List<int> pendingIds,
-    //                               List<int> completeIds,
-    //                               List<int> cancelIds)
-    // {
-    //     jobStatusData = new List<JobStatusData>
-    // {
-    //     new()
-    //     {
-    //         Status = "Pending",
-    //         Count = jobs.Count(j => j.JobStatus.HasValue && pendingIds.Contains(j.JobStatus.Value))
-    //     },
-    //     new()
-    //     {
-    //         Status = "Complete",
-    //         Count = jobs.Count(j => j.JobStatus.HasValue && completeIds.Contains(j.JobStatus.Value))
-    //     },
-    //     new()
-    //     {
-    //         Status = "Cancelled",
-    //         Count = jobs.Count(j => j.JobStatus.HasValue && cancelIds.Contains(j.JobStatus.Value))
-    //     }
-    // };
-    // }
-    // private void PrepareJobTypeData(List<Job> jobs)
-    // {
-    //     var monthlyData = jobs
-    //         .GroupBy(j => new { j.JobDate.Year, j.JobDate.Month })
-    //         .OrderBy(g => g.Key.Year).ThenBy(g => g.Key.Month)
-    //         .Take(6)
-    //         .Select(g => new JobTypeData
-    //         {
-    //             Month = new DateTime(g.Key.Year, g.Key.Month, 1).ToString("MMM yy"),
-    //             ImportCount = g.Count(j => j.JobType?.ToUpper() == "IMPORT"),
-    //             ExportCount = g.Count(j => j.JobType?.ToUpper() == "EXPORT")
-    //         })
-    //         .ToList();
+    // ── Filter ───────────────────────────────────────────
+    private void OpenDateFilter()
+        => dateFilterPopup.Show(filterFromDate, filterToDate, null, null, null);
 
-    //     jobTypeData = monthlyData;
-    // }
+    private async Task HandleFilterApplied(
+        (DateTime? FromDate, DateTime? ToDate, string? JobType, int? vouchertype, string? OutstandingType) f)
+    {
+        filterFromDate = f.FromDate;
+        filterToDate = f.ToDate;
+        await LoadDashboardData();
+    }
 
-    // ✅ NEW METHOD: Prepare revenue data for FULL YEAR only (ignores date filter)
-    // private void PrepareRevenueDataForYear(List<Bill> yearBills)
-    // {
-    //     // Get the selected year's date range
-    //     var selectedYear = YearStatechangeService.Years
-    //         .FirstOrDefault(y => y.YearId == YearStatechangeService.SelectedYearId);
-
-    //     if (selectedYear == null)
-    //     {
-    //         revenueData = new List<RevenueData>();
-    //         return;
-    //     }
-
-    //     // Filter bills to only include those within the selected financial year
-    //     var billsInYear = yearBills
-    //         .Where(b => YearStatechangeService.IsDateWithinSelectedYear(b.BillDate))
-    //         .ToList();
-
-    //     // Generate all months in the financial year
-    //     var allMonths = new List<DateTime>();
-    //     var currentDate = new DateTime(selectedYear.YearDateFrom.Value.Year, selectedYear.YearDateFrom.Value.Month, 1);
-    //     var endDate = new DateTime(selectedYear.YearDateTo.Value.Year, selectedYear.YearDateTo.Value.Month, 1);
-
-    //     while (currentDate <= endDate)
-    //     {
-    //         allMonths.Add(currentDate);
-    //         currentDate = currentDate.AddMonths(1);
-    //     }
-
-    //     // Create revenue data for all months (with 0 for months without bills)
-    //     revenueData = allMonths
-    //         .Select(month => new RevenueData
-    //         {
-    //             Month = month,
-    //             MonthName = month.ToString("MMM yy"), // e.g., "Jan 24", "Feb 24"
-    //             Amount = billsInYear
-    //                 .Where(b => b.BillDate.Year == month.Year && b.BillDate.Month == month.Month)
-    //                 .Sum(b => b.BillNetAmount)
-    //         })
-    //         .ToList();
-    // }
-
+    // ── Year change ───────────────────────────────────────
     private async void HandleYearChanged()
     {
-        CurrentYearName = YearStatechangeService.Years.FirstOrDefault(y => y.YearId == YearStatechangeService.SelectedYearId)?.YearName ?? DateTime.Now.Year.ToString();
-        await LoadDashboardData();
-        StateHasChanged();
+        try
+        {
+            CurrentYearName = YearStatechangeService.Years
+                .FirstOrDefault(y => y.YearId == YearStatechangeService.SelectedYearId)?.YearName
+                ?? DateTime.Now.Year.ToString();
+            await LoadDashboardData();
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Year change error: {ex.Message}");
+        }
     }
 
     public void Dispose()
-    {
-        YearStatechangeService.OnYearChanged -= HandleYearChanged;
-    }
-
-    // Data Classes
-
+        => YearStatechangeService.OnYearChanged -= HandleYearChanged;
 }
