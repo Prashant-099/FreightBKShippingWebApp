@@ -211,109 +211,46 @@
                             </Items>
                         </DxToolbarItem>
 
-                        <!-- Layout Selector -->
-                        <DxToolbarItem IconCssClass="bi bi-gear-wide-connected"
-                                       Alignment="ToolbarItemAlignment.Right"
-                                       AdaptivePriority="1">
-                            <Template Context="ctx">
-                                <DxComboBox Data="@availableB2BLayouts"
-                                            Value="@selectedB2BLayoutId"
-                                            ValueExpression="@(() => selectedB2BLayoutId)"
-                                            ValueChanged="@((int? value) => OnB2BLayoutSelectedAsync(value))"
-                                            ValueFieldName="GridLayoutId"
-                                            TextFieldName="GridLayoutName"
-                                            NullText="Default View"
-                                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
-                                            CssClass="layout-combobox" />
-                            </Template>
-                        </DxToolbarItem>
-
-                        <!-- Layout Management -->
-                        <DxToolbarItem Context="cfdr"
-                                       Alignment="ToolbarItemAlignment.Right"
-                                       RenderStyleMode="ToolbarItemRenderStyleMode.Contained"
-                                       RenderStyle="ButtonRenderStyle.Secondary"
-                                       IconCssClass="bi bi-gear-wide-connected"
-                                       AdaptivePriority="1">
-                            <Items>
-                                <DxToolbarItem Text="Save Current Layout"
-                                               RenderStyle="ButtonRenderStyle.Primary"
-                                               IconCssClass="bi bi-floppy"
-                                               Click="ShowSaveB2BLayoutDialog" />
-
-                                <DxToolbarItem Text="Create New Layout"
-                                               RenderStyle="ButtonRenderStyle.Success"
-                                               IconCssClass="bi bi-plus-square"
-                                               Click="ShowNewB2BLayoutDialog" />
-
-                                @if (selectedB2BLayoutId.HasValue)
-                                {
-                                    <DxToolbarItem Text="Delete Current Layout"
-                                                   RenderStyle="ButtonRenderStyle.Danger"
-                                                   IconCssClass="bi bi-trash"
-                                                   Click="DeleteCurrentB2BLayout" />
-                                }
-                            </Items>
-                        </DxToolbarItem>
+                       
                     </DxToolbar>
                 </ToolbarTemplate>
 
                 <Columns>
                     <DxGridDataColumn FieldName="BillGstNo"
-                                      Caption="GSTIN"
-                                      Visible="@GetB2BColumnVisibility("BillGstNo")"
-                                      Width="@GetB2BColumnWidth("BillGstNo")" />
+                                      Caption="GSTIN" />
 
                     <DxGridDataColumn FieldName="partyname"
-                                      Caption="Customer Name"
-                                      Visible="@GetB2BColumnVisibility("partyname")"
-                                      Width="@GetB2BColumnWidth("partyname")" />
+                                      Caption="Customer Name" Width="300" />
 
                     <DxGridDataColumn FieldName="BillNo"
-                                      Caption="Invoice No"
-                                      Visible="@GetB2BColumnVisibility("BillNo")"
-                                      Width="@GetB2BColumnWidth("BillNo")" />
+                                      Caption="Invoice No" />
 
                     <DxGridDataColumn FieldName="BillDate"
                                       Caption="Invoice Date"
-                                      DisplayFormat="dd-MM-yyyy"
-                                      Visible="@GetB2BColumnVisibility("BillDate")"
-                                      Width="@GetB2BColumnWidth("BillDate")" />
+                                      DisplayFormat="dd-MM-yyyy" />
 
                     <DxGridDataColumn FieldName="posname"
-                                      Caption="Place Of Supply"
-                                      Visible="@GetB2BColumnVisibility("posname")"
-                                      Width="@GetB2BColumnWidth("posname")" />
+                                      Caption="Place Of Supply" />
 
                     <DxGridDataColumn FieldName="BillTotal"
                                       Caption="Taxable Value"
-                                      DisplayFormat="N2"
-                                      Visible="@GetB2BColumnVisibility("BillTotal")"
-                                      Width="@GetB2BColumnWidth("BillTotal")" />
+                                      DisplayFormat="N2" />
 
                     <DxGridDataColumn FieldName="BillCgst"
                                       Caption="CGST"
-                                      DisplayFormat="N2"
-                                      Visible="@GetB2BColumnVisibility("BillCgst")"
-                                      Width="@GetB2BColumnWidth("BillCgst")" />
+                                      DisplayFormat="N2" />
 
                     <DxGridDataColumn FieldName="BillSgst"
                                       Caption="SGST"
-                                      DisplayFormat="N2"
-                                      Visible="@GetB2BColumnVisibility("BillSgst")"
-                                      Width="@GetB2BColumnWidth("BillSgst")" />
+                                      DisplayFormat="N2" />
 
                     <DxGridDataColumn FieldName="BillIgst"
                                       Caption="IGST"
-                                      DisplayFormat="N2"
-                                      Visible="@GetB2BColumnVisibility("BillIgst")"
-                                      Width="@GetB2BColumnWidth("BillIgst")" />
+                                      DisplayFormat="N2" />
 
                     <DxGridDataColumn FieldName="BillNetAmount"
                                       Caption="Invoice Value"
-                                      DisplayFormat="N2"
-                                      Visible="@GetB2BColumnVisibility("BillNetAmount")"
-                                      Width="@GetB2BColumnWidth("BillNetAmount")" />
+                                      DisplayFormat="N2" />
                 </Columns>
 
                 <TotalSummary>
@@ -368,14 +305,14 @@
                 </ToolbarTemplate>
 
                 <Columns>
-                    <DxGridDataColumn FieldName="BillNo" Caption="Invoice No" Width="150px" />
-                    <DxGridDataColumn FieldName="BillDate" Caption="Invoice Date" DisplayFormat="dd-MM-yyyy" Width="120px" />
-                    <DxGridDataColumn FieldName="posname" Caption="Place of Supply" Width="150px" />
-                    <DxGridDataColumn FieldName="BillTotal" Caption="Taxable Value" DisplayFormat="N2" Width="120px" />
-                    <DxGridDataColumn FieldName="BillIgst" Caption="IGST" DisplayFormat="N2" Width="100px" />
-                    <DxGridDataColumn FieldName="BillCgst" Caption="CGST" DisplayFormat="N2" Width="120px" />
-                    <DxGridDataColumn FieldName="BillSgst" Caption="SGST" DisplayFormat="N2" Width="120px" />
-                    <DxGridDataColumn FieldName="BillNetAmount" Caption="Invoice Value" DisplayFormat="N2" Width="120px" />
+                    <DxGridDataColumn FieldName="BillNo" Caption="Invoice No"  />
+                    <DxGridDataColumn FieldName="BillDate" Caption="Invoice Date" DisplayFormat="dd-MM-yyyy"  />
+                    <DxGridDataColumn FieldName="posname" Caption="Place of Supply"  />
+                    <DxGridDataColumn FieldName="BillTotal" Caption="Taxable Value" DisplayFormat="N2"  />
+                    <DxGridDataColumn FieldName="BillIgst" Caption="IGST" DisplayFormat="N2"  />
+                    <DxGridDataColumn FieldName="BillCgst" Caption="CGST" DisplayFormat="N2"  />
+                    <DxGridDataColumn FieldName="BillSgst" Caption="SGST" DisplayFormat="N2"  />
+                    <DxGridDataColumn FieldName="BillNetAmount" Caption="Invoice Value" DisplayFormat="N2"  />
                 </Columns>
 
                 <TotalSummary>
@@ -416,12 +353,12 @@
                 </ToolbarTemplate>
 
                 <Columns>
-                    <DxGridDataColumn FieldName="PlaceOfSupply" Caption="Place of Supply" Width="200px" />
-                    <DxGridDataColumn FieldName="TaxableValue" Caption="Taxable Value" DisplayFormat="N2" Width="150px" />
-                    <DxGridDataColumn FieldName="IGST" Caption="IGST" DisplayFormat="N2" Width="100px" />
-                    <DxGridDataColumn FieldName="CGST" Caption="CGST" DisplayFormat="N2" Width="120px" />
-                    <DxGridDataColumn FieldName="SGST" Caption="SGST" DisplayFormat="N2" Width="120px" />
-                    <DxGridDataColumn FieldName="InvoiceValue" Caption="Invoice Value" DisplayFormat="N2" Width="150px" />
+                    <DxGridDataColumn FieldName="PlaceOfSupply" Caption="Place of Supply"  />
+                    <DxGridDataColumn FieldName="TaxableValue" Caption="Taxable Value" DisplayFormat="N2"  />
+                    <DxGridDataColumn FieldName="IGST" Caption="IGST" DisplayFormat="N2"  />
+                    <DxGridDataColumn FieldName="CGST" Caption="CGST" DisplayFormat="N2" />
+                    <DxGridDataColumn FieldName="SGST" Caption="SGST" DisplayFormat="N2"  />
+                    <DxGridDataColumn FieldName="InvoiceValue" Caption="Invoice Value" DisplayFormat="N2"  />
                 </Columns>
 
                 <TotalSummary>
@@ -465,13 +402,13 @@
                 </ToolbarTemplate>
 
                 <Columns>
-                    <DxGridDataColumn FieldName="BillNo" Caption="Note No" Width="150px" />
-                    <DxGridDataColumn FieldName="BillDate" Caption="Note Date" DisplayFormat="dd-MM-yyyy" Width="120px" />
-                    <DxGridDataColumn FieldName="Vouchname" Caption="Note Type" Width="150px" />
-                    <DxGridDataColumn FieldName="BillGstNo" Caption="Customer GSTIN" Width="180px" />
-                    <DxGridDataColumn FieldName="partyname" Caption="Customer Name" Width="200px" />
-                    <DxGridDataColumn FieldName="BillTotal" Caption="Taxable Value" DisplayFormat="N2" Width="120px" />
-                    <DxGridDataColumn FieldName="BillNetAmount" Caption="Note Value" DisplayFormat="N2" Width="120px" />
+                    <DxGridDataColumn FieldName="BillNo" Caption="Note No" />
+                    <DxGridDataColumn FieldName="BillDate" Caption="Note Date" DisplayFormat="dd-MM-yyyy" />
+                    <DxGridDataColumn FieldName="Vouchname" Caption="Note Type"  />
+                    <DxGridDataColumn FieldName="BillGstNo" Caption="Customer GSTIN"  />
+                    <DxGridDataColumn FieldName="partyname" Caption="Customer Name" Width="300" />
+                    <DxGridDataColumn FieldName="BillTotal" Caption="Taxable Value" DisplayFormat="N2"  />
+                    <DxGridDataColumn FieldName="BillNetAmount" Caption="Note Value" DisplayFormat="N2"  />
                 </Columns>
 
                 <TotalSummary>
@@ -512,16 +449,16 @@
                         </ToolbarTemplate>
 
                         <Columns>
-                            <DxGridDataColumn FieldName="HSNCode" Caption="HSN Code" Width="120px" />
-                            <DxGridDataColumn FieldName="Description" Caption="Description" Width="250px" />
-                            <DxGridDataColumn FieldName="UQC" Caption="UQC" Width="80px" />
-                            <DxGridDataColumn FieldName="TotalQuantity" Caption="Quantity" DisplayFormat="N2" Width="100px" />
-                            <DxGridDataColumn FieldName="TotalValue" Caption="Total Value" DisplayFormat="N2" Width="120px" />
-                            <DxGridDataColumn FieldName="TaxRate" Caption="Tax Rate %" DisplayFormat="N2" Width="100px" />
-                            <DxGridDataColumn FieldName="TaxableValue" Caption="Taxable Value" DisplayFormat="N2" Width="130px" />
-                            <DxGridDataColumn FieldName="IGSTAmount" Caption="IGST" DisplayFormat="N2" Width="100px" />
-                            <DxGridDataColumn FieldName="CGSTAmount" Caption="CGST" DisplayFormat="N2" Width="100px" />
-                            <DxGridDataColumn FieldName="SGSTAmount" Caption="SGST" DisplayFormat="N2" Width="100px" />
+                            <DxGridDataColumn FieldName="HSNCode" Caption="HSN Code"  />
+                            <DxGridDataColumn FieldName="Description" Caption="Description" Width="250" />
+                            <DxGridDataColumn FieldName="UQC" Caption="UQC"  />
+                            <DxGridDataColumn FieldName="TotalQuantity" Caption="Quantity" DisplayFormat="N2"/>
+                            <DxGridDataColumn FieldName="TotalValue" Caption="Total Value" DisplayFormat="N2"  />
+                            <DxGridDataColumn FieldName="TaxRate" Caption="Tax Rate %" DisplayFormat="N2" />
+                            <DxGridDataColumn FieldName="TaxableValue" Caption="Taxable Value" DisplayFormat="N2"  />
+                            <DxGridDataColumn FieldName="IGSTAmount" Caption="IGST" DisplayFormat="N2"  />
+                            <DxGridDataColumn FieldName="CGSTAmount" Caption="CGST" DisplayFormat="N2"  />
+                            <DxGridDataColumn FieldName="SGSTAmount" Caption="SGST" DisplayFormat="N2"  />
                         </Columns>
 
                         <TotalSummary>
@@ -566,16 +503,16 @@
                         </ToolbarTemplate>
 
                         <Columns>
-                            <DxGridDataColumn FieldName="HSNCode" Caption="HSN Code" Width="120px" />
-                            <DxGridDataColumn FieldName="Description" Caption="Description" Width="250px" />
-                            <DxGridDataColumn FieldName="UQC" Caption="UQC" Width="80px" />
-                            <DxGridDataColumn FieldName="TotalQuantity" Caption="Quantity" DisplayFormat="N2" Width="100px" />
-                            <DxGridDataColumn FieldName="TotalValue" Caption="Total Value" DisplayFormat="N2" Width="120px" />
-                            <DxGridDataColumn FieldName="TaxRate" Caption="Tax Rate %" DisplayFormat="N2" Width="100px" />
-                            <DxGridDataColumn FieldName="TaxableValue" Caption="Taxable Value" DisplayFormat="N2" Width="130px" />
-                            <DxGridDataColumn FieldName="IGSTAmount" Caption="IGST" DisplayFormat="N2" Width="100px" />
-                            <DxGridDataColumn FieldName="CGSTAmount" Caption="CGST" DisplayFormat="N2" Width="100px" />
-                            <DxGridDataColumn FieldName="SGSTAmount" Caption="SGST" DisplayFormat="N2" Width="100px" />
+                            <DxGridDataColumn FieldName="HSNCode" Caption="HSN Code"  />
+                            <DxGridDataColumn FieldName="Description" Caption="Description" Width="250" />
+                            <DxGridDataColumn FieldName="UQC" Caption="UQC" />
+                            <DxGridDataColumn FieldName="TotalQuantity" Caption="Quantity" DisplayFormat="N2" />
+                            <DxGridDataColumn FieldName="TotalValue" Caption="Total Value" DisplayFormat="N2"  />
+                            <DxGridDataColumn FieldName="TaxRate" Caption="Tax Rate %" DisplayFormat="N2"  />
+                            <DxGridDataColumn FieldName="TaxableValue" Caption="Taxable Value" DisplayFormat="N2"  />
+                            <DxGridDataColumn FieldName="IGSTAmount" Caption="IGST" DisplayFormat="N2"  />
+                            <DxGridDataColumn FieldName="CGSTAmount" Caption="CGST" DisplayFormat="N2" />
+                            <DxGridDataColumn FieldName="SGSTAmount" Caption="SGST" DisplayFormat="N2"  />
                         </Columns>
 
                         <TotalSummary>
@@ -592,96 +529,6 @@
     </DxTabs>
 </div>
 
-<!-- B2B Layout Dialog -->
-@if (showB2BLayoutDialog)
-{
-    <div class="modal fade show d-block" style="background-color: rgba(0,0,0,0.5); z-index:1050;">
-        <div class="modal-dialog modal-md" @onclick:stopPropagation="true">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">@dialogTitle</h5>
-                    <button type="button" class="btn-close" @onclick="CloseB2BLayoutDialog"></button>
-                </div>
-
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Layout Name:</label>
-                        <input type="text"
-                               class="form-control"
-                               @bind="newLayoutName"
-                               @bind:event="oninput"
-                               placeholder="Enter layout name..."
-                               maxlength="100" />
-                    </div>
-
-                    <div class="mb-3">
-                        <div class="form-check">
-                            <input class="form-check-input"
-                                   type="checkbox"
-                                   @bind="isDefaultLayout"
-                                   id="defaultLayoutCheck" />
-                            <label class="form-check-label" for="defaultLayoutCheck">
-                                Set as Default Layout
-                            </label>
-                        </div>
-                    </div>
-
-                    <div class="mt-3">
-                        <label class="form-label fw-bold mb-2">Column Configuration:</label>
-                        <div class="table-responsive" style="max-height:400px; overflow-y:auto;">
-                            <table class="table table-sm table-bordered">
-                                <thead class="table-light sticky-top">
-                                    <tr>
-                                        <th style="width:50px;">Visible</th>
-                                        <th style="width:200px;">Column Name</th>
-                                        <th style="width:150px;">Width (px)</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var col in allB2BColumns)
-                                    {
-                                        <tr>
-                                            <td class="text-center">
-                                                <input class="form-check-input"
-                                                       type="checkbox"
-                                                       @bind="col.Visible"
-                                                       id="col_@col.FieldName" />
-                                            </td>
-                                            <td>
-                                                <label class="mb-0" for="col_@col.FieldName">
-                                                    @col.Caption
-                                                </label>
-                                            </td>
-                                            <td>
-                                                <input type="number"
-                                                       class="form-control form-control-sm"
-                                                       @bind="col.Width"
-                                                       @bind:event="oninput"
-                                                       min="50"
-                                                       max="500"
-                                                       step="10" />
-                                            </td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @onclick="CloseB2BLayoutDialog">
-                        Cancel
-                    </button>
-                    <button type="button" class="btn btn-primary" @onclick="SaveCurrentB2BLayout">
-                        <i class="bi bi-floppy me-1"></i>
-                        @(isEditMode ? "Update" : "Create") Layout
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-}
 
 <DateFilterPage @ref="dateFilterPopup" OnFilterApplied="ApplyFilter" />
 
@@ -712,44 +559,15 @@
     private GSTR1Summary? summaryData;
     private ValidationStatus validationStatus;
 
-    // B2B Grid Layout Management
-    private List<GridLayoutDto> availableB2BLayouts = [];
-    private int? selectedB2BLayoutId;
-    private bool showB2BLayoutDialog = false;
-    private string newLayoutName = "";
-    private string dialogTitle = "";
-    private bool isEditMode = false;
-    private bool isDefaultLayout = false;
-    private const string B2B_VOUCHER_TYPE = "GSTR1_B2B";
-    private List<GridColumnLayout> allB2BColumns = [];
-    private List<GridColumnLayout> currentB2BLayout = [];
+
 
     protected override async Task OnInitializedAsync()
     {
-        InitializeB2BColumns();
-        await LoadAvailableB2BLayouts();
-        await LoadDefaultB2BLayout();
+     
         await LoadData();
     }
 
-    private void InitializeB2BColumns()
-    {
-        allB2BColumns = new List<GridColumnLayout>
-        {
-            new() { FieldName = "BillGstNo", Caption = "GSTIN", Visible = true, Width = 180, DisplayIndex = 0 },
-            new() { FieldName = "partyname", Caption = "Customer Name", Visible = true, Width = 200, DisplayIndex = 1 },
-            new() { FieldName = "BillNo", Caption = "Invoice No", Visible = true, Width = 150, DisplayIndex = 2 },
-            new() { FieldName = "BillDate", Caption = "Invoice Date", Visible = true, Width = 120, DisplayIndex = 3 },
-            new() { FieldName = "posname", Caption = "Place Of Supply", Visible = true, Width = 150, DisplayIndex = 4 },
-            new() { FieldName = "BillTotal", Caption = "Taxable Value", Visible = true, Width = 120, DisplayIndex = 5 },
-            new() { FieldName = "BillCgst", Caption = "CGST", Visible = true, Width = 100, DisplayIndex = 6 },
-            new() { FieldName = "BillSgst", Caption = "SGST", Visible = true, Width = 100, DisplayIndex = 7 },
-            new() { FieldName = "BillIgst", Caption = "IGST", Visible = true, Width = 100, DisplayIndex = 8 },
-            new() { FieldName = "BillNetAmount", Caption = "Invoice Value", Visible = true, Width = 120, DisplayIndex = 9 }
-        };
-        currentB2BLayout = allB2BColumns.ToList();
-    }
-
+   
     private async Task LoadData()
     {
         try
@@ -1051,191 +869,7 @@
         }
     }
 
-    // B2B Layout Management
-    private string GetB2BColumnWidth(string fieldName)
-    {
-        var col = currentB2BLayout.FirstOrDefault(x => x.FieldName == fieldName);
-        return $"{col?.Width ?? 100}px";
-    }
-
-    private bool GetB2BColumnVisibility(string fieldName)
-    {
-        var col = currentB2BLayout.FirstOrDefault(x => x.FieldName == fieldName);
-        return col?.Visible ?? true;
-    }
-
-    private async Task LoadAvailableB2BLayouts()
-    {
-        availableB2BLayouts = await GridLayoutService.GetLayoutsByVoucherTypeAsync(B2B_VOUCHER_TYPE);
-    }
-
-    private async Task LoadDefaultB2BLayout()
-    {
-        var defaultLayout = await GridLayoutService.GetDefaultLayoutAsync(B2B_VOUCHER_TYPE);
-        if (defaultLayout != null)
-        {
-            selectedB2BLayoutId = defaultLayout.GridLayoutId;
-            await ApplyB2BLayout(defaultLayout);
-        }
-    }
-
-    private async Task OnB2BLayoutSelectedAsync(int? layoutId)
-    {
-        selectedB2BLayoutId = layoutId;
-        if (layoutId.HasValue)
-        {
-            var layout = await GridLayoutService.GetByIdAsync(layoutId.Value);
-            if (layout != null) await ApplyB2BLayout(layout);
-        }
-        else
-        {
-            InitializeB2BColumns();
-            await InvokeAsync(StateHasChanged);
-        }
-    }
-
-    private async Task ApplyB2BLayout(GridLayoutDto layout)
-    {
-        if (!string.IsNullOrEmpty(layout.GridLayoutData))
-        {
-            var savedLayout = GridLayoutService.DeserializeColumnLayout(layout.GridLayoutData);
-            if (savedLayout != null && savedLayout.Any())
-            {
-                currentB2BLayout = savedLayout.ToList();
-                foreach (var saved in savedLayout)
-                {
-                    var existing = allB2BColumns.FirstOrDefault(x => x.FieldName == saved.FieldName);
-                    if (existing != null)
-                    {
-                        existing.Visible = saved.Visible;
-                        existing.Width = saved.Width;
-                        existing.DisplayIndex = saved.DisplayIndex;
-                    }
-                }
-                await InvokeAsync(StateHasChanged);
-            }
-        }
-    }
-
-    private void ShowSaveB2BLayoutDialog()
-    {
-        if (selectedB2BLayoutId.HasValue)
-        {
-            var layout = availableB2BLayouts.FirstOrDefault(x => x.GridLayoutId == selectedB2BLayoutId.Value);
-            if (layout != null)
-            {
-                newLayoutName = layout.GridLayoutName ?? "";
-                isDefaultLayout = layout.GridLayoutDefault;
-                isEditMode = true;
-                dialogTitle = "Update Grid Layout";
-                showB2BLayoutDialog = true;
-                return;
-            }
-        }
-        ShowNewB2BLayoutDialog();
-    }
-
-    private void ShowNewB2BLayoutDialog()
-    {
-        newLayoutName = "";
-        isDefaultLayout = false;
-        isEditMode = false;
-        dialogTitle = "Create New Grid Layout";
-        showB2BLayoutDialog = true;
-    }
-
-    private async Task SaveCurrentB2BLayout()
-    {
-        if (string.IsNullOrWhiteSpace(newLayoutName))
-        {
-            ToastService.Warning("Please enter a layout name.");
-            return;
-        }
-
-        LoadingService.Show("Saving layout...");
-        try
-        {
-            foreach (var col in allB2BColumns)
-            {
-                var current = currentB2BLayout.FirstOrDefault(c => c.FieldName == col.FieldName);
-                if (current != null)
-                {
-                    current.Visible = col.Visible;
-                    current.Width = col.Width;
-                }
-            }
-
-            var configJson = GridLayoutService.SerializeColumnLayout(currentB2BLayout);
-            bool success;
-
-            if (isEditMode && selectedB2BLayoutId.HasValue)
-            {
-                success = await GridLayoutService.UpdateAsync(selectedB2BLayoutId.Value, new SaveGridLayoutRequest
-                {
-                    GridLayoutName = newLayoutName,
-                    GridLayoutVoucherType = B2B_VOUCHER_TYPE,
-                    GridLayoutData = configJson,
-                    GridLayoutDefault = isDefaultLayout
-                });
-            }
-            else
-            {
-                success = await GridLayoutService.CreateAsync(new SaveGridLayoutRequest
-                {
-                    GridLayoutName = newLayoutName,
-                    GridLayoutVoucherType = B2B_VOUCHER_TYPE,
-                    GridLayoutData = configJson,
-                    GridLayoutDefault = isDefaultLayout
-                });
-            }
-
-            if (success)
-            {
-                ToastService.Success($"Layout {(isEditMode ? "updated" : "created")} successfully!");
-                await LoadAvailableB2BLayouts();
-                CloseB2BLayoutDialog();
-            }
-            else
-            {
-                ToastService.Error("Failed to save layout.");
-            }
-        }
-        finally
-        {
-            LoadingService.Hide();
-        }
-    }
-
-    private async Task DeleteCurrentB2BLayout()
-    {
-        if (!selectedB2BLayoutId.HasValue) return;
-
-        LoadingService.Show("Deleting layout...");
-        try
-        {
-            var success = await GridLayoutService.DeleteAsync(selectedB2BLayoutId.Value);
-            if (success)
-            {
-                ToastService.Success("Layout deleted successfully!");
-                selectedB2BLayoutId = null;
-                InitializeB2BColumns();
-                await LoadAvailableB2BLayouts();
-            }
-        }
-        finally
-        {
-            LoadingService.Hide();
-        }
-    }
-
-    private void CloseB2BLayoutDialog()
-    {
-        showB2BLayoutDialog = false;
-        newLayoutName = "";
-        isDefaultLayout = false;
-        isEditMode = false;
-    }
-
+    
     // Helper methods
     private async Task DownloadFile(string fileName, byte[] bytes, string contentType)
     {
