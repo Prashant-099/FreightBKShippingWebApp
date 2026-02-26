@@ -32,6 +32,12 @@
                 <DxToolbarItem Text="Delete" IconCssClass="bi bi-trash" Click="OnDelete"
                                Enabled="@(SelectedLrs?.Any() == true)" />
                 <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="LoadDataAsync" />
+
+                <DxToolbarItem Alignment="ToolbarItemAlignment.Right"
+                               RenderStyle="ButtonRenderStyle.Secondary"
+                               IconCssClass="bi bi-gear-wide-connected"
+                               Click="ShowLayoutPopup" />
+
             </Items>
         </DxToolbar>
     </ToolbarTemplate>
@@ -39,10 +45,13 @@
     <!-- ================= COLUMNS ================= -->
     <Columns>
 
-        <DxGridSelectionColumn Width="40" FixedPosition="GridColumnFixedPosition.Left" />
+        <DxGridSelectionColumn Width="40"
+                               FixedPosition="GridColumnFixedPosition.Left" />
 
         <!-- Basic Info -->
-        <DxGridDataColumn FieldName="LrNoStr" Caption="LR No" Width="120">
+        <DxGridDataColumn FieldName="LrNoStr" Caption="LR No"
+                          Width="@(layoutManager?.GetColumnWidth("LrNoStr") ?? "120px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("LrNoStr") ?? true)">
             <CellDisplayTemplate Context="ctx">
                 @{
                     var lr = (LrListVM)ctx.DataItem;
@@ -54,40 +63,94 @@
                 </a>
             </CellDisplayTemplate>
         </DxGridDataColumn>
-        <DxGridDataColumn FieldName="LrDate" Caption="Date" DisplayFormat="dd-MM-yyyy" Width="120" />
-        <DxGridDataColumn FieldName="LrTripNo" Caption="Trip No" Width="100" />
+
+        <DxGridDataColumn FieldName="LrDate" Caption="Date"
+                          DisplayFormat="dd-MM-yyyy"
+                          Width="@(layoutManager?.GetColumnWidth("LrDate") ?? "120px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("LrDate") ?? true)" />
+
+        <DxGridDataColumn FieldName="LrTripNo" Caption="Trip No"
+                          Width="@(layoutManager?.GetColumnWidth("LrTripNo") ?? "100px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("LrTripNo") ?? true)" />
 
         <!-- Party Info -->
-        <DxGridDataColumn FieldName="PartyName" Caption="Party" Width="150" />
-        <DxGridDataColumn FieldName="SupplierName" Caption="Supplier" Width="150" />
-        <DxGridDataColumn FieldName="VehicleNo" Caption="Vehicle" Width="120" />
-        <DxGridDataColumn FieldName="DriverName" Caption="Driver" Width="120" />
+        <DxGridDataColumn FieldName="PartyName" Caption="Party"
+                          Width="@(layoutManager?.GetColumnWidth("PartyName") ?? "300px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("PartyName") ?? true)" />
+
+        <DxGridDataColumn FieldName="SupplierName" Caption="Supplier"
+                          Width="@(layoutManager?.GetColumnWidth("SupplierName") ?? "300px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("SupplierName") ?? true)" />
+
+        <DxGridDataColumn FieldName="VehicleNo" Caption="Vehicle"
+                          Width="@(layoutManager?.GetColumnWidth("VehicleNo") ?? "170px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("VehicleNo") ?? true)" />
+
+        <DxGridDataColumn FieldName="DriverName" Caption="Driver"
+                          Width="@(layoutManager?.GetColumnWidth("DriverName") ?? "170px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("DriverName") ?? true)" />
 
         <!-- Location -->
-        <DxGridDataColumn FieldName="FromLocationName" Caption="From" Width="130" />
-        <DxGridDataColumn FieldName="ToLocationName" Caption="To" Width="130" />
+        <DxGridDataColumn FieldName="FromLocationName" Caption="From"
+                          Width="@(layoutManager?.GetColumnWidth("FromLocationName") ?? "210px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("FromLocationName") ?? true)" />
+
+        <DxGridDataColumn FieldName="ToLocationName" Caption="To"
+                          Width="@(layoutManager?.GetColumnWidth("ToLocationName") ?? "210px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("ToLocationName") ?? true)" />
 
         <!-- Weight -->
-        <DxGridDataColumn FieldName="LrLoadWt" Caption="Load Wt" Width="110" />
-        <DxGridDataColumn FieldName="LrUnloadWt" Caption="Unload Wt" Width="110" />
-        <DxGridDataColumn FieldName="LrShortWt" Caption="Short Wt" Width="100" />
+        <DxGridDataColumn FieldName="LrLoadWt" Caption="Load Wt"
+                          Width="@(layoutManager?.GetColumnWidth("LrLoadWt") ?? "110px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("LrLoadWt") ?? true)" />
+
+        <DxGridDataColumn FieldName="LrUnloadWt" Caption="Unload Wt"
+                          Width="@(layoutManager?.GetColumnWidth("LrUnloadWt") ?? "110px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("LrUnloadWt") ?? true)" />
+
+        <DxGridDataColumn FieldName="LrShortWt" Caption="Short Wt"
+                          Width="@(layoutManager?.GetColumnWidth("LrShortWt") ?? "100px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("LrShortWt") ?? true)" />
 
         <!-- Billing -->
-        <DxGridDataColumn FieldName="LrBillTypeBill" Caption="Bill Type" Width="130" />
-        <DxGridDataColumn FieldName="LrRateBill" Caption="Rate" Width="100" />
-        <DxGridDataColumn FieldName="LrGrossFreightBill" Caption="Gross Freight" Width="130" />
-        <DxGridDataColumn FieldName="LrNetFreightBill" Caption="Net Freight" Width="130" />
+        <DxGridDataColumn FieldName="LrBillTypeBill" Caption="Bill Type"
+                          Width="@(layoutManager?.GetColumnWidth("LrBillTypeBill") ?? "150px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("LrBillTypeBill") ?? true)" />
+
+        <DxGridDataColumn FieldName="LrRateBill" Caption="Rate"
+                          Width="@(layoutManager?.GetColumnWidth("LrRateBill") ?? "100px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("LrRateBill") ?? true)" />
+
+        <DxGridDataColumn FieldName="LrGrossFreightBill" Caption="Gross Freight"
+                          Width="@(layoutManager?.GetColumnWidth("LrGrossFreightBill") ?? "130px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("LrGrossFreightBill") ?? true)" />
+
+        <DxGridDataColumn FieldName="LrNetFreightBill" Caption="Net Freight"
+                          Width="@(layoutManager?.GetColumnWidth("LrNetFreightBill") ?? "130px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("LrNetFreightBill") ?? true)" />
 
         <!-- Truck -->
-        <DxGridDataColumn FieldName="LrBillRateTruck" Caption="Truck Rate" Width="120" />
-        <DxGridDataColumn FieldName="LrNetFreightTruck" Caption="Truck Net" Width="120" />
+        <DxGridDataColumn FieldName="LrBillRateTruck" Caption="Truck Rate"
+                          Width="@(layoutManager?.GetColumnWidth("LrBillRateTruck") ?? "120px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("LrBillRateTruck") ?? true)" />
+
+        <DxGridDataColumn FieldName="LrNetFreightTruck" Caption="Truck Net"
+                          Width="@(layoutManager?.GetColumnWidth("LrNetFreightTruck") ?? "120px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("LrNetFreightTruck") ?? true)" />
 
         <!-- GST -->
-        <DxGridDataColumn FieldName="LrGstPercentage" Caption="GST %" Width="90" />
-        <DxGridDataColumn FieldName="LrGstAmount" Caption="GST Amt" Width="100" />
+        <DxGridDataColumn FieldName="LrGstPercentage" Caption="GST %"
+                          Width="@(layoutManager?.GetColumnWidth("LrGstPercentage") ?? "90px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("LrGstPercentage") ?? true)" />
+
+        <DxGridDataColumn FieldName="LrGstAmount" Caption="GST Amt"
+                          Width="@(layoutManager?.GetColumnWidth("LrGstAmount") ?? "100px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("LrGstAmount") ?? true)" />
 
         <!-- Status -->
-        <DxGridDataColumn FieldName="LrStatus" Caption="Status" Width="100">
+        <DxGridDataColumn FieldName="LrStatus" Caption="Status"
+                          Width="@(layoutManager?.GetColumnWidth("LrStatus") ?? "100px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("LrStatus") ?? true)">
             <CellDisplayTemplate Context="ctx">
                 @{
                     var status = (int)ctx.Value;
@@ -102,8 +165,15 @@
                 }
             </CellDisplayTemplate>
         </DxGridDataColumn>
+
     </Columns>
 </DxGrid>
+<ConfirmationDialog />
+
+<GridLayoutpPopup @ref="layoutManager"
+                  VoucherType="Company"
+                  Columns="@allColumns"
+                  OnLayoutChanged="HandleLayoutChanged" />
 
 @code {
 
@@ -111,11 +181,72 @@
     private List<LrListVM> LrList = new();
     private IReadOnlyList<object> SelectedLrs;
 
-    protected override async Task OnInitializedAsync()
+    private GridLayoutpPopup? layoutManager;
+    private List<GridColumnLayout> allColumns = [];
+    private async void ShowLayoutPopup()
     {
-        await LoadDataAsync();
+        await InvokeAsync(() =>
+        {
+            layoutManager?.ShowPopup();
+        });
+    }
+    private async Task HandleLayoutChanged(List<GridColumnLayout> updatedLayout)
+    {
+        allColumns = updatedLayout;
+        // Force the grid to re-render with new layout
+        await InvokeAsync(StateHasChanged);
     }
 
+    protected override async Task OnInitializedAsync()
+    {
+        InitializeColumns();
+        await LoadDataAsync();
+    }
+    private void InitializeColumns()
+    {
+        allColumns = new List<GridColumnLayout>
+    {
+        // Selection column (optional – usually handled separately)
+        // new() { FieldName = "Selection", Caption = "", Visible = true, Width = 40, DisplayIndex = 0 },
+
+        // Basic Info
+        new() { FieldName = "LrNoStr", Caption = "LR No", Visible = true, Width = 120, DisplayIndex = 1 },
+        new() { FieldName = "LrDate", Caption = "Date", Visible = true, Width = 120, DisplayIndex = 2 },
+        new() { FieldName = "LrTripNo", Caption = "Trip No", Visible = true, Width = 100, DisplayIndex = 3 },
+
+        // Party Info
+        new() { FieldName = "PartyName", Caption = "Party", Visible = true, Width = 300, DisplayIndex = 4 },
+        new() { FieldName = "SupplierName", Caption = "Supplier", Visible = true, Width = 300, DisplayIndex = 5 },
+        new() { FieldName = "VehicleNo", Caption = "Vehicle", Visible = true, Width = 170, DisplayIndex = 6 },
+        new() { FieldName = "DriverName", Caption = "Driver", Visible = true, Width = 170, DisplayIndex = 7 },
+
+        // Location
+        new() { FieldName = "FromLocationName", Caption = "From", Visible = true, Width = 210, DisplayIndex = 8 },
+        new() { FieldName = "ToLocationName", Caption = "To", Visible = true, Width = 210, DisplayIndex = 9 },
+
+        // Weight
+        new() { FieldName = "LrLoadWt", Caption = "Load Wt", Visible = true, Width = 110, DisplayIndex = 10 },
+        new() { FieldName = "LrUnloadWt", Caption = "Unload Wt", Visible = true, Width = 110, DisplayIndex = 11 },
+        new() { FieldName = "LrShortWt", Caption = "Short Wt", Visible = true, Width = 100, DisplayIndex = 12 },
+
+        // Billing
+        new() { FieldName = "LrBillTypeBill", Caption = "Bill Type", Visible = true, Width = 150, DisplayIndex = 13 },
+        new() { FieldName = "LrRateBill", Caption = "Rate", Visible = true, Width = 100, DisplayIndex = 14 },
+        new() { FieldName = "LrGrossFreightBill", Caption = "Gross Freight", Visible = true, Width = 130, DisplayIndex = 15 },
+        new() { FieldName = "LrNetFreightBill", Caption = "Net Freight", Visible = true, Width = 130, DisplayIndex = 16 },
+
+        // Truck
+        new() { FieldName = "LrBillRateTruck", Caption = "Truck Rate", Visible = true, Width = 120, DisplayIndex = 17 },
+        new() { FieldName = "LrNetFreightTruck", Caption = "Truck Net", Visible = true, Width = 120, DisplayIndex = 18 },
+
+        // GST
+        new() { FieldName = "LrGstPercentage", Caption = "GST %", Visible = true, Width = 90, DisplayIndex = 19 },
+        new() { FieldName = "LrGstAmount", Caption = "GST Amt", Visible = true, Width = 100, DisplayIndex = 20 },
+
+        // Status
+        new() { FieldName = "LrStatus", Caption = "Status", Visible = true, Width = 100, DisplayIndex = 21 }
+    };
+    }
     private async Task LoadDataAsync()
     {
         LrList = await LrService.GetListAsync();
