@@ -69,3 +69,528 @@
         z-index: -2;
     }
 
+/*    =============================================================================== */
+
+
+/* ── Base ── */
+.dash-wrap {
+    font-family: 'Sora', sans-serif;
+    background: #f0f4f9;
+    min-height: 100%;
+    padding: 16px;
+}
+
+/* ── Welcome Banner ── */
+.dash-banner {
+    background: linear-gradient(120deg, #1565c0 0%, #1976d2 60%, #42a5f5 100%);
+    border-radius: 18px;
+    padding: 18px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 18px;
+    box-shadow: 0 4px 20px rgba(21,101,192,.3);
+    animation: fadeUp .4s ease both;
+}
+
+.dash-banner-left h2 {
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: #fff;
+    margin: 0 0 2px;
+    letter-spacing: -.3px;
+}
+
+.dash-banner-left p {
+    font-size: .78rem;
+    color: rgba(255,255,255,.7);
+    margin: 0;
+}
+
+.dash-banner-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.dash-fy-badge {
+    background: rgba(255,255,255,.18);
+    border: 1px solid rgba(255,255,255,.3);
+    color: #fff;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: .8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .18s;
+    white-space: nowrap;
+    backdrop-filter: blur(4px);
+}
+
+    .dash-fy-badge:hover {
+        background: rgba(255,255,255,.28);
+    }
+
+/* ── Skeleton loading ── */
+.skel {
+    background: linear-gradient(90deg, #e8edf4 25%, #d4dce8 50%, #e8edf4 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s infinite;
+    border-radius: 10px;
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+.skel-card {
+    height: 72px;
+    border-radius: 14px;
+    margin-bottom: 0;
+}
+
+.skel-chart {
+    height: 300px;
+    border-radius: 16px;
+}
+
+/* ── Stat Cards ── */
+.stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+    animation: fadeUp .4s .05s ease both;
+}
+
+.stat-card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.06);
+    border: 1px solid rgba(0,0,0,.04);
+    cursor: pointer;
+    transition: all .2s;
+    text-decoration: none;
+}
+
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0,0,0,.1);
+    }
+
+.stat-icon-wrap {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+    color: #fff;
+}
+
+.si-import {
+    background: linear-gradient(135deg,#1565c0,#42a5f5);
+}
+
+.si-export {
+    background: linear-gradient(135deg,#e91e63,#f06292);
+}
+
+.si-pending {
+    background: linear-gradient(135deg,#f59e0b,#fbbf24);
+}
+
+.si-done {
+    background: linear-gradient(135deg,#10b981,#34d399);
+}
+
+.si-cancel {
+    background: linear-gradient(135deg,#ef4444,#f87171);
+}
+
+.si-bill {
+    background: linear-gradient(135deg,#6366f1,#818cf8);
+}
+
+.si-rev {
+    background: linear-gradient(135deg,#0891b2,#22d3ee);
+}
+
+.stat-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.stat-label {
+    font-size: .72rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    margin-bottom: 2px;
+}
+
+.stat-value {
+    font-size: 1.45rem;
+    font-weight: 800;
+    color: #1e293b;
+    line-height: 1;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.stat-sub {
+    font-size: .68rem;
+    color: #94a3b8;
+    margin-top: 2px;
+}
+
+/* Revenue card full-width */
+.stat-card.stat-wide {
+    grid-column: span 2;
+}
+
+/* ── Chart Cards ── */
+.chart-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 16px;
+    animation: fadeUp .4s .1s ease both;
+}
+
+.chart-card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.06);
+    border: 1px solid rgba(0,0,0,.04);
+    /* ✅ Fix: prevent chart overflow on small containers */
+    min-width: 0;
+    overflow: hidden;
+}
+
+.chart-card-full {
+    grid-column: span 2;
+}
+
+.chart-title {
+    font-size: .82rem;
+    font-weight: 700;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+    .chart-title i {
+        color: #1565c0;
+    }
+
+/* ── SuperAdmin Cards ── */
+.sa-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 18px;
+    animation: fadeUp .4s ease both;
+}
+
+.sa-card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 16px 18px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.06);
+    border: 1px solid rgba(0,0,0,.04);
+    transition: transform .2s;
+}
+
+    .sa-card:hover {
+        transform: translateY(-2px);
+    }
+
+.sa-card-label {
+    font-size: .72rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    margin-bottom: 6px;
+}
+
+.sa-card-val {
+    font-size: 2rem;
+    font-weight: 800;
+    font-family: 'JetBrains Mono', monospace;
+    line-height: 1;
+}
+
+.sa-primary {
+    color: #1565c0;
+}
+
+.sa-danger {
+    color: #ef4444;
+}
+
+.sa-success {
+    color: #10b981;
+}
+
+.sa-info {
+    color: #0891b2;
+}
+
+.sa-grid-divider {
+    grid-column: span 4;
+    height: 1px;
+    background: #e2e8f0;
+    margin: 2px 0;
+}
+
+/* SA Grid Table */
+.sa-table-card {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.06);
+    border: 1px solid rgba(0,0,0,.04);
+    overflow: hidden;
+    animation: fadeUp .4s .05s ease both;
+}
+
+.sa-table-header {
+    padding: 14px 18px;
+    border-bottom: 1px solid #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.sa-table-title {
+    font-size: .88rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.sa-table-count {
+    font-size: .75rem;
+    background: #e8f0fe;
+    color: #1565c0;
+    padding: 3px 10px;
+    border-radius: 10px;
+    font-weight: 600;
+}
+
+/* ── Empty / Loading ── */
+.dash-empty {
+    text-align: center;
+    padding: 48px 16px;
+    color: #94a3b8;
+}
+
+    .dash-empty i {
+        font-size: 3rem;
+        opacity: .3;
+        display: block;
+        margin-bottom: 10px;
+    }
+
+/* ── Animation ── */
+@keyframes fadeUp {
+    from {
+        opacity: 0;
+        transform: translateY(14px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ════════════════════════════════════════
+   RESPONSIVE BREAKPOINTS
+   ════════════════════════════════════════ */
+
+/* ── Tablet Landscape: 1024px ── */
+@media (max-width: 1024px) {
+    /* Stat: 4 col → 2 col, wide stays span 2 */
+    .stat-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .stat-card.stat-wide {
+        grid-column: span 2;
+    }
+
+    /* Charts: side-by-side still ok but value ko thoda tighten karo */
+    .stat-value {
+        font-size: 1.2rem;
+    }
+}
+
+/* ── Tablet Portrait: 900px ── */
+@media (max-width: 900px) {
+    /* Charts stack karo — side by side charts squeeze thaay che */
+    .chart-row {
+        grid-template-columns: 1fr;
+    }
+
+    .chart-card-full {
+        grid-column: span 1;
+    }
+
+    /* SA grid 2 col */
+    .sa-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .sa-grid-divider {
+        grid-column: span 2;
+    }
+}
+
+/* ── Tablet: 768px ── */
+@media (max-width: 768px) {
+    .dash-wrap {
+        padding: 10px;
+    }
+
+    .dash-banner {
+        padding: 14px 16px;
+        border-radius: 14px;
+    }
+
+    .dash-banner-left h2 {
+        font-size: 1.1rem;
+    }
+
+    /* Stat already 2-col from 1024px, keep it */
+    .stat-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    .stat-card.stat-wide {
+        grid-column: span 2;
+    }
+
+    .stat-value {
+        font-size: 1.15rem;
+    }
+
+    /* Chart full width */
+    .chart-row {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .chart-card-full {
+        grid-column: span 1;
+    }
+
+    /* SA */
+    .sa-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .sa-grid-divider {
+        grid-column: span 2;
+    }
+
+    .sa-card-val {
+        font-size: 1.6rem;
+    }
+}
+
+/* ── Mobile: 480px ── */
+@media (max-width: 480px) {
+    .dash-wrap {
+        padding: 8px;
+    }
+
+    .dash-banner {
+        border-radius: 12px;
+        padding: 12px 14px;
+    }
+
+    .dash-banner-left h2 {
+        font-size: 1rem;
+    }
+
+    /* Stat: 1 col on very small */
+    .stat-grid {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .stat-card.stat-wide {
+        grid-column: span 1;
+    }
+
+    .stat-card {
+        padding: 12px 14px;
+    }
+
+    .stat-value {
+        font-size: 1.25rem;
+    }
+
+    /* Charts already 1 col */
+    .chart-row {
+        gap: 8px;
+    }
+
+    .chart-card {
+        padding: 12px;
+    }
+
+    /* SA */
+    .sa-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    .sa-grid-divider {
+        grid-column: span 2;
+    }
+
+    .sa-card {
+        padding: 12px 14px;
+    }
+
+    .sa-card-val {
+        font-size: 1.4rem;
+    }
+}
+
+/* ── Extra Small: 360px ── */
+@media (max-width: 360px) {
+    .sa-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .sa-grid-divider {
+        grid-column: span 1;
+    }
+
+    .stat-grid {
+        grid-template-columns: 1fr;
+    }
+}
