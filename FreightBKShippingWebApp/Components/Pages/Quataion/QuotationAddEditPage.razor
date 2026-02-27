@@ -230,6 +230,25 @@
                     </ChildContent>
                 </DxFormLayoutItem>
 
+                <DxFormLayoutItem Caption="Customer Name" ColSpanMd="6">
+                    <div style="position: relative; display: inline-block; width: 100%;">
+                        <DxButton Click="@ShowAccountPopup"
+                                  Text="+"
+                                  CssClass="custom-plus-button" />
+                        <DxComboBox TData="Account" TValue="int"
+                                    Data="@AccountList"
+                                    TextFieldName="AccountName"
+                                    ValueFieldName="AccountId"
+                                    Value="@EditModel.BillPartyId"
+                                    ValueChanged="@((int partyid) => OnPartyChanged(partyid))"
+                                    ValueExpression="@(() => EditModel.BillPartyId)"
+                                    AllowUserInput="false"
+                                    NullText="-- Select Customer --"
+                                    SearchMode="ListSearchMode.AutoSearch"
+                                    SearchFilterCondition="ListSearchFilterCondition.StartsWith"
+                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                    </div>
+                </DxFormLayoutItem>
                 <DxFormLayoutItem Caption="Supply Type" ColSpanMd="3">
                     <DxComboBox Data="@SupplyTypeList"
                                 @bind-Value="EditModel.BillSupplyType"
@@ -255,25 +274,7 @@
                                 SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
                 </DxFormLayoutItem>
 
-                <DxFormLayoutItem Caption="Customer Name" ColSpanMd="6">
-                    <div style="position: relative; display: inline-block; width: 100%;">
-                        <DxButton Click="@ShowAccountPopup"
-                                  Text="+"
-                                  CssClass="custom-plus-button" />
-                        <DxComboBox TData="Account" TValue="int"
-                                    Data="@AccountList"
-                                    TextFieldName="AccountName"
-                                    ValueFieldName="AccountId"
-                                    Value="@EditModel.BillPartyId"
-                                    ValueChanged="@((int partyid) => OnPartyChanged(partyid))"
-                                    ValueExpression="@(() => EditModel.BillPartyId)"
-                                    AllowUserInput="false"
-                                    NullText="-- Select Customer --"
-                                    SearchMode="ListSearchMode.AutoSearch"
-                                    SearchFilterCondition="ListSearchFilterCondition.StartsWith"
-                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
-                    </div>
-                </DxFormLayoutItem>
+               
 
                 <DxFormLayoutItem Caption="Branch" ColSpanMd="3">
                     <DxComboBox TData="Branch" TValue="int"
@@ -290,29 +291,31 @@
                                 SearchFilterCondition="ListSearchFilterCondition.StartsWith"
                                 ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
                 </DxFormLayoutItem>
-                 <DxFormLayoutItem Caption="POL" ColSpanMd="3">
-     <DxComboBox TData="Location" TValue="int"
-     Data="@locationList"
-     TextFieldName="LocationName"
-     ValueFieldName="LocationId"
-     AllowUserInput="true"
-     NullText="-- Select POl --"
-     @bind-Value="EditModel.BillPolId"
-     SearchMode="ListSearchMode.AutoSearch"
-     SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
 
- </DxFormLayoutItem>
-   <DxFormLayoutItem Caption="POD" ColSpanMd="3">
-      <DxComboBox TData="Location" TValue="int"
-      Data="@locationList"
-      TextFieldName="LocationName"
-      ValueFieldName="LocationId"
-      AllowUserInput="true"
-      NullText="-- Select POD --"
-      @bind-Value="EditModel.BillPodId"
-      SearchMode="ListSearchMode.AutoSearch"
-      SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
-  </DxFormLayoutItem>
+                 <DxFormLayoutItem Caption="POL" ColSpanMd="3">
+                     <DxComboBox TData="Location" TValue="int"
+                     Data="@locationList"
+                     TextFieldName="LocationName"
+                     ValueFieldName="LocationId"
+                     AllowUserInput="true"
+                     NullText="-- Select POl --"
+                     @bind-Value="EditModel.BillPolId"
+                     SearchMode="ListSearchMode.AutoSearch"
+                     SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+
+                </DxFormLayoutItem>
+
+                   <DxFormLayoutItem Caption="POD" ColSpanMd="3">
+                      <DxComboBox TData="Location" TValue="int"
+                      Data="@locationList"
+                      TextFieldName="LocationName"
+                      ValueFieldName="LocationId"
+                      AllowUserInput="true"
+                      NullText="-- Select POD --"
+                      @bind-Value="EditModel.BillPodId"
+                      SearchMode="ListSearchMode.AutoSearch"
+                      SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
+                  </DxFormLayoutItem>
 
                 <DxFormLayoutItem Caption="Line" ColSpanMd="3">
                     <DxComboBox TData="Notify" TValue="int"
@@ -325,11 +328,13 @@
                                 SearchMode="ListSearchMode.AutoSearch"
                                 SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
                 </DxFormLayoutItem>
+
                 <DxFormLayoutItem Caption="Is RCM Applicable" ColSpanMd="3">
                     <DxCheckBox Checked="@EditModel.BillIsRcm"
                                 CheckedChanged="@((bool isChecked) => ApplyRcmLogic(isChecked))"
                                 CheckedExpression="() => EditModel.BillIsRcm" />
                 </DxFormLayoutItem>
+
             </DxFormLayout>
            
 
@@ -610,13 +615,12 @@
                         </div>
                     </DxFormLayoutTabPage>
                    
-
                     <DxFormLayoutTabPage Caption="Customer Details">
                         <div class="popup-content-container">
-                            <div class="form-scroll-section">
+                            <div class="form-scroll-section" style="padding-top:10px">
                                 <DxFormLayout>
-                                    <DxFormLayoutGroup Caption="Customer Information" ColSpanMd="6">
-                                        <DxFormLayoutItem Caption="Customer Name" ColSpanMd="12">
+                                    <DxFormLayoutGroup Caption="Customer Information" ColSpanMd="12">
+                                        <DxFormLayoutItem Caption="Customer Name" ColSpanMd="6" CaptionPosition="CaptionPosition.Vertical">
                                             <DxComboBox TData="Account" TValue="int"
                                                         Data="@AccountList"
                                                         TextFieldName="AccountName"
@@ -632,27 +636,29 @@
                                                         ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
                                         </DxFormLayoutItem>
 
-                                        <DxFormLayoutItem Caption="Address" ColSpanMd="12">
-                                            <DxMemo @bind-Text="EditModel.BillAddress1" />
-                                        </DxFormLayoutItem>
+                                       
 
-                                        <DxFormLayoutItem Caption="Mobile No." ColSpanMd="6">
+                                        <DxFormLayoutItem Caption="Mobile No." ColSpanMd="3" CaptionPosition="CaptionPosition.Vertical">
                                             <DxTextBox @bind-Text="EditModel.BillContactNo" />
                                         </DxFormLayoutItem>
 
-                                        <DxFormLayoutItem Caption="GSTIN No." ColSpanMd="6">
+                                        <DxFormLayoutItem Caption="GSTIN No." ColSpanMd="3" CaptionPosition="CaptionPosition.Vertical">
                                             <DxTextBox @bind-Text="EditModel.BillGstNo" />
                                         </DxFormLayoutItem>
 
-                                        <DxFormLayoutItem Caption="PIN" ColSpanMd="6">
+                                        <DxFormLayoutItem Caption="Address" ColSpanMd="6" CaptionPosition="CaptionPosition.Vertical">
+                                            <DxMemo @bind-Text="EditModel.BillAddress1" />
+                                        </DxFormLayoutItem>
+
+                                        <DxFormLayoutItem Caption="PIN" ColSpanMd="2" CaptionPosition="CaptionPosition.Vertical">
                                             <DxTextBox @bind-Text="EditModel.BillPincode" />
                                         </DxFormLayoutItem>
 
-                                        <DxFormLayoutItem Caption="City" ColSpanMd="6">
+                                        <DxFormLayoutItem Caption="City" ColSpanMd="2" CaptionPosition="CaptionPosition.Vertical">
                                             <DxTextBox @bind-Text="EditModel.BillCity" />
                                         </DxFormLayoutItem>
 
-                                        <DxFormLayoutItem Caption="State" ColSpanMd="12">
+                                        <DxFormLayoutItem Caption="State" ColSpanMd="2" CaptionPosition="CaptionPosition.Vertical" >
                                             <DxComboBox TData="State" TValue="int"
                                                         Data="@stateList"
                                                         TextFieldName="StateName"
@@ -693,6 +699,8 @@
                             </div>
                         </div>
                     </DxFormLayoutTabPage>
+
+
                 </DxFormLayoutTabPages>
             </DxFormLayout>
 

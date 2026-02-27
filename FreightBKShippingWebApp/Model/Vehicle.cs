@@ -14,10 +14,10 @@ namespace FreightBKShippingWebApp.Model
         public int VehicleCompanyId { get; set; }
 
         [Column("vehicle_addby_user_id")]
-        public int VehicleAddedByUserId { get; set; }
+        public string VehicleAddedByUserId { get; set; }
 
         [Column("vehicle_updatedby_user_id")]
-        public int? VehicleUpdatedByUserId { get; set; }
+        public string? VehicleUpdatedByUserId { get; set; }
 
         [Column("vehicle_no")]
         public string VehicleNo { get; set; } = string.Empty;

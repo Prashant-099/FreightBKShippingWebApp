@@ -10,8 +10,14 @@
 
 @inject IBranchContext BranchContext
 
-<DxPopup @bind-Visible="Visible" ShowCloseButton="true" HeaderText="@Title" MaxWidth="600" CloseOnOutsideClick="false" horizontalAlignment="HorizontalAlignment.Center"
-         verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body" ShowFooter="true" scrollable="true">
+<DxPopup @bind-Visible="Visible"
+ShowCloseButton="true" HeaderText="@Title" 
+MaxWidth="600" 
+CloseOnOutsideClick="false" 
+horizontalAlignment="HorizontalAlignment.Center"
+         verticalAlignment="VerticalAlignment.Center" 
+         BodyCssClass="my-popup-body" ShowFooter="true" 
+         scrollable="true">
 
     <BodyContentTemplate Context="bdybrnch">
         <EditForm  EditContext="@editContext" OnValidSubmit="HandleValidSubmit" Context="ctxeditform" id="branchForm">
@@ -165,28 +171,25 @@
     //     // await submitButton.FocusAsync(); // This triggers form validation
     //     // StateHasChanged(); // Force re-render to show validation messages
     // }
+
     public void Show(Branch branch)
     {
         if (branch != null && branch.BranchId > 0)
         {
-            // Edit mode – bind directly to the selected branch
-           // EditModel = branch;
             var json = JsonSerializer.Serialize(branch);
             EditModel = JsonSerializer.Deserialize<Branch>(json) ?? new Branch();
             Title = "Edit Branch";
         }
         else
         {
-            // Add mode – create new branch
             EditModel = new Branch
             {
                 BranchStatus = true,
-                BranchId = BranchContext.BranchId // 🔥 set default selected branch
+                BranchId = 0  
             };
             Title = "Add Branch";
         }
 
-        // Create EditContext when showing the form
         editContext = new EditContext(EditModel);
         Visible = true;
     }
