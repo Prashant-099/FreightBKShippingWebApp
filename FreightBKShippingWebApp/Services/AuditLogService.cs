@@ -6,6 +6,7 @@ namespace FreightBKShippingWebApp.Services
     {
         private readonly ApiClient _api;
 
+        public event Action? OnAuditChanged;
         public AuditLogService(ApiClient api)
         {
             _api = api;
@@ -28,6 +29,12 @@ namespace FreightBKShippingWebApp.Services
                 Console.WriteLine($"❌ Error loading audit logs: {ex.Message}");
                 return new();
             }
+        }
+
+        
+        public void NotifyAuditChanged()
+        {
+            OnAuditChanged?.Invoke();
         }
     }
 }

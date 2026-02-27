@@ -8,6 +8,7 @@
 @inject LoadingService LoadingService
 @inject ConfirmationDialogService ConfirmDialogService
 @inject GridLayoutService GridLayoutService
+@inject AuditLogService AuditLogService
 <style>
     .grid-size {
         max-height: 600px;
@@ -219,11 +220,21 @@
 
     private async Task OnEdit(ToolbarItemClickEventArgs e)
     {
-        var cargo = MyGrid.GetFocusedDataItem() as Cargo;
-        if (cargo != null)
-            popup.Show(cargo);
+        var focused = MyGrid.GetFocusedDataItem() as Cargo;
+
+        if (focused != null)
+        {
+            // Always take fresh object from latest cargoList
+            var freshCargo = cargoList
+                .FirstOrDefault(x => x.CargoId == focused.CargoId);
+
+            if (freshCargo != null)
+                popup.Show(freshCargo);
+        }
         else
+        {
             ToastService.Warning("Please select a cargo to edit.");
+        }
         await ClearSelection();
     }
 
@@ -253,8 +264,10 @@
         {
             var result = await CargoService.DeleteAsync(cargo.CargoId);
 
-            if (result.Success)
+            if (result.Success){
                 successCount++;
+                    AuditLogService.NotifyAuditChanged();
+            }
             else
                 failCount++;
                 errorMessages.Add(result.Error);

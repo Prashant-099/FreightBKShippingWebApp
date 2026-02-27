@@ -6,6 +6,7 @@
 @inject ToasteService ToastService
 @inject HsnSacService HsnSacService
 @inject LoadingService LoadingService
+@inject AuditLogService AuditLogService
 <DxPopup @bind-Visible="Visible" ShowCloseButton="true" HeaderText="@Title" MaxWidth="450" CloseOnOutsideClick="false" horizontalAlignment="HorizontalAlignment.Center"
          verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body" ShowFooter="true" scrollable="true">
     <BodyContentTemplate Context="bdy">
@@ -153,8 +154,11 @@
                 // EditModel.CargoGstPer = HsnSacList.HsnGstPer;
                 // EditModel.CargoCess = HsnSacList.HsnCess;
                 result = await CargoService.CreateAsync(EditModel);
-                if (result)
+                if (result){
                     ToastService.Success("Cargo created successfully!");
+                    AuditLogService.NotifyAuditChanged();
+
+                }
                 else
                 {
                     ToastService.Error("Failed to create Cargo!");
@@ -164,8 +168,10 @@
             else
             {
                 result = await CargoService.UpdateAsync(EditModel);
-                if (result)
+                if (result){
                     ToastService.Success("Cargo updated successfully!");
+                    AuditLogService.NotifyAuditChanged();
+            }
                 else
                 {
                     ToastService.Error("Failed to update Cargo!");

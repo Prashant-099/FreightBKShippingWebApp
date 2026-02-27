@@ -273,6 +273,8 @@
         LoadingService.OnChange += StateHasChanged;
         YearStatechangeService.OnYearChanged += StateHasChanged;
 
+        AuditLogService.OnAuditChanged += RefreshActivities;
+
         if (_branchInitialized) return;
         _branchInitialized = true;
 
@@ -322,8 +324,17 @@
     {
         LoadingService.OnChange -= StateHasChanged;
         YearStatechangeService.OnYearChanged -= StateHasChanged;
-    }
+        AuditLogService.OnAuditChanged -= RefreshActivities;
 
+    }
+    private async void RefreshActivities()
+    {
+        await InvokeAsync(async () =>
+        {
+            await LoadRecentActivities();
+            StateHasChanged();
+        });
+    }
 
     // Variables
     private bool _bellOpen = false;
@@ -357,7 +368,7 @@
         {
             var currentYearId = YearStatechangeService.SelectedYearId;
             var logs = (await AuditLogService.GetLatestAsync())
-                .Where(a => a.YearId == currentYearId)
+               
                 .OrderByDescending(l => l.DateTime)
                 .Take(10)
                 .ToList();
