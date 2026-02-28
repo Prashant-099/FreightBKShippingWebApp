@@ -16,7 +16,7 @@
 @inject YearStatechangeService YearStatechangeService
 @inject IJSRuntime JSRuntime
 @inject GridLayoutService GridLayoutService
-
+@inject AuditLogService AuditLogService
 <style>
     .grid-size {
         max-height: 570px;
@@ -298,8 +298,11 @@
             ToastService.Warning("Please select a quotation to edit.");
             return;
         }
+        var freshData = quotationList
+                .FirstOrDefault(x => x.BillId == quotation.BillId);
 
-        popup.Show(quotation);
+        if (freshData != null)
+            popup.Show(freshData);
         await ClearSelection();
     }
 
@@ -330,8 +333,11 @@
             foreach (var quotation in selectedList)
             {
                 var result = await BillService.DeleteAsync(quotation.BillId);
-                if (result.Success) 
+                if (result.Success) {
                     successCount++;
+                    AuditLogService.NotifyAuditChanged();
+
+                }
                 else
                 {
                     failCount++;

@@ -16,7 +16,7 @@
 @inject ConfirmationDialogService ConfirmDialogService
 @inject GridLayoutService GridLayoutService
 @inject AuthenticationStateProvider AuthenticationStateProvider
-
+@inject AuditLogService AuditLogService
 <style>
     .grid-size {
         max-height: 600px;
@@ -269,7 +269,14 @@
     {
         var company = CompanyGrid.GetFocusedDataItem() as Company;
         if (company != null)
-            companyPopup.Show(company);
+        {
+            // Always take fresh object from latest cargoList
+            var freshData = companyList
+                .FirstOrDefault(x => x.CompanyId == company.CompanyId);
+
+            if (freshData != null)
+                companyPopup.Show(freshData);
+        }
         else
             ToastService.Warning("Please select a company to edit.");
         await ClearSelection();
@@ -295,8 +302,9 @@
                 {
                     await CompanyService.DeleteAsync(company.CompanyId ?? 0);
                 }
-
+                AuditLogService.NotifyAuditChanged();
                 ToastService.Success($"{SelectedCompanies.Count} company(s) deleted successfully.");
+                AuditLogService.NotifyAuditChanged();
                 await LoadCompaniesAsync();
             }
             catch (Exception ex)

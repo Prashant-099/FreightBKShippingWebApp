@@ -7,6 +7,7 @@
 @inject LoadingService LoadingService
 @inject ConfirmationDialogService ConfirmDialogService
 @inject GridLayoutService GridLayoutService
+@inject AuditLogService AuditLogService
 <style>
 .grid-size {
         max-height: 570px;
@@ -107,7 +108,7 @@
     private IReadOnlyList<object> SelectedBranches { get; set; } = new List<object>();
     private BranchAddEditPage popup;
 
-  
+
 
     // Grid Layout Manager Reference
     private GridLayoutpPopup? layoutManager;
@@ -129,8 +130,8 @@
     {
         InitializeColumns();
         await LoadBranchesAsync();
-      
-        
+
+
     }
     private void InitializeColumns()
     {
@@ -143,10 +144,10 @@
         new() { FieldName = "Branchisdefault", Caption = "default", Visible = true,Width = 140, DisplayIndex = 4 },
         new() { FieldName = "BranchStatus", Caption = "Active", Visible = true, Width = 151, DisplayIndex = 5 }
    };
-        
+
     }
 
-    
+
     private async Task LoadBranchesAsync()
     {
         LoadingService.Show();
@@ -203,7 +204,11 @@
             ToastService.Warning("Please select a bill to edit.");
             return;
         }
-            popup.Show(branch);
+        var freshData = branchList
+                .FirstOrDefault(x => x.BranchId == branch.BranchId);
+
+        if (freshData != null)
+            popup.Show(freshData);
         await ClearSelection();
     }
 
@@ -215,7 +220,7 @@
             return;
         }
         var selectedList = SelectedBranches.Cast<Branch>().ToList();
-        
+
         var confirm = await ConfirmDialogService.ShowAsync(
             $"Are you sure you want to delete {SelectedBranches.Count} selected branch(es)?");
         if (!confirm)
@@ -231,7 +236,13 @@
             foreach (var branch in selectedList)
             {
                 var result = await BranchService.DeleteAsync(branch.BranchId);
-                if (result) successCount++; else failCount++;
+                if (result)
+                {
+                    successCount++;
+                    AuditLogService.NotifyAuditChanged();
+
+                }
+                else failCount++;
             }
 
             if (successCount > 0) ToastService.Success($"{successCount} Branch(s) Deleted Successfully.");

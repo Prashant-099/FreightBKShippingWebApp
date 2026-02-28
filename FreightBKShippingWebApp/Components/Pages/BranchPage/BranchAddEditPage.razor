@@ -7,7 +7,7 @@
 @inject StateService StateService
 @inject CountryService CountryService
 @inject IJSRuntime JSRuntime
-
+@inject AuditLogService AuditLogService
 @inject IBranchContext BranchContext
 
 <DxPopup @bind-Visible="Visible" ShowCloseButton="true" HeaderText="@Title" MaxWidth="600" CloseOnOutsideClick="false" horizontalAlignment="HorizontalAlignment.Center"
@@ -211,8 +211,12 @@
             {
                 var result = await BranchService.CreateAsync(EditModel);
                 if (result == true)
+                {
                     ToastService.Success("Branch created successfully!");
-                else
+                    AuditLogService.NotifyAuditChanged();
+
+                }
+                    else
                 {
                     ToastService.Error("Branch Failed To Create!");
                     return;
@@ -222,8 +226,12 @@
             {
                 var result = await BranchService.UpdateAsync(EditModel);
                 if (result == true)
+                {
                     ToastService.Success("Branch Update successfully!");
-                else
+                    AuditLogService.NotifyAuditChanged();
+
+                }
+                    else
                 {
                     ToastService.Error("Branch Failed To Update!");
                     return;

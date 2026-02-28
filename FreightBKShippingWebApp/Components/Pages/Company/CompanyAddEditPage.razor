@@ -9,6 +9,7 @@
 @inject LoadingService LoadingService
 @inject StateService StateService
 @inject CountryService CountryService
+@inject AuditLogService AuditLogService
 @inject IJSRuntime JSRuntime
 
 <DxPopup @bind-Visible="Visible"
@@ -299,6 +300,7 @@
                 }
 
                 EditModel.CompanyId = resultId;
+                AuditLogService.NotifyAuditChanged();
                 ToastService.Success("Company created successfully!");
             }
             else
@@ -317,7 +319,7 @@
                     ToastService.Error("Company failed to update!");
                     return;
                 }
-
+                AuditLogService.NotifyAuditChanged();
                 ToastService.Success("Company updated successfully!");
             }
 

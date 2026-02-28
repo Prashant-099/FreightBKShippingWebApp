@@ -115,14 +115,14 @@ namespace FreightBKShippingWebApp.Services
             // Find the requested voucher by id
             var voucher = VoucherConfigs.FirstOrDefault(v => v.VoucherId == voucherId.Value && v.VoucherBranchId == branchid);
             if (voucher == null)
-                throw new Exception("Voucher configuration not found!");
+                throw new Exception("Voucher not found! Please Create Voucher For Current Branch ");
 
             // Find the voucher detail that matches the financial year and is active
             var detail = voucher.VoucherDetails?
                 .FirstOrDefault(d => d.VoucherDetailYearId == finYearId && d.VoucherDetailStatus);
 
             if (detail == null)
-                throw new Exception("Voucher not found!");
+                throw new Exception("Voucher not Configure!");
 
 
             int nextNo = detail.VoucherDetailLastNo + 1;

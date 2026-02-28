@@ -8,6 +8,7 @@
 @inject EinvConfigService ConfigService
 @inject GstinAuthTokenService GstinAuthTokenService
 @inject BranchService BranchService
+@inject AuditLogService AuditLogService
 <DxPopup @bind-Visible="isVisible"
          HeaderText="@popupTitle"
          Width="700px"
@@ -347,6 +348,7 @@
             if (await EinvConfigService.SaveAsync(EditModel))
             {
                 ToastService.Success("Configuration saved successfully!");
+                AuditLogService.NotifyAuditChanged();
                 await OnSaved.InvokeAsync();
                 Hide();
             }

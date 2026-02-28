@@ -29,7 +29,7 @@
 @inject NotifyService NotifyService
 @inject CurrencyService CurrencyService
 @inject IBranchContext BranchContext
-
+@inject AuditLogService AuditLogService
 <style>
     /* Mobile Grid Fix */
     .quotation-grid-wrapper {
@@ -850,7 +850,7 @@
     private List<Branch> branchList = new();
     private List<ReportData> ReportDataList = new();
     private List<Account> BankList = new();
-        private List<Currency> CurrList = new();
+    private List<Currency> CurrList = new();
 
     private List<Location> locationList = new();
     private List<Notify> LineList = new();
@@ -909,7 +909,7 @@
             var reportTask = ReportDataService.GetAllAsync();
             var locationTask = LocationService.GetAllAsync();
             var notifyTask = NotifyService.GetAllAsync();
-             var currTask = CurrencyService.GetAllAsync();
+            var currTask = CurrencyService.GetAllAsync();
 
             await Task.WhenAll(serviceTask, voucherTask, unitTask, hsnTask, gstTask, reportTask, locationTask, notifyTask, currTask);
 
@@ -926,7 +926,7 @@
             UnitList = unitTask.Result;
             HsnList = hsnTask.Result;
             GstslabList = gstTask.Result;
-            
+
             CurrList = currTask.Result;
 
             isBackgroundDataLoaded = true;
@@ -994,7 +994,7 @@
 
         if (quotation?.BillId > 0)
         {
-           // EditModel = quotation;
+            // EditModel = quotation;
             var json = JsonSerializer.Serialize(quotation);
             EditModel = JsonSerializer.Deserialize<Bill>(json) ?? new Bill();
             BillDetails = quotation.BillDetails?
@@ -1034,6 +1034,7 @@
         }
         else
         {
+            EditModel = new Bill();
             var selectedCompany = CompanyList?.FirstOrDefault(c => c.Status == true);
 
             if (EditModel.BillBranchId == 0)
@@ -1049,7 +1050,13 @@
                 EditModel.BillDueDate = DateTime.Now.AddDays(30);
 
             EditModel.BillStatus = true;
-
+            var defaultVoucher = VoucherList
+       .Where(v => !string.IsNullOrWhiteSpace(v.VoucherGroup)
+                   && v.VoucherGroup.Trim()
+                      .Equals("QUOTATION", StringComparison.OrdinalIgnoreCase))
+       .FirstOrDefault();
+            EditModel.BillVoucherId =defaultVoucher?.VoucherId??0;
+             OnVoucherChanged(EditModel,EditModel.BillVoucherId);
             BillDetails = new List<BillDetail>();
             nextSNo = 1;
             Title = "Add Quotation";
@@ -1180,7 +1187,7 @@
             var finYearId = YearStatechangeService.SelectedYearId;
             try
             {
-                var result = await YearStatechangeService.GeneratebillNoAsync(voucherId, finYearId, BranchContext.BranchId);
+                var result = await YearStatechangeService.GeneratebillNoAsync(voucherId, finYearId, model.BillBranchId);
 
                 model.BillPrefix = result.prefix;
                 model.BillNo = result.prefix + result.number + result.suffix;
@@ -1783,8 +1790,10 @@
                 EditModel.BillTime = DateTime.Now.ToString("hh:mm tt");
                 savedQuotationId = await BillService.CreateAsync(EditModel);
 
-                if (savedQuotationId > 0)
+                if (savedQuotationId > 0){
                     ToastService.Success("Quotation created successfully!");
+                    AuditLogService.NotifyAuditChanged();
+                }
                 else
                 {
                     ToastService.Error("Failed to create Quotation!");
@@ -1795,8 +1804,10 @@
             {
                 result = await BillService.UpdateAsync(EditModel);
 
-                if (result)
+                if (result){
                     ToastService.Success("Quotation updated successfully!");
+                    AuditLogService.NotifyAuditChanged();
+                }
                 else
                 {
                     ToastService.Error(
