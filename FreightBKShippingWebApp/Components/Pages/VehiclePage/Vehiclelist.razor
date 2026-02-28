@@ -1,0 +1,137 @@
+﻿@page "/vehicle"
+@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Services
+
+@inject VehicleService VehicleService
+@inject ToasteService ToastService
+@inject LoadingService LoadingService
+@inject ConfirmationDialogService ConfirmDialogService
+
+<DxGrid TItem="Vehicle"
+        Data="@vehicleList"
+        @ref="MyGrid"
+        KeyFieldName="VehicleId"
+        ShowFilterRow="true"
+        ShowSearchBox="true"
+        FocusedRowEnabled="true"
+        SelectionMode="GridSelectionMode.Multiple"
+        SelectedDataItems="@SelectedVehicles"
+        SelectedDataItemsChanged="OnSelectedVehiclesChanged">
+
+    <ToolbarTemplate Context="toolbarContext">
+
+        <DxToolbar>
+            <TitleTemplate Context="tl">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-diagram-3 me-2"></i>
+                    <span class="fs-5">Vehicles</span>
+                </div>
+            </TitleTemplate>
+            <Items>
+                <DxToolbarItem Text="Add" IconCssClass="bi bi-plus-circle" Click="OnCreateNew" />
+                <DxToolbarItem Text="Edit" IconCssClass="bi bi-pencil-square" Click="OnEdit" />
+                <DxToolbarItem Text="Delete" IconCssClass="bi bi-trash" Click="OnDelete" />
+                <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="@LoadVehiclesAsync" />
+            </Items>
+        </DxToolbar>
+
+    </ToolbarTemplate>
+
+    <Columns>
+        <DxGridSelectionColumn Width="40" />
+        <DxGridDataColumn FieldName="VehicleNo" Caption="Vehicle No" Width="200px" />
+        <DxGridDataColumn FieldName="VehicleOwnerType" Caption="Owner Type" Width="150px" />
+        <DxGridDataColumn FieldName="VehicleMake" Caption="Make" Width="150px" />
+        <DxGridDataColumn FieldName="VehicleModel" Caption="Model" Width="150px" />
+        <DxGridDataColumn FieldName="VehicleLoadCapacity" Caption="Capacity" Width="120px" />
+        <DxGridDataColumn FieldName="VehicleStatus" Caption="Status" Width="100px" />
+    </Columns>
+</DxGrid>
+
+
+<VehicleAddEditPage @ref="popup" OnSaved="LoadVehiclesAsync" />
+
+
+<ConfirmationDialog />
+
+
+
+@code {
+
+    DxGrid MyGrid;
+    private List<Vehicle> vehicleList = new();
+    private IReadOnlyList<object> SelectedVehicles { get; set; } = new List<object>();
+    private VehicleAddEditPage popup;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadVehiclesAsync();
+    }
+
+    private async Task LoadVehiclesAsync()
+    {
+        LoadingService.Show();
+        try
+        {
+            vehicleList = await VehicleService.GetAllAsync();
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+
+    private async Task OnSelectedVehiclesChanged(IReadOnlyList<object> vehicles)
+    {
+        SelectedVehicles = vehicles ?? new List<object>();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void OnCreateNew(ToolbarItemClickEventArgs e)
+    {
+        popup.Show(new Vehicle());
+    }
+
+    private async Task OnEdit(ToolbarItemClickEventArgs e)
+    {
+        var vehicle = MyGrid.GetFocusedDataItem() as Vehicle;
+        if (vehicle == null)
+        {
+            ToastService.Warning("Please select a vehicle to edit.");
+            return;
+        }
+
+        popup.Show(vehicle);
+    }
+
+    private async Task OnDelete(ToolbarItemClickEventArgs e)
+    {
+        if (SelectedVehicles == null || SelectedVehicles.Count == 0)
+        {
+            ToastService.Warning("Please select at least one vehicle.");
+            return;
+        }
+
+        var confirm = await ConfirmDialogService.ShowAsync(
+            $"Are you sure you want to delete {SelectedVehicles.Count} vehicle(s)?");
+
+        if (!confirm) return;
+
+        LoadingService.Show();
+
+        try
+        {
+            foreach (var vehicle in SelectedVehicles.Cast<Vehicle>())
+            {
+                await VehicleService.DeleteAsync(vehicle.VehicleId);
+            }
+
+            ToastService.Success("Vehicle(s) deleted successfully.");
+            await LoadVehiclesAsync();
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+}

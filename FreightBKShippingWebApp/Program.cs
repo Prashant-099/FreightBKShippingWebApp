@@ -3,62 +3,86 @@ using FreightBKShipping.Client.Services;
 using FreightBKShippingWebApp;
 using FreightBKShippingWebApp.Authentication;
 using FreightBKShippingWebApp.Components;
+using FreightBKShippingWebApp.Extensions;
 using FreightBKShippingWebApp.Services;
 using FreightBKShippingWebApp.Services.PdfReaderAndHelperService;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.ResponseCompression;
-
-
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.HttpOverrides;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
-DXDrawingEngine.ForceSkia();
-// Add services to the container.
+
+DXDrawingEngine.ForceSkia(); // DevExpress drawing engine
+
+// ==========================================================
+// 1️⃣ RAZOR + BLAZOR SERVER
+// ==========================================================
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
-///do not change the path connected on the server where the app is hosted, as it is used to store the data protection keys for the application.
-///Changing this path may result in issues with data protection and authentication. If you need to change the path,
-///make sure to update it in both the code and the server configuration to ensure that the application can access the keys properly.     by DHruv Hadiya
+
+builder.Services.AddAntiforgery(options =>
+{
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    options.Cookie.Name = "__Host-Antiforgery-FreightBK"; // Extra credit: Use __Host- prefix for better security
+});
+// Protect SignalR payload size (VERY IMPORTANT FOR SaaS)
+builder.Services.AddSignalR(options =>
+{
+    options.MaximumReceiveMessageSize = 1024 * 50; // 50KB
+});
+
+// ==========================================================
+// 2️⃣ DATA PROTECTION (DO NOT CHANGE PATH IN PRODUCTION)
+// ==========================================================
 string keysPath;
+
 if (builder.Environment.IsDevelopment())
 {
-    // Local dev folder
     keysPath = Path.Combine(builder.Environment.ContentRootPath, "DataProtectionKeys");
 }
 else
 {
-    // Production server folder
+    // ⚠️ Production path (Linux VPS)
     keysPath = "/var/lib/freightbkshipping/dataprotection-keys";
 }
 
-Directory.CreateDirectory(keysPath); // ensure it exists
+Directory.CreateDirectory(keysPath);
 
 builder.Services.AddDataProtection()
     .PersistKeysToFileSystem(new DirectoryInfo(keysPath))
     .SetApplicationName("FreightBKShippingWebApp")
     .SetDefaultKeyLifetime(TimeSpan.FromDays(90));
 
-///end of data protection configuration
-///
-
-//builder.Services.AddDataProtection()
-//    .PersistKeysToFileSystem(new DirectoryInfo(
-//        Path.Combine(builder.Environment.ContentRootPath, "DataProtectionKeys")))
-//    .SetApplicationName("FreightBKShippingWebApp");
-
-
-builder.Services.AddDevExpressBlazor(options => {
+// ==========================================================
+// 3️⃣ DEVEXPRESS
+// ==========================================================
+builder.Services.AddDevExpressBlazor(options =>
+{
     options.BootstrapVersion = DevExpress.Blazor.BootstrapVersion.v5;
     options.SizeMode = DevExpress.Blazor.SizeMode.Medium;
 });
 
+builder.Services.AddDevExpressServerSideBlazorReportViewer();
 
-builder.Services.AddMvc();
+// ==========================================================
+// 4️⃣ AUTHENTICATION
+// ==========================================================
 builder.Services.AddAuthenticationCore();
 builder.Services.AddCascadingAuthenticationState();
 
-builder.Services.AddDevExpressServerSideBlazorReportViewer();
-// ✅ Add response compression
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always; // HTTPS only
+    options.Cookie.SameSite = SameSiteMode.Strict;
+});
+
+// ==========================================================
+// 5️⃣ RESPONSE COMPRESSION
+// ==========================================================
 builder.Services.AddResponseCompression(options =>
 {
     options.EnableForHttps = true;
@@ -66,18 +90,84 @@ builder.Services.AddResponseCompression(options =>
     options.Providers.Add<BrotliCompressionProvider>();
 });
 
-builder.Services.Configure<GzipCompressionProviderOptions>(options =>
+builder.Services.Configure<GzipCompressionProviderOptions>(o =>
 {
-    options.Level = System.IO.Compression.CompressionLevel.Fastest;
+    o.Level = System.IO.Compression.CompressionLevel.Fastest;
 });
 
-builder.Services.Configure<BrotliCompressionProviderOptions>(options =>
+builder.Services.Configure<BrotliCompressionProviderOptions>(o =>
 {
-    options.Level = System.IO.Compression.CompressionLevel.Fastest;
+    o.Level = System.IO.Compression.CompressionLevel.Fastest;
 });
 
+// ==========================================================
+// 6️⃣ OUTPUT CACHE
+// ==========================================================
 builder.Services.AddOutputCache();
-builder.Services.AddHttpClient<ApiClient>();
+
+// ==========================================================
+// 7️⃣ RATE LIMITING (GLOBAL SaaS PROTECTION)
+// ==========================================================
+builder.Services.AddRateLimiter(options =>
+{
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
+    {
+        var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+        return RateLimitPartition.GetSlidingWindowLimiter(ip, _ =>
+            new SlidingWindowRateLimiterOptions
+            {
+                PermitLimit = 60, // 60 req per minute per IP
+                Window = TimeSpan.FromMinutes(1),
+                SegmentsPerWindow = 6,
+                QueueLimit = 5,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst
+            });
+    });
+
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+});
+
+// ==========================================================
+// 8️⃣ FORWARDED HEADERS (NGINX / LINUX VPS)
+// ==========================================================
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders =
+        ForwardedHeaders.XForwardedFor |
+        ForwardedHeaders.XForwardedProto;
+
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
+// ==========================================================
+// 9️⃣ HTTP CLIENT
+// ==========================================================
+
+// 🔵 Local API
+builder.Services.AddHttpClient<ApiClient>(client =>
+{
+    client.BaseAddress = new Uri("https://localhost:5003/");
+});
+
+// 🔴 Production API (Uncomment in production)
+// builder.Services.AddHttpClient<ApiClient>(client =>
+// {
+//     client.BaseAddress = new Uri("https://apihost.freightbook.in/");
+// });
+
+// ==========================================================
+// 🔟 LOCALIZATION
+// ==========================================================
+builder.Services.AddLocalization();
+builder.Services.AddControllers();
+builder.Services.AddMvc();
+
+// ==========================================================
+// 1️⃣1️⃣ YOUR SCOPED SERVICES (UNCHANGED)
+// ==========================================================
+
 builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<BranchService>();
@@ -108,7 +198,7 @@ builder.Services.AddScoped<UnitService>();
 builder.Services.AddScoped<VesselService>();
 builder.Services.AddScoped<RateMasterService>();
 builder.Services.AddScoped<JobService>();
-builder.Services.AddScoped<ReportDataService>(); 
+builder.Services.AddScoped<ReportDataService>();
 builder.Services.AddScoped<ReportService>();
 builder.Services.AddScoped<BillService>();
 builder.Services.AddScoped<GridLayoutService>();
@@ -123,17 +213,17 @@ builder.Services.AddScoped<GstTemplateService>();
 builder.Services.AddScoped<GstExcelService>();
 builder.Services.AddScoped<Gstr2TemplateService>();
 builder.Services.AddScoped<Gstr3BTemplateService>();
-//pdfreder services
-builder.Services.AddScoped<DataCleanupService>();
-//builder.Services.AddScoped<PdfExtractionService>();
-builder.Services.AddScoped<FreightBKShippingWebApp.Services.PdfReaderAndHelperService.ExportJobBuilderService>();
-builder.Services.AddScoped<FreightBKShippingWebApp.Services.PdfReaderAndHelperService.ExportPdfExtractorService>(); 
+builder.Services.AddScoped<VehicleService>();
 
-builder.Services.AddScoped<FreightBKShippingWebApp.Services.PdfReaderAndHelperService.PdfDetailedExtractorService>();
+// PDF Services
+builder.Services.AddScoped<DataCleanupService>();
+builder.Services.AddScoped<ExportJobBuilderService>();
+builder.Services.AddScoped<ExportPdfExtractorService>();
+builder.Services.AddScoped<FreightBKShippingWebApp.Services.PdfReaderAndHelperService.PdfDetailedExtractorService>(); 
 builder.Services.AddScoped<JobDataCreationService>();
 builder.Services.AddScoped<JobBuilderService>();
 
-//wpmail send dhruvadmina
+// Mail + Other Services
 builder.Services.AddScoped<ChatwayService>();
 builder.Services.AddScoped<SendWpMailService>();
 builder.Services.AddScoped<WpMailConfigService>();
@@ -141,49 +231,52 @@ builder.Services.AddScoped<Sentwpcerti>();
 builder.Services.AddScoped<FileUploadService>();
 builder.Services.AddScoped<JournalService>();
 builder.Services.AddScoped<LrApiService>();
-
-//
 builder.Services.AddScoped<AuthTokenService>();
 builder.Services.AddScoped<IBranchContext, BranchContext>();
 builder.Services.AddScoped<ITokenProvider, TokenProvider>();
 builder.Services.AddScoped<IGenericReportManager, GenericReportManager>();
 
-//builder.Services.AddHttpClient<ApiClient>(client =>
-//{
-//    client.BaseAddress = new Uri("http://localhost:5003/");
-//});
-
-builder.Services.AddHttpClient<ApiClient>(client =>
-{
-    client.BaseAddress = new Uri("https://localhost:5003/");
-});
-
-//builder.Services.AddHttpClient<ApiClient>(client =>
-//{
-//    client.BaseAddress = new Uri("https://apihost.freightbook.in/");
-//});
-//builder.Services.AddHttpClient<ApiClient>(client =>
-//{
-//    client.BaseAddress = new Uri("http://apihost.freightbook.in/");
-//});
-builder.Services.AddLocalization();
-builder.Services.AddControllers();
+// ==========================================================
+// 🚀 BUILD APP
+// ==========================================================
 var app = builder.Build();
-// ✅ Use compression middleware (place BEFORE UseEndpoints)
-app.UseResponseCompression();
-// Configure the HTTP request pipeline.
+
+// ==========================================================
+// 🔥 MIDDLEWARE ORDER (VERY IMPORTANT)
+// ==========================================================
+
+// 1️⃣ Forwarded headers FIRST (Linux VPS)
+app.UseForwardedHeaders();
+
+// 2️⃣ Exception + HSTS (Production only)
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
+
+// 3️⃣ HTTPS
 app.UseHttpsRedirection();
 
+// 4️⃣ Compression
+app.UseResponseCompression();
+
+// 5️⃣ Security Headers (CSP)
+app.UseSecurityHeaders();
+
+// 6️⃣ Static files
 app.UseStaticFiles();
+
+// 7️⃣ Anti-forgery
 app.UseAntiforgery();
 
+// 8️⃣ Rate limiter (BEFORE endpoints)
+app.UseRateLimiter();
+
+// 9️⃣ Output Cache
 app.UseOutputCache();
+
+// 🔟 Map Blazor
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 

@@ -85,11 +85,13 @@
         {
             <div class="sb-label">Operations</div>
 
-            <NavLink class="sb-item" href="/quotation"
-                 ActiveClass="sb-item-active" @onclick="NavClicked">
-                <i class="bi bi-file-earmark-text" style="color:#64748b"></i>
-                <span>Quotation</span>
-        </NavLink>
+
+                <NavLink class="sb-item" href="/quotation" Match="NavLinkMatch.All"
+                         ActiveClass="sb-sub-active" @onclick="NavClicked">
+                    <i class="bi bi-file-earmark-text sb-icon" ></i>
+                    <span>Quotation</span>
+                </NavLink>
+
 
             @if (ShowGroup("Shipments", shipItems))
             {
@@ -99,6 +101,7 @@
                         <span>Shipments</span>
                         <i class="bi bi-chevron-right sb-chevron @(_ship ? "sb-chevron-open" : "")"></i>
                     </button>
+
                     @if (_ship)
                     {
                         <div class="sb-sub">
@@ -242,6 +245,7 @@
     private bool _voucher = false;
     private bool _reports = false;
     private bool _gstr = false;
+    private bool _quotation;
 
     private void Toggle(ref bool val) => val = !val;
 
@@ -257,6 +261,7 @@
         new("GST Slab",       "/gstslabs",   "bi bi-cash-coin"),
         new("Users Activity", "/audit-logs", "bi bi-person-video2"),
     };
+
     private List<M> masterItems = new()
     {
         new("Accounts",      "/account",      "bi bi-journal-text"),
@@ -272,18 +277,26 @@
         new("Unit",          "/Unit",         "bi bi-rulers"),
         new("Rate",          "/ratemaster",   "bi bi-currency-exchange"),
         new("Status",        "/status",       "bi bi-flag"),
+        new("Vehicle",        "/vehicle",       "bi bi-flag"),
     };
+
     private List<M> shipItems = new()
     {
         new("Import Job", "/jobimport", "bi bi-box-arrow-in-down"),
         new("Export Job", "/jobexport", "bi bi-box-arrow-up"),
-        
+        // new("Quotation",  "/quotation", "bi bi-file-earmark-text"),
     };
+
+    private List<M> quotationItems = new()
+{
+    new("Quotation", "/quotation", "bi bi-file-earmark-text"),
+};
     private List<M> transportItems = new()
     {
         new("Party Bill", "/partybill", "bi bi-box-arrow-in-down"),
         new("Lr Entry",   "/lrentry",   "bi bi-box-arrow-in-down"),
     };
+
     private List<M> voucherItems = new()
     {
         new("Sale Invoice",     "/bill",     "bi bi-receipt"),
@@ -291,6 +304,7 @@
         new("Receipt",          "/Receipt",  "bi bi-cash-coin"),
         new("Payment",          "/Payment",  "bi bi-credit-card-2-front"),
     };
+
     private List<M> reportItems = new()
     {
         new("Job Register",       "/jobregister",         "bi bi-book"),

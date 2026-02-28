@@ -18,7 +18,7 @@
 @inject IJSRuntime JS
 @inject LrApiService LrApiService
 @inject NavigationManager NavManager
-
+@inject VehicleService VehicleService
 <style>
     :root {
         --clr-bg: #f4f6fb;
@@ -145,8 +145,16 @@
                             {
                                 <div class="field-group">
                                     <label>Vehicle</label>
-                                    <DxSpinEdit @bind-Value="model.LrVehicleId" TValue="int?"
-                                                NullText="Enter Trip No" ShowSpinButtons=false/>
+
+                                                 <DxComboBox Data="@vehiclelist"
+                                                TData="Vehicle" TValue="int?"
+                                                TextFieldName="VehicleNo" ValueFieldName="VehicleId"
+                                                @bind-Value="model.LrVehicleId"
+                                                NullText="Select Vehicle"
+                                                ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                                AllowUserInput="true"
+                                                SearchMode="ListSearchMode.AutoSearch"
+                                                SearchFilterCondition="ListSearchFilterCondition.Contains" />
                                 </div>
                             }
 
@@ -1101,6 +1109,7 @@
     private List<Account> ChargesList = new();
     private List<Account> ExpenseAccountList = new();
     private List<Account> BankCashList = new();
+    private List<Vehicle> vehiclelist = new();
 
     public class BillTypeVM { public string Name { get; set; } = ""; }
     private List<BillTypeVM> BillTypeList = new()
@@ -1134,8 +1143,8 @@
         var accountTask   = AccountService.GetAllAsync();
         var payTypeTask   = PayTypeService.GetAllAsync();
         var cargoTask     = CargoService.GetAllAsync();
-
-        await Task.WhenAll(notifyTask, locationTask, accountTask, payTypeTask, cargoTask);
+        var vehicleTask   = VehicleService.GetAllAsync();
+        await Task.WhenAll(notifyTask, locationTask, accountTask, payTypeTask, cargoTask,vehicleTask);
 
         notifylist           = notifyTask.Result;
         paytypeList          = payTypeTask.Result;
@@ -1151,7 +1160,7 @@
         ExpenseAccountList   = accountpartylist.Where(x => x.AccountTypeId == 19).ToList();
         BankCashList         = accountpartylist
             .Where(x => x.AccountTypeId == 10 || x.AccountTypeId == 11).ToList();
-
+        vehiclelist          = vehicleTask.Result;
         if (IsEditMode)
             await LoadLrForEdit(LrId!.Value);
     }
