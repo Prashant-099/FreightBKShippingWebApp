@@ -8,6 +8,7 @@
 @inject LoadingService LoadingService
 @inject ConfirmationDialogService ConfirmDialogService
 @inject GridLayoutService GridLayoutService
+@inject AuditLogService AuditLogService
 <style>
     .grid-size {
         max-height: 600px;
@@ -140,7 +141,7 @@
     {
         InitializeColumns();
         await LoadUnitsAsync();
-       
+
     }
     private void InitializeColumns()
     {
@@ -160,10 +161,10 @@
 
         new(){ FieldName = "UnitUpdated", Caption = "Updated", Visible = true, Width = 200, DisplayIndex = 6 }
     };
-       
+
     }
 
-   
+
     private async Task LoadUnitsAsync()
     {
         LoadingService.Show("Loading units...");
@@ -219,7 +220,13 @@
     {
         var unit = MyGrid.GetFocusedDataItem() as Unit;
         if (unit != null)
-            popup.Show(unit);
+        {
+            var freshData = unitList
+         .FirstOrDefault(x => x.UnitId == unit.UnitId);
+
+            if (freshData != null)
+                popup.Show(freshData);
+        }
         else
             ToastService.Warning("Please select a unit to edit.");
         await ClearSelection();
@@ -246,14 +253,18 @@
             LoadingService.Show("Deleting...");
             int successCount = 0, failCount = 0;
 
-        foreach (var unit in selectedList)
-        {
-            var result = await UnitService.DeleteAsync(unit.UnitId);
-            if (result)
-                successCount++;
-            else
-                failCount++;
-        }
+            foreach (var unit in selectedList)
+            {
+                var result = await UnitService.DeleteAsync(unit.UnitId);
+                if (result)
+                {
+                    successCount++;
+                    AuditLogService.NotifyAuditChanged();
+
+                }
+                else
+                    failCount++;
+            }
 
         if (successCount > 0)
             ToastService.Success($"{successCount} Unit(s) deleted successfully.");

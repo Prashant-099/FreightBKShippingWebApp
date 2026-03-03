@@ -14,7 +14,7 @@
 @inject UnitService UnitService
 @inject AccountService AccountService
 @inject VoucherService VoucherService
-
+@inject AuditLogService AuditLogService
 
 
 <style>
@@ -311,6 +311,8 @@
             if (result)
             {
                 ToastService.Success($"Service {(EditModel.ServiceId == 0 ? "created" : "updated")} successfully!");
+                AuditLogService.NotifyAuditChanged();
+
                 Visible = false;
                 await OnSaved.InvokeAsync();
             }

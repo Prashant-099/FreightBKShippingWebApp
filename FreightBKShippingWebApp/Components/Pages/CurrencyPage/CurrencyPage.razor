@@ -7,6 +7,7 @@
 @inject LoadingService LoadingService
 @inject ConfirmationDialogService ConfirmDialogService
 @inject GridLayoutService GridLayoutService
+@inject AuditLogService AuditLogService
 <style>
     .grid-size {
         max-height: 600px;
@@ -106,7 +107,7 @@
     private IReadOnlyList<object> SelectedCurrencies { get; set; } = new List<object>();
 
     private CurrencyAddEditPage popup;
-   
+
 
     // All possible columns
     private GridLayoutpPopup? layoutManager;
@@ -129,8 +130,8 @@
     {
         InitializeColumns();
         await LoadCurrenciesAsync();
-     
-        
+
+
     }
 
     private void InitializeColumns()
@@ -144,10 +145,10 @@
         new() { FieldName = "CurrencyCreated", Caption = "Created At", Visible = true, Width = 150, DisplayIndex = 3 },
         new() { FieldName = "CurrencyUpdated", Caption = "Updated At", Visible = true, Width = 150, DisplayIndex = 4 }
         };
-      
+
     }
 
-  
+
 
     private async Task LoadCurrenciesAsync()
     {
@@ -201,7 +202,13 @@
     {
         var currency = MyGrid.GetFocusedDataItem() as Currency;
         if (currency != null)
-            popup.Show(currency);
+        {
+            var freshData = currencyList
+              .FirstOrDefault(x => x.CurrencyId == currency.CurrencyId);
+
+            if (freshData != null)
+              popup.Show(freshData);
+        }
         else
             ToastService.Warning("Please select a currency to edit.");
         await ClearSelection();
@@ -233,7 +240,12 @@
             {
 
                 var result = await CurrencyService.DeleteAsync(currency.CurrencyId);
-                if (result) successCount++; else failCount++;
+                if (result) 
+                {
+                    AuditLogService.NotifyAuditChanged();
+                    successCount++; 
+                }
+                else failCount++;
 
             }
             if (successCount > 0) ToastService.Success($"{successCount} currency(s) Deleted Successfully.");

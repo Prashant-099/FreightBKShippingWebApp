@@ -4,7 +4,7 @@
 @inject UnitService UnitService
 @inject ToasteService ToastService
 @inject LoadingService LoadingService
-
+@inject AuditLogService AuditLogService
 <DxPopup @bind-Visible="Visible" ShowCloseButton="true" HeaderText="@Title" MaxWidth="400" CloseOnOutsideClick="false" horizontalAlignment="HorizontalAlignment.Center"
          verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body" ShowFooter="true" scrollable="true">
   
@@ -145,7 +145,10 @@
             {
                 result = await UnitService.CreateAsync(EditModel);
                 if (result)
+                {
                     ToastService.Success("Unit created successfully!");
+                    AuditLogService.NotifyAuditChanged();
+                }
                 else
                     ToastService.Error("Failed to create unit!");
             }
@@ -153,7 +156,10 @@
             {
                 result = await UnitService.UpdateAsync(EditModel);
                 if (result)
+                {
                     ToastService.Success("Unit updated successfully!");
+                    AuditLogService.NotifyAuditChanged();
+                }
                 else
                     ToastService.Error("Failed to update unit!");
             }

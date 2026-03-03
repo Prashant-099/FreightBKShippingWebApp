@@ -4,7 +4,7 @@
 @inject VesselService VesselService
 @inject ToasteService ToastService
 @inject LoadingService LoadingService
-
+@inject AuditLogService AuditLogService
 <DxPopup @bind-Visible="Visible" ShowCloseButton="true" HeaderText="@Title" Width="650px" CloseOnOutsideClick="false" horizontalAlignment="HorizontalAlignment.Center"
          verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body" ShowFooter="true" scrollable="true">
      <BodyContentTemplate Context="bdy">
@@ -108,11 +108,11 @@
 
     public void Show(Vessel? vessel)
     {
-      
+
         if (vessel.VesselId > 0)
         {
             // Edit mode – bind directly to the selected object
-           // EditModel = vessel;
+            // EditModel = vessel;
             var json = JsonSerializer.Serialize(vessel);
             EditModel = JsonSerializer.Deserialize<Vessel>(json) ?? new Vessel();
             Title = "Edit Vessel";
@@ -143,7 +143,11 @@
             {
                 result = await VesselService.CreateAsync(EditModel);
                 if (result)
+                {
                     ToastService.Success("Vessel created successfully!");
+                    AuditLogService.NotifyAuditChanged();
+
+                }
                 else
                     ToastService.Error("Failed to create vessel!");
             }
@@ -151,7 +155,11 @@
             {
                 result = await VesselService.UpdateAsync(EditModel);
                 if (result)
+                {
                     ToastService.Success("Vessel updated successfully!");
+                    AuditLogService.NotifyAuditChanged();
+
+                }
                 else
                     ToastService.Error("Failed to update vessel!");
             }

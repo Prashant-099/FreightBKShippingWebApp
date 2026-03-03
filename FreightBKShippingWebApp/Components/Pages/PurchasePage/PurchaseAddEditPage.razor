@@ -6,7 +6,7 @@
 @using FreightBKShippingWebApp.Services
 @using DevExpress.Blazor
 @using System.Text.Json
-
+@inject AuditLogService AuditLogService
 @inject BillService BillService
 @inject ToasteService ToastService
 @inject LoadingService LoadingService
@@ -3533,7 +3533,11 @@ width:fit-content;
                 EditModel.BillTime = DateTime.Now.ToString("hh:mm tt");
                 savedBillId = await BillService.CreateAsync(EditModel);
                 if (savedBillId >0)
+                {
                     ToastService.Success("Bill created successfully!");
+                                    AuditLogService.NotifyAuditChanged();
+
+                }
                 else
                 {
                    // ToastService.Error(BillService.LastError);
@@ -3545,8 +3549,10 @@ width:fit-content;
             else
             {
                 result = await BillService.UpdateAsync(EditModel);
-                if (result)
+                if (result){
                     ToastService.Success("Bill updated successfully!");
+                    AuditLogService.NotifyAuditChanged();
+                }
                 else
                 {
                     ToastService.Error(

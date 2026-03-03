@@ -4,7 +4,7 @@
 @inject StatusService StatusService
 @inject ToasteService ToastService
 @inject LoadingService LoadingService
-
+@inject AuditLogService AuditLogService
 <DxPopup @bind-Visible="Visible"
          ShowCloseButton="true"
          HeaderText="@Title"
@@ -119,7 +119,10 @@
             {
                 result = await StatusService.CreateAsync(EditModel);
                 if (result)
+                {
                     ToastService.Success("Status created successfully!");
+                    AuditLogService.NotifyAuditChanged();
+                }
                 else
                 {
                     ToastService.Error("Failed to create status!");
@@ -130,7 +133,10 @@
             {
                 result = await StatusService.UpdateAsync(EditModel);
                 if (result)
+                {
                     ToastService.Success("Status updated successfully!");
+                    AuditLogService.NotifyAuditChanged();
+                }
                 else
                 {
                     ToastService.Error("Failed to update status!");

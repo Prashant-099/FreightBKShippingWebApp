@@ -13,7 +13,7 @@
 @inject ConfirmationDialogService ConfirmDialogService
 @inject IBranchContext BranchContext
 @inject BranchService BranchService
-
+@inject AuditLogService AuditLogService
 <style>
     .receipt-grid-wrapper {
         width: 100%;
@@ -1219,11 +1219,15 @@
             {
                 result = await JournalService.CreateAsync(EditModel);
                 ToastService.Success(result ? "Receipt created successfully!" : "Failed to create receipt!");
+                                    AuditLogService.NotifyAuditChanged();
+
             }
             else
             {
                 result = await JournalService.UpdateAsync(EditModel);
                 ToastService.Success(result ? "Receipt updated successfully!" : "Failed to update receipt!");
+                                    AuditLogService.NotifyAuditChanged();
+
             }
 
             if (result)

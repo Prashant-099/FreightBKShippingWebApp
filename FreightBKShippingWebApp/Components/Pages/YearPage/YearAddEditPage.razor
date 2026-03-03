@@ -4,7 +4,8 @@
 @inject YearService YearService
 @inject ToasteService ToastService
 @inject LoadingService LoadingService
-
+@inject AuditLogService AuditLogService
+@inject YearStatechangeService YearStatechangeService
 <DxPopup @bind-Visible="Visible" ShowCloseButton="true" HeaderText="@Title" MaxWidth="600" CloseOnOutsideClick="false" horizontalAlignment="HorizontalAlignment.Center"
          verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body" ShowFooter="true" scrollable="true">
           <BodyContentTemplate Context="bdy">
@@ -99,9 +100,12 @@
             if (EditModel.YearId == 0)
             {
                 var result = await YearService.CreateAsync(EditModel);
-                if (result)
+                if (result){
                     ToastService.Success("Year created successfully!");
-                else
+                    AuditLogService.NotifyAuditChanged();
+                    await YearStatechangeService.RefreshYearsAsync(true);
+                }
+                    else
                 {
                     ToastService.Error("Failed to create Year!");
                     return;
@@ -110,9 +114,12 @@
             else
             {
                 var result = await YearService.UpdateAsync(EditModel);
-                if (result)
+                if (result){
                     ToastService.Success("Year updated successfully!");
-                else
+                    AuditLogService.NotifyAuditChanged();
+                    await YearStatechangeService.RefreshYearsAsync(true);
+                }
+                    else
                 {
                     ToastService.Error("Failed to update Year!");
                     return;

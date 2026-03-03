@@ -11,7 +11,7 @@
 @inject NavigationManager NavigationManager
 @inject ConfirmationDialogService ConfirmDialogService
 @inject AuthenticationStateProvider AuthenticationStateProvider
-
+@inject AuditLogService AuditLogService
 <PageTitle>Payment</PageTitle>
 <style>
     .grid-size {
@@ -229,7 +229,7 @@
         InitializeColumns();
         await CheckRole();
         await LoadReceipts();
-      
+
     }
 
     private async Task LoadReceipts()
@@ -265,8 +265,11 @@
             ToastService.Error("This receipt is locked.");
             return;
         }
+        var freshData = PaymentList
+              .FirstOrDefault(x => x.JournalId == journal.JournalId);
 
-        Popup?.Show(journal);
+        if (freshData != null)
+            Popup?.Show(freshData);
     }
 
     private async Task OnDelete(ToolbarItemClickEventArgs e)
@@ -296,7 +299,12 @@
             foreach (var journal in selectedList)
             {
                 var result = await JournalService.DeleteAsync(journal.JournalId);
-                if (result.Success) successCount++;
+                if (result.Success)
+                {
+                    successCount++;
+                    AuditLogService.NotifyAuditChanged();
+
+                }
                 else
                 {
                     failCount++;

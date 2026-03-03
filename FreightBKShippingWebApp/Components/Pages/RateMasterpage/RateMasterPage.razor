@@ -8,6 +8,7 @@
 @inject AccountService AccountService
 @inject ServiceService ServiceService
 @inject GridLayoutService GridLayoutService
+@inject AuditLogService AuditLogService
 <style>
     .grid-size {
         max-height: 600px;
@@ -150,7 +151,7 @@
     {
         InitializeColumns();
         await LoadRatesAsync();
-       
+
     }
     private void InitializeColumns()
     {
@@ -172,10 +173,10 @@
 
      new(){ FieldName = "RateMasterUpdated", Caption = "Updated At", Visible = true, Width = 140, DisplayIndex = 7 }
 };
-       
+
     }
 
-   
+
     private async Task LoadRatesAsync()
     {
         LoadingService.Show();
@@ -228,7 +229,13 @@
     {
         var rate = MyGrid.GetFocusedDataItem() as RateMaster;
         if (rate != null)
-            popup.Show(rate);
+        {
+            var freshData = rateMasterList
+    .FirstOrDefault(x => x.RateMasterId == rate.RateMasterId);
+
+            if (freshData != null)
+                popup.Show(freshData);
+        }
         else
             ToastService.Warning("Please select a rate to edit.");
         await ClearSelection();
@@ -257,7 +264,13 @@
             foreach (var rate in selectedList)
             {
                 var result = await RateMasterService.DeleteAsync(rate.RateMasterId);
-                if (result) successCount++; else failCount++;
+                if (result)
+                {
+                    successCount++;
+                    AuditLogService.NotifyAuditChanged();
+
+                }
+                else failCount++;
             }
 
             if (successCount > 0) ToastService.Success($"{successCount} rate(s) Deleted Successfully.");

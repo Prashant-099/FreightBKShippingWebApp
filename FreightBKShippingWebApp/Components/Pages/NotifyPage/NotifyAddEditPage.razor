@@ -7,6 +7,7 @@
 @inject LoadingService LoadingService
 @inject CountryService CountryService
 @inject StateService StateService
+@inject AuditLogService AuditLogService
 <DxPopup @bind-Visible="Visible" ShowCloseButton="true" HeaderText="@Title" MaxWidth="850"
          CloseOnOutsideClick="false" horizontalAlignment="HorizontalAlignment.Center"
          verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body" 
@@ -164,8 +165,8 @@
     {
         if (notify.NotifyId>0)
         {
-           // EditModel = notify;
-                var json = JsonSerializer.Serialize(notify);
+            // EditModel = notify;
+            var json = JsonSerializer.Serialize(notify);
             EditModel = JsonSerializer.Deserialize<Notify>(json) ?? new Notify();
             Title = "Edit Miscellaneous";
         }
@@ -198,7 +199,11 @@
                 result = await NotifyService.CreateAsync(EditModel);
 
                 if (result != null)
+                {
                     ToastService.Success("Miscellaneous created successfully!");
+                    AuditLogService.NotifyAuditChanged();
+
+                }
                 else
                 {
                     ToastService.Error("Failed to create Miscellaneous!");
@@ -211,7 +216,11 @@
                 result = await NotifyService.UpdateAsync(EditModel);
 
                 if (result != null)
+                {
                     ToastService.Success("Miscellaneous updated successfully!");
+                    AuditLogService.NotifyAuditChanged();
+
+                }
                 else
                 {
                     ToastService.Error("Failed to update Miscellaneous!");

@@ -33,6 +33,7 @@
 @inject NavigationManager Navigation
 @inject GridLayoutService GridLayoutService
 @inject IBranchContext BranchContext
+@inject AuditLogService AuditLogService
 <style>
     /* ========== MOBILE GRID FIX ========== */
 
@@ -3343,7 +3344,11 @@
             EditModel.BillTime = DateTime.Now.ToString("hh:mm tt");
             result = await BillService.CreateAsync(EditModel);
             if (result>0)
+            {
                 ToastService.Success("Bill created successfully!");
+                AuditLogService.NotifyAuditChanged();
+
+            }
             else
             {
                 ToastService.Error("Failed to create Bill!");
@@ -3499,7 +3504,11 @@
                 EditModel.BillTime = DateTime.Now.ToString("hh:mm tt");
                 savedBillId = await BillService.CreateAsync(EditModel);
                 if (savedBillId >0)
+                {
                     ToastService.Success("Bill created successfully!");
+                    AuditLogService.NotifyAuditChanged();
+
+                }
                 else
                 {
                    // ToastService.Error(BillService.LastError);
@@ -3512,7 +3521,11 @@
             {
                 result = await BillService.UpdateAsync(EditModel);
                 if (result)
+                {
                     ToastService.Success("Bill updated successfully!");
+                    AuditLogService.NotifyAuditChanged();
+
+                }
                 else
                 {
                     // ToastService.Error(BillService.LastError);

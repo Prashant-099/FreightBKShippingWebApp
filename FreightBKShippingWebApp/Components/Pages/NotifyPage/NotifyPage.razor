@@ -7,6 +7,7 @@
 @inject LoadingService LoadingService
 @inject ConfirmationDialogService ConfirmDialogService
 @inject GridLayoutService GridLayoutService
+@inject AuditLogService AuditLogService
 <style>
     .grid-size {
         max-height: 600px;
@@ -131,8 +132,8 @@
     {
         InitializeColumns();
         await LoadNotifiesAsync();
-       
-     
+
+
     }
     private void InitializeColumns()
     {
@@ -145,10 +146,10 @@
     new() { FieldName = "NotifyEmail", Caption = "Email", Visible = true, Width = 180, DisplayIndex = 5 },
      new() { FieldName = "NotifyStatus", Caption = "Active", Visible = true, Width = 120, DisplayIndex = 6 }
     };
-       
+
     }
 
-   
+
     private async Task LoadNotifiesAsync()
     {
         LoadingService.Show("Loading notifies...");
@@ -206,7 +207,14 @@
     {
         var notify = MyGrid.GetFocusedDataItem() as Notify;
         if (notify != null)
-            popup.Show(notify);
+        {
+            var freshData = notifyList
+          .FirstOrDefault(x => x.NotifyId == notify.NotifyId);
+
+            if (freshData != null)
+                popup.Show(freshData);
+        
+        }
         else
             ToastService.Warning("Please select a record to edit.");
         await ClearSelection();
@@ -234,14 +242,18 @@
             LoadingService.Show("Deleting...");
             int successCount = 0, failCount = 0;
 
-        foreach (var notify in selectedList)
-        {
-            var result = await NotifyService.DeleteAsync(notify.NotifyId);
-            if (result)
-                successCount++;
-            else
-                failCount++;
-        }
+            foreach (var notify in selectedList)
+            {
+                var result = await NotifyService.DeleteAsync(notify.NotifyId);
+                if (result)
+                {
+                    successCount++;
+                    AuditLogService.NotifyAuditChanged();
+
+                }
+                else
+                    failCount++;
+            }
 
         if (successCount > 0)
             ToastService.Success($"{successCount} record(s) deleted successfully.");

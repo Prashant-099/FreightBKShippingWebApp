@@ -34,7 +34,7 @@
 @inject FileUploadService FileUploadService
 @inject ReportDataService ReportDataService
 @inject IJSRuntime JS
-
+@inject AuditLogService AuditLogService
 <DxPopup @bind-Visible="Visible"
 ShowCloseButton="true"
 HeaderText="@PopupTitle"
@@ -2324,6 +2324,8 @@ MinWidth="200"
                 var result =  await JobService.CreateAsync(EditModel);
                 if (result.Success)
                 {
+                    AuditLogService.NotifyAuditChanged();
+
                     ToastService.Success("Import Job created successfully.");
                 }
 
@@ -2335,6 +2337,8 @@ MinWidth="200"
                 var result = await JobService.UpdateAsync(EditModel);
                 if (result.Success)
                 {
+                    AuditLogService.NotifyAuditChanged();
+
                 ToastService.Success("Import Job updated successfully.");
                 }
 

@@ -41,7 +41,23 @@ namespace FreightBKShippingWebApp.Services
             SelectedYearId = newYearId;
             OnYearChanged?.Invoke(); // 🔔 notify subscribers
         }
+        public async Task RefreshYearsAsync(bool preserveSelection = true)
+        {
+            int previousSelectedId = SelectedYearId;
 
+            await LoadYearsAsync();
+
+            if (preserveSelection && Years.Any(y => y.YearId == previousSelectedId))
+            {
+                SelectedYearId = previousSelectedId;
+            }
+            else
+            {
+                SelectedYearId = Years.FirstOrDefault()?.YearId ?? 0;
+            }
+
+            OnYearChanged?.Invoke(); // 🔔 Notify UI
+        }
         // ✅ Global validation function
 
         public bool IsDateWithinSelectedYear(DateTime? date)

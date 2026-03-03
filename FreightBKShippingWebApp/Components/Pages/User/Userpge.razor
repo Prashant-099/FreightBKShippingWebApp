@@ -6,6 +6,7 @@
 @inject LoadingService LoadingService
 @inject ConfirmationDialogService ConfirmDialogService
 @inject GridLayoutService GridLayoutService
+@inject AuditLogService AuditLogService
 <style>
     .grid-size {
         max-height: 600px;
@@ -132,8 +133,8 @@
     {
         InitializeColumns();
         await LoadUsersAsync();
-       
-        
+
+
     }
     private void InitializeColumns()
     {
@@ -151,10 +152,10 @@
          new() { FieldName = "UserStatus", Caption = "Status", Visible = true, Width = 120, DisplayIndex = 6 },
         new() { FieldName = "UserCreated", Caption = "Created On", Visible = true, Width = 160, DisplayIndex = 7 }
     };
-       
+
     }
 
-   
+
     private async Task LoadUsersAsync()
     {
         LoadingService.Show();
@@ -207,7 +208,13 @@
     {
         var user = MyGrid.GetFocusedDataItem() as User;
         if (user != null)
-            popup.Show(user,false);
+        {
+            var freshData = userList
+               .FirstOrDefault(x => x.UserId == user.UserId);
+
+            if (freshData != null)
+                popup.Show(freshData, false);
+        }
         else
             ToastService.Warning("Please select a user to edit.");
 
@@ -238,7 +245,13 @@
             foreach (var user in selectedList)
             {
                 var result = await UserService.DeleteAsync(user.UserId);
-                if (result) successCount++; else failCount++;
+                if (result) 
+                {
+                    successCount++;
+                    AuditLogService.NotifyAuditChanged();
+
+                }
+                else failCount++;
             }
             if (successCount > 0) ToastService.Success($"{successCount} User(s) Deleted Successfully.");
             if (failCount > 0) ToastService.Error($"{failCount} User(s) Failed To Delete.");

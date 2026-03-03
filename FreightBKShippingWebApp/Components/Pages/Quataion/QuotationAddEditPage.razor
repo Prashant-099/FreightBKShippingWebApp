@@ -619,7 +619,7 @@
                         <div class="popup-content-container">
                             <div class="form-scroll-section" style="padding-top:10px">
                                 <DxFormLayout>
-                                    <DxFormLayoutGroup Caption="Customer Information" ColSpanMd="12">
+                                    <DxFormLayoutGroup Caption="Customer Information" ColSpanMd="12" Decoration="FormLayoutGroupDecoration.None">
                                         <DxFormLayoutItem Caption="Customer Name" ColSpanMd="6" CaptionPosition="CaptionPosition.Vertical">
                                             <DxComboBox TData="Account" TValue="int"
                                                         Data="@AccountList"
@@ -1064,7 +1064,7 @@
                       .Equals("QUOTATION", StringComparison.OrdinalIgnoreCase))
        .FirstOrDefault();
             EditModel.BillVoucherId =defaultVoucher?.VoucherId??0;
-             OnVoucherChanged(EditModel,EditModel.BillVoucherId);
+            OnVoucherChanged(EditModel,EditModel.BillVoucherId);
             BillDetails = new List<BillDetail>();
             nextSNo = 1;
             Title = "Add Quotation";
@@ -1206,6 +1206,7 @@
             catch (Exception ex)
             {
                 ToastService.Error("Error: " + ex.Message);
+                model.BillNo = null;
             }
         }
     }
@@ -1714,7 +1715,11 @@
             int result = await BillService.CreateAsync(EditModel);
 
             if (result > 0)
+            {
+                AuditLogService.NotifyAuditChanged();
+
                 ToastService.Success("Quotation created successfully!");
+            }
             else
             {
                 ToastService.Error("Failed to create Quotation!");

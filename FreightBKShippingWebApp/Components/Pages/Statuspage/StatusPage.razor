@@ -5,7 +5,7 @@
 @inject ToasteService ToastService
 @inject LoadingService LoadingService
 @inject ConfirmationDialogService ConfirmDialogService
-
+@inject AuditLogService AuditLogService
 <style>
     .grid-size {
         max-height: 600px;
@@ -142,7 +142,7 @@
           new() { FieldName = "Status_code", Caption = "Status Code", Visible = true, Width = 360, DisplayIndex = 2},
         new() { FieldName = "StatusCreated", Caption = "Created", Visible = true, Width =370, DisplayIndex = 3 },
         new() { FieldName = "StatusUpdated", Caption = "Updated", Visible = true, Width = 360, DisplayIndex = 4}
-      
+
     };
     }
     private async Task LoadStatusAsync()
@@ -177,8 +177,11 @@
             ToastService.Warning("Please select a status to edit.");
             return;
         }
+        var freshData = statusList
+    .FirstOrDefault(x => x.StatusId == status.StatusId);
 
-        popup.Show(status);
+        if (freshData != null)
+            popup.Show(freshData);
         await ClearSelection();
     }
 
@@ -207,7 +210,12 @@
             foreach (var item in SelectedStatuses.Cast<Status>())
             {
                 var result = await StatusService.DeleteAsync(item.StatusId);
-                if (result) success++; else fail++;
+                if (result)
+                {
+                    success++;
+                    AuditLogService.NotifyAuditChanged();
+                }
+                else fail++;
             }
 
             if (success > 0)

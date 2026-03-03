@@ -41,7 +41,13 @@
             <Items>
                 <DxToolbarItem Text="Refresh"
                                IconCssClass="bi bi-arrow-clockwise"
+                                   RenderStyle="ButtonRenderStyle.None"
                                Click="@(async (_) => await LoadAuditLogsAsync())" />
+
+                                <DxToolbarItem Text="Filter"
+                                       IconCssClass="bi bi-funnel-fill"
+                                       Click="OpenFilter"
+                                       RenderStyle="ButtonRenderStyle.None" />
 
                 <DxToolbarItem Alignment="ToolbarItemAlignment.Right"
                                RenderStyle="ButtonRenderStyle.Secondary"
@@ -101,9 +107,23 @@
                       VoucherType="AuditLog"
                       Columns="@gridColumns"
                       OnLayoutChanged="HandleLayoutChanged" />
+    <DateFilterPage @ref="dateFilterPopup" OnFilterApplied="ApplyFilter" />
 </div>
 
 @code {
+    private DateTime? filterFromDate;
+    private DateTime? filterToDate;
+    private DateFilterPage dateFilterPopup;
+    private void OpenFilter()
+    {
+        dateFilterPopup.Show(filterFromDate, filterToDate, null, null, null);
+    }
+    private async Task ApplyFilter((DateTime? FromDate, DateTime? ToDate, string? JobType, int? vouchertype, string? OutstandingType) f)
+    {
+        filterFromDate = f.FromDate;
+        filterToDate = f.ToDate;
+        await LoadAuditLogsAsync();
+    }
     private async void ShowLayoutPopup()
     {
         await InvokeAsync(() =>
@@ -158,9 +178,14 @@
         try
         {
             var CurrentYearId = YearStatechangeService.SelectedYearId;
-            auditLogs = (await AuditLogService.GetLatestAsync())
-                .Where(a => a.YearId == CurrentYearId)
-                .ToList();
+            auditLogs = await AuditLogService.GetLatestAsync(
+             filterFromDate,
+             filterToDate);
+
+            // Optional: agar year filter client side chahiye
+            // auditLogs = data
+            //     .Where(a => a.YearId == CurrentYearId)
+            //     .ToList();
         }
         catch (Exception ex)
         {

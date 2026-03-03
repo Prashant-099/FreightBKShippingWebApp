@@ -15,23 +15,37 @@ namespace FreightBKShippingWebApp.Services
         /// <summary>
         /// Get latest 10 audit logs
         /// </summary>
-        public async Task<List<AuditLog>> GetLatestAsync()
+        public async Task<List<AuditLog>> GetLatestAsync(
+     DateTime? fromDate,
+     DateTime? toDate)
         {
             try
             {
-                var response = await _api.GetFromJsonAsync<List<AuditLog>>(
-                    "api/audit-log/latest");
+                var queryParams = new List<string>();
 
-                return response ?? new();
+                if (fromDate.HasValue)
+                    queryParams.Add($"fromDate={fromDate.Value:yyyy-MM-dd}");
+
+                if (toDate.HasValue)
+                    queryParams.Add($"toDate={toDate.Value:yyyy-MM-dd}");
+
+                var url = "api/audit-log/latest";
+
+                if (queryParams.Any())
+                    url += "?" + string.Join("&", queryParams);
+
+                var response = await _api.GetFromJsonAsync<List<AuditLog>>(url);
+
+                return response ?? new List<AuditLog>();
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Error loading audit logs: {ex.Message}");
-                return new();
+                return new List<AuditLog>();
             }
         }
 
-        
+
         public void NotifyAuditChanged()
         {
             OnAuditChanged?.Invoke();

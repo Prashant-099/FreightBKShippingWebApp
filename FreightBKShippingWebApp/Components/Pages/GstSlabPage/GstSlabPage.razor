@@ -8,6 +8,7 @@
 @inject LoadingService LoadingService
 @inject ConfirmationDialogService ConfirmDialogService
 @inject GridLayoutService GridLayoutService
+@inject AuditLogService AuditLogService
 <style>
     .grid-size {
         max-height: 600px;
@@ -135,8 +136,8 @@
     {
         InitializeColumns();
         await LoadGstSlabsAsync();
-      
-       
+
+
     }
     private void InitializeColumns()
     {
@@ -151,10 +152,10 @@
         new() { FieldName = "GstSlabStatus", Caption = "Active", Visible = true, Width = 120, DisplayIndex = 6 },
         new() { FieldName = "GstSlabCreated", Caption = "Created", Visible = true, Width = 110, DisplayIndex = 7 }
      };
-       
+
     }
 
-   
+
 
     private async Task LoadGstSlabsAsync()
     {
@@ -211,7 +212,15 @@
     {
         var slab = MyGrid.GetFocusedDataItem() as GstSlab;
         if (slab != null)
-            popup.Show(slab);
+        {
+
+            var freshData = gstSlabList
+          .FirstOrDefault(x => x.GstSlabId == slab.GstSlabId);
+
+            if (freshData != null)
+                popup.Show(freshData);
+        
+        }
         else
             ToastService.Warning("Please select a GST Slab to edit.");
         await ClearSelection();
@@ -236,12 +245,16 @@
         {
             LoadingService.Show("Deleting...");
             int successCount = 0, failCount = 0;
-        foreach (var slab in selectedList)
-        {
-            var result = await GstSlabService.DeleteAsync(slab.GstSlabId);
-            if (result) successCount++;
-            else failCount++;
-        }
+            foreach (var slab in selectedList)
+            {
+                var result = await GstSlabService.DeleteAsync(slab.GstSlabId);
+                if (result)
+                {
+                    successCount++;
+                    AuditLogService.NotifyAuditChanged();
+                }
+                else failCount++;
+            }
 
         if (successCount > 0)
             ToastService.Success($"{successCount} GST Slab(s) deleted successfully.");
