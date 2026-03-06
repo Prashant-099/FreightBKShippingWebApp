@@ -1,0 +1,455 @@
+﻿@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Models
+@using FreightBKShippingWebApp.Services
+@using DevExpress.Blazor
+@using System.Text.Json
+@inject JournalService JournalService
+@inject ToasteService ToastService
+@inject LoadingService LoadingService
+@inject VoucherService VoucherService
+@inject AccountService AccountService
+@inject YearStatechangeService YearStatechangeService
+@inject IBranchContext BranchContext
+@inject AuditLogService AuditLogService
+
+<style>
+    .summary-box {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+    }
+
+    .summary-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+        padding: 4px 8px;
+    }
+
+    .summary-label {
+        font-weight: 600;
+        color: #495057;
+    }
+
+    .summary-value {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #212529;
+    }
+
+    .total-amount {
+        background-color: #e3f2fd;
+        padding: 8px;
+        border-radius: 6px;
+        border: 2px solid #1976d2;
+    }
+
+    
+    
+</style>
+
+<DxPopup @bind-Visible="Visible"
+         ShowCloseButton="true"
+         HeaderText="@Title"
+         CloseOnOutsideClick="false"
+         MaxWidth="1099"
+         MinWidth="200"
+         MaxHeight="90vh"
+         HorizontalAlignment="HorizontalAlignment.Center"
+         VerticalAlignment="VerticalAlignment.Center"
+         ShowFooter="true"
+         Scrollable="true">
+
+    <BodyContentTemplate Context="bdy">
+        <EditForm Model="@EditModel" OnValidSubmit="HandleValidSubmit" Context="ctsc" id="contra">
+            <DataAnnotationsValidator />
+
+           
+
+            <DxFormLayout>
+                <!-- Voucher -->
+                <DxFormLayoutItem Caption="Voucher" ColSpanMd="4">
+                    <DxComboBox TData="Voucher" TValue="int"
+                                Data="@VoucherList"
+                                TextFieldName="VoucherName"
+                                ValueFieldName="VoucherId"
+                                AllowUserInput="true"
+                                ShowValidationIcon="true"
+                                NullText="-- Select Voucher --"
+                                Value="@EditModel.JournalVoucherId"
+                                ValueChanged="@((int voucherId) => OnVoucherChanged(voucherId))"
+                                ValueExpression="@(() => EditModel.JournalVoucherId)"
+                                SearchMode="ListSearchMode.AutoSearch"
+                                ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                </DxFormLayoutItem>
+
+                <!-- Contra No -->
+                <DxFormLayoutItem Caption="Contra No" ColSpanMd="4">
+                    <DxTextBox @bind-Text="EditModel.JournalNoStr" ReadOnly="true" ShowValidationIcon="true" />
+                </DxFormLayoutItem>
+
+                <!-- Date -->
+                <DxFormLayoutItem Caption="Date" ColSpanMd="4">
+                    <DxDateEdit @bind-Date="EditModel.JournalDate"
+                                ShowValidationIcon="true"
+                                Format="dd-MM-yyyy" />
+                    <ValidationMessage For="@(() => EditModel.JournalDate)" />
+                </DxFormLayoutItem>
+
+                <!-- From Account (Cash/Bank) — stored in JournalAccountId -->
+                <DxFormLayoutItem Caption="From (Cash / Bank)" ColSpanMd="4">
+                    <DxComboBox TData="Account" TValue="int"
+                                Data="@CashBankAccountList"
+                                TextFieldName="AccountName"
+                                ValueFieldName="AccountId"
+                                AllowUserInput="true"
+                                ShowValidationIcon="true"
+                                NullText="-- Select Source Account --"
+                                Value="@EditModel.JournalAccountId"
+                                ValueChanged="@((int id) => OnFromAccountChanged(id))"
+                                ValueExpression="@(() => EditModel.JournalAccountId)"
+                                SearchMode="ListSearchMode.AutoSearch"
+                                ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                    <ValidationMessage For="@(() => EditModel.JournalAccountId)" />
+                </DxFormLayoutItem>
+
+                <!-- To Account (Cash/Bank) — stored in JournalPartyId -->
+                <DxFormLayoutItem Caption="To (Cash / Bank)" ColSpanMd="4">
+                    <DxComboBox TData="Account" TValue="int"
+                                Data="@ToAccountList"
+                                TextFieldName="AccountName"
+                                ValueFieldName="AccountId"
+                                AllowUserInput="true"
+                                ShowValidationIcon="true"
+                                NullText="-- Select Destination Account --"
+                                Value="@EditModel.JournalPartyId"
+                                ValueChanged="@((int id) => OnToAccountChanged(id))"
+                                ValueExpression="@(() => EditModel.JournalPartyId)"
+                                SearchMode="ListSearchMode.AutoSearch"
+                                ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                    <ValidationMessage For="@(() => EditModel.JournalPartyId)" />
+                </DxFormLayoutItem>
+
+                <!-- Amount -->
+                <DxFormLayoutItem Caption="Transfer Amount" ColSpanMd="4">
+                    <DxSpinEdit Value="@EditModel.JournalAmount"
+                                ValueChanged="@((double val) => OnAmountChanged(val))"
+                                ValueExpression="@(() => EditModel.JournalAmount)"
+                                ShowValidationIcon="true"
+                                ShowSpinButtons="false"
+                                DisplayFormat="N2"
+                                MinValue="0" />
+                    <ValidationMessage For="@(() => EditModel.JournalAmount)" />
+                </DxFormLayoutItem>
+            </DxFormLayout>
+
+            <!-- Summary + Remarks Row -->
+            <div class="row mt-3">
+                <!-- Remarks -->
+                <div class="col-md-7">
+                    <DxFormLayout>
+                        <DxFormLayoutItem Caption="Remarks" ColSpanMd="12">
+                            <DxMemo @bind-Text="EditModel.JournalRemarks" Rows="3" />
+                        </DxFormLayoutItem>
+                    </DxFormLayout>
+                </div>
+
+                <!-- Summary -->
+                <div class="col-md-5">
+                    <div class="summary-box p-3 h-100">
+                        <div class="summary-row">
+                            <span class="summary-label">
+                                <i class="bi bi-arrow-up-circle text-danger me-1"></i>
+                                From Account:
+                            </span>
+                            <span class="summary-value text-danger">
+                                @(FromAccountName ?? "—")
+                            </span>
+                        </div>
+
+                        <div class="summary-row">
+                            <span class="summary-label">
+                                <i class="bi bi-arrow-down-circle text-success me-1"></i>
+                                To Account:
+                            </span>
+                            <span class="summary-value text-success">
+                                @(ToAccountName ?? "—")
+                            </span>
+                        </div>
+
+                        <div class="summary-row total-amount mt-2">
+                            <span class="summary-label">Transfer Amount:</span>
+                            <span class="summary-value">₹ @EditModel.JournalAmount.ToString("N2")</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @if (SameAccountError)
+            {
+                <div class="alert alert-danger mt-2">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    <strong>Invalid Entry:</strong> "From" and "To" accounts cannot be the same.
+                </div>
+            }
+        </EditForm>
+    </BodyContentTemplate>
+
+    <FooterContentTemplate>
+        <div class="d-flex justify-content-end gap-2">
+            <DxButton Text="Save"
+                      RenderStyle="ButtonRenderStyle.Primary"
+                      SubmitFormOnClick="true"
+                      Form="contra"
+                      IconCssClass="bi bi-save" />
+            <DxButton Text="Cancel"
+                      RenderStyle="ButtonRenderStyle.Danger"
+                      Click="Hide"
+                      IconCssClass="bi bi-x-circle" />
+        </div>
+    </FooterContentTemplate>
+</DxPopup>
+
+@code {
+    [Parameter] public EventCallback OnSaved { get; set; }
+
+    private bool Visible { get; set; }
+    private string Title { get; set; } = "Contra Entry";
+    private Journal EditModel { get; set; } = new();
+
+    private List<Voucher> VoucherList = new();
+    private List<Account> CashBankAccountList = new();
+
+    // "To" list excludes the selected "From" account
+    private List<Account> ToAccountList = new();
+
+    private string? FromAccountName;
+    private string? ToAccountName;
+    private bool SameAccountError = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDropdownsAsync();
+    }
+
+    private async Task LoadDropdownsAsync()
+    {
+        try
+        {
+            var voucherTask = VoucherService.GetAllAsync();
+            var accountTask = AccountService.GetAllAsync();
+
+            await Task.WhenAll(voucherTask, accountTask);
+
+            // Only CONTRA vouchers
+            VoucherList = voucherTask.Result
+                .Where(v => v.VoucherGroup?.Equals("CONTRA", StringComparison.OrdinalIgnoreCase) == true)
+                .ToList();
+
+            // AccountTypeId 10 = Cash, 11 = Bank (same as Receipt)
+            CashBankAccountList = accountTask.Result
+                .Where(a => a.AccountTypeId == 10 || a.AccountTypeId == 11)
+                .ToList();
+
+            ToAccountList = CashBankAccountList.ToList();
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Error loading data: {ex.Message}");
+        }
+    }
+
+    public async Task Show(Journal journal = null)
+    {
+        EditModel = journal ?? new Journal
+        {
+            JournalDate = DateTime.Now,
+            JournalYearId = YearStatechangeService.SelectedYearId,
+            JournalStatus = true,
+            JournalMasterType = "CONTRA"
+        };
+
+        SameAccountError = false;
+        FromAccountName = null;
+        ToAccountName = null;
+
+        if (EditModel.JournalId > 0)
+        {
+            // Edit mode: clone to avoid mutating list reference
+            var json = JsonSerializer.Serialize(journal);
+            EditModel = JsonSerializer.Deserialize<Journal>(json) ?? new Journal();
+            Title = "Edit Contra Entry";
+
+            // Restore display names
+            FromAccountName = CashBankAccountList
+                .FirstOrDefault(a => a.AccountId == EditModel.JournalAccountId)?.AccountName;
+            ToAccountName = CashBankAccountList
+                .FirstOrDefault(a => a.AccountId == EditModel.JournalPartyId)?.AccountName;
+
+            // Rebuild "To" list excluding the From account
+            RefreshToAccountList();
+        }
+        else
+        {
+            // Add mode: auto-select first voucher
+            var voucher = VoucherList.FirstOrDefault();
+            if (voucher != null)
+                await OnVoucherChanged(voucher.VoucherId);
+
+            Title = "Add Contra Entry";
+        }
+
+        Visible = true;
+        StateHasChanged();
+    }
+
+    private async Task OnVoucherChanged(int voucherId)
+    {
+        EditModel.JournalVoucherId = voucherId;
+
+        if (EditModel.JournalId == 0)
+        {
+            try
+            {
+                var result = await YearStatechangeService.GeneratebillNoAsync(
+                    voucherId,
+                    YearStatechangeService.SelectedYearId,
+                    BranchContext.BranchId
+                );
+
+                EditModel.JournalNoStr = result.prefix + result.number + result.suffix;
+                EditModel.JournalPrefix = result.prefix;
+                EditModel.JournalPostfix = result.suffix;
+                EditModel.JournalNo = int.Parse(result.number);
+
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                ToastService.Error($"Error generating contra number: {ex.Message}");
+            }
+        }
+    }
+
+    private void OnFromAccountChanged(int accountId)
+    {
+        EditModel.JournalAccountId = accountId;
+        FromAccountName = CashBankAccountList.FirstOrDefault(a => a.AccountId == accountId)?.AccountName;
+
+        // If "To" is same as new "From", reset it
+        if (EditModel.JournalPartyId == accountId)
+        {
+            EditModel.JournalPartyId = 0;
+            ToAccountName = null;
+        }
+
+        RefreshToAccountList();
+        ValidateSameAccount();
+        StateHasChanged();
+    }
+
+    private void OnToAccountChanged(int accountId)
+    {
+        EditModel.JournalPartyId = accountId;
+        ToAccountName = CashBankAccountList.FirstOrDefault(a => a.AccountId == accountId)?.AccountName;
+        ValidateSameAccount();
+        StateHasChanged();
+    }
+
+    private void OnAmountChanged(double val)
+    {
+        EditModel.JournalAmount = val;
+        EditModel.JournalTotal = val;
+        EditModel.JournalOnAccount = (float)val;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Rebuilds the "To" dropdown, excluding the currently selected "From" account.
+    /// </summary>
+    private void RefreshToAccountList()
+    {
+        ToAccountList = CashBankAccountList
+            .Where(a => a.AccountId != EditModel.JournalAccountId)
+            .ToList();
+    }
+
+    private void ValidateSameAccount()
+    {
+        SameAccountError = EditModel.JournalAccountId > 0 &&
+                           EditModel.JournalPartyId > 0 &&
+                           EditModel.JournalAccountId == EditModel.JournalPartyId;
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        try
+        {
+            // Guard: same account
+            if (SameAccountError || EditModel.JournalAccountId == EditModel.JournalPartyId)
+            {
+                ToastService.Warning("'From' and 'To' accounts cannot be the same.");
+                return;
+            }
+
+            // Guard: amount
+            if (EditModel.JournalAmount <= 0)
+            {
+                ToastService.Warning("Please enter a valid transfer amount.");
+                return;
+            }
+
+            // Guard: both accounts selected
+            if (EditModel.JournalAccountId <= 0 || EditModel.JournalPartyId <= 0)
+            {
+                ToastService.Warning("Please select both source and destination accounts.");
+                return;
+            }
+
+            LoadingService.Show("Saving contra entry...");
+
+            // Contra has no bill settlements
+            EditModel.BillRefDetails = new List<BillRefDetail>();
+            EditModel.JournalYearId = YearStatechangeService.SelectedYearId;
+            EditModel.JournalMasterType = "CONTRA";
+            EditModel.JournalTotal = EditModel.JournalAmount;
+            EditModel.JournalOnAccount = (float)EditModel.JournalAmount;
+
+            bool result;
+            if (EditModel.JournalId == 0)
+            {
+                result = await JournalService.CreateAsync(EditModel);
+                ToastService.Success(result ? "Contra entry created successfully!" : "Failed to create contra entry!");
+                AuditLogService.NotifyAuditChanged();
+            }
+            else
+            {
+                result = await JournalService.UpdateAsync(EditModel);
+                ToastService.Success(result ? "Contra entry updated successfully!" : "Failed to update contra entry!");
+                AuditLogService.NotifyAuditChanged();
+            }
+
+            if (result)
+            {
+                Visible = false;
+                await OnSaved.InvokeAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Error saving contra entry: {ex.Message}");
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+
+    private void Hide()
+    {
+        Visible = false;
+        SameAccountError = false;
+        FromAccountName = null;
+        ToAccountName = null;
+    }
+}

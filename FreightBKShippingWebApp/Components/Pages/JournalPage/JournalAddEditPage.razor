@@ -1,0 +1,742 @@
+﻿@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Models
+@using FreightBKShippingWebApp.Services
+@using DevExpress.Blazor
+@using System.Text.Json
+@inject JournalService JournalService
+@inject ToasteService ToastService
+@inject LoadingService LoadingService
+@inject VoucherService VoucherService
+@inject AccountService AccountService
+@inject YearStatechangeService YearStatechangeService
+@inject IBranchContext BranchContext
+@inject AuditLogService AuditLogService
+
+<style>
+    .journal-grid-wrapper {
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .journal-lines-grid {
+        height: 290px;
+        overflow-y: auto;
+    }
+
+    /* Debit row highlight */
+    .row-debit td {
+        background-color: #fff8f0 !important;
+    }
+
+    /* Credit row highlight */
+    .row-credit td {
+        background-color: #f0f8ff !important;
+    }
+
+    .balance-box {
+        border-radius: 8px;
+        padding: 12px 16px;
+    }
+
+    .balance-balanced {
+        background-color: #e8f5e9;
+        border: 2px solid #4caf50;
+    }
+
+    .balance-unbalanced {
+        background-color: #fdecea;
+        border: 2px solid #f44336;
+    }
+
+    .balance-label {
+        font-weight: 600;
+        color: #495057;
+        font-size: 0.9rem;
+    }
+
+    .balance-value {
+        font-size: 1.05rem;
+        font-weight: 700;
+    }
+
+    .balance-ok {
+        color: #2e7d32;
+    }
+
+    .balance-bad {
+        color: #c62828;
+    }
+
+    .journal-info-box {
+        background: linear-gradient(135deg, #fff9e6 0%, #fff3e0 100%);
+        border-left: 4px solid #f59e0b;
+        border-radius: 6px;
+        padding: 10px 14px;
+        margin-bottom: 12px;
+        font-size: 0.875rem;
+        color: #37474f;
+    }
+
+    .dr-badge {
+        background-color: #ff7043;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .cr-badge {
+        background-color: #1976d2;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+</style>
+
+<DxPopup @bind-Visible="Visible"
+         ShowCloseButton="true"
+         HeaderText="@Title"
+         CloseOnOutsideClick="false"
+         MaxWidth="1400"
+         Width="75vw"
+         MaxHeight="92vh"
+         HorizontalAlignment="HorizontalAlignment.Center"
+         VerticalAlignment="VerticalAlignment.Center"
+         ShowFooter="true"
+         Scrollable="true">
+
+    <BodyContentTemplate Context="bdy">
+        <EditForm Model="@EditModel"  Context="ctsc" >
+            <DataAnnotationsValidator />
+
+            
+
+            <!-- Header -->
+            <DxFormLayout>
+                <DxFormLayoutItem Caption="Voucher" ColSpanMd="5">
+                    <DxComboBox TData="Voucher" TValue="int"
+                                Data="@VoucherList"
+                                TextFieldName="VoucherName"
+                                ValueFieldName="VoucherId"
+                                AllowUserInput="true"
+                                ShowValidationIcon="true"
+                                NullText="-- Select Voucher --"
+                                Value="@EditModel.JournalVoucherId"
+                                ValueChanged="@((int v) => OnVoucherChanged(v))"
+                                ValueExpression="@(() => EditModel.JournalVoucherId)"
+                                SearchMode="ListSearchMode.AutoSearch"
+                                ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                </DxFormLayoutItem>
+
+                <DxFormLayoutItem Caption="Journal No" ColSpanMd="4">
+                    <DxTextBox @bind-Text="EditModel.JournalNoStr" ReadOnly="true" ShowValidationIcon="true" />
+                </DxFormLayoutItem>
+
+                <DxFormLayoutItem Caption="Date" ColSpanMd="3">
+                    <DxDateEdit @bind-Date="EditModel.JournalDate"
+                                ShowValidationIcon="true"
+                                Format="dd-MM-yyyy" />
+                    <ValidationMessage For="@(() => EditModel.JournalDate)" />
+                </DxFormLayoutItem>
+            </DxFormLayout>
+
+            <!-- Journal Lines Grid -->
+            <div class="journal-grid-wrapper mt-3">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h5 class="mb-0">
+                        <i class="bi bi-table me-2"></i>Journal Lines
+                    </h5>
+                    
+                </div>
+
+                <DxGrid Data="@JournalLines"
+                        @ref="LinesGrid"
+                        TItem="JournalLine"
+                        KeyFieldName="LineId"
+                        EditMode="GridEditMode.EditCell"
+                        ShowFilterRow="false"
+                        ShowAddNewButton="false"
+                        EditModelSaving="OnLineSaving"
+                        CustomizeElement="LinesGrid_CustomizeElement"
+                        ColumnResizeMode="GridColumnResizeMode.NextColumn"
+                        AllowSort="false"
+                        PageSize="50"
+                        CssClass="journal-lines-grid">
+                    <Columns>
+
+                        <!-- Delete Button Column -->
+                        <DxGridCommandColumn Width="50px"
+                                             CancelButtonVisible="false"
+                                             SaveButtonVisible="false"
+                                             NewButtonVisible="false"
+                                             FixedPosition="GridColumnFixedPosition.Left"
+                                             TextAlignment="GridTextAlignment.Center">
+                                             <HeaderTemplate>
+
+
+                                <DxButton 
+                                          IconCssClass="bi bi-plus-circle"
+                                          RenderStyle="ButtonRenderStyle.None"
+                                          SizeMode="SizeMode.Small"
+                                          Click="AddNewLine" />
+                                             </HeaderTemplate>
+                            <CellDisplayTemplate>
+                                @{
+                                    var line = (JournalLine)context.DataItem;
+                                }
+                                <DxButton IconCssClass="bi bi-trash text-danger"
+                                          RenderStyle="ButtonRenderStyle.Link"
+                                          SizeMode="SizeMode.Small"
+                                          Click="@(() => RemoveLine(line))" />
+                            </CellDisplayTemplate>
+                        </DxGridCommandColumn>
+
+                        <!-- S.No -->
+                        <DxGridDataColumn FieldName="LineNo" Caption="S.No" ReadOnly="true" Width="60px">
+                            <CellDisplayTemplate>
+                                @{
+                                    var line = (JournalLine)context.DataItem;
+                                }
+                                <span class="text-muted">@line.LineNo</span>
+                            </CellDisplayTemplate>
+                        </DxGridDataColumn>
+
+                        <!-- Dr / Cr Type -->
+                        <DxGridDataColumn FieldName="DrCr" Caption="Dr/Cr" Width="90px">
+                            <CellDisplayTemplate>
+                                @{
+                                    var line = (JournalLine)context.DataItem;
+                                }
+                                @if (line.DrCr == "DR")
+                                {
+                                    <span class="dr-badge">DR</span>
+                                }
+                                else
+                                {
+                                    <span class="cr-badge">CR</span>
+                                }
+                            </CellDisplayTemplate>
+                            <CellEditTemplate>
+                                @{
+                                    var line = (JournalLine)context.EditModel;
+                                }
+                                <DxComboBox TData="string" TValue="string"
+                                            Data="@DrCrOptions"
+                                            @bind-Value="line.DrCr"
+                                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Never" />
+                            </CellEditTemplate>
+                        </DxGridDataColumn>
+
+                        <!-- Account -->
+                        <DxGridDataColumn FieldName="AccountId" Caption="Account"  Width="450px">
+                            <CellDisplayTemplate>
+                                @{
+                                    var line = (JournalLine)context.DataItem;
+                                    var acc = AllAccounts.FirstOrDefault(a => a.AccountId == line.AccountId);
+                                }
+                                <span>@(acc?.AccountName ?? "—")</span>
+                            </CellDisplayTemplate>
+                            <CellEditTemplate>
+                                @{
+                                    var line = (JournalLine)context.EditModel;
+                                }
+                                <DxComboBox TData="Account" TValue="int"
+                                            Data="@AllAccounts"
+                                            TextFieldName="AccountName"
+                                            ValueFieldName="AccountId"
+                                            AllowUserInput="true"
+                                            NullText="-- Select Account --"
+                                            @bind-Value="line.AccountId"
+                                            SearchMode="ListSearchMode.AutoSearch"
+                                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                            </CellEditTemplate>
+                        </DxGridDataColumn>
+
+                        <!-- Amount -->
+                        <DxGridDataColumn FieldName="Amount" Caption="Amount" Width="250px">
+                            <CellDisplayTemplate>
+                                @{
+                                    var line = (JournalLine)context.DataItem;
+                                }
+                                <span class="fw-semibold">₹ @line.Amount.ToString("N2")</span>
+                            </CellDisplayTemplate>
+                            <CellEditTemplate>
+                                @{
+                                    var line = (JournalLine)context.EditModel;
+                                }
+                                <DxSpinEdit Value="@line.Amount"
+                                            ValueChanged="@((double v) => { line.Amount = v; RecalcTotals(); })"
+                                            ValueExpression="@(() => line.Amount)"
+                                            ShowSpinButtons="false"
+                                            DisplayFormat="N2"
+                                            MinValue="0" />
+                            </CellEditTemplate>
+                        </DxGridDataColumn>
+
+                        <!-- Narration per line -->
+                        <DxGridDataColumn FieldName="Narration" Caption="Narration" Width="450px">
+                            <CellEditTemplate>
+                                @{
+                                    var line = (JournalLine)context.EditModel;
+                                }
+                                <DxTextBox @bind-Text="line.Narration" />
+                            </CellEditTemplate>
+                        </DxGridDataColumn>
+
+                    </Columns>
+
+                    <TotalSummary>
+                        <DxGridSummaryItem FieldName="Amount" SummaryType="GridSummaryItemType.Sum"
+                                           DisplayText="Total: {0:N2}" />
+                    </TotalSummary>
+                </DxGrid>
+            </div>
+
+            <!-- Bottom: Narration + Balance Summary -->
+            <div class="row mt-3">
+                <!-- Narration (Master) -->
+                <div class="col-md-7">
+                    <DxFormLayout>
+                        <DxFormLayoutItem Caption="Narration" ColSpanMd="12">
+                            <DxMemo @bind-Text="EditModel.JournalRemarks" Rows="3"
+                                    NullText="Enter overall narration for this journal entry..." />
+                        </DxFormLayoutItem>
+                    </DxFormLayout>
+                </div>
+
+                <!-- Balance Summary -->
+                <div class="col-md-5">
+                    <div class="balance-box @(IsBalanced ? "balance-balanced" : "balance-unbalanced")">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="balance-label">
+                                <span class="dr-badge me-1">DR</span> Total Debit:
+                            </span>
+                            <span class="balance-value balance-ok">₹ @TotalDebit.ToString("N2")</span>
+                        </div>
+
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="balance-label">
+                                <span class="cr-badge me-1">CR</span> Total Credit:
+                            </span>
+                            <span class="balance-value" style="color:#1976d2">₹ @TotalCredit.ToString("N2")</span>
+                        </div>
+
+                        <hr class="my-2" />
+
+                        <div class="d-flex justify-content-between">
+                            <span class="balance-label">Difference:</span>
+                            <span class="balance-value @(IsBalanced ? "balance-ok" : "balance-bad")">
+                                @if (IsBalanced)
+                                {
+                                    <i class="bi bi-check-circle-fill me-1"></i>
+                                    <span>Balanced</span>
+                                }
+                                else
+                                {
+                                    <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                                    <span>₹ @(Math.Abs(TotalDebit - TotalCredit).ToString("N2")) off</span>
+                                }
+                            </span>
+                        </div>
+
+                        @* <div class="mt-2 text-center">
+                            <small class="text-muted">Lines: @JournalLines.Count &nbsp;|&nbsp; DR: @JournalLines.Count(l => l.DrCr == "DR") &nbsp;|&nbsp; CR: @JournalLines.Count(l => l.DrCr == "CR")</small>
+                        </div> *@
+                    </div>
+
+                    @if (!IsBalanced && JournalLines.Any())
+                    {
+                        <div class="alert alert-warning mt-2 py-2 small">
+                            <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                            Entry is <strong>not balanced</strong>. Debit must equal Credit.
+                        </div>
+                    }
+                </div>
+            </div>
+
+        </EditForm>
+    </BodyContentTemplate>
+
+    <FooterContentTemplate>
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                @if (JournalLines.Count == 0)
+                {
+                    <span class="text-danger small">
+                        <i class="bi bi-exclamation-circle me-1"></i>Add at least one journal line.
+                    </span>
+                }
+            </div>
+            <div class="d-flex gap-2">
+                <DxButton Text="Save"
+                          RenderStyle="ButtonRenderStyle.Primary"
+                          Click="HandleValidSubmit"
+                          Enabled="@(IsBalanced && JournalLines.Count >= 2)"
+                          IconCssClass="bi bi-save" />
+                <DxButton Text="Cancel"
+                          RenderStyle="ButtonRenderStyle.Danger"
+                          Click="Hide"
+                          IconCssClass="bi bi-x-circle" />
+            </div>
+        </div>
+    </FooterContentTemplate>
+</DxPopup>
+
+@code {
+    [Parameter] public EventCallback OnSaved { get; set; }
+
+    private bool Visible { get; set; }
+    private string Title { get; set; } = "Journal Entry";
+    private Journal EditModel { get; set; } = new();
+    private IGrid? LinesGrid;
+
+    private List<Voucher> VoucherList = new();
+    private List<Account> AllAccounts = new();
+
+    private List<JournalLine> JournalLines = new();
+    private int _lineCounter = 0;
+
+    private static readonly List<string> DrCrOptions = new() { "DR", "CR" };
+
+    // ── Computed Totals ──────────────────────────────────────────────────────
+    private double TotalDebit => JournalLines.Where(l => l.DrCr == "DR").Sum(l => l.Amount);
+    private double TotalCredit => JournalLines.Where(l => l.DrCr == "CR").Sum(l => l.Amount);
+    private bool IsBalanced => JournalLines.Count >= 2
+                                  && TotalDebit > 0
+                                  && Math.Abs(TotalDebit - TotalCredit) < 0.001;
+
+    // ── Lifecycle ────────────────────────────────────────────────────────────
+    protected override async Task OnInitializedAsync()
+        => await LoadDropdownsAsync();
+
+    private async Task LoadDropdownsAsync()
+    {
+        try
+        {
+            var voucherTask = VoucherService.GetAllAsync();
+            var accountTask = AccountService.GetAllAsync();
+            await Task.WhenAll(voucherTask, accountTask);
+
+            VoucherList = voucherTask.Result
+                .Where(v => v.VoucherGroup?.Equals("JOURNAL", StringComparison.OrdinalIgnoreCase) == true)
+                .ToList();
+
+            AllAccounts = accountTask.Result.ToList();
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Error loading data: {ex.Message}");
+        }
+    }
+
+    // ── Show / Hide ──────────────────────────────────────────────────────────
+    public async Task Show(Journal journal = null)
+    {
+        JournalLines.Clear();
+        _lineCounter = 0;
+
+        EditModel = journal ?? new Journal
+        {
+            JournalDate = DateTime.Now,
+            JournalYearId = YearStatechangeService.SelectedYearId,
+            JournalStatus = true,
+            JournalMasterType = "JOURNAL"
+        };
+
+        if (EditModel.JournalId > 0)
+        {
+            var json = JsonSerializer.Serialize(journal);
+            EditModel = JsonSerializer.Deserialize<Journal>(json) ?? new Journal();
+            Title = "Edit Journal Entry";
+            LoadExistingLines();
+        }
+        else
+        {
+            Title = "Add Journal Entry";
+            var voucher = VoucherList.FirstOrDefault();
+            if (voucher != null)
+                await OnVoucherChanged(voucher.VoucherId);
+
+            for (int i = 0; i < 10; i++)
+            {
+                AddNewLine();
+            }
+        }
+
+        Visible = true;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void Hide()
+    {
+        Visible = false;
+        JournalLines.Clear();
+        _lineCounter = 0;
+    }
+
+    // ── Voucher Number Generation ─────────────────────────────────────────────
+    private async Task OnVoucherChanged(int voucherId)
+    {
+        EditModel.JournalVoucherId = voucherId;
+
+        if (EditModel.JournalId == 0)
+        {
+            try
+            {
+                var result = await YearStatechangeService.GeneratebillNoAsync(
+                    voucherId,
+                    YearStatechangeService.SelectedYearId,
+                    BranchContext.BranchId);
+
+                EditModel.JournalNoStr = result.prefix + result.number + result.suffix;
+                EditModel.JournalPrefix = result.prefix;
+                EditModel.JournalPostfix = result.suffix;
+                EditModel.JournalNo = int.Parse(result.number);
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                ToastService.Error($"Error generating journal number: {ex.Message}");
+            }
+        }
+    }
+
+    // ── Line Management ───────────────────────────────────────────────────────
+    private void AddNewLine()
+    {
+        _lineCounter++;
+        JournalLines.Add(new JournalLine
+        {
+            LineId = _lineCounter,
+            LineNo = JournalLines.Count + 1,
+            DrCr = JournalLines.Count % 2 == 0 ? "DR" : "CR",
+            AccountId = 0,
+            Amount = 0,
+            Narration = string.Empty
+        });
+        RenumberLines();
+        if (LinesGrid is not null)
+        {
+            try
+            {
+                LinesGrid.Reload();
+            }
+            catch (ObjectDisposedException)
+            {
+                // Grid was disposed, skip reload
+            }
+        }
+        StateHasChanged();
+    }
+
+    private void RemoveLine(JournalLine line)
+    {
+        JournalLines.Remove(line);
+        RenumberLines();
+        RecalcTotals();
+        if (LinesGrid is not null)
+        {
+            try
+            {
+                LinesGrid.Reload();
+            }
+            catch (ObjectDisposedException)
+            {
+                // Grid was disposed, skip reload
+            }
+        }
+        StateHasChanged();
+    }
+
+    
+
+    private void RenumberLines()
+    {
+        for (int i = 0; i < JournalLines.Count; i++)
+            JournalLines[i].LineNo = i + 1;
+    }
+
+    private void RecalcTotals()
+    {
+        // Update master amount as total of debit side (= credit side when balanced)
+        EditModel.JournalAmount = TotalDebit;
+        EditModel.JournalTotal = TotalDebit;
+        StateHasChanged();
+    }
+
+    // ── Grid Edit Saving ──────────────────────────────────────────────────────
+    private void OnLineSaving(GridEditModelSavingEventArgs e)
+    {
+        var edited = (JournalLine)e.EditModel;
+        var original = (JournalLine)e.DataItem;
+        if (original == null)
+            return;
+        original.DrCr = edited.DrCr;
+        original.AccountId = edited.AccountId;
+        original.Amount = edited.Amount;
+        original.Narration = edited.Narration;
+
+        RecalcTotals();
+    }
+
+    void LinesGrid_CustomizeElement(GridCustomizeElementEventArgs ea)
+    {
+        if (ea.ElementType != GridElementType.DataRow) return;
+
+        var line = (JournalLine)LinesGrid!.GetDataItem(ea.VisibleIndex);
+        if (line == null) return;
+
+        ea.CssClass = line.DrCr == "DR" ? "row-debit" : "row-credit";
+    }
+
+    // ── Load existing lines when editing ─────────────────────────────────────
+    private void LoadExistingLines()
+    {
+        // Journal lines are stored in BillRefDetails:
+        // BillRefVchId      → AccountId
+        // BillRefVchType    → "DR" or "CR"
+        // BillRefVchAmount  → Amount
+        // BillRefVchNo      → Narration (line-level)
+
+        if (EditModel.BillRefDetails == null || !EditModel.BillRefDetails.Any())
+            return;
+
+        foreach (var detail in EditModel.BillRefDetails.OrderBy(x => x.BillRefDetailId))
+        {
+            
+    // ✅ ADD THIS CHECK — skips blank rows saved accidentally
+    if (detail.BillRefVchId == 0 || detail.BillRefVchAmount <= 0)
+        continue;
+
+            _lineCounter++;
+            JournalLines.Add(new JournalLine
+            {
+                BillRefDetailId = detail.BillRefDetailId,   // 🔥 VERY IMPORTANT
+                LineId = _lineCounter,
+                LineNo = JournalLines.Count + 1,
+                DrCr = detail.BillRefVchType ?? "DR",
+                AccountId = detail.BillRefVchId,
+                Amount = detail.BillRefVchAmount,
+                Narration = detail.BillRefVchNo ?? string.Empty
+            });
+        }
+
+        RecalcTotals();
+    }
+
+    // ── Save ──────────────────────────────────────────────────────────────────
+    private async Task HandleValidSubmit()
+    {
+        if (LinesGrid != null)
+{
+    await LinesGrid.CancelEditAsync(); // commit last edited cell
+    await LinesGrid.SaveChangesAsync();
+}
+        var validLines = JournalLines
+    .Where(l => l.AccountId > 0 && l.Amount > 0)
+    .ToList();
+        // validLines = validLines
+        // .GroupBy(x => new { x.LineNo, x.AccountId, x.DrCr })
+        // .Select(g => g.First())
+        // .ToList();
+       
+        // Validation
+        if (validLines.Count < 2)
+        {
+            ToastService.Warning("A journal entry needs at least 2 lines (one Debit, one Credit).");
+            return;
+        }
+
+        if (validLines.Any(l => l.AccountId == 0))
+        {
+            ToastService.Warning("Please select an account for every journal line.");
+            return;
+        }
+
+        if (validLines.Any(l => l.Amount <= 0))
+        {
+            ToastService.Warning("Amount must be greater than zero for every line.");
+            return;
+        }
+
+        if (!IsBalanced)
+        {
+            ToastService.Warning($"Journal is not balanced. Debit (₹{TotalDebit:N2}) ≠ Credit (₹{TotalCredit:N2}).");
+            return;
+        }
+
+        try
+        {
+            LoadingService.Show("Saving journal entry...");
+
+            // Map lines → BillRefDetails (reusing existing table)
+            EditModel.BillRefDetails = validLines.OrderBy(l => l.LineNo).Select(l => new BillRefDetail
+            {
+                BillRefDetailId = l.BillRefDetailId,
+                BillRefAgainstId = EditModel.JournalId,
+                BillRefVchType = l.DrCr,                    // "DR" or "CR"
+                BillRefVchId = l.AccountId,               // Account being debited/credited
+                BillRefVchAmount = l.Amount,
+                BillRefVchNo = l.Narration,               // Line-level narration
+                BillRefVchDate = EditModel.JournalDate,
+                BillRefAccountId = l.AccountId
+            }).ToList();
+
+            EditModel.JournalYearId = YearStatechangeService.SelectedYearId;
+            EditModel.JournalMasterType = "JOURNAL";
+            EditModel.JournalAmount = TotalDebit;
+            EditModel.JournalTotal = TotalDebit;
+
+            // For Journal: no party/account concept at header level,
+            // but model requires them — set to first DR and CR account respectively
+            var firstDr = validLines.FirstOrDefault(l => l.DrCr == "DR");
+            var firstCr = validLines.FirstOrDefault(l => l.DrCr == "CR");
+            EditModel.JournalPartyId = firstDr?.AccountId ?? EditModel.JournalPartyId;
+            EditModel.JournalAccountId = firstCr?.AccountId ?? EditModel.JournalAccountId;
+
+            bool result;
+            if (EditModel.JournalId == 0)
+            {
+                result = await JournalService.CreateAsync(EditModel);
+                ToastService.Success(result ? "Journal entry created successfully!" : "Failed to create journal entry!");
+                AuditLogService.NotifyAuditChanged();
+            }
+            else
+            {
+                result = await JournalService.UpdateAsync(EditModel);
+                ToastService.Success(result ? "Journal entry updated successfully!" : "Failed to update journal entry!");
+                AuditLogService.NotifyAuditChanged();
+            }
+
+            if (result)
+            {
+                Visible = false;
+                await OnSaved.InvokeAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Error saving journal entry: {ex.Message}");
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+
+    // ── JournalLine model (UI-only, maps to BillRefDetail for storage) ────────
+    public class JournalLine
+    {
+        public int LineId { get; set; }   // UI key only
+        public int LineNo { get; set; }   // Display row number
+        public string DrCr { get; set; } = "DR";
+        public int AccountId { get; set; }
+        public double Amount { get; set; }
+        public string Narration { get; set; } = string.Empty;
+        public int BillRefDetailId { get; set; }
+    }
+}
