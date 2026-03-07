@@ -1545,8 +1545,10 @@ width:fit-content;
         // Find the selected bill from billList
         var selectedBill = billList.FirstOrDefault(b => b.BillId == selectedBillId);
         if (selectedBill == null)
+        {
+            InitializeInvoiceDetails();
             return;
-
+        }
         // --- Fill Header fields from the selected bill ---
         EditModel.BillPartyId = selectedBill.BillPartyId;
         EditModel.BillPlaceOfSupply = selectedBill.BillPlaceOfSupply;
@@ -2174,17 +2176,16 @@ width:fit-content;
             //   EditModel.BillVoucherId = purchaseVoucherId;
             OnJobDetailsChanged(EditModel.BillJobNo);
             OnvoucherChanged(EditModel,EditModel.BillVoucherId);
-            if(EditModel.BillQuatationId>0)
-            {
 
-                OnBillAgainstChanged(EditModel.BillQuatationId);
-            }
-           
-            nextSNo = 1;
+
+            OnBillAgainstChanged(EditModel.BillQuatationId);
+
+
+            // nextSNo = 1;
             IsCreditnote = false;
             Quotationvisible = true;
             Title = "Add Purchase Bill";
-            InitializeInvoiceDetails();
+            //InitializeInvoiceDetails();
             IsPartyLocked = false;
         }
 
@@ -2358,6 +2359,7 @@ width:fit-content;
             PartyTDSVisible = false;
             EditModel.BillTdsPer =0;
         }
+        shippartydetails(EditModel.BillPartyId);
     }
     // private EditContext? editContext;
     private void OnJobDetailsChanged(string selectedjobno)
@@ -2444,6 +2446,7 @@ width:fit-content;
 
     private void OnJobTypeChanged(string selectedType)
     {
+       
         JobType = selectedType;
         EditModel.BillJobType = selectedType;
         FilteredJobList = JobList
@@ -3475,7 +3478,22 @@ width:fit-content;
                     );
                 return;
             }
+            if (EditModel.BillPartyId<=0)
+            {
 
+                ToastService.Error(
+                        "Please Select the Party."
+                    );
+                return;
+            }
+            if (EditModel.BillJobType==null)
+            {
+
+                ToastService.Error(
+                        "Please Select the Job Type."
+                    );
+                return;
+            }
             // --- STEP 1: Apply Unsaved Changes ---
             foreach (var unsavedChange in UnsavedChanges)
             {

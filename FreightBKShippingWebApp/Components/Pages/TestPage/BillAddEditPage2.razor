@@ -1501,8 +1501,10 @@
         // Find the selected bill from billList
         var selectedBill = billList.FirstOrDefault(b => b.BillId == selectedBillId);
         if (selectedBill == null)
+        {
+            InitializeInvoiceDetails();
             return;
-
+        }
         // --- Fill Header fields from the selected bill ---
         EditModel.BillPartyId = selectedBill.BillPartyId;
         EditModel.BillPlaceOfSupply = selectedBill.BillPlaceOfSupply;
@@ -2139,6 +2141,7 @@
         }
         else
         {
+            BillDetails = new List<BillDetail>();
             var defaultBranch = branchList.FirstOrDefault(b => b.Branchisdefault);
 
             var selectedCompany = CompanyList?.FirstOrDefault(c => c.Status == true);
@@ -2165,12 +2168,13 @@
 
             OnJobDetailsChanged(EditModel.BillJobNo);
             OnvoucherChanged(EditModel,EditModel.BillVoucherId);
-            BillDetails = new List<BillDetail>();
-            nextSNo = 1;
+            OnBillAgainstChanged(EditModel.BillQuatationId);
+            
+           // nextSNo = 1;
             IsCreditnote = false;
             Quotationvisible = true;
             Title = "Add Bill";
-            InitializeInvoiceDetails();
+            //InitializeInvoiceDetails();
             IsPartyLocked = false;
         }
 
@@ -2445,6 +2449,7 @@
 
     private void OnJobTypeChanged(string selectedType)
     {
+        
         JobType = selectedType;
         EditModel.BillJobType = selectedType;
         FilteredJobList = JobList
@@ -3436,9 +3441,23 @@
                    return;
              }
                   
+            if (EditModel.BillPartyId <= 0)
+            {
 
+                ToastService.Error(
+                        "Please Select the Party."
+                    );
+                return;
+            }
 
+            if (EditModel.BillJobType == null)
+            {
 
+                ToastService.Error(
+                        "Please Select the Job Type."
+                    );
+                return;
+            }
 
 
             // --- STEP 1: Apply Unsaved Changes ---
