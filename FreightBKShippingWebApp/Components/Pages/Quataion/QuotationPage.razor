@@ -1,5 +1,7 @@
 ﻿@page "/quotation"
 @using FreightBKShippingWebApp.Components.Pages.AccountPage
+@using FreightBKShippingWebApp.Components.Pages.PurchasePage
+@using FreightBKShippingWebApp.Components.Pages.TestPage
 @using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Models
 @using FreightBKShippingWebApp.Services
@@ -81,16 +83,25 @@
     <Columns>
         <DxGridSelectionColumn Width="30" FixedPosition="GridColumnFixedPosition.Left" />
 
-       @*  <DxGridCommandColumn CancelButtonVisible="false" Name="Action" Caption="Action"
+        <DxGridCommandColumn CancelButtonVisible="false" Name="Bill" Caption="Bill"
                             DeleteButtonVisible="false"
                             EditButtonVisible="false"
                             SaveButtonVisible="false"
                             NewButtonVisible="false" Width="120">
-            
-        </DxGridCommandColumn> *@
+            <CellDisplayTemplate Context="cellContext">
+                <div style="display: flex; align-items: center;">
+                  
+
+                    <DxButton RenderStyle="ButtonRenderStyle.Link"
+                              IconCssClass="bi bi-three-dots"
+                              SizeMode="SizeMode.Medium"
+                              Click="@(e => ShowVoucherMenu(e, (Bill)cellContext.DataItem))" />
+                </div>
+            </CellDisplayTemplate>
+        </DxGridCommandColumn>
 
         <DxGridDataColumn FieldName="BillId" Caption="ID" Width="@(layoutManager?.GetColumnWidth("BillId") ?? "80px")"
-                         Visible="@(layoutManager?.GetColumnVisibility("BillId") ?? true)" />
+                         Visible="@(layoutManager?.GetColumnVisibility("BillId") ?? false)" />
 
         <DxGridDataColumn FieldName="branchname" Caption="Branch" Width="@(layoutManager?.GetColumnWidth("branchname") ?? "120px")"
                          Visible="@(layoutManager?.GetColumnVisibility("branchname") ?? true)" />
@@ -173,8 +184,84 @@
         URL.revokeObjectURL(url);
     };
 </script>
+<FreightBKShippingWebApp.Components.Pages.TestPage.BillAddEditPage2 @ref="billAddEditPage" />
 
+<FreightBKShippingWebApp.Components.Pages.PurchasePage.PurchaseAddEditPage @ref="purchasaddedit"></FreightBKShippingWebApp.Components.Pages.PurchasePage.PurchaseAddEditPage>
+
+<DxContextMenu @ref="voucherMenu" ItemClick="@OnMenuItemClick">
+    <Items>
+        @foreach (var voucher in VoucherList)
+        {
+            <DxContextMenuItem Text="@voucher.VoucherName"
+                               Name="@voucher.VoucherId.ToString()" />
+        }
+    </Items>
+</DxContextMenu>
 @code {
+    void OnMenuItemClick(ContextMenuItemClickEventArgs args)
+    {
+        var id = int.Parse(args.ItemInfo.Name);
+        var selectedVoucher = VoucherList.FirstOrDefault(v => v.VoucherId == id);
+
+        if (selectedVoucher == null)
+            return;
+
+        // 👇 YAHI MAIN LOGIC HAI
+        if (selectedVoucher.VoucherName
+                .Equals("Purchase", StringComparison.OrdinalIgnoreCase))
+        {
+            // 👉 Purchase hai → Purchase popup
+            Openpurchaseadddedit(selectedbilltype, selectedVoucher);
+        }
+        else
+        {
+            // 👉 baki sab → normal bill popup
+            OpenBilleditPopup(selectedbilltype, selectedVoucher);
+        }
+    }
+    private List<Voucher> VoucherList = new();
+    BillAddEditPage2 billAddEditPage;
+    async Task OpenBilleditPopup(Bill quot, Voucher voucher)
+    {
+        var bill = new Bill
+        {
+            BillJobId = quot.BillJobId,
+            BillJobNo = quot.BillJobNo,
+            BillJobType = quot.BillJobType,
+            BillPartyId = quot.BillPartyId,
+            BillBranchId = quot.BillBranchId,
+            BillQuatationId = quot.BillId,
+            BillVoucherId = voucher.VoucherId
+        };
+
+        billAddEditPage.Show(bill);
+    }
+
+
+
+    PurchaseAddEditPage purchasaddedit;
+    async Task Openpurchaseadddedit(Bill quot, Voucher voucher)
+    {
+        var bill = new Bill
+        {
+            BillJobId = quot.BillJobId,
+            BillJobNo = quot.BillJobNo,
+            BillJobType = quot.BillJobType,
+            BillPartyId = quot.BillPartyId,
+            BillBranchId = quot.BillBranchId,
+            BillQuatationId = quot.BillId,
+            BillVoucherId = voucher.VoucherId
+        };
+
+        purchasaddedit.Show(bill);
+    }
+    private Bill selectedbilltype;
+    DxContextMenu voucherMenu;
+    async Task ShowVoucherMenu(MouseEventArgs e, Bill bill)
+    {
+        selectedbilltype = bill; // store clicked job
+        await voucherMenu.ShowAsync(e); // show at mouse coords
+    }
     private void InitializeColumns()
     {
         allColumns = new List<GridColumnLayout>
@@ -269,6 +356,15 @@
 
             ReportDataList = await ReportDataService.GetAllAsync();
             
+            var voucherTask = await VoucherService.GetAllAsync(); 
+
+            VoucherList = voucherTask.Where(v =>
+                !string.IsNullOrWhiteSpace(v.VoucherGroup) &&
+                (
+                    v.VoucherGroup.Trim().Equals("SALES", StringComparison.OrdinalIgnoreCase) ||
+                    v.VoucherGroup.Trim().Equals("PURCHASE", StringComparison.OrdinalIgnoreCase)
+                ))
+                .ToList();
             LoadingService.Hide();
             await InvokeAsync(StateHasChanged);
         }

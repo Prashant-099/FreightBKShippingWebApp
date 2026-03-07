@@ -19,6 +19,8 @@
 @inject LrApiService LrApiService
 @inject NavigationManager NavManager
 @inject VehicleService VehicleService
+@inject GridLayoutService GridLayoutService
+
 <style>
     :root {
         --clr-bg: #f4f6fb;
@@ -74,32 +76,43 @@
     </div>
 
     <!-- ══ COLUMN VISIBILITY PANEL ══ -->
-    @if (showPanel)
-    {
-        <div class="col-panel-backdrop" @onclick="() => showPanel = false"></div>
-        <div class="col-panel">
-            <div class="col-panel-header">
-                <span>Show / Hide Fields</span>
-                <button type="button" @onclick="() => showPanel = false">✕</button>
-            </div>
-            <div class="col-panel-actions">
-                <button type="button" @onclick="SelectAll">Select All</button>
-                <button type="button" @onclick="SelectNone">Clear All</button>
-            </div>
-            <div class="col-panel-list">
-                @foreach (var key in Visible.Keys.ToList())
-                {
-                    var capturedKey = key;
-                    <label class="col-toggle-row">
-                        <input type="checkbox"
-                               checked="@Visible[capturedKey]"
-                               @onchange="e => { Visible[capturedKey] = (bool)e.Value!; StateHasChanged(); }" />
-                        <span>@Labels[capturedKey]</span>
-                    </label>
-                }
-            </div>
+
+@if (showPanel)
+{
+    <div class="col-panel-backdrop" @onclick="CloseFieldPanel"></div>
+    <div class="col-panel">
+
+        <div class="col-panel-header">
+            <span>Show / Hide Fields</span>
+            <button type="button" @onclick="CloseFieldPanel">✕</button>
         </div>
-    }
+
+        @* Save button sits in the actions row — always visible *@
+        <div class="col-panel-actions">
+            <button type="button" @onclick="SelectAll">Select All</button>
+            <button type="button" @onclick="SelectNone">Clear All</button>
+            <button type="button"
+                    disabled="@_isSavingFields"
+                    @onclick="SaveFieldLayout">
+                @(_isSavingFields ? "..." : "Save")
+            </button>
+        </div>
+
+        <div class="col-panel-list">
+            @foreach (var key in Visible.Keys.ToList())
+            {
+                var capturedKey = key;
+                <label class="col-toggle-row">
+                    <input type="checkbox"
+                           checked="@Visible[capturedKey]"
+                           @onchange="e => OnFieldVisibilityChanged(capturedKey, (bool)e.Value!)" />
+                    <span>@Labels[capturedKey]</span>
+                </label>
+            }
+        </div>
+
+    </div>
+}
 
     @if (IsLoading)
     {
@@ -383,6 +396,10 @@
                               Click="@AddNewProduct" style="padding:1px" />
                     <DxButton IconCssClass="bi bi-arrow-clockwise" RenderStyle="ButtonRenderStyle.Link"
                               Click="@RevertProductGrid" style="padding:1px" />
+
+                               <DxButton IconCssClass="bi bi-three-dots" RenderStyle="ButtonRenderStyle.Link"
+              Click="@(() => ProductLayoutMgr?.ShowPopup())" style="padding:1px" />
+
                 </HeaderCaptionTemplate>
                 <CellEditTemplate Context="editCtx">
                     <DxButton Enabled="false" IconCssClass="bi bi-trash" RenderStyle="ButtonRenderStyle.Link" />
@@ -394,9 +411,11 @@
                 </CellDisplayTemplate>
             </DxGridCommandColumn>
 
-            <DxGridDataColumn FieldName="SrNo" Caption="Sr No" Width="60px" ReadOnly="true" />
+            <DxGridDataColumn FieldName="SrNo" Caption="Sr No"   Width="@(ProductLayoutMgr?.GetColumnWidth("SrNo") ?? "60px")"     
+                ReadOnly="true"   Visible="@(ProductLayoutMgr?.GetColumnVisibility("SrNo") ?? true)" />
 
-            <DxGridDataColumn FieldName="ProductId" Caption="Product" Width="280px">
+            <DxGridDataColumn FieldName="ProductId" Caption="Product" Width="@(ProductLayoutMgr?.GetColumnWidth("ProductId") ?? "280px")"   
+            Visible="@(ProductLayoutMgr?.GetColumnVisibility("ProductId") ?? true)">
                 <CellDisplayTemplate Context="data">
                     @{
                         var row = (LrProductRow)data.DataItem;
@@ -431,7 +450,8 @@
                 </CellEditTemplate>
             </DxGridDataColumn>
 
-            <DxGridDataColumn FieldName="LrBillTypeBill" Caption="Bill Type" Width="180px">
+            <DxGridDataColumn FieldName="LrBillTypeBill" Caption="Bill Type" Width="@(ProductLayoutMgr?.GetColumnWidth("LrBillTypeBill") ?? "180px")" 
+             Visible="@(ProductLayoutMgr?.GetColumnVisibility("LrBillTypeBill") ?? true)">
                 <CellEditTemplate Context="editCtx">
                     @{ var edit = (LrProductRow)editCtx.EditModel; }
                     <DxComboBox Data="@BillTypeList"
@@ -451,11 +471,13 @@
                 </CellEditTemplate>
             </DxGridDataColumn>
 
-            <DxGridDataColumn FieldName="NtUnit" Caption="Unit" Width="90px">
+            <DxGridDataColumn FieldName="NtUnit" Caption="Unit"  Width="@(ProductLayoutMgr?.GetColumnWidth("NtUnit") ?? "90px")"     
+            Visible="@(ProductLayoutMgr?.GetColumnVisibility("NtUnit") ?? true)">
                 <EditSettings><DxTextBoxSettings /></EditSettings>
             </DxGridDataColumn>
 
-            <DxGridDataColumn FieldName="TotalBags" Caption="Total Bags" Width="100px">
+            <DxGridDataColumn FieldName="TotalBags" Caption="Total Bags" Width="@(ProductLayoutMgr?.GetColumnWidth("TotalBags") ?? "100px")"  
+            Visible="@(ProductLayoutMgr?.GetColumnVisibility("TotalBags") ?? true)" >
                 <CellEditTemplate Context="editCtx">
                     @{ var edit = (LrProductRow)editCtx.EditModel; }
                     <DxSpinEdit TValue="decimal?"
@@ -466,7 +488,8 @@
                 </CellEditTemplate>
             </DxGridDataColumn>
 
-            <DxGridDataColumn FieldName="GrossWt" Caption="Gross Wt" Width="100px">
+            <DxGridDataColumn FieldName="GrossWt" Caption="Gross Wt"  Width="@(ProductLayoutMgr?.GetColumnWidth("GrossWt") ?? "100px")"   
+           Visible="@(ProductLayoutMgr?.GetColumnVisibility("GrossWt") ?? true)">
                 <CellEditTemplate Context="editCtx">
                     @{ var edit = (LrProductRow)editCtx.EditModel; }
                     <DxSpinEdit TValue="double?"
@@ -482,7 +505,8 @@
                 </CellEditTemplate>
             </DxGridDataColumn>
 
-            <DxGridDataColumn FieldName="TareWt" Caption="Tare Wt" Width="90px">
+            <DxGridDataColumn FieldName="TareWt" Caption="Tare Wt" Width="@(ProductLayoutMgr?.GetColumnWidth("TareWt") ?? "90px")"    
+           Visible="@(ProductLayoutMgr?.GetColumnVisibility("TareWt") ?? true)">
                 <CellEditTemplate Context="editCtx">
                     @{ var edit = (LrProductRow)editCtx.EditModel; }
                     <DxSpinEdit TValue="double?"
@@ -498,7 +522,8 @@
                 </CellEditTemplate>
             </DxGridDataColumn>
 
-            <DxGridDataColumn FieldName="NetWt" Caption="Net Wt" Width="90px" ReadOnly="true">
+            <DxGridDataColumn FieldName="NetWt" Caption="Net Wt"  Width="@(ProductLayoutMgr?.GetColumnWidth("NetWt") ?? "90px")"
+            ReadOnly="true" Visible="@(ProductLayoutMgr?.GetColumnVisibility("NetWt") ?? true)">
                 <CellDisplayTemplate Context="data">
                     @{ var row = (LrProductRow)data.DataItem; }
                     <span style="color:#1e293b;">@(row.NetWt.HasValue ? row.NetWt.Value.ToString("N2") : "")</span>
@@ -511,7 +536,8 @@
                 </CellEditTemplate>
             </DxGridDataColumn>
 
-            <DxGridDataColumn FieldName="UnLoadWt" Caption="UnLoad Wt" Width="100px">
+            <DxGridDataColumn FieldName="UnLoadWt" Caption="UnLoad Wt" Width="@(ProductLayoutMgr?.GetColumnWidth("UnLoadWt") ?? "100px")"  
+           Visible="@(ProductLayoutMgr?.GetColumnVisibility("UnLoadWt") ?? true)">
                 <CellEditTemplate Context="editCtx">
                     @{ var edit = (LrProductRow)editCtx.EditModel; }
                     <DxSpinEdit TValue="double?"
@@ -526,7 +552,8 @@
                 </CellEditTemplate>
             </DxGridDataColumn>
 
-            <DxGridDataColumn FieldName="ChargeQty" Caption="Charge Wt" Width="100px">
+            <DxGridDataColumn FieldName="ChargeQty" Caption="Charge Wt"Width="@(ProductLayoutMgr?.GetColumnWidth("ChargeQty") ?? "100px")"  
+            Visible="@(ProductLayoutMgr?.GetColumnVisibility("ChargeQty") ?? true)">
                 <CellEditTemplate Context="editCtx">
                     @{ var edit = (LrProductRow)editCtx.EditModel; }
                     <DxSpinEdit TValue="double?"
@@ -541,7 +568,8 @@
                 </CellEditTemplate>
             </DxGridDataColumn>
 
-            <DxGridDataColumn FieldName="RateBill" Caption="Rate" Width="90px">
+            <DxGridDataColumn FieldName="RateBill" Caption="Rate" Width="@(ProductLayoutMgr?.GetColumnWidth("RateBill") ?? "90px")"     
+         Visible="@(ProductLayoutMgr?.GetColumnVisibility("RateBill") ?? true)" >
                 <CellEditTemplate Context="editCtx">
                     @{ var edit = (LrProductRow)editCtx.EditModel; }
                     <DxSpinEdit TValue="double?"
@@ -558,8 +586,8 @@
 
             <DxGridDataColumn FieldName="GrossFreight"
                               Caption="Freight"
-                              Width="100px"
-                              ReadOnly="true">
+                             Width="@(ProductLayoutMgr?.GetColumnWidth("GrossFreight") ?? "100px")" 
+                             ReadOnly="true" Visible="@(ProductLayoutMgr?.GetColumnVisibility("GrossFreight") ?? true)">
                 <CellDisplayTemplate Context="ctx">
                     @{
                         var row = (LrProductRow)ctx.DataItem;
@@ -607,6 +635,8 @@
                                                 <DxButton IconCssClass="bi bi-arrow-clockwise"
                                                           RenderStyle="ButtonRenderStyle.Link"
                                                           Click="@RevertAdvanceGrid" style="padding:1px" />
+                                                           <DxButton IconCssClass="bi bi-three-dots" RenderStyle="ButtonRenderStyle.Link"
+              Click="@(() => AdvanceLayoutMgr?.ShowPopup())" style="padding:1px" />
                                             </HeaderCaptionTemplate>
                                             <CellDisplayTemplate Context="rowCtx">
                                                 @{
@@ -617,11 +647,14 @@
                                                           Click="@(() => DeleteAdvanceRow(row))" />
                                             </CellDisplayTemplate>
                                         </DxGridCommandColumn>
-                                        <DxGridDataColumn FieldName="Sno" Caption="Sr No" Width="70px" ReadOnly="true" />
-                                        <DxGridDataColumn FieldName="JournalDate" Caption="Date" Width="120px">
+                                        <DxGridDataColumn FieldName="Sno" Caption="Sr No" Width="@(AdvanceLayoutMgr?.GetColumnWidth("Sno") ?? "70px")"   
+                                        ReadOnly="true" Visible="@(AdvanceLayoutMgr?.GetColumnVisibility("Sno") ?? true)" />
+                                        <DxGridDataColumn FieldName="JournalDate" Caption="Date" Width="@(AdvanceLayoutMgr?.GetColumnWidth("JournalDate") ?? "120px")"  
+                                        Visible="@(AdvanceLayoutMgr?.GetColumnVisibility("JournalDate") ?? true)" >
                                             <EditSettings><DxDateEditSettings PickerDisplayMode="DatePickerDisplayMode.ScrollPicker"/></EditSettings>
                                         </DxGridDataColumn>
-                                        <DxGridDataColumn FieldName="AccountId" Caption="Account" Width="200px">
+                                        <DxGridDataColumn FieldName="AccountId" Caption="Account" Width="@(AdvanceLayoutMgr?.GetColumnWidth("AccountId") ?? "310px")"  
+                                        Visible="@(AdvanceLayoutMgr?.GetColumnVisibility("AccountId") ?? true)">
                                             <EditSettings>
                                                 <DxComboBoxSettings Data="@BankCashList"
                                                                     TextFieldName="AccountName"
@@ -630,10 +663,12 @@
                                                                     SearchFilterCondition="ListSearchFilterCondition.Contains" />
                                             </EditSettings>
                                         </DxGridDataColumn>
-                                        <DxGridDataColumn FieldName="Amount" Caption="Amount">
+                                        <DxGridDataColumn FieldName="Amount" Caption="Amount"  Width="@(AdvanceLayoutMgr?.GetColumnWidth("Amount") ?? "150px")" 
+                                        Visible="@(AdvanceLayoutMgr?.GetColumnVisibility("Amount") ?? true)">
                                             <EditSettings><DxSpinEditSettings ShowSpinButtons="false" /></EditSettings>
                                         </DxGridDataColumn>
-                                        <DxGridDataColumn FieldName="Remarks" Caption="Remarks" Width="200px" />
+                                        <DxGridDataColumn FieldName="Remarks" Caption="Remarks"Width="@(AdvanceLayoutMgr?.GetColumnWidth("Remarks") ?? "483px")"  
+                                        Visible="@(AdvanceLayoutMgr?.GetColumnVisibility("Remarks") ?? true)" />
                                     </Columns>
                                 </DxGrid>
                             </div>
@@ -663,6 +698,8 @@
                                                 <DxButton IconCssClass="bi bi-arrow-clockwise"
                                                           RenderStyle="ButtonRenderStyle.Link"
                                                           Click="@RevertDieselGrid" style="padding:1px" />
+                                                          <DxButton IconCssClass="bi bi-three-dots" RenderStyle="ButtonRenderStyle.Link"
+              Click="@(() => DieselLayoutMgr?.ShowPopup())" style="padding:1px" />
                                             </HeaderCaptionTemplate>
                                             <CellEditTemplate Context="editCtx">
                                                 <DxButton Enabled="false" IconCssClass="bi bi-trash" RenderStyle="ButtonRenderStyle.Link" />
@@ -676,11 +713,14 @@
                                                           Click="@(() => DeleteDieselRow(row))" />
                                             </CellDisplayTemplate>
                                         </DxGridCommandColumn>
-                                        <DxGridDataColumn FieldName="Sno" Caption="Sr No" Width="70px" ReadOnly="true" />
-                                        <DxGridDataColumn FieldName="JournalDate" Caption="Date">
+                                        <DxGridDataColumn FieldName="Sno" Caption="Sr No"  Width="@(DieselLayoutMgr?.GetColumnWidth("Sno") ?? "70px")" 
+                                       ReadOnly="true" Visible="@(DieselLayoutMgr?.GetColumnVisibility("Sno") ?? true)"/>
+                                        <DxGridDataColumn FieldName="JournalDate" Caption="Date"  Width="@(DieselLayoutMgr?.GetColumnWidth("JournalDate") ?? "120px")" 
+                                        Visible="@(DieselLayoutMgr?.GetColumnVisibility("JournalDate") ?? true)">
                                             <EditSettings><DxDateEditSettings /></EditSettings>
                                         </DxGridDataColumn>
-                                        <DxGridDataColumn FieldName="PumpBillId" Caption="Petrol Pump">
+                                        <DxGridDataColumn FieldName="PumpBillId" Caption="Petrol Pump" Width="@(DieselLayoutMgr?.GetColumnWidth("PumpBillId") ?? "380px")" 
+                                        Visible="@(DieselLayoutMgr?.GetColumnVisibility("PumpBillId") ?? true)">
                                             <EditSettings>
                                                 <DxComboBoxSettings Data="@PumpList"
                                                                     TextFieldName="AccountName"
@@ -689,13 +729,16 @@
                                                                     SearchFilterCondition="ListSearchFilterCondition.Contains" />
                                             </EditSettings>
                                         </DxGridDataColumn>
-                                        <DxGridDataColumn FieldName="UreaRate" Caption="Rate">
+                                        <DxGridDataColumn FieldName="UreaRate" Caption="Rate" Width="@(DieselLayoutMgr?.GetColumnWidth("UreaRate") ?? "170px")"   
+                                        Visible="@(DieselLayoutMgr?.GetColumnVisibility("UreaRate") ?? true)">
                                             <EditSettings><DxSpinEditSettings ShowSpinButtons="false" /></EditSettings>
                                         </DxGridDataColumn>
-                                        <DxGridDataColumn FieldName="UreaQty" Caption="Ltr">
+                                        <DxGridDataColumn FieldName="UreaQty" Caption="Ltr"  Width="@(DieselLayoutMgr?.GetColumnWidth("UreaQty") ?? "170px")"   
+                                        Visible="@(DieselLayoutMgr?.GetColumnVisibility("UreaQty") ?? true)" >
                                             <EditSettings><DxSpinEditSettings ShowSpinButtons="false" /></EditSettings>
                                         </DxGridDataColumn>
-                                        <DxGridDataColumn FieldName="UreaAmount" Caption="Amount">
+                                        <DxGridDataColumn FieldName="UreaAmount" Caption="Amount" Width="@(DieselLayoutMgr?.GetColumnWidth("UreaAmount") ?? "223px")" 
+                                        Visible="@(DieselLayoutMgr?.GetColumnVisibility("UreaAmount") ?? true)">
                                             <EditSettings><DxSpinEditSettings ShowSpinButtons="false" /></EditSettings>
                                         </DxGridDataColumn>
                                     </Columns>
@@ -727,6 +770,8 @@
                                                 <DxButton IconCssClass="bi bi-arrow-clockwise"
                                                           RenderStyle="ButtonRenderStyle.Link"
                                                           Click="@RevertChargesGrid" style="padding:1px" />
+                                                           <DxButton IconCssClass="bi bi-three-dots" RenderStyle="ButtonRenderStyle.Link"
+              Click="@(() => ChargesLayoutMgr?.ShowPopup())" style="padding:1px" />
                                             </HeaderCaptionTemplate>
                                             <CellEditTemplate Context="editCtx">
                                                 <DxButton Enabled="false" IconCssClass="bi bi-trash" RenderStyle="ButtonRenderStyle.Link" />
@@ -740,11 +785,14 @@
                                                           Click="@(() => DeleteChargesRow(row))" />
                                             </CellDisplayTemplate>
                                         </DxGridCommandColumn>
-                                        <DxGridDataColumn FieldName="Sno" Caption="Sr No" Width="70px" ReadOnly="true" />
-                                        <DxGridDataColumn FieldName="JournalDate" Caption="Date">
+                                        <DxGridDataColumn FieldName="Sno" Caption="Sr No" Width="@(ChargesLayoutMgr?.GetColumnWidth("Sno") ?? "70px")"
+                                        ReadOnly="true" Visible="@(ChargesLayoutMgr?.GetColumnVisibility("Sno") ?? true)"/>
+                                        <DxGridDataColumn FieldName="JournalDate" Caption="Date" Width="@(ChargesLayoutMgr?.GetColumnWidth("JournalDate") ?? "120px")" 
+                                        Visible="@(ChargesLayoutMgr?.GetColumnVisibility("JournalDate") ?? true)">
                                             <EditSettings><DxDateEditSettings /></EditSettings>
                                         </DxGridDataColumn>
-                                        <DxGridDataColumn FieldName="AccountId" Caption="Account" Width="200px">
+                                        <DxGridDataColumn FieldName="AccountId" Caption="Account" Width="@(ChargesLayoutMgr?.GetColumnWidth("AccountId") ?? "310px")"   
+                                        Visible="@(ChargesLayoutMgr?.GetColumnVisibility("AccountId") ?? true)">
                                             <EditSettings>
                                                 <DxComboBoxSettings Data="@BankCashList"
                                                                     TextFieldName="AccountName"
@@ -753,10 +801,12 @@
                                                                     SearchFilterCondition="ListSearchFilterCondition.Contains" />
                                             </EditSettings>
                                         </DxGridDataColumn>
-                                        <DxGridDataColumn FieldName="Amount" Caption="Amount">
+                                        <DxGridDataColumn FieldName="Amount" Caption="Amount" Width="@(ChargesLayoutMgr?.GetColumnWidth("Amount") ?? "150px")"
+                                        Visible="@(ChargesLayoutMgr?.GetColumnVisibility("Amount") ?? true)">
                                             <EditSettings><DxSpinEditSettings ShowSpinButtons="false" /></EditSettings>
                                         </DxGridDataColumn>
-                                        <DxGridDataColumn FieldName="Remarks" Caption="Remarks" Width="200px" />
+                                        <DxGridDataColumn FieldName="Remarks" Caption="Remarks" Width="@(ChargesLayoutMgr?.GetColumnWidth("Remarks") ?? "483px")"   
+                                              Visible="@(ChargesLayoutMgr?.GetColumnVisibility("Remarks") ?? true)"  />
                                     </Columns>
                                 </DxGrid>
                             </div>
@@ -786,6 +836,8 @@
                                                 <DxButton IconCssClass="bi bi-arrow-clockwise"
                                                           RenderStyle="ButtonRenderStyle.Link"
                                                           Click="@RevertExpenseGrid" style="padding:1px" />
+                                                           <DxButton IconCssClass="bi bi-three-dots" RenderStyle="ButtonRenderStyle.Link"
+              Click="@(() => ExpenseLayoutMgr?.ShowPopup())" style="padding:1px" />
                                             </HeaderCaptionTemplate>
                                             <CellEditTemplate Context="editCtx">
                                                 <DxButton Enabled="false" IconCssClass="bi bi-trash" RenderStyle="ButtonRenderStyle.Link" />
@@ -799,11 +851,14 @@
                                                           Click="@(() => DeleteExpenseRow(row))" />
                                             </CellDisplayTemplate>
                                         </DxGridCommandColumn>
-                                        <DxGridDataColumn FieldName="Sno" Caption="Sr No" Width="70px" ReadOnly="true" />
-                                        <DxGridDataColumn FieldName="JournalDate" Caption="Date">
+                                        <DxGridDataColumn FieldName="Sno" Caption="Sr No" Width="@(ExpenseLayoutMgr?.GetColumnWidth("Sno") ?? "70px")" 
+                                           ReadOnly="true" Visible="@(ExpenseLayoutMgr?.GetColumnVisibility("Sno") ?? true)"/>
+                                        <DxGridDataColumn FieldName="JournalDate" Caption="Date"  Width="@(ExpenseLayoutMgr?.GetColumnWidth("JournalDate") ?? "120px")"  
+                                        Visible="@(ExpenseLayoutMgr?.GetColumnVisibility("JournalDate") ?? true)">
                                             <EditSettings><DxDateEditSettings /></EditSettings>
                                         </DxGridDataColumn>
-                                        <DxGridDataColumn FieldName="AccountId" Caption="Account" Width="200px">
+                                        <DxGridDataColumn FieldName="AccountId" Caption="Account"Width="@(ExpenseLayoutMgr?.GetColumnWidth("AccountId") ?? "310px")"
+                                        Visible="@(ExpenseLayoutMgr?.GetColumnVisibility("AccountId") ?? true)">
                                             <EditSettings>
                                                 <DxComboBoxSettings Data="@BankCashList"
                                                                     TextFieldName="AccountName"
@@ -812,10 +867,12 @@
                                                                     SearchFilterCondition="ListSearchFilterCondition.Contains" />
                                             </EditSettings>
                                         </DxGridDataColumn>
-                                        <DxGridDataColumn FieldName="Amount" Caption="Amount">
+                                        <DxGridDataColumn FieldName="Amount" Caption="Amount" Width="@(ExpenseLayoutMgr?.GetColumnWidth("Amount") ?? "150px")"  
+                                        Visible="@(ExpenseLayoutMgr?.GetColumnVisibility("Amount") ?? true)">
                                             <EditSettings><DxSpinEditSettings ShowSpinButtons="false" /></EditSettings>
                                         </DxGridDataColumn>
-                                        <DxGridDataColumn FieldName="Remarks" Caption="Remarks" Width="200px" />
+                                        <DxGridDataColumn FieldName="Remarks" Caption="Remarks"Width="@(ExpenseLayoutMgr?.GetColumnWidth("Remarks") ?? "483px")"    
+                                        Visible="@(ExpenseLayoutMgr?.GetColumnVisibility("Remarks") ?? true)" />
                                     </Columns>
                                 </DxGrid>
                             </div>
@@ -845,6 +902,8 @@
                                                 <DxButton IconCssClass="bi bi-arrow-clockwise"
                                                           RenderStyle="ButtonRenderStyle.Link"
                                                           Click="@RevertAdvanceReceivedGrid" style="padding:1px" />
+                                                            <DxButton IconCssClass="bi bi-three-dots" RenderStyle="ButtonRenderStyle.Link"
+              Click="@(() => AdvanceReceivedLayoutMgr?.ShowPopup())" style="padding:1px" />
                                             </HeaderCaptionTemplate>
                                             <CellEditTemplate Context="editCtx">
                                                 <DxButton Enabled="false" IconCssClass="bi bi-trash" RenderStyle="ButtonRenderStyle.Link" />
@@ -858,11 +917,14 @@
                                                           Click="@(() => DeleteAdvanceReceivedRow(row))" />
                                             </CellDisplayTemplate>
                                         </DxGridCommandColumn>
-                                        <DxGridDataColumn FieldName="Sno" Caption="Sr No" Width="70px" ReadOnly="true" />
-                                        <DxGridDataColumn FieldName="JournalDate" Caption="Date">
+                                        <DxGridDataColumn FieldName="Sno" Caption="Sr No"  Width="@(AdvanceReceivedLayoutMgr?.GetColumnWidth("Sno") ?? "70px")" 
+                                        ReadOnly="true" Visible="@(AdvanceReceivedLayoutMgr?.GetColumnVisibility("Sno") ?? true)" />
+                                        <DxGridDataColumn FieldName="JournalDate" Caption="Date" Width="@(AdvanceReceivedLayoutMgr?.GetColumnWidth("JournalDate") ?? "120px")"   
+                                        Visible="@(AdvanceReceivedLayoutMgr?.GetColumnVisibility("JournalDate") ?? true)">
                                             <EditSettings><DxDateEditSettings /></EditSettings>
                                         </DxGridDataColumn>
-                                        <DxGridDataColumn FieldName="AccountId" Caption="Account" Width="200px">
+                                        <DxGridDataColumn FieldName="AccountId" Caption="Account" Width="@(AdvanceReceivedLayoutMgr?.GetColumnWidth("AccountId") ?? "310px")" 
+                                                   Visible="@(AdvanceReceivedLayoutMgr?.GetColumnVisibility("AccountId") ?? true)">
                                             <EditSettings>
                                                 <DxComboBoxSettings Data="@accountpartylist"
                                                                     TextFieldName="AccountName"
@@ -871,13 +933,16 @@
                                                                     SearchFilterCondition="ListSearchFilterCondition.Contains" />
                                             </EditSettings>
                                         </DxGridDataColumn>
-                                        <DxGridDataColumn FieldName="Amount" Caption="Amount">
+                                        <DxGridDataColumn FieldName="Amount" Caption="Amount" Width="@(AdvanceReceivedLayoutMgr?.GetColumnWidth("Amount") ?? "120px")" 
+                                           Visible="@(AdvanceReceivedLayoutMgr?.GetColumnVisibility("Amount") ?? true)" >
                                             <EditSettings><DxSpinEditSettings ShowSpinButtons="false" /></EditSettings>
                                         </DxGridDataColumn>
-                                        <DxGridDataColumn FieldName="UreaQty" Caption="Qty (Diesel)">
+                                        <DxGridDataColumn FieldName="UreaQty" Caption="Qty (Diesel)" Width="@(AdvanceReceivedLayoutMgr?.GetColumnWidth("UreaQty") ?? "120px")" 
+                                        Visible="@(AdvanceReceivedLayoutMgr?.GetColumnVisibility("UreaQty") ?? true)">
                                             <EditSettings><DxSpinEditSettings ShowSpinButtons="false" /></EditSettings>
                                         </DxGridDataColumn>
-                                        <DxGridDataColumn FieldName="Remarks" Caption="Remarks" Width="200px" />
+                                        <DxGridDataColumn FieldName="Remarks" Caption="Remarks" Width="@(AdvanceReceivedLayoutMgr?.GetColumnWidth("Remarks") ?? "393px")"     
+                                        Visible="@(AdvanceReceivedLayoutMgr?.GetColumnVisibility("Remarks") ?? true)" />
                                     </Columns>
                                 </DxGrid>
                             </div>
@@ -992,7 +1057,229 @@
                  DefaultSubCategory="@SelectedSubCategory"
                  DefaultReferenceId="@SelectedReferenceId" />
 
+         <ConfirmationDialog/>
+                 <!-- ══ GRID LAYOUT MANAGERS ══ -->
+<GridLayoutpPopup @ref="ProductLayoutMgr"
+                  VoucherType="LrProduct"
+                  Columns="@ProductGridColumns"
+                  OnLayoutChanged="@(cols => HandleLayoutChanged(cols, ref ProductGridColumns))" />
+
+<GridLayoutpPopup @ref="AdvanceLayoutMgr"
+                  VoucherType="LrAdvance"
+                  Columns="@AdvanceGridColumns"
+                  OnLayoutChanged="@(cols => HandleLayoutChanged(cols, ref AdvanceGridColumns))" />
+
+<GridLayoutpPopup @ref="DieselLayoutMgr"
+                  VoucherType="LrDiesel"
+                  Columns="@DieselGridColumns"
+                  OnLayoutChanged="@(cols => HandleLayoutChanged(cols, ref DieselGridColumns))" />
+
+<GridLayoutpPopup @ref="ChargesLayoutMgr"
+                  VoucherType="LrCharges"
+                  Columns="@ChargesGridColumns"
+                  OnLayoutChanged="@(cols => HandleLayoutChanged(cols, ref ChargesGridColumns))" />
+
+<GridLayoutpPopup @ref="ExpenseLayoutMgr"
+                  VoucherType="LrExpense"
+                  Columns="@ExpenseGridColumns"
+                  OnLayoutChanged="@(cols => HandleLayoutChanged(cols, ref ExpenseGridColumns))" />
+
+<GridLayoutpPopup @ref="AdvanceReceivedLayoutMgr"
+                  VoucherType="LrAdvanceReceived"
+                  Columns="@AdvanceReceivedGridColumns"
+                  OnLayoutChanged="@(cols => HandleLayoutChanged(cols, ref AdvanceReceivedGridColumns))" />
+
+
+                  <GridLayoutpPopup @ref="CoreFieldsLayoutMgr"
+                  VoucherType="LrCoreFields"
+                  Columns="@CoreFieldColumns"
+                  OnLayoutChanged="@(cols => HandleCoreFieldLayoutChanged(cols))" />
 @code {
+
+    // ── Core-fields panel persistence ─────────────────────────────
+    private GridLayoutpPopup? CoreFieldsLayoutMgr;
+    private List<GridColumnLayout> CoreFieldColumns = new();
+    private bool _isSavingFields = false;
+    // The ordered list of all field keys (drives column order in DB)
+    private static readonly string[] CoreFieldKeys =
+    {
+        "LrNo", "LrDate", "Vehicle", "Supplier", "BillingParty",
+        "Consignor", "Consignee", "FromStation", "ToLocation",
+        "PickupLoc", "BackLocation", "Driver",
+        "Container1", "Container2", "RefNo", "PaymentMode", "TripNo"
+    };
+
+    // ── Load saved layout from DB and apply to Visible dict ───────
+    private async Task LoadCoreFieldLayoutAsync()
+    {
+        try
+        {
+            // GridLayoutService.GetLayoutAsync returns saved List<GridColumnLayout>
+            // for the given VoucherType key, or empty list if none saved yet.
+            var saved = await GridLayoutService.GetLayoutAsync("LrCoreFields");
+            if (saved != null && saved.Any())
+            {
+                foreach (var col in saved)
+                {
+                    if (Visible.ContainsKey(col.FieldName))
+                        Visible[col.FieldName] = col.Visible;
+                }
+            }
+        }
+        catch
+        {
+            // If table is empty / first run – silently keep defaults (all true)
+        }
+    }
+
+    // ── Called when user toggles a checkbox ───────────────────────
+    private void OnFieldVisibilityChanged(string key, bool value)
+    {
+        Visible[key] = value;
+        StateHasChanged();
+    }
+     private List<GridColumnLayout> BuildCoreFieldColumns() =>
+        CoreFieldKeys.Select((key, i) => new GridColumnLayout
+        {
+            FieldName    = key,
+            Caption      = Labels.TryGetValue(key, out var lbl) ? lbl : key,
+            Visible      = Visible.TryGetValue(key, out var vis) && vis,
+            Width        = 100,
+            DisplayIndex = i
+        }).ToList();
+    // ── Save button inside the panel ──────────────────────────────
+       private async Task SaveFieldLayout()
+    {
+        _isSavingFields = true;
+        StateHasChanged();
+        try
+        {
+            var ok = await GridLayoutService.SaveLayoutAsync(
+                        "LrCoreFields", BuildCoreFieldColumns());
+
+            ToastService.Success(ok ? "Field visibility saved." : "Save failed.");
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Save error: {ex.Message}");
+        }
+        finally
+        {
+            _isSavingFields = false;
+            showPanel = false;
+            StateHasChanged();
+        }
+    }
+
+    // ── Close without saving ──────────────────────────────────────
+    private void CloseFieldPanel() => showPanel = false;
+
+    // ── Callback if GridLayoutpPopup fires (not used actively) ───
+    private void HandleCoreFieldLayoutChanged(List<GridColumnLayout> cols)
+    {
+        CoreFieldColumns = cols;
+        foreach (var col in cols)
+            if (Visible.ContainsKey(col.FieldName))
+                Visible[col.FieldName] = col.Visible;
+        StateHasChanged();
+    }
+
+    // ── SelectAll / SelectNone (keep existing, just add StateHasChanged) ──
+    private void SelectAll()
+    {
+        Visible.Keys.ToList().ForEach(k => Visible[k] = true);
+        StateHasChanged();
+    }
+    private void SelectNone()
+    {
+        Visible.Keys.ToList().ForEach(k => Visible[k] = false);
+        StateHasChanged();
+    }
+
+
+
+
+
+
+
+
+    private GridLayoutpPopup? ProductLayoutMgr;
+private GridLayoutpPopup? AdvanceLayoutMgr;
+private GridLayoutpPopup? DieselLayoutMgr;
+private GridLayoutpPopup? ChargesLayoutMgr;
+private GridLayoutpPopup? ExpenseLayoutMgr;
+private GridLayoutpPopup? AdvanceReceivedLayoutMgr;
+// ── Column definitions ────────────────────────────────────────────
+private List<GridColumnLayout> ProductGridColumns = new();
+private List<GridColumnLayout> AdvanceGridColumns = new();
+private List<GridColumnLayout> DieselGridColumns = new();
+private List<GridColumnLayout> ChargesGridColumns = new();
+private List<GridColumnLayout> ExpenseGridColumns = new();
+private List<GridColumnLayout> AdvanceReceivedGridColumns = new();
+    
+private void HandleLayoutChanged(List<GridColumnLayout> updatedLayout,
+                                        ref List<GridColumnLayout> target)
+{
+    target = updatedLayout;
+      StateHasChanged();
+}
+// ── Initialise column definitions ────────────────────────────────
+private void InitializeAllGridColumns()
+{
+    ProductGridColumns = new List<GridColumnLayout>
+    {
+        new() { FieldName = "Actions",        Caption = "Actions",     Visible = true, Width = 80,  DisplayIndex = 0 },
+        new() { FieldName = "SrNo",           Caption = "Sr No",       Visible = true, Width = 60,  DisplayIndex = 1 },
+        new() { FieldName = "ProductId",      Caption = "Product",     Visible = true, Width = 280, DisplayIndex = 2 },
+        new() { FieldName = "LrBillTypeBill", Caption = "Bill Type",   Visible = true, Width = 180, DisplayIndex = 3 },
+        new() { FieldName = "NtUnit",         Caption = "Unit",        Visible = true, Width = 90,  DisplayIndex = 4 },
+        new() { FieldName = "TotalBags",      Caption = "Total Bags",  Visible = true, Width = 100, DisplayIndex = 5 },
+        new() { FieldName = "GrossWt",        Caption = "Gross Wt",    Visible = true, Width = 100, DisplayIndex = 6 },
+        new() { FieldName = "TareWt",         Caption = "Tare Wt",     Visible = true, Width = 90,  DisplayIndex = 7 },
+        new() { FieldName = "NetWt",          Caption = "Net Wt",      Visible = true, Width = 90,  DisplayIndex = 8 },
+        new() { FieldName = "UnLoadWt",       Caption = "UnLoad Wt",   Visible = true, Width = 100, DisplayIndex = 9 },
+        new() { FieldName = "ChargeQty",      Caption = "Charge Wt",   Visible = true, Width = 100, DisplayIndex = 10 },
+        new() { FieldName = "RateBill",       Caption = "Rate",        Visible = true, Width = 90,  DisplayIndex = 11 },
+        new() { FieldName = "GrossFreight",   Caption = "Freight",     Visible = true, Width = 100, DisplayIndex = 12 },
+    };
+
+    var journalBase = new Func<string, List<GridColumnLayout>>(prefix => new List<GridColumnLayout>
+    {
+        new() { FieldName = "Actions",      Caption = "Actions",  Visible = true, Width = 80,  DisplayIndex = 0 },
+        new() { FieldName = "Sno",          Caption = "Sr No",    Visible = true, Width = 70,  DisplayIndex = 1 },
+        new() { FieldName = "JournalDate",  Caption = "Date",     Visible = true, Width = 120, DisplayIndex = 2 },
+        new() { FieldName = "AccountId",    Caption = "Account",  Visible = true, Width = 310, DisplayIndex = 3 },
+        new() { FieldName = "Amount",       Caption = "Amount",   Visible = true, Width = 150, DisplayIndex = 4 },
+        new() { FieldName = "Remarks",      Caption = "Remarks",  Visible = true, Width = 483, DisplayIndex = 5 },
+    });
+
+    AdvanceGridColumns  = journalBase("Advance");
+    ChargesGridColumns  = journalBase("Charges");
+    ExpenseGridColumns  = journalBase("Expense");
+
+    DieselGridColumns = new List<GridColumnLayout>
+    {
+        new() { FieldName = "Actions",      Caption = "Actions",      Visible = true, Width = 80,  DisplayIndex = 0 },
+        new() { FieldName = "Sno",          Caption = "Sr No",        Visible = true, Width = 70,  DisplayIndex = 1 },
+        new() { FieldName = "JournalDate",  Caption = "Date",         Visible = true, Width = 120, DisplayIndex = 2 },
+        new() { FieldName = "PumpBillId",   Caption = "Petrol Pump",  Visible = true, Width = 380, DisplayIndex = 3 },
+        new() { FieldName = "UreaRate",     Caption = "Rate",         Visible = true, Width = 170,  DisplayIndex = 4 },
+        new() { FieldName = "UreaQty",      Caption = "Ltr",          Visible = true, Width = 170,  DisplayIndex = 5 },
+        new() { FieldName = "UreaAmount",   Caption = "Amount",       Visible = true, Width = 223, DisplayIndex = 6 },
+    };
+
+    AdvanceReceivedGridColumns = new List<GridColumnLayout>
+    {
+        new() { FieldName = "Actions",      Caption = "Actions",      Visible = true, Width = 80,  DisplayIndex = 0 },
+        new() { FieldName = "Sno",          Caption = "Sr No",        Visible = true, Width = 70,  DisplayIndex = 1 },
+        new() { FieldName = "JournalDate",  Caption = "Date",         Visible = true, Width = 120, DisplayIndex = 2 },
+        new() { FieldName = "AccountId",    Caption = "Account",      Visible = true, Width = 310, DisplayIndex = 3 },
+        new() { FieldName = "Amount",       Caption = "Amount",       Visible = true, Width = 120, DisplayIndex = 4 },
+        new() { FieldName = "UreaQty",      Caption = "Qty (Diesel)", Visible = true, Width = 120, DisplayIndex = 5 },
+        new() { FieldName = "Remarks",      Caption = "Remarks",      Visible = true, Width = 393, DisplayIndex = 6 },
+    };
+}
+
 
     // ══════════════════════════════════════════════════════════════════
     // COLUMN VISIBILITY
@@ -1020,8 +1307,8 @@
 
     private bool showPanel = false;
 
-    private void SelectAll()  => Visible.Keys.ToList().ForEach(k => Visible[k] = true);
-    private void SelectNone() => Visible.Keys.ToList().ForEach(k => Visible[k] = false);
+    // private void SelectAll()  => Visible.Keys.ToList().ForEach(k => Visible[k] = true);
+    // private void SelectNone() => Visible.Keys.ToList().ForEach(k => Visible[k] = false);
 
     private Dictionary<string, string> Labels = new()
     {
@@ -1138,7 +1425,9 @@
     // ── Init ──────────────────────────────────────────────────────────
     protected override async Task OnInitializedAsync()
     {
+         InitializeAllGridColumns();
         InitializeAllGridRows();
+        await LoadCoreFieldLayoutAsync();
 
         var notifyTask    = NotifyService.GetAllAsync();
         var locationTask  = LocationService.GetAllAsync();

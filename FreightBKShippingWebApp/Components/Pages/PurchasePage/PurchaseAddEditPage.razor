@@ -2028,7 +2028,7 @@ width:fit-content;
                 PartyTDSVisible = true;
             }
             else{
-            PartyTDSVisible = false;
+                PartyTDSVisible = false;
             }
             BillDetails = new List<BillDetail>();
             BillDetails = bill.BillDetails?
@@ -2139,6 +2139,7 @@ width:fit-content;
         }
         else
         {
+            BillDetails = new List<BillDetail>();
             var defaultBranch = branchList.FirstOrDefault(b => b.Branchisdefault);
 
             var selectedCompany = CompanyList?.FirstOrDefault(c => c.Status == true);
@@ -2173,7 +2174,12 @@ width:fit-content;
             //   EditModel.BillVoucherId = purchaseVoucherId;
             OnJobDetailsChanged(EditModel.BillJobNo);
             OnvoucherChanged(EditModel,EditModel.BillVoucherId);
-            BillDetails = new List<BillDetail>();
+            if(EditModel.BillQuatationId>0)
+            {
+
+                OnBillAgainstChanged(EditModel.BillQuatationId);
+            }
+           
             nextSNo = 1;
             IsCreditnote = false;
             Quotationvisible = true;

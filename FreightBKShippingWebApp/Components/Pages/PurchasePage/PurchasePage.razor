@@ -107,18 +107,28 @@ SelectedDataItemsChanged="OnSelectedBillsChanged"
     <Columns>
         <DxGridSelectionColumn Width="30"
                                FixedPosition="GridColumnFixedPosition.Left" />
-        <DxGridCommandColumn CancelButtonVisible="false" Name="Action" Caption="Action"
+        <DxGridCommandColumn CancelButtonVisible="false" Name="Payment" Caption="Payment"
                              DeleteButtonVisible="false"
                              EditButtonVisible="false"
                              SaveButtonVisible="false"
-                             NewButtonVisible="false" Width="120">
+                             NewButtonVisible="false" Width="80">
 
            
             <CellDisplayTemplate Context="cellContext">
+                @{
+                    var bill = (Bill)cellContext.DataItem;
+                    string iconColor = bill.Bill_due_amt == 0 ? "green"
+                    : bill.Bill_due_amt < bill.BillNetAmount ? "orange"
+                    : "red";
+                }
+
+              
+
                 <div style="display: flex; align-items: center;">
                     <DxButton RenderStyle="ButtonRenderStyle.Link"
                               IconCssClass="bi bi-file-earmark-diff-fill"
                               SizeMode="SizeMode.Medium"
+                              style="@($"color:{iconColor}")"
                               Click="@(() => OnReceiptAdd((Bill)cellContext.DataItem))" />
 
 
@@ -128,7 +138,7 @@ SelectedDataItemsChanged="OnSelectedBillsChanged"
         <DxGridDataColumn FieldName="BillId"
                           Caption="ID"
                           Width="@(layoutManager?.GetColumnWidth("BillId") ?? "80px")"
-                          Visible="@(layoutManager?.GetColumnVisibility("BillId") ?? true)" />
+                          Visible="@(layoutManager?.GetColumnVisibility("BillId") ?? false)" />
 
         <DxGridDataColumn FieldName="BillLockedByUsername" Caption="Lock By"
                           Width="@(layoutManager?.GetColumnWidth("BillLockedByUsername") ?? "140px")"
