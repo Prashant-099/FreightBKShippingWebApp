@@ -11,6 +11,7 @@
         Data="@vehicleList"
         @ref="MyGrid"
         KeyFieldName="VehicleId"
+        ColumnResizeMode="GridColumnResizeMode.ColumnsContainer"
         ShowFilterRow="true"
         ShowSearchBox="true"
         FocusedRowEnabled="true"
@@ -32,19 +33,49 @@
                 <DxToolbarItem Text="Edit" IconCssClass="bi bi-pencil-square" Click="OnEdit" />
                 <DxToolbarItem Text="Delete" IconCssClass="bi bi-trash" Click="OnDelete" />
                 <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="@LoadVehiclesAsync" />
+                <DxToolbarItem Alignment="ToolbarItemAlignment.Right"
+                               RenderStyle="ButtonRenderStyle.Secondary"
+                               IconCssClass="bi bi-gear-wide-connected"
+                               Click="ShowLayoutPopup" />
             </Items>
         </DxToolbar>
 
     </ToolbarTemplate>
 
     <Columns>
+
         <DxGridSelectionColumn Width="40" />
-        <DxGridDataColumn FieldName="VehicleNo" Caption="Vehicle No" Width="200px" />
-        <DxGridDataColumn FieldName="VehicleOwnerType" Caption="Owner Type" Width="150px" />
-        <DxGridDataColumn FieldName="VehicleMake" Caption="Make" Width="150px" />
-        <DxGridDataColumn FieldName="VehicleModel" Caption="Model" Width="150px" />
-        <DxGridDataColumn FieldName="VehicleLoadCapacity" Caption="Capacity" Width="120px" />
-        <DxGridDataColumn FieldName="VehicleStatus" Caption="Status" Width="100px" />
+
+        <DxGridDataColumn FieldName="VehicleNo"
+                          Caption="Vehicle No"
+                          Width="@(layoutManager?.GetColumnWidth("VehicleNo") ?? "300px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("VehicleNo") ?? true)" />
+
+        <DxGridDataColumn FieldName="VehicleOwnerType"
+                          Caption="Owner Type"
+                          Width="@(layoutManager?.GetColumnWidth("VehicleOwnerType") ?? "350px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("VehicleOwnerType") ?? true)" />
+
+        <DxGridDataColumn FieldName="VehicleMake"
+                          Caption="Make"
+                          Width="@(layoutManager?.GetColumnWidth("VehicleMake") ?? "350px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("VehicleMake") ?? true)" />
+
+        <DxGridDataColumn FieldName="VehicleModel"
+                          Caption="Model"
+                          Width="@(layoutManager?.GetColumnWidth("VehicleModel") ?? "250px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("VehicleModel") ?? true)" />
+
+        <DxGridDataColumn FieldName="VehicleLoadCapacity"
+                          Caption="Capacity"
+                          Width="@(layoutManager?.GetColumnWidth("VehicleLoadCapacity") ?? "120px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("VehicleLoadCapacity") ?? true)" />
+
+        <DxGridDataColumn FieldName="VehicleStatus"
+                          Caption="Status"
+                          Width="@(layoutManager?.GetColumnWidth("VehicleStatus") ?? "100px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("VehicleStatus") ?? true)" />
+
     </Columns>
 </DxGrid>
 
@@ -54,6 +85,10 @@
 
 <ConfirmationDialog />
 
+<GridLayoutpPopup @ref="layoutManager"
+                  VoucherType="VehiclePage"
+                  Columns="@allColumns"
+                  OnLayoutChanged="HandleLayoutChanged" />
 
 
 @code {
@@ -65,6 +100,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        InitializeColumns();
         await LoadVehiclesAsync();
     }
 
@@ -134,4 +170,33 @@
             LoadingService.Hide();
         }
     }
+
+    private GridLayoutpPopup? layoutManager;
+    private List<GridColumnLayout> allColumns = [];
+    private void InitializeColumns()
+    {
+        allColumns = new List<GridColumnLayout>
+    {
+        new() { FieldName = "VehicleNo", Caption = "Vehicle No", Visible = true, Width = 270, DisplayIndex = 0 },
+        new() { FieldName = "VehicleOwnerType", Caption = "Owner Type", Visible = true, Width = 240, DisplayIndex = 1 },
+        new() { FieldName = "VehicleMake", Caption = "Make", Visible = true, Width = 250, DisplayIndex = 2 },
+        new() { FieldName = "VehicleModel", Caption = "Model", Visible = true, Width = 150, DisplayIndex = 3 },
+        new() { FieldName = "VehicleLoadCapacity", Caption = "Capacity", Visible = true, Width = 220, DisplayIndex = 4 },
+        new() { FieldName = "VehicleStatus", Caption = "Status", Visible = true, Width = 100, DisplayIndex = 5 }
+    };
+    }
+    private async void ShowLayoutPopup()
+    {
+        await InvokeAsync(() =>
+        {
+            layoutManager?.ShowPopup();
+        });
+    }
+    private async Task HandleLayoutChanged(List<GridColumnLayout> updatedLayout)
+    {
+        allColumns = updatedLayout;
+        // Force the grid to re-render with new layout
+        await InvokeAsync(StateHasChanged);
+    }
+
 }
