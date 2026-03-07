@@ -146,16 +146,16 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 // ==========================================================
 
 // 🔵 Local API
-//builder.Services.AddHttpClient<ApiClient>(client =>
-//{
-//    client.BaseAddress = new Uri("https://localhost:5003/");
-//});
-
-// 🔴 Production API (Uncomment in production)
 builder.Services.AddHttpClient<ApiClient>(client =>
 {
-    client.BaseAddress = new Uri("https://apihost.freightbook.in/");
+    client.BaseAddress = new Uri("https://localhost:5003/");
 });
+
+// 🔴 Production API (Uncomment in production)
+//builder.Services.AddHttpClient<ApiClient>(client =>
+//{
+//    client.BaseAddress = new Uri("https://apihost.freightbook.in/");
+//});
 
 // ==========================================================
 // 🔟 LOCALIZATION

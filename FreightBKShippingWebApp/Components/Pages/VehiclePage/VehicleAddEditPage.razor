@@ -4,6 +4,7 @@
 @inject VehicleService VehicleService
 @inject ToasteService ToastService
 @inject LoadingService LoadingService
+@inject AccountService AccountService
 
 <DxPopup @bind-Visible="Visible"
          ShowCloseButton="true"
@@ -38,6 +39,17 @@
                     <ChildContent Context="ctx">
                         <DxTextBox @bind-Text="EditModel.VehicleOwnerType"
                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                    </ChildContent>
+                </DxFormLayoutItem>
+                <DxFormLayoutItem Caption="Driver">
+                    <ChildContent Context="ctx">
+                        <DxComboBox Data="driverlist" @bind-Value="EditModel.VehicleDriverId"
+                        TextFieldName="AccountName" ValueFieldName="AccountId"
+                         ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                                AllowUserInput="true"
+                                                SearchMode="ListSearchMode.AutoSearch"
+                                                SearchFilterCondition="ListSearchFilterCondition.Contains"
+                                    />
                     </ChildContent>
                 </DxFormLayoutItem>
 
@@ -123,12 +135,21 @@
     private bool Visible { get; set; }
     private string Title { get; set; } = "Add/Edit Vehicle";
     private Vehicle EditModel { get; set; } = new();
+    private List<Account> driverlist = new();
+
     // private EditContext? editContext;
     private bool IsActive
     {
         get => EditModel.VehicleStatus == 1;
         set => EditModel.VehicleStatus = value ? 1 : 0;
     }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var driverlists = await AccountService.GetAllAsync();
+        driverlist = driverlists.Where(a => a.AccountTypeId== 16).ToList();
+    }
+
 
     public void Show(Vehicle vehicle)
     {
@@ -146,7 +167,8 @@
                 VehicleChassisNo = vehicle.VehicleChassisNo,
                 VehicleInsurance = vehicle.VehicleInsurance,
                 VehicleFitness = vehicle.VehicleFitness,
-                VehicleStatus = vehicle.VehicleStatus
+                VehicleStatus = vehicle.VehicleStatus,
+                VehicleDriverId =vehicle.VehicleDriverId
             };
 
             Title = "Edit Vehicle";
@@ -156,7 +178,7 @@
             EditModel = new Vehicle { VehicleStatus = 1 };
             Title = "Add Vehicle";
         }
-
+     
         Visible = true;
     }
 

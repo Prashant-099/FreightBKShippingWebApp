@@ -162,7 +162,9 @@
                                                  <DxComboBox Data="@vehiclelist"
                                                 TData="Vehicle" TValue="int?"
                                                 TextFieldName="VehicleNo" ValueFieldName="VehicleId"
-                                                @bind-Value="model.LrVehicleId"
+                                                 Value="@model.LrVehicleId"
+                                                    ValueChanged="OnVehicleChanged"
+                                                         ValueExpression="() => model.LrVehicleId"
                                                 NullText="Select Vehicle"
                                                 ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
                                                 AllowUserInput="true"
@@ -335,8 +337,9 @@
                                     <div class="twoinone">
                                         @if (Visible["PaymentMode"])
                                         {
-                                            <div>
+                                            <div class="field-group">
                                                 <label>Payment Mode</label>
+                                                
                                                 <DxComboBox Data="@PaymethodList"
                                                             @bind-Value="model.LrPaymentType"
                                                             TextFieldName="Text" ValueFieldName="Value"
@@ -346,11 +349,12 @@
                                                             AllowUserInput="false"
                                                             NullText="Payment Mode"
                                                             TData="SelectItem" TValue="string?" />
+
                                             </div>
                                         }
                                         @if (Visible["TripNo"])
                                         {
-                                            <div>
+                                            <div class="field-group">
                                                 <label>Trip No</label>
                                                 <DxSpinEdit @bind-Value="model.LrTripNo" ShowSpinButtons=false/>
                                             </div>
@@ -1386,6 +1390,7 @@ private void InitializeAllGridColumns()
 
     private List<Notify> notifylist = new();
     private List<Account> accountpartylist = new();
+    private List<Account> accountlist = new();
     private List<Account> accountSupplierlist = new();
     private List<Account> DriverList = new();
     private List<Location> LocationList = new();
@@ -1440,14 +1445,14 @@ private void InitializeAllGridColumns()
         ProductList          = cargoTask.Result;
         LocationList         = locationTask.Result;
         StationLocationList  = LocationList.Where(x => x.LocationType == "STATION").ToList();
-        // accountpartylist     = accountTask.Result;
-        accountSupplierlist  = accountpartylist.Where(x => x.AccountTypeId == 14).ToList();
-        accountpartylist  = accountpartylist.Where(x => x.AccountTypeId == 18).ToList();
-        DriverList           = accountpartylist.Where(x => x.AccountTypeId == 16).ToList();
-        PumpList             = accountpartylist.Where(x => x.AccountTypeId == 12).ToList();
-        ChargesList          = accountpartylist.Where(x => x.AccountTypeId == 20).ToList();
-        ExpenseAccountList   = accountpartylist.Where(x => x.AccountTypeId == 19).ToList();
-        BankCashList         = accountpartylist
+        accountlist     = accountTask.Result;
+        accountSupplierlist  = accountlist.Where(x => x.AccountTypeId == 14).ToList();
+        accountpartylist  = accountlist.Where(x => x.AccountTypeId == 18).ToList();
+        DriverList           = accountlist.Where(x => x.AccountTypeId == 16).ToList();
+        PumpList             = accountlist.Where(x => x.AccountTypeId == 12).ToList();
+        ChargesList          = accountlist.Where(x => x.AccountTypeId == 20).ToList();
+        ExpenseAccountList   = accountlist.Where(x => x.AccountTypeId == 19).ToList();
+        BankCashList         = accountlist
             .Where(x => x.AccountTypeId == 10 || x.AccountTypeId == 11).ToList();
         vehiclelist          = vehicleTask.Result;
         if (IsEditMode) 
@@ -1552,6 +1557,23 @@ private void InitializeAllGridColumns()
                 VchType      = vchType.ToString()
             });
     }
+
+    // ── on change driver  ────────────────────────────────────────────────────
+
+    private void OnVehicleChanged(int? vehicleId)
+{
+    model.LrVehicleId = vehicleId;
+
+    if (vehicleId == null)
+        return;
+
+    var vehicle = vehiclelist.FirstOrDefault(x => x.VehicleId == vehicleId);
+
+    if (vehicle != null)
+    {
+        model.LrDriverId = vehicle.VehicleDriverId;
+    }
+}
 
     // ── Navigation ────────────────────────────────────────────────────
     private void GoBack() => NavManager.NavigateTo("/lrlist");
