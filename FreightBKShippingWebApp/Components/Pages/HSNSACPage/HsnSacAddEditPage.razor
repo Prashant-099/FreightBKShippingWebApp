@@ -6,7 +6,7 @@
 @inject ToasteService ToastService
 @inject LoadingService LoadingService
 @inject GstSlabService GstSlabService
-
+@inject AuditLogService AuditLogService
 <DxPopup @bind-Visible="Visible" ShowCloseButton="true" HeaderText="@Title" MaxWidth="600" CloseOnOutsideClick="false" horizontalAlignment="HorizontalAlignment.Center"
          verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body" ShowFooter="true" scrollable="true">
        <BodyContentTemplate Context="bdy">
@@ -132,6 +132,7 @@
             if (result)
             {
                 ToastService.Success(EditModel.HsnId == 0 ? "HSN/SAC created successfully!" : "HSN/SAC updated successfully!");
+                AuditLogService.NotifyAuditChanged();
                 Visible = false;
                 await OnSaved.InvokeAsync();
             }

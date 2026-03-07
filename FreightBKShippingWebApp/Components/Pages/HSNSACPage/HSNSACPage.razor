@@ -8,6 +8,7 @@
 @inject LoadingService LoadingService
 @inject ConfirmationDialogService ConfirmDialogService
 @inject GridLayoutService GridLayoutService
+@inject AuditLogService AuditLogService
     <style >
     .grid-size {
         max-height: 600px;
@@ -132,8 +133,8 @@
     {
         InitializeColumns();
         await LoadHsnAsync();
-        
-       
+
+
     }
     private void InitializeColumns()
     {
@@ -153,10 +154,10 @@
 
      new() { FieldName = "HsnStatus", Caption = "Active",Visible = true, Width = 120, DisplayIndex = 6 }
         };
-       
+
     }
 
-   
+
     private async Task LoadHsnAsync()
     {
         LoadingService.Show();
@@ -209,7 +210,14 @@
     {
         var hsn = MyGrid.GetFocusedDataItem() as HsnSac;
         if (hsn != null)
-            popup.Show(hsn);
+        {
+            var freshData = hsnList
+             .FirstOrDefault(x => x.HsnId == hsn.HsnId);
+
+            if (freshData != null)
+                popup.Show(freshData);
+        }
+        
         else
             ToastService.Warning("Please select a record to edit.");
         await ClearSelection();
@@ -240,8 +248,10 @@
         {
             var result = await HsnSacService.DeleteAsync(item.HsnId);
             if (result)
+{
                 successCount++;
-            else
+                    AuditLogService.NotifyAuditChanged();
+} else
                 failCount++;
         }
 

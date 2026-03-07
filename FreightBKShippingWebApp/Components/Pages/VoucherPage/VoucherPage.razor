@@ -6,7 +6,7 @@
 @inject LoadingService LoadingService
 @inject ConfirmationDialogService ConfirmDialogService
 @inject GridLayoutService GridLayoutService
-
+@inject AuditLogService AuditLogService
 <style>
     .grid-size {
         max-height: 600px;
@@ -127,8 +127,8 @@
     {
         InitializeColumns();
         await LoadVouchersAsync();
-        
-      
+
+
     }
 
     private async Task LoadVouchersAsync()
@@ -156,17 +156,17 @@
         new() { FieldName = "VoucherStatus", Caption = "Active", Visible = true, Width = 120, DisplayIndex = 6 }
 
    };
-        
+
     }
 
-    
-   
+
+
     private async Task OnSelectedVouchersChanged(IReadOnlyList<object> vouchers)
     {
         SelectedVouchers = vouchers ?? new List<object>();
         await InvokeAsync(StateHasChanged);
     }
-      // ✅ FIXED: Reliable clear selection method
+    // ✅ FIXED: Reliable clear selection method
     private async Task ClearSelectionManual()
     {
         try
@@ -199,8 +199,13 @@
     private async Task OnEdit(ToolbarItemClickEventArgs e)
     {
         var voucher = MyGrid.GetFocusedDataItem() as Voucher;
-        if (voucher != null)
-            popup.Show(voucher);
+        if (voucher != null){
+            var freshData = voucherList
+                  .FirstOrDefault(x => x.VoucherId == voucher.VoucherId);
+
+            if (freshData != null)
+                popup.Show(freshData);
+        }
         else
             ToastService.Warning("Please select a voucher to edit.");
         await ClearSelection();
@@ -229,7 +234,13 @@
             foreach (var voucher in selectedList)
             {
                 var result = await VoucherService.DeleteAsync(voucher.VoucherId);
-                if (result) successCount++; else failCount++;
+                if (result)
+                {
+                    successCount++;
+                    AuditLogService.NotifyAuditChanged();
+
+                }
+                else failCount++;
             }
 
             if (successCount > 0) ToastService.Success($"{successCount} Voucher(s) Deleted Successfully.");

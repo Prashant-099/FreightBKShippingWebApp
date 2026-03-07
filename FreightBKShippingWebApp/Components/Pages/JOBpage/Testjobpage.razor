@@ -14,7 +14,7 @@
 @inject GridLayoutService GridLayoutService
 @inject StatusService StatusService
 @inject VoucherService VoucherService
-
+@inject AuditLogService AuditLogService
 <style>
     .grid-size {
         max-height: 570px;
@@ -348,7 +348,7 @@
     }
 
     //===================================================================================
-    
+
     PurchaseAddEditPage purchasaddedit;
     async Task Openpurchaseadddedit(Job job, Voucher voucher)
     {
@@ -403,7 +403,7 @@
 
     private bool showPdfImportDialog = false;
 
-   
+
 
     protected override async Task OnInitializedAsync()
     {
@@ -411,8 +411,8 @@
         {
             InitializeColumns();
             await LoadJobsAsync();
-           
-         
+
+
             var voucherTask = await VoucherService.GetAllAsync(); // ya jo bhi tumhara method hai
 
             VoucherList = voucherTask.Where(v =>
@@ -432,7 +432,7 @@
             ToastService.Error("Failed to load jobs");
         }
     }
-  
+
     List<Status> statuslist;
     private async Task LoadJobsAsync()
     {
@@ -551,9 +551,16 @@
     private async Task OnEdit(ToolbarItemClickEventArgs e)
     {
         var job = MyGrid.GetFocusedDataItem() as Job;
-        if (job != null) popup.Show(job);
+        if (job != null)
+        {
+            var freshData = jobList
+               .FirstOrDefault(x => x.JobId == job.JobId);
+
+            if (freshData != null)
+                popup.Show(freshData);
+        }
         else ToastService.Warning("Please select a job to edit.");
-         await ClearSelection();
+        await ClearSelection();
     }
 
     private async Task OnDelete(ToolbarItemClickEventArgs e)
@@ -582,6 +589,8 @@
                 var result = await JobService.DeleteAsync(job.JobId);
                 if (result.Success)
                 {
+                    AuditLogService.NotifyAuditChanged();
+
                     successCount++;
                 }
                 else

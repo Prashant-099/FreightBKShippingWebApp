@@ -5,7 +5,7 @@
 @using FreightBKShippingWebApp.Services
 @using DevExpress.Blazor
 @using static FreightBKShippingWebApp.Components.Pages.FileUploadpopup
-
+@inject AuditLogService AuditLogService
 @inject ToasteService ToastService
 @inject PayTypeService PayTypeService
 @inject LocationService LocationService
@@ -1750,6 +1750,7 @@
 
             await LoadDocumentsAsync();
             ToastService.Success(IsEditMode ? "LR updated successfully." : "LR saved successfully.");
+                                AuditLogService.NotifyAuditChanged();
 
             if (!IsEditMode)
                 NavManager.NavigateTo($"/lrentry/{model.LrId}", replace: true);

@@ -7,7 +7,7 @@
 @inject StateService StateService
 @inject CountryService CountryService
 @inject IJSRuntime JSRuntime
-
+@inject AuditLogService AuditLogService
 @inject IBranchContext BranchContext
 
 <DxPopup @bind-Visible="Visible"
@@ -174,7 +174,7 @@ horizontalAlignment="HorizontalAlignment.Center"
 
     public void Show(Branch branch)
     {
-        if (branch != null && branch.BranchId > 0)
+        if (branch.BranchId > 0)
         {
             var json = JsonSerializer.Serialize(branch);
             EditModel = JsonSerializer.Deserialize<Branch>(json) ?? new Branch();
@@ -214,8 +214,12 @@ horizontalAlignment="HorizontalAlignment.Center"
             {
                 var result = await BranchService.CreateAsync(EditModel);
                 if (result == true)
+                {
                     ToastService.Success("Branch created successfully!");
-                else
+                    AuditLogService.NotifyAuditChanged();
+
+                }
+                    else
                 {
                     ToastService.Error("Branch Failed To Create!");
                     return;
@@ -225,8 +229,12 @@ horizontalAlignment="HorizontalAlignment.Center"
             {
                 var result = await BranchService.UpdateAsync(EditModel);
                 if (result == true)
+                {
                     ToastService.Success("Branch Update successfully!");
-                else
+                    AuditLogService.NotifyAuditChanged();
+
+                }
+                    else
                 {
                     ToastService.Error("Branch Failed To Update!");
                     return;

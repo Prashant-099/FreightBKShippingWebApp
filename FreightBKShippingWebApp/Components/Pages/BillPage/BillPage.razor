@@ -21,6 +21,7 @@
 @inject IJSRuntime JSRuntime
 @inject GridLayoutService GridLayoutService
 @inject IGenericReportManager ReportManager
+@inject AuditLogService AuditLogService
 <style>
     .grid-size {
         max-height: 570px;
@@ -368,7 +369,7 @@ DefaultFileName="@PendingFileName"
         new() { FieldName = "BillUpdated", Caption = "Updated At", Visible = true, Width = 140, DisplayIndex = 23 },
         new() { FieldName = "BillStatus", Caption = "Status", Visible = true, Width = 140, DisplayIndex = 24 }
      };
-        
+
     }
     private ReceiptAddEditPage? Popup;
     private void OnReceiptAdd(Bill bill)
@@ -377,29 +378,29 @@ DefaultFileName="@PendingFileName"
             return;
 
         if (string.Equals(bill.BillType, "SALES", StringComparison.OrdinalIgnoreCase))
-           {
+        {
             if (bill.Bill_due_amt <= 0)
             {
                 ToastService.Warning(" Invoices is Already Settaled.");
-                    return;
+                return;
             }
-           
-                    Popup?.Show(new Journal
+
+            Popup?.Show(new Journal
                     {
                         JournalDate = DateTime.Now,
                         JournalPartyId = bill.BillPartyId,
                         JournalBillId = bill.BillId,
                         JournalAmount= bill.BillNetAmount
                     }, bill.BillId);
-               
-            
 
-           }
 
-               else
-              {
+
+        }
+
+        else
+        {
             ToastService.Warning("It is  Not Sale Invoices.");
-              }
+        }
     }
 
     // Grid Layout Manager Reference
@@ -488,18 +489,18 @@ DefaultFileName="@PendingFileName"
     private CancelingEInvoices EInvoiceCancelPopupRef { get; set; }
 
 
-  
+
 
     protected override async Task OnInitializedAsync()
     {
         InitializeColumns();
-       
+
         await CheckUserRole();
         await LoadBillsAsync();
 
 
     }
-   
+
     private int ParseWidth(string width)
     {
         if (string.IsNullOrEmpty(width))
@@ -513,7 +514,7 @@ DefaultFileName="@PendingFileName"
         return 100;
     }
 
-   
+
     // private void Grid_ColumnResizing(GridColumnResizeMode e)
     // {
     //     var col = currentLayout.FirstOrDefault(x => x.FieldName == e.Column.FieldName);
@@ -523,7 +524,7 @@ DefaultFileName="@PendingFileName"
     //     }
     // }
 
-  
+
 
 
     // ✅ FIXED: Proper selection change handler with immediate state update
@@ -701,8 +702,11 @@ DefaultFileName="@PendingFileName"
             ToastService.Error($"This bill is locked by {bill.BillLockedByUsername} and cannot be edited.");
             return;
         }
+        var freshData = billList
+              .FirstOrDefault(x => x.BillId == bill.BillId);
 
-        popup.Show(bill);
+        if (freshData != null)
+            popup.Show(freshData);
         await ClearSelection();
     }
 
@@ -742,9 +746,15 @@ DefaultFileName="@PendingFileName"
             foreach (var bill in selectedBillsList)
             {
                 var result = await BillService.DeleteAsync(bill.BillId);
-                if (result.Success) successCount++;
+                if (result.Success)
+                {
+                    successCount++;
+                    AuditLogService.NotifyAuditChanged();
+
+                }
                 else
-                { failCount++; 
+                {
+                    failCount++;
                     failCount++;
                     ToastService.Error(result.Error);
                 }

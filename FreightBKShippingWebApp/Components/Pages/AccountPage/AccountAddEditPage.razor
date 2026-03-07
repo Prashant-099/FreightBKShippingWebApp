@@ -12,7 +12,7 @@
 @inject AccountTypeService AccountTypeService
 @inject EinvConfigService EinvConfigService
 @inject GstinService GstinService
-
+@inject AuditLogService AuditLogService
 <DxPopup @bind-Visible="Visible" ShowCloseButton="true" HeaderText="@Title" CloseOnOutsideClick="false" MaxWidth="1050"  
 horizontalAlignment="HorizontalAlignment.Center"
 verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body"
@@ -406,6 +406,8 @@ verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body"
                 if (result != null)
                 {
                     ToastService.Success("✅ Account created successfully!");
+                    AuditLogService.NotifyAuditChanged();
+
                 }
                 else
                 {
@@ -421,6 +423,8 @@ verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body"
                 if (result != null)
                 {
                     ToastService.Success("✅ Account updated successfully!");
+                    AuditLogService.NotifyAuditChanged();
+
                 }
                 else
                 {

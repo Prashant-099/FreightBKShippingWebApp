@@ -4,7 +4,7 @@
 @inject CurrencyService CurrencyService
 @inject ToasteService ToastService
 @inject LoadingService LoadingService
-
+@inject AuditLogService AuditLogService
 <DxPopup @bind-Visible="Visible" ShowCloseButton="true" HeaderText="@Title" MaxWidth="450" CloseOnOutsideClick="false" horizontalAlignment="HorizontalAlignment.Center"
          verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body" ShowFooter="true" scrollable="true">
     <BodyContentTemplate Context="bdybrnch">
@@ -51,11 +51,11 @@
 
     public void Show(Currency currency)
     {
-       
+
         if (currency.CurrencyId > 0)
         {
             // Edit mode – bind directly to the selected object
-           // EditModel = currency;
+            // EditModel = currency;
             var json = JsonSerializer.Serialize(currency);
             EditModel = JsonSerializer.Deserialize<Currency>(json) ?? new Currency();
             Title = "Edit Currency";
@@ -84,8 +84,12 @@
             if (EditModel.CurrencyId == 0)
             {
                 var result = await CurrencyService.CreateAsync(EditModel);
-                if(result==true)
+                if (result == true)
+                {
                     ToastService.Success("Currency created successfully!");
+                    AuditLogService.NotifyAuditChanged();
+
+                }
                 else
                 {
                     ToastService.Error("Currency Failed To Created !");
@@ -96,7 +100,11 @@
             {
                 var result = await CurrencyService.UpdateAsync(EditModel);
                 if (result == true)
+                {
                     ToastService.Success("Currency updated successfully!");
+                    AuditLogService.NotifyAuditChanged();
+
+                }
                 else
                 {
                     ToastService.Error("Currency Failed To Update !");

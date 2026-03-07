@@ -3,7 +3,7 @@
 @using FreightBKShippingWebApp.Services
 @using FreightBKShippingWebApp.Components.Pages
 @using System.Text.Json
-
+@inject AuditLogService AuditLogService
 @inject VesselService VesselService
 @inject ToasteService ToastService
 @inject LoadingService LoadingService
@@ -183,10 +183,10 @@
         new() { FieldName = "VesselUpdated", Caption = "Updated At",Visible = true, Width = 120, DisplayIndex = 10 } 
     };
 
-       
+
     }
 
-   
+
     private async Task LoadVesselsAsync()
     {
         LoadingService.Show();
@@ -245,7 +245,13 @@
     {
         var vessel = MyGrid.GetFocusedDataItem() as Vessel;
         if (vessel != null)
-            popup.Show(vessel);
+        {
+            var freshData = vesselList
+                   .FirstOrDefault(x => x.VesselId == vessel.VesselId);
+
+            if (freshData != null)
+                popup.Show(vessel);
+        }
         else
             ToastService.Warning("Please select a vessel to edit.");
         await ClearSelection();
@@ -277,7 +283,11 @@
             {
                 var result = await VesselService.DeleteAsync(vessel.VesselId);
                 if (result)
+                {
                     successCount++;
+                    AuditLogService.NotifyAuditChanged();
+
+                }
                 else
                     failCount++;
             }

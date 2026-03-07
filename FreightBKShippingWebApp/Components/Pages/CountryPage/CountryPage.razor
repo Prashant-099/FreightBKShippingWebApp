@@ -7,6 +7,7 @@
 @inject LoadingService LoadingService
 @inject ConfirmationDialogService ConfirmDialogService
 @inject GridLayoutService GridLayoutService
+@inject AuditLogService AuditLogService
 <style>
     .grid-size {
         max-height: 600px;
@@ -138,7 +139,7 @@
     {
         InitializeColumns();
         await LoadCountriesAsync();
-       
+
     }
     private void InitializeColumns()
     {
@@ -153,7 +154,7 @@
         new() { FieldName = "CountryCreated", Caption = "Created At", Visible = true, Width = 160, DisplayIndex = 6 },
         new() { FieldName = "CountryUpdated", Caption = "Updated At", Visible = true, Width = 160, DisplayIndex = 7}
    };
-       
+
     }
 
     private async Task LoadCountriesAsync()
@@ -207,7 +208,13 @@
     {
         var country = MyGrid.GetFocusedDataItem() as Country;
         if (country != null)
-            popup.Show(country);
+        {
+            var freshData = countryList
+             .FirstOrDefault(x => x.CountryId == country.CountryId);
+
+            if (freshData != null)
+                popup.Show(freshData);
+        }
         else
             ToastService.Warning("Please select a country to edit.");
         await ClearSelection();
@@ -238,7 +245,14 @@
             foreach (var country in selectedList)
             {
                 var result = await CountryService.DeleteAsync(country.CountryId);
-                if (result) successCount++; else failCount++;
+                if (result)
+                { 
+                    successCount++; 
+                    AuditLogService.NotifyAuditChanged();
+
+                }
+
+                else failCount++;
 
             }
             if (successCount > 0) ToastService.Success($"{successCount} country(ies) Deleted Successfully.");

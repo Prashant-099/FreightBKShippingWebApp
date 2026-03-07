@@ -20,6 +20,7 @@
 @inject IJSRuntime JSRuntime
 @inject GridLayoutService GridLayoutService
 @inject VoucherService VoucherService
+@inject AuditLogService AuditLogService
 <style>
     .grid-size {
         max-height: 570px;
@@ -670,8 +671,11 @@ DefaultFileName="@PendingFileName"
             ToastService.Error($"This bill is locked by {bill.BillLockedByUsername} and cannot be edited.");
             return;
         }
+        var freshData = billList
+             .FirstOrDefault(x => x.BillId == bill.BillId);
 
-        popup.Show(bill);
+        if (freshData != null)
+            popup.Show(freshData);
         await ClearSelection();
     }
 
@@ -711,8 +715,11 @@ DefaultFileName="@PendingFileName"
             foreach (var bill in selectedBillsList)
             {
                 var result = await BillService.DeleteAsync(bill.BillId);
-                if (result.Success) successCount++;
-                else
+                if (result.Success) 
+                {
+                    AuditLogService.NotifyAuditChanged();
+                    successCount++;
+                }else
                 { failCount++; 
                     failCount++;
                     ToastService.Error(result.Error);

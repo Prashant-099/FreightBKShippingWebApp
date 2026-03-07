@@ -7,6 +7,8 @@
 @inject LoadingService LoadingService
 @inject ConfirmationDialogService ConfirmDialogService
 @inject GridLayoutService GridLayoutService
+@inject AuditLogService AuditLogService
+@inject YearStatechangeService YearStatechangeService
 <style>
     .grid-size {
         max-height: 600px;
@@ -101,7 +103,7 @@
     // private List<YearModel> SelectedYears = new();
     private IReadOnlyList<object> SelectedYears { get; set; } = new List<object>();
     private YearAddEditPage popup;
- 
+
 
     // All possible columns
     private List<GridColumnLayout> allColumns = [];
@@ -124,8 +126,8 @@
     {
         InitializeColumns();
         await LoadYearsAsync();
-       
-       
+
+
     }
     private void InitializeColumns()
     {
@@ -139,10 +141,10 @@
         new() { FieldName = "YearIsDefault", Caption = "Default", Visible = true, Width = 120, DisplayIndex = 5 },
 
    };
-       
+
     }
 
-   
+
     private async Task LoadYearsAsync()
     {
         LoadingService.Show();
@@ -199,7 +201,13 @@
     {
         var year = MyGrid.GetFocusedDataItem() as YearModel;
         if (year != null)
-            popup.Show(year);
+        {
+
+            var freshData = yearList.FirstOrDefault(x => x.YearId == year.YearId);
+
+            if (freshData != null)
+                popup.Show(freshData);
+        }
         else
             ToastService.Warning("Please select a year to edit.");
         await ClearSelection();
@@ -225,16 +233,20 @@
         try
         {
             LoadingService.Show("Deleting...");
-        int successCount = 0;
-        int failCount = 0;
+            int successCount = 0;
+            int failCount = 0;
 
-        foreach (var year in selectedList)
-        {
-            var result = await YearService.DeleteAsync(year.YearId);
+            foreach (var year in selectedList)
+            {
+                var result = await YearService.DeleteAsync(year.YearId);
 
-            if (result)
-                successCount++;
-            else
+                if (result){
+                    successCount++;
+                    AuditLogService.NotifyAuditChanged();
+                    // false = if deleted selected year, auto switch to first available
+                    await YearStatechangeService.RefreshYearsAsync(false);
+                }
+                else
                 failCount++;
         }
 

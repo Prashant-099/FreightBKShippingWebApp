@@ -17,7 +17,7 @@
 @inject StatusService StatusService
 @inject VoucherService VoucherService
 @inject IBranchContext BranchContext
-
+@inject AuditLogService AuditLogService
 <style>
     .grid-size {
         max-height: 570px;
@@ -573,9 +573,13 @@
     private async Task OnEdit(ToolbarItemClickEventArgs e)
     {
         var job = MyGrid.GetFocusedDataItem() as Job;
-        if (job != null)
+        if (job != null){
+            var freshData = jobList
+                 .FirstOrDefault(x => x.JobId == job.JobId);
+
+        if (freshData != null)
             popup.Show(job);
-        else
+        }      else
             ToastService.Warning("Please select a job to edit.");
         await ClearSelection();
     }
@@ -607,6 +611,8 @@
                 var result = await JobService.DeleteAsync(job.JobId);
               if (result.Success)
                     {
+                    AuditLogService.NotifyAuditChanged();
+
                         successCount++;
                     }
                     else

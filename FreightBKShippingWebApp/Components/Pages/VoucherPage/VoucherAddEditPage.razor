@@ -11,7 +11,7 @@
 @inject BranchService BranchService
 @inject YearStatechangeService YearStatechangeService
 @inject IBranchContext BranchContext
-
+@inject AuditLogService AuditLogService
 <DxPopup @bind-Visible="Visible" ShowCloseButton="true" HeaderText="@Title" CloseOnOutsideClick="false" MaxWidth="1050"
 horizontalAlignment="HorizontalAlignment.Center"
          verticalAlignment="VerticalAlignment.Center"
@@ -383,7 +383,7 @@ horizontalAlignment="HorizontalAlignment.Center"
                 ToastService.Error(isNew ? "Voucher creation failed!" : "Voucher update failed!");
                 return;
             }
-
+            AuditLogService.NotifyAuditChanged();
             ToastService.Success(isNew ? "Voucher created successfully!" : "Voucher updated successfully!");
             Visible = false;
             await OnSaved.InvokeAsync();

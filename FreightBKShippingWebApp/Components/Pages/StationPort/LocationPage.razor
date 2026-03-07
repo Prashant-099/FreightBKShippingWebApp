@@ -8,6 +8,7 @@
 @inject LoadingService LoadingService
 @inject ConfirmationDialogService ConfirmDialogService
 @inject GridLayoutService GridLayoutService
+@inject AuditLogService AuditLogService
 <style>
     .grid-size {
         max-height: 600px;
@@ -140,8 +141,8 @@
     {
         InitializeColumns();
         await LoadLocationsAsync();
-        
-  
+
+
     }
     private void InitializeColumns()
     {
@@ -169,7 +170,7 @@
 };
     }
 
-  
+
     private async Task LoadLocationsAsync()
     {
         LoadingService.Show();
@@ -227,7 +228,14 @@
     {
         var location = MyGrid.GetFocusedDataItem() as Location;
         if (location != null)
-            popup.Show(location);
+        {
+            var freshData = locationList
+            .FirstOrDefault(x => x.LocationId == location.LocationId);
+
+            if (freshData != null)
+                popup.Show(freshData);
+        }
+
         else
             ToastService.Warning("Please select a location to edit.");
         await ClearSelection();
@@ -255,12 +263,18 @@
             LoadingService.Show("Deleting...");
             int successCount = 0, failCount = 0;
 
-        foreach (var location in selectedList)
-        {
-            var result = await LocationService.DeleteAsync(location.LocationId);
-            if (result) successCount++;
-            else failCount++;
-        }
+            foreach (var location in selectedList)
+            {
+                var result = await LocationService.DeleteAsync(location.LocationId);
+                if (result)
+                {
+                    successCount++;
+                    AuditLogService.NotifyAuditChanged();
+
+                }
+
+                else failCount++;
+            }
 
         if (successCount > 0)
             ToastService.Success($"{successCount} Location(s) Deleted Successfully.");

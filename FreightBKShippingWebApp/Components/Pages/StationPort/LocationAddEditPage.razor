@@ -8,7 +8,7 @@
 @inject LoadingService LoadingService
 @inject StateService StateService
 @inject CountryService CountryService
-
+@inject AuditLogService AuditLogService
 
 <DxPopup @bind-Visible="Visible" ShowCloseButton="true" HeaderText="@Title" MaxWidth="600" CloseOnOutsideClick="false" horizontalAlignment="HorizontalAlignment.Center"
          verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body" ShowFooter="true" scrollable="true">
@@ -173,7 +173,11 @@
             {
                 var result = await LocationService.CreateAsync(EditModel);
                 if (result)
+                {
                     ToastService.Success("Location created successfully!");
+                    AuditLogService.NotifyAuditChanged();
+
+                }
                 else
                 {
                     ToastService.Error("Failed to create Location!");
@@ -184,7 +188,11 @@
             {
                 var result = await LocationService.UpdateAsync(EditModel);
                 if (result)
+                {
                     ToastService.Success("Location updated successfully!");
+                    AuditLogService.NotifyAuditChanged();
+
+                }
                 else
                 {
                     ToastService.Error("Failed to update Location!");

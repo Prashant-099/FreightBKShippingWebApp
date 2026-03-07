@@ -41,7 +41,23 @@ namespace FreightBKShippingWebApp.Services
             SelectedYearId = newYearId;
             OnYearChanged?.Invoke(); // 🔔 notify subscribers
         }
+        public async Task RefreshYearsAsync(bool preserveSelection = true)
+        {
+            int previousSelectedId = SelectedYearId;
 
+            await LoadYearsAsync();
+
+            if (preserveSelection && Years.Any(y => y.YearId == previousSelectedId))
+            {
+                SelectedYearId = previousSelectedId;
+            }
+            else
+            {
+                SelectedYearId = Years.FirstOrDefault()?.YearId ?? 0;
+            }
+
+            OnYearChanged?.Invoke(); // 🔔 Notify UI
+        }
         // ✅ Global validation function
 
         public bool IsDateWithinSelectedYear(DateTime? date)
@@ -115,14 +131,14 @@ namespace FreightBKShippingWebApp.Services
             // Find the requested voucher by id
             var voucher = VoucherConfigs.FirstOrDefault(v => v.VoucherId == voucherId.Value && v.VoucherBranchId == branchid);
             if (voucher == null)
-                throw new Exception("Voucher configuration not found!");
+                throw new Exception("Voucher not found! Please Create Voucher For Current Branch ");
 
             // Find the voucher detail that matches the financial year and is active
             var detail = voucher.VoucherDetails?
                 .FirstOrDefault(d => d.VoucherDetailYearId == finYearId && d.VoucherDetailStatus);
 
             if (detail == null)
-                throw new Exception("Voucher not found!");
+                throw new Exception("Voucher not Configure!");
 
 
             int nextNo = detail.VoucherDetailLastNo + 1;

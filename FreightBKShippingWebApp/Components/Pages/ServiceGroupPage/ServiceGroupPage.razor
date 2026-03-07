@@ -9,6 +9,7 @@
 @inject LoadingService LoadingService
 @inject ConfirmationDialogService ConfirmDialogService
 @inject GridLayoutService GridLayoutService
+@inject AuditLogService AuditLogService
 <style>
     .grid-size {
         max-height: 600px;
@@ -103,7 +104,7 @@
     private IReadOnlyList<object> SelectedGroups { get; set; } = new List<object>();
 
     private ServiceGroupAddEditPage popup;
-  
+
 
     // All possible columns
     private GridLayoutpPopup? layoutManager;
@@ -126,8 +127,8 @@
     {
         InitializeColumns();
         await LoadServiceGroupsAsync();
-     
-       
+
+
     }
     private void InitializeColumns()
     {
@@ -145,10 +146,10 @@
 
         new() { FieldName = "ServiceGroupsUpdated", Caption = "Updated At", Visible = true, Width = 230, DisplayIndex = 4 }
     };
-        
+
     }
 
-   
+
     private async Task LoadServiceGroupsAsync()
     {
         LoadingService.Show();
@@ -204,7 +205,14 @@
     {
         var group = MyGrid.GetFocusedDataItem() as ServiceGroup;
         if (group != null)
-            popup.Show(group);
+        {
+            var freshData = serviceGroupList
+               .FirstOrDefault(x => x.ServiceGroupsId == group.ServiceGroupsId);
+
+            if (freshData != null)
+                popup.Show(freshData);
+
+        }
         else
             ToastService.Warning("Please select a Service Group to edit.");
         await ClearSelection();
@@ -233,11 +241,16 @@
 
 
             foreach (var group in selectedList)
-        {
-            var result = await ServiceGroupService.DeleteAsync(group.ServiceGroupsId);
-            if (result) successCount++;
-            else failCount++;
-        }
+            {
+                var result = await ServiceGroupService.DeleteAsync(group.ServiceGroupsId);
+                if (result)
+                {
+                    successCount++;
+                    AuditLogService.NotifyAuditChanged();
+
+                }
+                else failCount++;
+            }
 
         if (successCount > 0)
             ToastService.Success($"{successCount} Group(s) Deleted Successfully.");

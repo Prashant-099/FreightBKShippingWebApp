@@ -6,7 +6,7 @@
 @inject LoadingService LoadingService
 @inject UserRoleService UserRoleService
 @inject BranchService BranchService
-
+@inject AuditLogService AuditLogService
 <DxPopup @bind-Visible="Visible" ShowCloseButton="true" HeaderText="@Title" CloseOnOutsideClick="false" MaxWidth="600px" horizontalAlignment="HorizontalAlignment.Center"
          verticalAlignment="VerticalAlignment.Center" BodyCssClass="my-popup-body" ShowFooter="true" scrollable="true">
    <BodyContentTemplate Context="bdybrnch">
@@ -218,7 +218,7 @@
                 ToastService.Error(isNew ? "User creation failed!" : "User update failed!");
                 return;
             }
-
+            AuditLogService.NotifyAuditChanged();
             ToastService.Success(isNew ? "User created successfully!" : "User updated successfully!");
             Visible = false;
             await OnSaved.InvokeAsync();
