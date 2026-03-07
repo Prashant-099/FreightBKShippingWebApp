@@ -322,8 +322,9 @@
                                     <div class="twoinone">
                                         @if (Visible["PaymentMode"])
                                         {
-                                            <div>
+                                            <div class="field-group">
                                                 <label>Payment Mode</label>
+                                                
                                                 <DxComboBox Data="@PaymethodList"
                                                             @bind-Value="model.LrPaymentType"
                                                             TextFieldName="Text" ValueFieldName="Value"
@@ -333,11 +334,12 @@
                                                             AllowUserInput="false"
                                                             NullText="Payment Mode"
                                                             TData="SelectItem" TValue="string?" />
+
                                             </div>
                                         }
                                         @if (Visible["TripNo"])
                                         {
-                                            <div>
+                                            <div class="field-group">
                                                 <label>Trip No</label>
                                                 <DxSpinEdit @bind-Value="model.LrTripNo" ShowSpinButtons=false/>
                                             </div>
@@ -1151,7 +1153,7 @@
         ProductList          = cargoTask.Result;
         LocationList         = locationTask.Result;
         StationLocationList  = LocationList.Where(x => x.LocationType == "STATION").ToList();
-        // accountpartylist     = accountTask.Result;
+        accountpartylist     = accountTask.Result;
         accountSupplierlist  = accountpartylist.Where(x => x.AccountTypeId == 14).ToList();
         accountpartylist  = accountpartylist.Where(x => x.AccountTypeId == 18).ToList();
         DriverList           = accountpartylist.Where(x => x.AccountTypeId == 16).ToList();
