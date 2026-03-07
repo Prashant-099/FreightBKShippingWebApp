@@ -170,5 +170,90 @@ namespace FreightBKShippingWebApp.Services
                 return null;
             }
         }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        public async Task<List<GridColumnLayout>?> GetLayoutAsync(string voucherType)
+        {
+            try
+            {
+                var dto = await GetDefaultLayoutAsync(voucherType);
+                if (dto == null || string.IsNullOrWhiteSpace(dto.GridLayoutData))
+                    return null;
+
+                return DeserializeColumnLayout(dto.GridLayoutData);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ GetLayoutAsync error for {voucherType}: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Persist columns for a VoucherType.
+        /// Creates a new record if none exists, updates if one already exists.
+        /// </summary>
+        public async Task<bool> SaveLayoutAsync(string voucherType, List<GridColumnLayout> columns)
+        {
+            try
+            {
+                var json = SerializeColumnLayout(columns);
+
+                // Check if a layout already exists for this voucherType
+                var existing = await GetDefaultLayoutAsync(voucherType);
+
+                if (existing == null || existing.GridLayoutId == 0)
+                {
+                    // Create new
+                    var request = new SaveGridLayoutRequest
+                    {
+                        GridLayoutVoucherType = voucherType,
+                        GridLayoutName = voucherType,   // use voucherType as default name
+                        GridLayoutData = json,
+                        GridLayoutDefault = true
+                    };
+                    return await CreateAsync(request);
+                }
+                else
+                {
+                    // Update existing
+                    var request = new SaveGridLayoutRequest
+                    {
+                        GridLayoutVoucherType = voucherType,
+                        GridLayoutName = existing.GridLayoutName ?? voucherType,
+                        GridLayoutData = json,
+                        GridLayoutDefault = true
+                    };
+                    return await UpdateAsync(existing.GridLayoutId, request);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ SaveLayoutAsync error for {voucherType}: {ex.Message}");
+                return false;
+            }
+        }
+
     }
 }
