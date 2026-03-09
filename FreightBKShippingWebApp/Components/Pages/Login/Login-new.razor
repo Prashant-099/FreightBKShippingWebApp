@@ -13,490 +13,846 @@
 @inject ToasteService ToastService
 @rendermode InteractiveServer
 
+<PageTitle>Sign In – FreightBook</PageTitle>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
 <style>
-    @* ── Google Font ── *@
-    @@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+    /* ── SCROLL FIX ── */
+    html, body {
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+        height: auto !important;
+        min-height: 100% !important;
+    }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    #app, .bb-root, [blazor-render-mode] {
+        overflow: visible !important;
+        height: auto !important;
+    }
 
-    .login-page {
+    *, *::before, *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+    }
+
+    /* ── SHELL ── */
+    .ls {
         min-height: 100vh;
         display: flex;
-        font-family: 'Sora', sans-serif;
-        background: #0a0f1e;
-        overflow: hidden;
-        position: relative;
-    }
-
-    /* ── Animated background ── */
-    .login-bg {
-        position: fixed;
-        inset: 0;
-        z-index: 0;
-        overflow: hidden;
-    }
-    .login-bg::before {
-        content: '';
-        position: absolute;
-        width: 800px; height: 800px;
-        background: radial-gradient(circle, rgba(21,101,192,.35) 0%, transparent 70%);
-        top: -200px; left: -200px;
-        animation: drift1 12s ease-in-out infinite alternate;
-    }
-    .login-bg::after {
-        content: '';
-        position: absolute;
-        width: 600px; height: 600px;
-        background: radial-gradient(circle, rgba(66,165,245,.2) 0%, transparent 70%);
-        bottom: -100px; right: -100px;
-        animation: drift2 15s ease-in-out infinite alternate;
-    }
-    @@keyframes drift1 {
-        from { transform: translate(0,0) scale(1); }
-        to   { transform: translate(80px,60px) scale(1.15); }
-    }
-    @@keyframes drift2 {
-        from { transform: translate(0,0) scale(1); }
-        to   { transform: translate(-60px,-40px) scale(1.2); }
-    }
-
-    /* Grid dots */
-    .login-grid {
-        position: fixed;
-        inset: 0;
-        z-index: 0;
-        background-image:
-            radial-gradient(circle, rgba(255,255,255,.06) 1px, transparent 1px);
-        background-size: 32px 32px;
-    }
-
-    /* ── Left panel ── */
-    .login-left {
-        flex: 1;
-        display: flex;
         flex-direction: column;
-        justify-content: center;
-        padding: 60px 80px;
-        position: relative;
-        z-index: 1;
+        font-family: 'Sora', sans-serif;
+        background-color: #e8eef8;
+        background-image: radial-gradient(ellipse 80% 60% at 0% 0%, rgba(26,115,232,.18) 0%, transparent 55%), radial-gradient(ellipse 60% 50% at 100% 100%, rgba(59,130,246,.14) 0%, transparent 50%), radial-gradient(ellipse 45% 40% at 55% 50%, rgba(99,102,241,.09) 0%, transparent 48%), url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='1' cy='1' r='1.2' fill='%231a73e8' fill-opacity='0.07'/%3E%3C/svg%3E");
+        background-size: auto,auto,auto,40px 40px;
+        background-attachment: local;
     }
 
-    .brand-wrap {
+    /* ── HEADER ── */
+    .ls-nav {
+        height: 62px;
+        flex-shrink: 0;
+        background: linear-gradient(90deg,#1a73e8,#1557b0);
         display: flex;
         align-items: center;
-        gap: 14px;
-        margin-bottom: 56px;
-        animation: fadeUp .6s ease both;
+        padding: 0 1.5rem;
+        gap: .8rem;
+        box-shadow: 0 3px 16px rgba(21,87,176,.38);
+        position: sticky;
+        top: 0;
+        z-index: 100;
     }
-    .brand-logo {
-        width: 52px; height: 52px;
-        border-radius: 14px;
-        object-fit: contain;
-        box-shadow: 0 0 0 1px rgba(255,255,255,.1), 0 8px 24px rgba(21,101,192,.4);
+
+        .ls-nav img {
+            height: 38px;
+            width: 38px;
+            border-radius: 9px;
+            border: 2px solid rgba(255,255,255,.28);
+            object-fit: cover;
+            flex-shrink: 0;
+        }
+
+    .nb {
+        flex-shrink: 0;
+        line-height: 1.2;
     }
-    .brand-name {
-        font-size: 1.5rem;
+
+    .nb-name {
+        display: block;
+        font-size: 1rem;
         font-weight: 800;
         color: #fff;
         letter-spacing: -.3px;
     }
-    .brand-tag {
-        font-size: .72rem;
-        color: rgba(255,255,255,.4);
-        letter-spacing: .8px;
-        text-transform: uppercase;
-        font-family: 'JetBrains Mono', monospace;
-    }
 
-    .hero-text {
-        animation: fadeUp .6s .1s ease both;
-    }
-    .hero-eyebrow {
-        font-size: .72rem;
-        font-family: 'JetBrains Mono', monospace;
-        color: #42a5f5;
-        letter-spacing: 2px;
-        text-transform: uppercase;
-        margin-bottom: 16px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-    .hero-eyebrow::before {
-        content: '';
+    .nb-sub {
         display: block;
-        width: 28px; height: 2px;
-        background: #42a5f5;
-        border-radius: 2px;
-    }
-    .hero-title {
-        font-size: 3.2rem;
-        font-weight: 800;
-        color: #fff;
-        line-height: 1.1;
-        letter-spacing: -1px;
-        margin-bottom: 20px;
-    }
-    .hero-title span {
-        background: linear-gradient(90deg, #42a5f5, #90caf9);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-    }
-    .hero-sub {
-        font-size: .95rem;
-        color: rgba(255,255,255,.45);
-        line-height: 1.7;
-        max-width: 340px;
+        font-size: .6rem;
+        color: rgba(255,255,255,.7);
+        letter-spacing: .4px;
     }
 
-    /* Stats */
-    .stats-row {
-        display: flex;
-        gap: 32px;
-        margin-top: 48px;
-        animation: fadeUp .6s .2s ease both;
-    }
-    .stat-item { }
-    .stat-num {
-        font-size: 1.8rem;
-        font-weight: 800;
-        color: #fff;
-        font-family: 'JetBrains Mono', monospace;
-    }
-    .stat-label {
-        font-size: .72rem;
-        color: rgba(255,255,255,.35);
-        text-transform: uppercase;
-        letter-spacing: .8px;
-        margin-top: 2px;
-    }
-    .stat-div {
-        width: 1px;
-        background: rgba(255,255,255,.1);
-        align-self: stretch;
+    .n-ticker {
+        flex: 1;
+        overflow: hidden;
+        min-width: 0;
+        mask-image: linear-gradient(90deg,transparent,#000 10%,#000 90%,transparent);
     }
 
-    /* ── Right panel ── */
-    .login-right {
-        width: 480px;
-        flex-shrink: 0;
+    .n-ticker-in {
+        display: inline-flex;
+        gap: 3rem;
+        white-space: nowrap;
+        animation: tick 24s linear infinite;
+        font-family: 'JetBrains Mono',monospace;
+        font-size: .73rem;
+        color: rgba(255,255,255,.8);
+    }
+
+    @@keyframes tick {
+        from {
+            transform: translateX(0)
+        }
+
+        to {
+            transform: translateX(-50%)
+        }
+    }
+
+    /* ── MAIN ── */
+    .ls-main {
+        flex: 1;
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 40px 48px;
+        padding: 36px 20px 44px;
+        gap: 28px;
+    }
+
+    /* ══ LEFT ══ */
+    .ls-left {
+        flex: 1;
+        max-width: 420px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    .welcome-card {
+        background: linear-gradient(135deg,#1a73e8,#1151a8);
+        border-radius: 20px;
+        padding: 32px 28px;
+        box-shadow: 0 8px 32px rgba(21,87,176,.32);
+        position: relative;
+        overflow: hidden;
+    }
+
+        .welcome-card::before {
+            content: '';
+            position: absolute;
+            top: -60px;
+            right: -60px;
+            width: 190px;
+            height: 190px;
+            border-radius: 50%;
+            background: rgba(255,255,255,.09);
+            pointer-events: none;
+        }
+
+        .welcome-card::after {
+            content: '';
+            position: absolute;
+            bottom: -45px;
+            left: 10px;
+            width: 130px;
+            height: 130px;
+            border-radius: 50%;
+            background: rgba(255,255,255,.06);
+            pointer-events: none;
+        }
+
+    .wc-pill {
+        position: relative;
+        z-index: 1;
+        display: inline-flex;
+        align-items: center;
+        gap: .4rem;
+        background: rgba(255,255,255,.15);
+        border: 1px solid rgba(255,255,255,.25);
+        color: #fff;
+        font-size: .65rem;
+        font-weight: 700;
+        font-family: 'JetBrains Mono',monospace;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        padding: .28rem .85rem;
+        border-radius: 100px;
+        margin-bottom: 1rem;
+    }
+
+    .welcome-card h2 {
+        position: relative;
+        z-index: 1;
+        font-size: 1.75rem;
+        font-weight: 800;
+        color: #fff;
+        letter-spacing: -.5px;
+        line-height: 1.18;
+        margin-bottom: .65rem;
+    }
+
+        .welcome-card h2 em {
+            font-style: normal;
+            color: #bfdbfe;
+        }
+
+    .welcome-card p {
+        position: relative;
+        z-index: 1;
+        font-size: .85rem;
+        color: rgba(255,255,255,.82);
+        line-height: 1.72;
+    }
+
+    /* ── STAT CARDS ── */
+    .stat-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 11px;
+    }
+
+    .sc {
+        background: #fff;
+        border-radius: 14px;
+        border: 1px solid #dce5f2;
+        padding: 1rem 1.1rem;
+        display: flex;
+        align-items: center;
+        gap: .85rem;
+        box-shadow: 0 2px 12px rgba(21,87,176,.07);
+        transition: transform .18s,box-shadow .18s;
+    }
+
+        .sc:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(21,87,176,.13);
+        }
+
+    /* icon box via background-image — never bleeds */
+    .ico {
+        width: 42px;
+        height: 42px;
+        min-width: 42px;
+        min-height: 42px;
+        border-radius: 11px;
+        flex-shrink: 0;
+        background-repeat: no-repeat;
+        background-position: center center;
+        background-size: 20px 20px;
+    }
+
+    .ico-boxes {
+        background-color: #3b82f6;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' fill='white' viewBox='0 0 16 16'%3E%3Cpath d='M7.752.066a.5.5 0 0 1 .496 0l3.75 2.143a.5.5 0 0 1 .252.434v3.995l3.498 2A.5.5 0 0 1 16 9.5v4a.5.5 0 0 1-.252.434l-4 2.285a.5.5 0 0 1-.496 0l-3.75-2.143-3.75 2.143a.5.5 0 0 1-.496 0l-4-2.285A.5.5 0 0 1 0 13.5v-4a.5.5 0 0 1 .252-.434L3.75 7.066V3.143a.5.5 0 0 1 .252-.434zM4.25 8.5v2.734l3 1.715V10.5zm3.5 4.448 3-1.715V8.5l-3 1.715zm3.5-7.153V3.807L8 2.092 4.75 3.807V5.795L8 7.51zM8.5 2.807l2.5 1.429V6.5l-2.5-1.43zm-1 0V5.07L5 6.5V4.236z'/%3E%3C/svg%3E");
+    }
+
+    .ico-check {
+        background-color: #10b981;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' fill='white' viewBox='0 0 16 16'%3E%3Cpath d='M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zm-3.97-3.03a.75.75 0 0 0-1.08.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-.01-1.05z'/%3E%3C/svg%3E");
+    }
+
+    .ico-branch {
+        background-color: #06b6d4;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' fill='white' viewBox='0 0 16 16'%3E%3Cpath d='M8 1a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM6 3a2 2 0 1 1 4 0A2 2 0 0 1 6 3zm-3 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-2 2a2 2 0 1 1 4 0 2 2 0 0 1-4 0zm11-2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zm-2 2a2 2 0 1 1 4 0 2 2 0 0 1-4 0zM8 7a1 1 0 0 1 1 1v1h3a1 1 0 1 1 0 2H9v1a1 1 0 1 1-2 0v-1H4a1 1 0 1 1 0-2h3V8a1 1 0 0 1 1-1z'/%3E%3C/svg%3E");
+    }
+
+    .ico-gst {
+        background-color: #6366f1;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' fill='white' viewBox='0 0 16 16'%3E%3Cpath d='M1.92.506a.5.5 0 0 1 .434.14L3 1.293l.646-.647a.5.5 0 0 1 .708 0L5 1.293l.646-.647a.5.5 0 0 1 .708 0L7 1.293l.646-.647a.5.5 0 0 1 .708 0L9 1.293l.646-.647a.5.5 0 0 1 .708 0l.646.647.646-.647a.5.5 0 0 1 .708 0l.646.647.646-.647a.5.5 0 0 1 .801.13l.5 1A.5.5 0 0 1 15 2v12a.5.5 0 0 1-.053.224l-.5 1a.5.5 0 0 1-.8.13L13 14.707l-.646.647a.5.5 0 0 1-.708 0L11 14.707l-.646.647a.5.5 0 0 1-.708 0L9 14.707l-.646.647a.5.5 0 0 1-.708 0L7 14.707l-.646.647a.5.5 0 0 1-.708 0L5 14.707l-.646.647a.5.5 0 0 1-.708 0L3 14.707l-.646.647a.5.5 0 0 1-.801-.13l-.5-1A.5.5 0 0 1 1 14V2a.5.5 0 0 1 .053-.224l.5-1a.5.5 0 0 1 .367-.27zm.217 1.338L2 2.118v11.764l.137.274.51-.51a.5.5 0 0 1 .707 0l.646.647.646-.646a.5.5 0 0 1 .708 0l.646.646.646-.646a.5.5 0 0 1 .708 0l.646.646.646-.646a.5.5 0 0 1 .708 0l.646.646.646-.646a.5.5 0 0 1 .708 0l.646.646.646-.646a.5.5 0 0 1 .708 0l.509.509.137-.274V2.118l-.137-.274-.51.51a.5.5 0 0 1-.707 0L12 1.707l-.646.647a.5.5 0 0 1-.708 0L10 1.707l-.646.647a.5.5 0 0 1-.708 0L8 1.707l-.646.647a.5.5 0 0 1-.708 0L6 1.707l-.646.647a.5.5 0 0 1-.708 0L4 1.707l-.646.647a.5.5 0 0 1-.708 0l-.509-.51zM3 4.5a.5.5 0 0 1 .5-.5h6a.5.5 0 1 1 0 1h-6a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h6a.5.5 0 1 1 0 1h-6a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h6a.5.5 0 1 1 0 1h-6a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5z'/%3E%3C/svg%3E");
+    }
+
+    .sc-lbl {
+        font-size: .58rem;
+        font-weight: 700;
+        color: #8099b5;
+        text-transform: uppercase;
+        letter-spacing: 1.3px;
+        font-family: 'JetBrains Mono',monospace;
+        margin-bottom: .2rem;
+    }
+
+    .sc-val {
+        font-size: 1rem;
+        font-weight: 800;
+        color: #0c1a30;
+        font-family: 'JetBrains Mono',monospace;
+        letter-spacing: -.3px;
+    }
+
+    /* ══ RIGHT: LOGIN FORM ══ */
+    .ls-right {
+        width: 100%;
+        max-width: 420px;
+        flex-shrink: 0;
+    }
+
+    .lbox {
+        background: #fff;
+        border-radius: 22px;
+        border: 1px solid #dce5f2;
+        box-shadow: 0 8px 40px rgba(21,87,176,.13);
+        overflow: hidden;
+    }
+
+    .lbox-top {
+        background: linear-gradient(135deg,#1a73e8,#1151a8);
+        padding: 22px 26px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        position: relative;
+        overflow: hidden;
+    }
+
+        .lbox-top::before {
+            content: '';
+            position: absolute;
+            top: -35px;
+            right: -35px;
+            width: 110px;
+            height: 110px;
+            border-radius: 50%;
+            background: rgba(255,255,255,.1);
+            pointer-events: none;
+        }
+
+        .lbox-top::after {
+            content: '';
+            position: absolute;
+            bottom: -40px;
+            left: -20px;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: rgba(255,255,255,.07);
+            pointer-events: none;
+        }
+
+    .lt-title {
+        font-size: 1.05rem;
+        font-weight: 800;
+        color: #fff;
+        margin-bottom: 3px;
         position: relative;
         z-index: 1;
     }
 
-    .login-card {
-        width: 100%;
-        background: rgba(255,255,255,.035);
-        border: 1px solid rgba(255,255,255,.08);
-        border-radius: 24px;
-        padding: 44px 40px;
-        backdrop-filter: blur(24px);
-        -webkit-backdrop-filter: blur(24px);
-        box-shadow: 0 32px 80px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.06);
-        animation: fadeUp .6s .15s ease both;
-    }
-
-    .card-header-text {
-        margin-bottom: 36px;
-    }
-    .card-title {
-        font-size: 1.6rem;
-        font-weight: 700;
-        color: #fff;
-        letter-spacing: -.4px;
-        margin-bottom: 6px;
-    }
-    .card-sub {
-        font-size: .83rem;
-        color: rgba(255,255,255,.38);
-    }
-
-    /* Form */
-    .fb-form-group {
-        margin-bottom: 20px;
-    }
-    .fb-label {
-        display: block;
+    .lt-sub {
         font-size: .72rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: .8px;
-        color: rgba(255,255,255,.4);
-        margin-bottom: 8px;
-        font-family: 'JetBrains Mono', monospace;
-    }
-    .fb-input-wrap {
+        color: rgba(255,255,255,.75);
+        font-family: 'JetBrains Mono',monospace;
         position: relative;
+        z-index: 1;
     }
-    .fb-input-icon {
+
+    .lt-badge {
+        position: relative;
+        z-index: 1;
+        background: rgba(255,255,255,.18);
+        border: 1px solid rgba(255,255,255,.3);
+        color: #fff;
+        font-size: .65rem;
+        font-weight: 700;
+        font-family: 'JetBrains Mono',monospace;
+        padding: .28rem .85rem;
+        border-radius: 100px;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+
+    .lbox-body {
+        padding: 26px 26px 28px;
+    }
+
+    /* form group */
+    .fg {
+        margin-bottom: 18px;
+    }
+
+    .flbl {
+        display: block;
+        font-size: .63rem;
+        font-weight: 700;
+        color: #5a7a99;
+        text-transform: uppercase;
+        letter-spacing: 1.4px;
+        font-family: 'JetBrains Mono',monospace;
+        margin-bottom: 7px;
+    }
+
+    /* ══════════════════════════════════════════════════
+       INPUT WITH ICON — THE PROPER FIX
+       Strategy: wrap everything in .fiw (position:relative)
+       The icon .fic sits absolute on the left.
+       We push the DX input's internal <input> left-padding
+       to 42px via the deepest possible CSS selectors.
+    ══════════════════════════════════════════════════ */
+    .fiw {
+        position: relative;
+        display: block;
+        width: 100%;
+    }
+
+    /* Icon wrapper — perfectly centered, never overlaps text */
+    .fic {
         position: absolute;
-        left: 14px;
+        left: 13px;
         top: 50%;
         transform: translateY(-50%);
-        color: rgba(255,255,255,.25);
-        font-size: .9rem;
-        pointer-events: none;
-        z-index: 2;
-    }
-
-    /* Override DevExpress textbox inside our wrapper */
-    .fb-input-wrap .dxbl-textbox,
-    .fb-input-wrap .dxbl-text-edit {
-        background: rgba(255,255,255,.06) !important;
-        border: 1px solid rgba(255,255,255,.1) !important;
-        border-radius: 12px !important;
-        color: #fff !important;
-        font-size: .9rem !important;
-        height: 48px !important;
-        padding-left: 42px !important;
-        transition: all .2s !important;
-    }
-    .fb-input-wrap .dxbl-textbox:focus-within,
-    .fb-input-wrap .dxbl-text-edit:focus-within {
-        border-color: #42a5f5 !important;
-        background: rgba(66,165,245,.08) !important;
-        box-shadow: 0 0 0 3px rgba(66,165,245,.15) !important;
-    }
-    .fb-input-wrap .dxbl-text-edit-input-container input {
-        background: transparent !important;
-        color: #fff !important;
-        padding-left: 42px !important;
-    }
-    .fb-input-wrap .dxbl-text-edit-input-container input::placeholder {
-        color: rgba(255,255,255,.2) !important;
-    }
-
-    .forgot-link {
-        display: block;
-        text-align: right;
-        font-size: .78rem;
-        color: #42a5f5;
-        text-decoration: none;
-        margin-top: -12px;
-        margin-bottom: 28px;
-        transition: color .15s;
-    }
-    .forgot-link:hover { color: #90caf9; }
-
-    /* Login button */
-    .fb-login-btn {
-        width: 100%;
-        height: 52px;
-        background: linear-gradient(135deg, #1565c0, #1976d2);
-        color: #fff;
-        border: none;
-        border-radius: 14px;
-        font-size: .95rem;
-        font-weight: 700;
-        font-family: 'Sora', sans-serif;
-        cursor: pointer;
-        transition: all .2s;
+        z-index: 10;
+        width: 17px;
+        height: 17px;
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 10px;
-        letter-spacing: .2px;
-        box-shadow: 0 4px 20px rgba(21,101,192,.5);
-        position: relative;
-        overflow: hidden;
-    }
-    .fb-login-btn::before {
-        content: '';
-        position: absolute;
-        inset: 0;
-        background: linear-gradient(135deg, rgba(255,255,255,.12), transparent);
-        border-radius: inherit;
-    }
-    .fb-login-btn:hover:not(:disabled) {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 32px rgba(21,101,192,.65);
-    }
-    .fb-login-btn:active:not(:disabled) {
-        transform: translateY(0);
-    }
-    .fb-login-btn:disabled {
-        opacity: .65;
-        cursor: not-allowed;
+        pointer-events: none;
+        flex-shrink: 0;
     }
 
-    /* Divider */
-    .card-footer-text {
-        text-align: center;
-        margin-top: 28px;
-        font-size: .78rem;
-        color: rgba(255,255,255,.25);
+        .fic svg {
+            width: 15px;
+            height: 15px;
+            fill: #94a3b8;
+            display: block;
+            flex-shrink: 0;
+            overflow: visible;
+        }
+
+    /* ── DX TextBox outer shell ── */
+    .fiw .dxbl-textbox,
+    .fiw .dxbl-text-edit {
+        background: #f5f8fc !important;
+        border: 1.5px solid #dce5f2 !important;
+        border-radius: 11px !important;
+        color: #0c1a30 !important;
+        font-size: .88rem !important;
+        height: 46px !important;
+        width: 100% !important;
+        padding: 0 !important;
+        transition: border-color .18s, box-shadow .18s !important;
     }
-    .card-footer-text span {
+
+        .fiw .dxbl-textbox:focus-within,
+        .fiw .dxbl-text-edit:focus-within {
+            border-color: #3b82f6 !important;
+            box-shadow: 0 0 0 3px rgba(59,130,246,.14) !important;
+            background: #fff !important;
+        }
+
+    /* ── DX inner container ── */
+    .fiw .dxbl-text-edit-input-container {
+        height: 100% !important;
+        display: flex !important;
+        align-items: center !important;
+    }
+
+        /* ── THE KEY FIX: push the actual <input> right to clear the icon ── */
+        .fiw .dxbl-text-edit-input-container input,
+        .fiw .dxbl-text-edit-input-container textarea,
+        .fiw .dxbl-textbox input,
+        .fiw input[type="text"],
+        .fiw input[type="password"],
+        .fiw input[type="email"],
+        .fiw input {
+            padding-left: 42px !important; /* 13px icon-left + 15px icon + 14px gap */
+            padding-right: 12px !important;
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+            height: 44px !important;
+            line-height: 44px !important;
+            background: transparent !important;
+            color: #0c1a30 !important;
+            font-family: 'Sora', sans-serif !important;
+            font-size: .88rem !important;
+            width: 100% !important;
+            border: none !important;
+            outline: none !important;
+            box-shadow: none !important;
+        }
+
+            .fiw input::placeholder,
+            .fiw .dxbl-text-edit-input-container input::placeholder {
+                color: #b0c2d6 !important;
+                font-size: .86rem !important;
+                font-family: 'Sora', sans-serif !important;
+            }
+
+        /* hide any built-in DX left icon/prefix so it can't conflict */
+        .fiw .dxbl-text-edit-prefix,
+        .fiw .dxbl-edit-btn-left,
+        .fiw .dxbl-text-edit-input-container > *:not(input):not(textarea) {
+            display: none !important;
+        }
+
+    /* ── OTHER FORM ELEMENTS ── */
+    .forgot-row {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 7px;
+    }
+
+    .forgot-a {
+        font-size: .75rem;
+        color: #3b82f6;
+        text-decoration: none;
+        font-weight: 600;
+        transition: color .15s;
+    }
+
+        .forgot-a:hover {
+            color: #1557b0;
+            text-decoration: underline;
+        }
+
+    .fsep {
+        height: 1px;
+        background: #edf1f8;
+        margin: 18px 0;
+    }
+
+    .sbtn {
+        width: 100%;
+        height: 48px;
+        background: linear-gradient(90deg,#2563eb,#1a73e8);
+        color: #fff;
+        border: none;
+        border-radius: 12px;
+        font-family: 'Sora',sans-serif;
+        font-size: .92rem;
+        font-weight: 700;
+        cursor: pointer;
+        letter-spacing: .2px;
         display: flex;
         align-items: center;
-        gap: 10px;
-    }
-    .card-footer-text span::before,
-    .card-footer-text span::after {
-        content: '';
-        flex: 1;
-        height: 1px;
-        background: rgba(255,255,255,.08);
+        justify-content: center;
+        gap: 8px;
+        box-shadow: 0 4px 14px rgba(37,99,235,.38);
+        transition: transform .18s,box-shadow .18s,opacity .18s;
     }
 
-    /* Validation */
-    .validation-message { color: #f87171; font-size: .75rem; margin-top: 4px; }
-
-    /* Fade up animation */
-    @@keyframes fadeUp {
-        from { opacity: 0; transform: translateY(20px); }
-        to   { opacity: 1; transform: translateY(0); }
-    }
-
-    /* Mobile responsive */
-    @@media (max-width: 768px) {
-        .login-page { flex-direction: column; }
-        .login-left  { display: none; }
-        .login-right {
-            width: 100%;
-            padding: 24px 20px;
-            align-items: flex-start;
-            padding-top: 60px;
+        .sbtn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 9px 24px rgba(37,99,235,.45);
         }
-        .login-card { padding: 32px 24px; }
+
+        .sbtn:disabled {
+            opacity: .55;
+            cursor: not-allowed;
+        }
+
+    .validation-message {
+        color: #ef4444;
+        font-size: .72rem;
+        margin-top: 5px;
+        font-family: 'JetBrains Mono',monospace;
+    }
+
+    .ffoot {
+        text-align: center;
+        margin-top: 20px;
+        font-size: .7rem;
+        color: #8099b5;
+        font-family: 'JetBrains Mono',monospace;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+        .ffoot::before, .ffoot::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #edf1f8;
+        }
+
+    /* ── FOOTER ── */
+    .ls-footer {
+        background: #fff;
+        border-top: 1px solid #dce5f2;
+        padding: .65rem 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: .5rem;
+        font-size: .72rem;
+        color: #8099b5;
+        font-family: 'JetBrains Mono',monospace;
+        flex-wrap: wrap;
+    }
+
+    /* ════════ TABLET ════════ */
+    @@media(max-width:860px) {
+        .ls-left {
+            max-width: 340px;
+        }
+
+        .welcome-card h2 {
+            font-size: 1.45rem;
+        }
+    }
+
+    /* ════════ MOBILE ════════ */
+    @@media(max-width:640px) {
+        .n-ticker {
+            display: none;
+        }
+
+        .ls-nav {
+            padding: 0 1rem;
+            gap: .6rem;
+        }
+
+        .ls-main {
+            flex-direction: column;
+            align-items: stretch;
+            padding: 16px 12px 32px;
+            gap: 16px;
+        }
+
+        .ls-left {
+            max-width: 100%;
+        }
+
+        .welcome-card {
+            padding: 22px 18px;
+            border-radius: 16px;
+        }
+
+            .welcome-card h2 {
+                font-size: 1.3rem;
+            }
+
+        .ls-right {
+            max-width: 100%;
+        }
+
+        .lbox {
+            border-radius: 18px;
+        }
+
+        .lbox-top {
+            padding: 18px 20px;
+        }
+
+        .lbox-body {
+            padding: 20px 18px 22px;
+        }
+
+        .ls-footer {
+            flex-direction: column;
+            padding: .6rem 1rem;
+            text-align: center;
+        }
+    }
+
+    /* ════════ SMALL ════════ */
+    @@media(max-width:380px) {
+        .welcome-card h2 {
+            font-size: 1.1rem;
+        }
+
+        .lt-badge {
+            display: none;
+        }
+
+        .sbtn {
+            height: 44px;
+            font-size: .88rem;
+        }
     }
 </style>
 
-<div class="login-page">
-    <!-- Background -->
-    <div class="login-bg"></div>
-    <div class="login-grid"></div>
+<div class="ls">
 
-    <!-- LEFT: Hero Panel -->
-    <div class="login-left">
-        <div class="brand-wrap">
-            <img src="images/freightbook.jpg" alt="FreightBook" class="brand-logo" />
-            <div>
-                <div class="brand-name">FreightBook</div>
-                <div class="brand-tag">Shipping Management</div>
+    <!-- HEADER -->
+    <nav class="ls-nav">
+        <img src="images/freightbook.jpg" alt="FreightBook" />
+        <div class="nb">
+            <span class="nb-name">FreightBook</span>
+            <span class="nb-sub">Shipping Management</span>
+        </div>
+        <div class="n-ticker">
+            <div class="n-ticker-in">
+                <span>FREIGHTBOOKSHIPPING</span>
+                <span>&#9742; 9409309616</span>
+                <span>FREIGHTBOOKSHIPPING</span>
+                <span>&#9742; 9409309616</span>
+                <span>FREIGHTBOOKSHIPPING</span>
+                <span>&#9742; 9409309616</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- MAIN -->
+    <main class="ls-main">
+
+        <!-- LEFT -->
+        <div class="ls-left">
+            <div class="welcome-card">
+                <div class="wc-pill">
+                    <svg width="11" height="11" viewBox="0 0 16 16" fill="white" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M5.52.359A.5.5 0 0 1 6 0h4a.5.5 0 0 1 .474.658L8.694 6H12.5a.5.5 0 0 1 .395.807l-7 9a.5.5 0 0 1-.873-.454L6.823 9H3.5a.5.5 0 0 1-.48-.641z" />
+                    </svg>
+                    FREIGHT PLATFORM
+                </div>
+                <h2>Manage Every<br /><em>Shipment</em><br />with Full Control.</h2>
+                <p>Complete freight management — imports, exports, invoicing, and real-time analytics in one place.</p>
+            </div>
+
+            <div class="stat-grid">
+                <div class="sc">
+                    <div class="ico ico-boxes"></div>
+                    <div><div class="sc-lbl">Shipments</div><div class="sc-val">50K+</div></div>
+                </div>
+                <div class="sc">
+                    <div class="ico ico-check"></div>
+                    <div><div class="sc-lbl">Uptime</div><div class="sc-val">99.9%</div></div>
+                </div>
+                <div class="sc">
+                    <div class="ico ico-branch"></div>
+                    <div><div class="sc-lbl">Branches</div><div class="sc-val">Multi</div></div>
+                </div>
+                <div class="sc">
+                    <div class="ico ico-gst"></div>
+                    <div><div class="sc-lbl">GST</div><div class="sc-val">Ready ✓</div></div>
+                </div>
             </div>
         </div>
 
-        <div class="hero-text">
-            <div class="hero-eyebrow">Freight Operations</div>
-            <h1 class="hero-title">
-                Manage Your<br />
-                <span>Shipments</span><br />
-                Smarter
-            </h1>
-            <p class="hero-sub">
-                Complete freight management — imports, exports,
-                invoicing, and real-time analytics in one place.
-            </p>
-        </div>
+        <!-- RIGHT FORM -->
+        <div class="ls-right">
+            <div class="lbox">
 
-        <div class="stats-row">
-            <div class="stat-item">
-                <div class="stat-num">100%</div>
-                <div class="stat-label">Uptime</div>
-            </div>
-            <div class="stat-div"></div>
-            <div class="stat-item">
-                <div class="stat-num">GST</div>
-                <div class="stat-label">Ready</div>
-            </div>
-            <div class="stat-div"></div>
-            <div class="stat-item">
-                <div class="stat-num">Fast</div>
-                <div class="stat-label">Reports</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- RIGHT: Login Card -->
-    <div class="login-right">
-        <div class="login-card">
-
-            <div class="card-header-text">
-                <div class="card-title">Welcome back 👋</div>
-                <div class="card-sub">Sign in to your account to continue</div>
-            </div>
-
-            <EditForm Model="@user" OnValidSubmit="@HandleLogin">
-                <DataAnnotationsValidator />
-
-                <!-- Email -->
-                <div class="fb-form-group">
-                    <label class="fb-label">Email Address</label>
-                    <div class="fb-input-wrap">
-                        <i class="bi bi-envelope fb-input-icon"></i>
-                        <DxTextBox @bind-Text="user.UserEmail"
-                                   CssClass="w-100"
-                                   NullText="you@company.com" />
+                <div class="lbox-top">
+                    <div>
+                        <div class="lt-title">👋 Welcome back</div>
+                        <div class="lt-sub">Sign in to your account</div>
                     </div>
-                    <ValidationMessage For="@(() => user.UserEmail)" />
+                    <span class="lt-badge">Secure Login</span>
                 </div>
 
-                <!-- Password -->
-                <div class="fb-form-group">
-                    <label class="fb-label">Password</label>
-                    <div class="fb-input-wrap">
-                        <i class="bi bi-lock fb-input-icon"></i>
-                        <DxTextBox @bind-Text="user.UserPassword"
-                                   Password="true"
-                                   CssClass="w-100"
-                                   NullText="••••••••" />
-                    </div>
-                    <ValidationMessage For="@(() => user.UserPassword)" />
+                <div class="lbox-body">
+                    <EditForm Model="@user" OnValidSubmit="@HandleLogin">
+                        <DataAnnotationsValidator />
+
+                        <!-- EMAIL -->
+                        <div class="fg">
+                            <label class="flbl">Email Address</label>
+                            <div class="fiw">
+                                <span class="fic">
+                                    <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2Zm2-1a1 1 0 0 0-1 1v.217l7 4.2 7-4.2V4a1 1 0 0 0-1-1Zm13 2.383-4.708 2.825L15 11.105Zm-.034 6.876-5.64-3.471L8 9.583l-1.326-.795-5.64 3.47A1 1 0 0 0 2 13h12a1 1 0 0 0 .966-.741M1 11.105l4.708-2.897L1 5.383Z" />
+                                    </svg>
+                                </span>
+                                <DxTextBox @bind-Text="user.UserEmail"
+                                           CssClass="w-100"
+                                           NullText="you@company.com" />
+                            </div>
+                            <ValidationMessage For="@(() => user.UserEmail)" />
+                        </div>
+
+                        <!-- PASSWORD -->
+                        <div class="fg">
+                            <label class="flbl">Password</label>
+                            <div class="fiw">
+                                <span class="fic">
+                                    <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2m3 6V3a3 3 0 0 0-6 0v4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2" />
+                                    </svg>
+                                </span>
+                                <DxTextBox @bind-Text="user.UserPassword"
+                                           Password="true"
+                                           CssClass="w-100"
+                                           NullText="Enter your password" />
+                            </div>
+                            <ValidationMessage For="@(() => user.UserPassword)" />
+                        </div>
+
+                        <div class="forgot-row">
+                            <a href="/forgot" class="forgot-a">Forgot password?</a>
+                        </div>
+
+                        <div class="fsep"></div>
+
+                        <button type="submit" class="sbtn" disabled="@isloading">
+                            @if (isloading)
+                            {
+                                <span class="spinner-border spinner-border-sm" style="width:18px;height:18px;border-width:2px;"></span>
+                                <span>Signing in…</span>
+                            }
+                            else
+                            {
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="white" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0">
+                                    <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0z" />
+                                    <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708z" />
+                                </svg>
+                                <span>Sign In to FreightBook</span>
+                            }
+                        </button>
+
+                    </EditForm>
+
+                    <div class="ffoot">FreightBook &copy; @DateTime.Now.Year</div>
                 </div>
 
-                <!-- Forgot -->
-                <a href="/forgot" class="forgot-link">Forgot password?</a>
-
-                <!-- Submit -->
-                <button type="submit" class="fb-login-btn" disabled="@isloading">
-                    @if (isloading)
-                    {
-                        <span class="spinner-border spinner-border-sm"></span>
-                        <span>Signing in...</span>
-                    }
-                    else
-                    {
-                        <i class="bi bi-box-arrow-in-right"></i>
-                        <span>Sign In</span>
-                    }
-                </button>
-
-            </EditForm>
-
-            <div class="card-footer-text">
-                <span>FreightBook &copy; @DateTime.Now.Year</span>
             </div>
-
         </div>
-    </div>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="ls-footer">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="#8099b5" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3.654 1.328a.678.678 0 0 0-1.015-.063L1.605 2.3c-.483.484-.661 1.169-.45 1.77a17.6 17.6 0 0 0 4.168 6.608 17.6 17.6 0 0 0 6.608 4.168c.601.211 1.286.033 1.77-.45l1.034-1.034a.678.678 0 0 0-.063-1.015l-2.307-1.794a.68.68 0 0 0-.58-.122l-2.19.547a1.75 1.75 0 0 1-1.657-.459L5.482 8.062a1.75 1.75 0 0 1-.46-1.657l.548-2.19a.68.68 0 0 0-.122-.58z" />
+        </svg>
+        <span>Support: 9409309616</span>
+        <span style="color:#dce5f2">·</span>
+        <span>FreightBook Shipping Management</span>
+    </footer>
+
 </div>
 
 @code {
     private bool isloading = false;
     private LoginModel user = new LoginModel();
 
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        if (authState.User.Identity?.IsAuthenticated == true)
+            Navigation.NavigateTo("/dashboard", forceLoad: false);
+    }
+
     private async Task HandleLogin()
     {
         isloading = true;
-
         try
         {
             var result = await AuthService.LoginAsync(new LoginModel
             {
-                UserEmail    = user.UserEmail,
+                UserEmail = user.UserEmail,
                 UserPassword = user.UserPassword
             });
-
             if (result?.Token != null)
             {
                 await ((CustomAuthStateProvider)AuthStateProvider).MarkUserAsAuthenticated(result);
-                Navigation.NavigateTo("/?login=success", forceLoad: false);
+                Navigation.NavigateTo("/dashboard", forceLoad: false);
             }
             else
             {
@@ -507,9 +863,6 @@
         {
             ToastService.Error($"🛑 Error: {ex.Message}", "Login Failed");
         }
-        finally
-        {
-            isloading = false;
-        }
+        finally { isloading = false; }
     }
 }
