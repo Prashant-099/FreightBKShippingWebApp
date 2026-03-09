@@ -309,7 +309,7 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender && _shouldRedirect)
-            NavigationManager.NavigateTo("/login", forceLoad: true);
+            NavigationManager.NavigateTo("/", forceLoad: true);
     }
 
     private async Task Logout()
@@ -317,7 +317,7 @@
         _profileOpen = false;
         if (AuthStateProvider is CustomAuthStateProvider cp)
             await cp.MarkUserAsLoggedOut();
-        NavigationManager.NavigateTo("/login", true);
+        NavigationManager.NavigateTo("/", true);
     }
 
     public void Dispose()

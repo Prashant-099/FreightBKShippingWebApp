@@ -1,0 +1,966 @@
+@page "/"
+@using FreightBKShippingWebApp.Components.Layout
+@using Microsoft.AspNetCore.Components.Authorization
+@layout EmptyLayout
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+
+<PageTitle>FreightBook – Shipping Management System</PageTitle>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+<style>
+    /* ── RESET ── */
+    html, body {
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+        height: auto !important;
+        min-height: 100% !important;
+        scroll-behavior: smooth;
+    }
+
+    #app, .bb-root, [blazor-render-mode] {
+        overflow: visible !important;
+        height: auto !important;
+    }
+
+    *, *::before, *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+    }
+
+    /* ── VARIABLES ── */
+    :root {
+        --h: #1557b0;
+        --hm: #1a73e8;
+        --hl: #3b82f6;
+        --bg: #edf1f8;
+        --card: #ffffff;
+        --border: #dce5f2;
+        --ink: #0c1a30;
+        --ink2: #3a5070;
+        --muted: #8099b5;
+        --green: #10b981;
+        --teal: #06b6d4;
+        --amber: #f59e0b;
+        --purple: #6366f1;
+        --red: #ef4444;
+        --font: 'Sora', sans-serif;
+        --mono: 'JetBrains Mono', monospace;
+    }
+
+    /* ══════════════════════════════════════
+           UNIFIED NAVBAR
+        ══════════════════════════════════════ */
+    .fb-nav {
+        position: sticky;
+        top: 0;
+        z-index: 200;
+        height: 62px;
+        background: linear-gradient(90deg, #1a73e8 0%, #1557b0 100%);
+        box-shadow: 0 3px 16px rgba(21,87,176,.38);
+        display: flex;
+        align-items: center;
+        padding: 0 1.5rem;
+        gap: .8rem;
+        font-family: var(--font);
+    }
+
+    .fb-nav-logo {
+        height: 38px;
+        width: 38px;
+        border-radius: 9px;
+        border: 2px solid rgba(255,255,255,.28);
+        object-fit: cover;
+        flex-shrink: 0;
+    }
+
+    .fb-nav-brand {
+        flex-shrink: 0;
+        line-height: 1.2;
+    }
+
+    .fb-nav-brand-name {
+        display: block;
+        font-size: 1rem;
+        font-weight: 800;
+        color: #fff;
+        letter-spacing: -.3px;
+    }
+
+    .fb-nav-brand-sub {
+        display: block;
+        font-size: .6rem;
+        color: rgba(255,255,255,.7);
+        letter-spacing: .4px;
+        font-family: var(--mono);
+    }
+
+    .fb-nav-ticker {
+        flex: 1;
+        overflow: hidden;
+        mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+        min-width: 0;
+    }
+
+    .fb-nav-ticker-inner {
+        display: inline-flex;
+        gap: 3rem;
+        white-space: nowrap;
+        animation: fb-tick 24s linear infinite;
+        font-family: var(--mono);
+        font-size: .73rem;
+        color: rgba(255,255,255,.8);
+    }
+
+    @@keyframes fb-tick {
+        from {
+            transform: translateX(0);
+        }
+
+        to {
+            transform: translateX(-50%);
+        }
+    }
+
+    .fb-nav-links {
+        display: flex;
+        align-items: center;
+        gap: .4rem;
+        flex-shrink: 0;
+    }
+
+    .fb-nav-link {
+        display: flex;
+        align-items: center;
+        gap: .35rem;
+        font-size: .78rem;
+        color: rgba(255,255,255,.85);
+        text-decoration: none;
+        padding: .3rem .7rem;
+        border-radius: 7px;
+        transition: .15s;
+        white-space: nowrap;
+    }
+
+        .fb-nav-link:hover {
+            color: #fff;
+            background: rgba(255,255,255,.14);
+        }
+
+    .fb-nav-cta {
+        display: inline-flex;
+        align-items: center;
+        gap: .4rem;
+        padding: .42rem 1.1rem;
+        background: #fff;
+        color: #1557b0;
+        font-family: var(--font);
+        font-size: .8rem;
+        font-weight: 700;
+        border: none;
+        border-radius: 9px;
+        cursor: pointer;
+        text-decoration: none;
+        box-shadow: 0 2px 10px rgba(0,0,0,.2);
+        transition: transform .15s, box-shadow .15s;
+        white-space: nowrap;
+    }
+
+        .fb-nav-cta:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 5px 18px rgba(0,0,0,.25);
+        }
+
+    .fb-nav-burger {
+        display: none;
+        flex-direction: column;
+        gap: 5px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: .3rem;
+        margin-left: auto;
+    }
+
+        .fb-nav-burger span {
+            display: block;
+            width: 22px;
+            height: 2px;
+            background: #fff;
+            border-radius: 2px;
+        }
+
+    .fb-drawer {
+        display: none;
+        flex-direction: column;
+        background: linear-gradient(180deg, #1151a8 0%, #0b3580 100%);
+        padding: .65rem 1.1rem 1rem;
+        gap: .35rem;
+        box-shadow: 0 8px 24px rgba(21,87,176,.35);
+        position: sticky;
+        top: 62px;
+        z-index: 199;
+    }
+
+        .fb-drawer.open {
+            display: flex;
+        }
+
+    .fb-drawer-link {
+        color: rgba(255,255,255,.88);
+        text-decoration: none;
+        font-size: .88rem;
+        padding: .6rem .8rem;
+        border-radius: 9px;
+        display: flex;
+        align-items: center;
+        gap: .6rem;
+        transition: .15s;
+    }
+
+        .fb-drawer-link:hover {
+            background: rgba(255,255,255,.12);
+        }
+
+    .fb-drawer-cta {
+        background: #fff;
+        color: #1557b0;
+        font-weight: 700;
+        margin-top: .25rem;
+        justify-content: center;
+        box-shadow: 0 3px 12px rgba(0,0,0,.2);
+    }
+
+    /* ══════════════════════════════════════
+           UNIFIED FOOTER
+        ══════════════════════════════════════ */
+    .fb-footer {
+        background: #fff;
+        border-top: 1px solid var(--border);
+        padding: .75rem 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: .5rem;
+        font-size: .72rem;
+        color: var(--muted);
+        font-family: var(--mono);
+    }
+
+    .fb-footer-left {
+        display: flex;
+        align-items: center;
+        gap: .4rem;
+    }
+
+    .fb-footer-right {
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+    }
+
+    /* ── PAGE WRAPPER ── */
+    .lp {
+        font-family: var(--font);
+        background: var(--bg);
+        background-image: radial-gradient(ellipse 80% 60% at 10% 0%, rgba(26,115,232,.14) 0%, transparent 60%), radial-gradient(ellipse 60% 50% at 90% 100%, rgba(59,130,246,.10) 0%, transparent 55%), radial-gradient(ellipse 40% 40% at 55% 45%, rgba(99,102,241,.07) 0%, transparent 50%), url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='1' cy='1' r='1.3' fill='%231a73e8' fill-opacity='0.07'/%3E%3C/svg%3E");
+        background-size: auto, auto, auto, 40px 40px;
+        background-attachment: local;
+        overflow-x: hidden;
+    }
+
+    .lp-body {
+        width: 100%;
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 28px 20px 48px;
+        box-sizing: border-box;
+    }
+
+    /* ── HERO ── */
+    .hero {
+        background: linear-gradient(135deg, var(--hm) 0%, var(--h) 100%);
+        border-radius: 22px;
+        padding: 42px 36px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 2rem;
+        box-shadow: 0 8px 32px rgba(21,87,176,.3);
+        position: relative;
+        overflow: hidden;
+    }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -70px;
+            right: -70px;
+            width: 240px;
+            height: 240px;
+            border-radius: 50%;
+            background: rgba(255,255,255,.07);
+            pointer-events: none;
+        }
+
+        .hero::after {
+            content: '';
+            position: absolute;
+            bottom: -60px;
+            right: 140px;
+            width: 160px;
+            height: 160px;
+            border-radius: 50%;
+            background: rgba(255,255,255,.05);
+            pointer-events: none;
+        }
+
+    .hero-left {
+        position: relative;
+        z-index: 1;
+        flex: 1;
+        min-width: 0;
+    }
+
+    .hero-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: .4rem;
+        background: rgba(255,255,255,.16);
+        border: 1px solid rgba(255,255,255,.28);
+        color: #fff;
+        font-size: .68rem;
+        font-weight: 700;
+        font-family: var(--mono);
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        padding: .32rem .9rem;
+        border-radius: 100px;
+        margin-bottom: 1rem;
+    }
+
+    .hero h1 {
+        font-size: clamp(1.65rem, 4.5vw, 2.4rem);
+        font-weight: 800;
+        color: #fff;
+        letter-spacing: -.6px;
+        line-height: 1.18;
+        margin-bottom: .75rem;
+    }
+
+        .hero h1 em {
+            font-style: normal;
+            color: #bfdbfe;
+        }
+
+    .hero-desc {
+        font-size: .9rem;
+        color: rgba(255,255,255,.82);
+        line-height: 1.75;
+        max-width: 420px;
+    }
+
+    .hero-right {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-direction: column;
+        gap: .75rem;
+        flex-shrink: 0;
+        min-width: 200px;
+    }
+
+    .btn-primary {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: .5rem;
+        padding: .78rem 1.75rem;
+        background: #fff;
+        color: var(--h);
+        border: none;
+        border-radius: 12px;
+        font-family: var(--font);
+        font-size: .92rem;
+        font-weight: 700;
+        cursor: pointer;
+        text-decoration: none;
+        box-shadow: 0 4px 16px rgba(0,0,0,.2);
+        transition: transform .18s, box-shadow .18s;
+    }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 9px 26px rgba(0,0,0,.26);
+        }
+
+    .btn-secondary {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: .5rem;
+        padding: .78rem 1.75rem;
+        background: rgba(255,255,255,.13);
+        color: #fff;
+        border: 1.5px solid rgba(255,255,255,.38);
+        border-radius: 12px;
+        font-family: var(--font);
+        font-size: .92rem;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        transition: background .18s;
+    }
+
+        .btn-secondary:hover {
+            background: rgba(255,255,255,.22);
+        }
+
+    /* ── STAT GRID ── */
+    .stat-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 13px;
+        margin-bottom: 24px;
+    }
+
+    .stat-card {
+        background: var(--card);
+        border-radius: 15px;
+        border: 1px solid var(--border);
+        padding: 1.05rem .95rem;
+        display: flex;
+        align-items: center;
+        gap: .8rem;
+        box-shadow: 0 2px 12px rgba(21,87,176,.07);
+        transition: transform .18s, box-shadow .18s;
+    }
+
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 24px rgba(21,87,176,.14);
+        }
+
+    .ic {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.18rem;
+        color: #fff;
+    }
+
+    .ic-blue {
+        background: var(--hl);
+    }
+
+    .ic-green {
+        background: var(--green);
+    }
+
+    .ic-teal {
+        background: var(--teal);
+    }
+
+    .ic-amber {
+        background: var(--amber);
+    }
+
+    .ic-purple {
+        background: var(--purple);
+    }
+
+    .ic-red {
+        background: var(--red);
+    }
+
+    .sc-label {
+        font-size: .6rem;
+        font-weight: 700;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 1.3px;
+        font-family: var(--mono);
+        margin-bottom: .18rem;
+    }
+
+    .sc-val {
+        font-size: 1.22rem;
+        font-weight: 800;
+        color: var(--ink);
+        letter-spacing: -.4px;
+        font-family: var(--mono);
+    }
+
+    .sc-sub {
+        font-size: .68rem;
+        color: var(--muted);
+        margin-top: .1rem;
+    }
+
+    /* ── SECTION HEADER ── */
+    .sec-header {
+        margin-bottom: 16px;
+    }
+
+    .sec-eyebrow {
+        font-size: .62rem;
+        font-weight: 700;
+        color: var(--hl);
+        text-transform: uppercase;
+        letter-spacing: 2.5px;
+        font-family: var(--mono);
+        margin-bottom: .35rem;
+    }
+
+    .sec-title {
+        font-size: 1.2rem;
+        font-weight: 800;
+        color: var(--ink);
+        letter-spacing: -.4px;
+    }
+
+    /* ── FEATURE GRID ── */
+    .feat-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+        margin-bottom: 24px;
+    }
+
+    .feat-card {
+        background: var(--card);
+        border-radius: 15px;
+        border: 1px solid var(--border);
+        padding: 1.5rem 1.35rem;
+        box-shadow: 0 2px 12px rgba(21,87,176,.07);
+        transition: transform .2s, box-shadow .2s;
+        position: relative;
+        overflow: hidden;
+    }
+
+        .feat-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--c, var(--hl));
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform .25s ease;
+        }
+
+        .feat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 28px rgba(21,87,176,.13);
+        }
+
+            .feat-card:hover::after {
+                transform: scaleX(1);
+            }
+
+    .feat-ic {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        color: #fff;
+        margin-bottom: 1rem;
+    }
+
+    .feat-title {
+        font-size: .92rem;
+        font-weight: 700;
+        color: var(--ink);
+        margin-bottom: .42rem;
+        letter-spacing: -.2px;
+    }
+
+    .feat-desc {
+        font-size: .8rem;
+        color: var(--ink2);
+        line-height: 1.72;
+    }
+
+    /* ── CTA BAND ── */
+    .cta-band {
+        background: linear-gradient(135deg, var(--hm) 0%, var(--h) 100%);
+        border-radius: 22px;
+        padding: 40px 36px;
+        text-align: center;
+        box-shadow: 0 8px 32px rgba(21,87,176,.3);
+        position: relative;
+        overflow: hidden;
+        margin-bottom: 4px;
+    }
+
+        .cta-band::before {
+            content: '';
+            position: absolute;
+            top: -80px;
+            left: -80px;
+            width: 220px;
+            height: 220px;
+            border-radius: 50%;
+            background: rgba(255,255,255,.06);
+            pointer-events: none;
+        }
+
+        .cta-band::after {
+            content: '';
+            position: absolute;
+            bottom: -60px;
+            right: -60px;
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background: rgba(255,255,255,.05);
+            pointer-events: none;
+        }
+
+        .cta-band h2 {
+            font-size: 1.45rem;
+            font-weight: 800;
+            color: #fff;
+            margin-bottom: .55rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .cta-band p {
+            font-size: .9rem;
+            color: rgba(255,255,255,.82);
+            margin-bottom: 1.75rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .cta-band .btn-primary {
+            position: relative;
+            z-index: 1;
+        }
+
+    /* ── RESPONSIVE ── */
+    @@media (max-width: 960px) {
+        .stat-grid {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        .feat-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @@media (max-width: 640px) {
+        .fb-nav {
+            padding: 0 .9rem;
+            gap: .55rem;
+        }
+
+        .fb-nav-ticker {
+            display: none;
+        }
+
+        .fb-nav-links {
+            display: none;
+        }
+
+        .fb-nav-burger {
+            display: flex;
+        }
+
+        .lp-body {
+            padding: 14px 12px 40px;
+        }
+
+        .hero {
+            flex-direction: column;
+            padding: 24px 18px 26px;
+            border-radius: 18px;
+            gap: 1.25rem;
+            margin-bottom: 14px;
+        }
+
+            .hero h1 {
+                font-size: 1.5rem;
+            }
+
+        .hero-desc {
+            font-size: .84rem;
+        }
+
+        .hero-right {
+            width: 100%;
+            min-width: unset;
+        }
+
+        .btn-primary, .btn-secondary {
+            width: 100%;
+            padding: .82rem 1rem;
+            font-size: .88rem;
+        }
+
+        .stat-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .stat-card {
+            padding: .9rem .8rem;
+            gap: .65rem;
+        }
+
+        .ic {
+            width: 38px;
+            height: 38px;
+            font-size: 1rem;
+            border-radius: 10px;
+        }
+
+        .sc-val {
+            font-size: 1.05rem;
+        }
+
+        .feat-grid {
+            grid-template-columns: 1fr;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .feat-card {
+            padding: 1.25rem 1.1rem;
+        }
+
+        .cta-band {
+            padding: 26px 18px;
+            border-radius: 18px;
+        }
+
+            .cta-band h2 {
+                font-size: 1.15rem;
+            }
+
+            .cta-band p {
+                font-size: .84rem;
+            }
+
+            .cta-band .btn-primary {
+                width: 100%;
+            }
+
+        .sec-title {
+            font-size: 1.05rem;
+        }
+
+        .fb-footer {
+            flex-direction: column;
+            text-align: center;
+            justify-content: center;
+            padding: .75rem 1rem;
+        }
+    }
+
+    @@media (max-width: 380px) {
+        .stat-grid {
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .hero h1 {
+            font-size: 1.3rem;
+        }
+
+        .fb-nav-brand-name {
+            font-size: .9rem;
+        }
+
+        .lp-body {
+            padding: 10px 10px 32px;
+        }
+    }
+</style>
+
+<!-- ── NAVBAR ── -->
+<nav class="fb-nav">
+    <img class="fb-nav-logo" src="images/freightbook.jpg" alt="FreightBook" />
+    <div class="fb-nav-brand">
+        <span class="fb-nav-brand-name">FreightBook</span>
+        <span class="fb-nav-brand-sub">Shipping Management</span>
+    </div>
+    <div class="fb-nav-ticker">
+        <div class="fb-nav-ticker-inner">
+            <span>FREIGHTBOOKSHIPPING</span>
+            <span>&#9742; 9409309616</span>
+            <span>FREIGHTBOOKSHIPPING</span>
+            <span>&#9742; 9409309616</span>
+            <span>FREIGHTBOOKSHIPPING</span>
+            <span>&#9742; 9409309616</span>
+        </div>
+    </div>
+    <div class="fb-nav-links">
+        <a href="#features" class="fb-nav-link">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M1 2.5A1.5 1.5 0 0 1 2.5 1h3A1.5 1.5 0 0 1 7 2.5v3A1.5 1.5 0 0 1 5.5 7h-3A1.5 1.5 0 0 1 1 5.5zm8 0A1.5 1.5 0 0 1 10.5 1h3A1.5 1.5 0 0 1 15 2.5v3A1.5 1.5 0 0 1 13.5 7h-3A1.5 1.5 0 0 1 9 5.5zm-8 8A1.5 1.5 0 0 1 2.5 9h3A1.5 1.5 0 0 1 7 10.5v3A1.5 1.5 0 0 1 5.5 15h-3A1.5 1.5 0 0 1 1 13.5zm8 0A1.5 1.5 0 0 1 10.5 9h3A1.5 1.5 0 0 1 15 10.5v3A1.5 1.5 0 0 1 13.5 15h-3A1.5 1.5 0 0 1 9 13.5z" /></svg>
+            Features
+        </a>
+        <a href="tel:9409309616" class="fb-nav-link">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" /></svg>
+            Support
+        </a>
+        <a href="/login" class="fb-nav-cta">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0z" /><path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708z" /></svg>
+            Sign In
+        </a>
+    </div>
+    <button class="fb-nav-burger" onclick="document.getElementById('fb-drawer').classList.toggle('open')" aria-label="Menu">
+        <span></span><span></span><span></span>
+    </button>
+</nav>
+
+<div class="fb-drawer" id="fb-drawer">
+    <a href="#features" class="fb-drawer-link" onclick="document.getElementById('fb-drawer').classList.remove('open')">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M1 2.5A1.5 1.5 0 0 1 2.5 1h3A1.5 1.5 0 0 1 7 2.5v3A1.5 1.5 0 0 1 5.5 7h-3A1.5 1.5 0 0 1 1 5.5zm8 0A1.5 1.5 0 0 1 10.5 1h3A1.5 1.5 0 0 1 15 2.5v3A1.5 1.5 0 0 1 13.5 7h-3A1.5 1.5 0 0 1 9 5.5zm-8 8A1.5 1.5 0 0 1 2.5 9h3A1.5 1.5 0 0 1 7 10.5v3A1.5 1.5 0 0 1 5.5 15h-3A1.5 1.5 0 0 1 1 13.5zm8 0A1.5 1.5 0 0 1 10.5 9h3A1.5 1.5 0 0 1 15 10.5v3A1.5 1.5 0 0 1 13.5 15h-3A1.5 1.5 0 0 1 9 13.5z" /></svg>
+        Features
+    </a>
+    <a href="tel:9409309616" class="fb-drawer-link">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" /></svg>
+        Support: 9409309616
+    </a>
+    <a href="/login" class="fb-drawer-link fb-drawer-cta">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0z" /><path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708z" /></svg>
+        Sign In to FreightBook
+    </a>
+</div>
+
+<!-- ── PAGE ── -->
+<div class="lp">
+    <div class="lp-body">
+
+        <section class="hero">
+            <div class="hero-left">
+                <div class="hero-pill">
+                    <i class="bi bi-lightning-charge-fill"></i> Freight Management Platform
+                </div>
+                <h1>Manage Every <em>Shipment</em><br />with Full Control.</h1>
+                <p class="hero-desc">Complete freight management — imports, exports, billing, real-time analytics, and multi-branch control in one platform.</p>
+            </div>
+            <div class="hero-right">
+                <a href="/login" class="btn-primary">
+                    <i class="bi bi-rocket-takeoff-fill"></i> Get Started — Sign In
+                </a>
+                <a href="tel:9409309616" class="btn-secondary">
+                    <i class="bi bi-headset"></i> Call: 9409309616
+                </a>
+            </div>
+        </section>
+
+        <div class="stat-grid">
+            <div class="stat-card">
+                <div class="ic ic-blue"><i class="bi bi-box-arrow-in-down"></i></div>
+                <div><div class="sc-label">Shipments</div><div class="sc-val">50K+</div><div class="sc-sub">↑ tracked</div></div>
+            </div>
+            <div class="stat-card">
+                <div class="ic ic-green"><i class="bi bi-check-circle-fill"></i></div>
+                <div><div class="sc-label">Uptime</div><div class="sc-val">99.9%</div><div class="sc-sub">Always on</div></div>
+            </div>
+            <div class="stat-card">
+                <div class="ic ic-teal"><i class="bi bi-headset"></i></div>
+                <div><div class="sc-label">Support</div><div class="sc-val">24 / 7</div><div class="sc-sub">Available</div></div>
+            </div>
+            <div class="stat-card">
+                <div class="ic ic-amber"><i class="bi bi-diagram-3-fill"></i></div>
+                <div><div class="sc-label">Branches</div><div class="sc-val">Multi</div><div class="sc-sub">All in one</div></div>
+            </div>
+            <div class="stat-card">
+                <div class="ic ic-purple"><i class="bi bi-receipt"></i></div>
+                <div><div class="sc-label">Invoicing</div><div class="sc-val">GST ✓</div><div class="sc-sub">Compliant</div></div>
+            </div>
+        </div>
+
+        <div id="features">
+            <div class="sec-header">
+                <div class="sec-eyebrow">Core Capabilities</div>
+                <div class="sec-title">Everything your logistics team needs</div>
+            </div>
+            <div class="feat-grid">
+                <div class="feat-card" style="--c:#3b82f6">
+                    <div class="feat-ic ic-blue"><i class="bi bi-boxes"></i></div>
+                    <div class="feat-title">Consignment Management</div>
+                    <p class="feat-desc">Create and track LR bookings end-to-end with real-time status updates across all branches.</p>
+                </div>
+                <div class="feat-card" style="--c:#06b6d4">
+                    <div class="feat-ic ic-teal"><i class="bi bi-diagram-3-fill"></i></div>
+                    <div class="feat-title">Multi-Branch Control</div>
+                    <p class="feat-desc">Operate multiple branches under one account with instant context switching and isolated data.</p>
+                </div>
+                <div class="feat-card" style="--c:#10b981">
+                    <div class="feat-ic ic-green"><i class="bi bi-cash-coin"></i></div>
+                    <div class="feat-title">Billing &amp; Finance</div>
+                    <p class="feat-desc">Automated freight billing, payment tracking, outstanding reports, and GST-compliant invoicing.</p>
+                </div>
+                <div class="feat-card" style="--c:#f59e0b">
+                    <div class="feat-ic ic-amber"><i class="bi bi-calendar3"></i></div>
+                    <div class="feat-title">Financial Year Control</div>
+                    <p class="feat-desc">Manage data across multiple financial years and switch instantly without disrupting operations.</p>
+                </div>
+                <div class="feat-card" style="--c:#6366f1">
+                    <div class="feat-ic ic-purple"><i class="bi bi-shield-check-fill"></i></div>
+                    <div class="feat-title">Role-Based Access</div>
+                    <p class="feat-desc">Granular Admin / Manager / Staff permissions with a complete audit trail for every action.</p>
+                </div>
+                <div class="feat-card" style="--c:#ef4444">
+                    <div class="feat-ic ic-red"><i class="bi bi-bar-chart-line-fill"></i></div>
+                    <div class="feat-title">Reports &amp; Analytics</div>
+                    <p class="feat-desc">Job register, invoice register, outstanding reports, P&amp;L, GSTR reports and more.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="cta-band">
+            <h2>Ready to streamline your freight?</h2>
+            <p>Sign in to FreightBook and take full control of your logistics operations today.</p>
+            <a href="/login" class="btn-primary">
+                <i class="bi bi-box-arrow-in-right"></i> Sign In to FreightBook
+            </a>
+        </div>
+
+    </div>
+
+    <!-- ── UNIFIED FOOTER ── -->
+    <footer class="fb-footer">
+        <div class="fb-footer-left">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" /></svg>
+            Support: 9409309616
+        </div>
+        <div class="fb-footer-right">
+            FreightBook &copy; @DateTime.Now.Year &nbsp;·&nbsp; Shipping Management
+        </div>
+    </footer>
+
+</div>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        if (authState.User.Identity?.IsAuthenticated == true)
+            Navigation.NavigateTo("/dashboard", forceLoad: false);
+    }
+}

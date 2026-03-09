@@ -1,0 +1,171 @@
+@page "/coming-soon"
+@layout EmptyLayout
+
+<PageTitle>Coming Soon | FreightBook</PageTitle>
+
+<style>
+    @@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=JetBrains+Mono:wght@500&display=swap');
+    *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+
+    body, .cs-shell { background:#f0f4f8; font-family:'Sora',sans-serif; }
+    .cs-shell { min-height:100vh; display:flex; flex-direction:column; }
+
+    .cs-header {
+        height:60px; background:linear-gradient(90deg,#1a73e8 0%,#1557b0 100%);
+        display:flex; align-items:center; padding:0 1.25rem; gap:.75rem;
+        box-shadow:0 2px 8px rgba(21,87,176,.3); flex-shrink:0;
+    }
+    .cs-header img { height:36px; width:36px; border-radius:8px; border:2px solid rgba(255,255,255,.3); }
+    .hdr-brand { display:flex; flex-direction:column; line-height:1.2; }
+    .hdr-brand-name { font-size:1rem; font-weight:800; color:#fff; }
+    .hdr-brand-sub  { font-size:.65rem; color:rgba(255,255,255,.7); }
+    .hdr-marquee {
+        flex:1; overflow:hidden;
+        mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent);
+    }
+    .hdr-marquee-inner {
+        display:inline-flex; white-space:nowrap;
+        animation:marquee 20s linear infinite;
+        font-size:.78rem; color:rgba(255,255,255,.85); font-family:'JetBrains Mono',monospace;
+    }
+    @@keyframes marquee { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+
+    .cs-body { flex:1; display:flex; align-items:center; justify-content:center; padding:32px 20px; }
+    .cs-wrap { width:100%; max-width:540px; animation:fadeUp .45s ease both; }
+
+    .cs-banner {
+        background:linear-gradient(135deg,#0891b2 0%,#0e7490 100%);
+        border-radius:16px; padding:22px 24px; margin-bottom:16px;
+        display:flex; align-items:center; justify-content:space-between;
+        box-shadow:0 4px 16px rgba(8,145,178,.25);
+    }
+    .cs-banner h2 { font-size:1.15rem; font-weight:800; color:#fff; margin-bottom:3px; }
+    .cs-banner p  { font-size:.78rem; color:rgba(255,255,255,.75); font-family:'JetBrains Mono',monospace; }
+    .cs-badge {
+        background:rgba(255,255,255,.2); border:1px solid rgba(255,255,255,.3);
+        color:#fff; font-size:.7rem; font-weight:700;
+        font-family:'JetBrains Mono',monospace;
+        padding:.3rem .85rem; border-radius:100px;
+        letter-spacing:1px; text-transform:uppercase;
+    }
+
+    .cs-card {
+        background:#fff; border-radius:16px; border:1px solid #e2e8f0;
+        padding:2.5rem 2rem 2.25rem; text-align:center;
+        box-shadow:0 2px 12px rgba(0,0,0,.06);
+        position:relative; overflow:hidden;
+    }
+    .cs-card::before {
+        content:''; position:absolute; top:0; left:0; right:0; height:4px;
+        background:linear-gradient(90deg,#06b6d4,#22d3ee);
+    }
+
+    .cs-icon-box {
+        width:72px; height:72px; border-radius:16px;
+        display:flex; align-items:center; justify-content:center;
+        margin:0 auto 1.5rem; font-size:1.9rem;
+        background:#06b6d4; color:#fff;
+        animation:spinGear 5s linear infinite;
+    }
+    @@keyframes spinGear { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+
+    .cs-label   { font-size:.65rem; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:1.5px; font-family:'JetBrains Mono',monospace; margin-bottom:.35rem; }
+    .cs-title   { font-size:1.5rem; font-weight:800; color:#1e293b; letter-spacing:-.4px; line-height:1.2; margin-bottom:.2rem; }
+    .cs-title em { font-style:normal; color:#06b6d4; }
+    .cs-divider { width:40px; height:3px; background:linear-gradient(90deg,#06b6d4,#22d3ee); margin:.65rem auto .9rem; border-radius:2px; }
+    .cs-sub     { font-size:.83rem; color:#64748b; line-height:1.65; max-width:360px; margin:0 auto 1.75rem; }
+
+    /* Progress bar */
+    .cs-progress { margin-bottom:2rem; }
+    .cs-prog-meta {
+        display:flex; justify-content:space-between;
+        font-size:.7rem; color:#94a3b8;
+        font-family:'JetBrains Mono',monospace; margin-bottom:.5rem;
+    }
+    .cs-prog-track {
+        height:8px; background:#f1f5f9;
+        border-radius:100px; overflow:hidden;
+        border:1px solid #e2e8f0;
+    }
+    .cs-prog-fill {
+        height:100%;
+        background:linear-gradient(90deg,#0891b2,#06b6d4,#22d3ee);
+        border-radius:100px; width:70%;
+        animation:fillIn 1.6s cubic-bezier(.16,1,.3,1) .4s both;
+        position:relative; overflow:hidden;
+    }
+    .cs-prog-fill::after {
+        content:''; position:absolute;
+        top:0; right:0; bottom:0; width:50%;
+        background:linear-gradient(90deg,transparent,rgba(255,255,255,.5));
+        animation:sheen 2.5s ease-in-out infinite;
+    }
+    @@keyframes fillIn { from{width:0} to{width:70%} }
+    @@keyframes sheen  { from{transform:translateX(-150%)} to{transform:translateX(300%)} }
+
+    .cs-btn {
+        display:inline-flex; align-items:center; gap:.45rem;
+        padding:.6rem 1.5rem; background:#06b6d4; color:#fff;
+        border:none; border-radius:10px;
+        font-family:'Sora',sans-serif; font-size:.85rem; font-weight:700;
+        cursor:pointer; text-decoration:none;
+        box-shadow:0 4px 12px rgba(6,182,212,.35);
+        transition:background .18s,transform .18s;
+    }
+    .cs-btn:hover { background:#0891b2; transform:translateY(-2px); }
+
+    .cs-footer {
+        height:40px; background:#fff; border-top:1px solid #e2e8f0;
+        display:flex; align-items:center; justify-content:center;
+        font-size:.75rem; color:#94a3b8; font-family:'JetBrains Mono',monospace;
+    }
+    @@keyframes fadeUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+</style>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+
+<div class="cs-shell">
+    <header class="cs-header">
+        <img src="images/freightbook.jpg" alt="FB" />
+        <div class="hdr-brand">
+            <span class="hdr-brand-name">FreightBook</span>
+            <span class="hdr-brand-sub">Shipping Management</span>
+        </div>
+        <div class="hdr-marquee">
+            <div class="hdr-marquee-inner">
+                <span>FREIGHTBOOKSHIPPING &nbsp;&nbsp;<i class="bi bi-headset"></i> 9409309616 &nbsp;&nbsp;&nbsp;&nbsp; FREIGHTBOOKSHIPPING &nbsp;&nbsp;<i class="bi bi-headset"></i> 9409309616 &nbsp;&nbsp;&nbsp;&nbsp;</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="cs-body">
+        <div class="cs-wrap">
+            <div class="cs-banner">
+                <div>
+                    <h2>🔧 Feature In Progress</h2>
+                    <p>Development Status · Active Build</p>
+                </div>
+                <span class="cs-badge">Coming Soon</span>
+            </div>
+            <div class="cs-card">
+                <div class="cs-icon-box"><i class="bi bi-gear-fill"></i></div>
+                <div class="cs-label">Under Development</div>
+                <div class="cs-title">Something <em>New</em><br />Is Loading…</div>
+                <div class="cs-divider"></div>
+                <p class="cs-sub">Our team is actively building this feature. It will be ready and deployed for your team soon.</p>
+                <div class="cs-progress">
+                    <div class="cs-prog-meta">
+                        <span>Development Progress</span>
+                        <span>70%</span>
+                    </div>
+                    <div class="cs-prog-track">
+                        <div class="cs-prog-fill"></div>
+                    </div>
+                </div>
+                <a href="/" class="cs-btn"><i class="bi bi-house-fill"></i> Back to Dashboard</a>
+            </div>
+        </div>
+    </div>
+
+    <footer class="cs-footer"><i class="bi bi-headset me-1"></i>&nbsp;Support: 9409309616</footer>
+</div>

@@ -1,8 +1,7 @@
-﻿
-.lr-page {
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
+﻿.lr-page {
+    height: 93vh;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
     font-family: var(--font-main);
     color: var(--clr-text);
     overflow: hidden;
@@ -208,7 +207,7 @@
 .col-panel-list {
     flex: 1;
     overflow-y: auto;
-   /* padding: 6px 0;*/
+    /* padding: 6px 0;*/
 }
 
 .col-toggle-row {
@@ -350,15 +349,10 @@
     box-shadow: var(--shadow-card);
     overflow: hidden;
     margin-bottom: 12px;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
 }
 
 .lr-tab-body {
     padding: 16px;
-    overflow-y: auto;
-    flex: 1;
 }
 
 .validation-summary-errors {
@@ -378,21 +372,17 @@
     }
 
 .lr-footer {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     background: var(--clr-surface);
     border-top: 1px solid var(--clr-border);
     box-shadow: var(--shadow-footer);
     padding: 10px 24px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    z-index: 1000;
     gap: 12px;
     height: 52px;
     flex-shrink: 0;
+    z-index: 100;
 }
 
 .lr-footer-meta {
@@ -450,9 +440,9 @@
 }
 
 .lr-form-scroll {
-    flex: 1;
     overflow-y: auto;
-    padding: 0 16px 64px;
+    padding: 0 16px 12px;
+    min-height: 0; /* critical for grid row 1fr to shrink correctly */
 }
 
 .loading-overlay {
