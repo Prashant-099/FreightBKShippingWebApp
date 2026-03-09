@@ -5,7 +5,6 @@
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthStateProvider
 @inject YearStatechangeService YearStatechangeService
-
 <div class="sb-inner">
 
     <!-- Search -->
@@ -24,7 +23,7 @@
         <!-- Home -->
         <NavLink class="sb-item" href="/" Match="NavLinkMatch.All"
                  ActiveClass="sb-item-active" @onclick="NavClicked">
-            <i class="bi bi-house-door-fill sb-icon"></i>
+            <i class="bi bi-house-door-fill sb-icon" style="color:#3b82f6"></i>
             <span>Home</span>
         </NavLink>
 
@@ -85,13 +84,11 @@
         {
             <div class="sb-label">Operations</div>
 
-
-                <NavLink class="sb-item" href="/quotation" Match="NavLinkMatch.All"
-                         ActiveClass="sb-sub-active" @onclick="NavClicked">
-                    <i class="bi bi-file-earmark-text sb-icon" ></i>
-                    <span>Quotation</span>
-                </NavLink>
-
+            <NavLink class="sb-item" href="/quotation" Match="NavLinkMatch.All"
+                     ActiveClass="sb-item-active" @onclick="NavClicked">
+                <i class="bi bi-file-earmark-text sb-icon" style="color:#8b5cf6"></i>
+                <span>Quotation</span>
+            </NavLink>
 
             @if (ShowGroup("Shipments", shipItems))
             {
@@ -101,7 +98,6 @@
                         <span>Shipments</span>
                         <i class="bi bi-chevron-right sb-chevron @(_ship ? "sb-chevron-open" : "")"></i>
                     </button>
-
                     @if (_ship)
                     {
                         <div class="sb-sub">
@@ -277,19 +273,20 @@
         new("Unit",          "/Unit",         "bi bi-rulers"),
         new("Rate",          "/ratemaster",   "bi bi-currency-exchange"),
         new("Status",        "/status",       "bi bi-flag"),
-        new("Vehicle",       "/vehicle",      "bi bi-truck-front")    };
+        new("Vehicle",       "/vehicle",      "bi bi-truck-front"),
+    };
 
     private List<M> shipItems = new()
     {
         new("Import Job", "/jobimport", "bi bi-box-arrow-in-down"),
         new("Export Job", "/jobexport", "bi bi-box-arrow-up"),
-        // new("Quotation",  "/quotation", "bi bi-file-earmark-text"),
     };
 
     private List<M> quotationItems = new()
-{
-    new("Quotation", "/quotation", "bi bi-file-earmark-text"),
-};
+    {
+        new("Quotation", "/quotation", "bi bi-file-earmark-text"),
+    };
+
     private List<M> transportItems = new()
     {
         new("Party Bill", "/partybill", "bi bi-box-arrow-in-down"),
@@ -298,12 +295,12 @@
 
     private List<M> voucherItems = new()
     {
-        new("Sale Invoice",     "/bill",     "bi bi-receipt"),
-        new("Purchase Invoice", "/purchase", "bi bi-bag-check"),
-        new("Receipt",          "/Receipt",  "bi bi-cash-coin"),
-        new("Payment",          "/Payment",  "bi bi-credit-card-2-front"),
-         new("Contra",          "/Contra",  "bi bi-arrow-left-right"),
-          new("JournalEntry",          "/JournalEntry",  "bi bi-journal-text"),
+        new("Sale Invoice",     "/bill",         "bi bi-receipt"),
+        new("Purchase Invoice", "/purchase",     "bi bi-bag-check"),
+        new("Receipt",          "/Receipt",      "bi bi-cash-coin"),
+        new("Payment",          "/Payment",      "bi bi-credit-card-2-front"),
+        new("Contra",           "/Contra",       "bi bi-arrow-left-right"),
+        new("JournalEntry",     "/JournalEntry", "bi bi-journal-text"),
     };
 
     private List<M> reportItems = new()
@@ -313,7 +310,7 @@
         new("Invoice Tally",      "/InvoiceExporttally",  "bi bi-arrow-left-right"),
         new("Outstanding Report", "/outstandingregister", "bi bi-hourglass-split"),
         new("Profit & Loss",      "/jobprofitloss",       "bi bi-graph-up"),
-         new("TDS Report",      "/TdsReport",       "bi bi-receipt-cutoff"),
+        new("TDS Report",         "/TdsReport",           "bi bi-receipt-cutoff"),
     };
 
     private bool ShowGroup(string groupName, List<M> items)
