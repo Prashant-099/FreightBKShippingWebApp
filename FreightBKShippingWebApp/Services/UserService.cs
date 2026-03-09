@@ -13,7 +13,7 @@ namespace FreightBKShippingWebApp.Services
             _api = api;
             
         }
-
+        public string? LastError { get; private set; }
         // ✅ GET ALL USERS
         public async Task<List<User>> GetAllAsync()
         {
@@ -58,11 +58,13 @@ namespace FreightBKShippingWebApp.Services
         {
             try
             {
+                LastError = null;
                 await _api.PostAsync<User, User>("api/Users", user);
                 return true;
             }
             catch (Exception ex)
             {
+                LastError = ex.Message;
                 Console.WriteLine(ex);
                 return false;
             }
@@ -74,11 +76,13 @@ namespace FreightBKShippingWebApp.Services
         {
             try
             {
+                LastError = null;
                 var result = await _api.PutAsync<bool, User>($"api/Users/{user.UserId}", user);
                 return result;
             }
             catch (Exception ex)
             {
+                LastError = ex.Message;
                 Console.WriteLine($"❌ Error updating user: {ex.Message}");
                 return false;
             }

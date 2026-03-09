@@ -1489,7 +1489,7 @@
 
         return 100; // default
     }
-    private void OnBillAgainstChanged(int? selectedBillId)
+    private async Task OnBillAgainstChanged(int? selectedBillId)
     {
         if (!selectedBillId.HasValue)
         {
@@ -2166,9 +2166,9 @@
 
 
 
-            OnJobDetailsChanged(EditModel.BillJobNo);
-            OnvoucherChanged(EditModel,EditModel.BillVoucherId);
-            OnBillAgainstChanged(EditModel.BillQuatationId);
+           await  OnJobDetailsChanged(EditModel.BillJobNo);
+           await  OnvoucherChanged(EditModel,EditModel.BillVoucherId);
+            await OnBillAgainstChanged(EditModel.BillQuatationId);
             
            // nextSNo = 1;
             IsCreditnote = false;
@@ -2339,7 +2339,7 @@
 
     }
     // private EditContext? editContext;
-    private void OnJobDetailsChanged(string selectedjobno)
+    private async Task OnJobDetailsChanged(string selectedjobno)
     {
         if (string.IsNullOrWhiteSpace(selectedjobno))
             return;

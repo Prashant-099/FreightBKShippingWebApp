@@ -215,7 +215,7 @@
 
             if (!success)
             {
-                ToastService.Error(isNew ? "User creation failed!" : "User update failed!");
+                ToastService.Error(UserService.LastError ?? (isNew ? "User creation failed!" : "User update failed!"));
                 return;
             }
             AuditLogService.NotifyAuditChanged();
