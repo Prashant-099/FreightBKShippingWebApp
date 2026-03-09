@@ -3,29 +3,31 @@
 @using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Services
 
-@inject LrApiService LrApiService
-@inject AccountService AccountService
-@inject VoucherService VoucherService
-@inject StateService StateService
-@inject GstSlabService GstSlabService
+@inject LrApiService     LrApiService
+@inject AccountService   AccountService
+@inject VoucherService   VoucherService
+@inject StateService     StateService
+@inject GstSlabService   GstSlabService
+@inject NavigationManager NavManager
+@inject IJSRuntime       JS
 
 <style>
     :root {
-        --clr-bg: #f4f6fb;
-        --clr-surface: #ffffff;
-        --clr-border: #e2e8f0;
-        --clr-primary: #2563eb;
+        --clr-bg:         #f4f6fb;
+        --clr-surface:    #ffffff;
+        --clr-border:     #e2e8f0;
+        --clr-primary:    #2563eb;
         --clr-primary-dk: #1d4ed8;
-        --clr-accent: #0ea5e9;
-        --clr-text: #1e293b;
-        --clr-muted: #64748b;
-        --clr-danger: #ef4444;
-        --clr-success: #10b981;
-        --radius-card: 12px;
-        --radius-inner: 8px;
-        --shadow-card: 0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.06);
-        --shadow-footer: 0 -2px 12px rgba(0,0,0,.08);
-        --font-main: 'Sora', 'Segoe UI', sans-serif;
+        --clr-accent:     #0ea5e9;
+        --clr-text:       #1e293b;
+        --clr-muted:      #64748b;
+        --clr-danger:     #ef4444;
+        --clr-success:    #10b981;
+        --radius-card:    12px;
+        --radius-inner:   8px;
+        --shadow-card:    0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.06);
+        --shadow-footer:  0 -2px 12px rgba(0,0,0,.08);
+        --font-main:      'Sora', 'Segoe UI', sans-serif;
     }
 </style>
 
@@ -41,20 +43,25 @@
                 <polyline points="14,2 14,8 20,8"/>
                 <line x1="16" y1="13" x2="8" y2="13"/>
                 <line x1="16" y1="17" x2="8" y2="17"/>
-                <polyline points="10,9 9,9 8,9"/>
             </svg>
         </div>
         <div class="pb-header-divider"></div>
         <div class="pb-header-text">
             <h1>Party Bill</h1>
-            <span>Generate & Manage Party Bills</span>
+            <span>Generate &amp; Manage Party Bills</span>
         </div>
+
+        <button type="button" class="btn-back" @onclick='() => NavManager.NavigateTo("/")'>
+            ← Back
+        </button>
+
         <div class="pb-header-badge">New Bill</div>
     </div>
 
+    <!-- ══ FORM SCROLL — the ONE scroller ══ -->
     <div class="pb-form-scroll">
 
-        <!-- ══ SEARCH FILTER CARD ══ -->
+        <!-- ══ SEARCH LRs CARD ══ -->
         <div class="pb-card">
             <div class="pb-card-header"><h2>Search LRs</h2></div>
             <div class="pb-card-body">
@@ -75,11 +82,17 @@
                     </div>
                     <div class="field-group">
                         <label>From Date</label>
-                        <DxDateEdit @bind-Date="fromDate" DisplayFormat="dd-MM-yyyy" Format="dd-MM-yyyy" NullText="From date" />
+                        <DxDateEdit @bind-Date="fromDate"
+                                    DisplayFormat="dd-MM-yyyy"
+                                    Format="dd-MM-yyyy"
+                                    NullText="From date" />
                     </div>
                     <div class="field-group">
                         <label>To Date</label>
-                        <DxDateEdit @bind-Date="toDate" DisplayFormat="dd-MM-yyyy" Format="dd-MM-yyyy" NullText="To date" />
+                        <DxDateEdit @bind-Date="toDate"
+                                    DisplayFormat="dd-MM-yyyy"
+                                    Format="dd-MM-yyyy"
+                                    NullText="To date" />
                     </div>
                     <div class="field-group" style="justify-content:flex-end; padding-top:18px;">
                         <DxButton Text="Search" RenderStyle="ButtonRenderStyle.Primary" Click="SerchLrs" />
@@ -94,9 +107,7 @@
                 <h2>LR List</h2>
                 @if (selectedLrs.Any())
                 {
-                    <span style="margin-left:auto; font-size:.72rem; color:var(--clr-primary); font-weight:600; background:#eff4ff; padding:3px 8px; border-radius:4px;">
-                        @selectedLrs.Count selected
-                    </span>
+                    <span class="pill">@selectedLrs.Count selected</span>
                 }
             </div>
             <div class="pb-card-body" style="padding:0;">
@@ -110,26 +121,26 @@
                             ShowGroupPanel="false">
                         <Columns>
                             <DxGridSelectionColumn AllowSelectAll="true" Width="40" FixedPosition="GridColumnFixedPosition.Left" />
-                            <DxGridDataColumn FieldName="SrNo"                Caption="Sr No"       Width="60px" />
-                            <DxGridDataColumn FieldName="LrNoStr"             Caption="LR No"       Width="90px" />
-                            <DxGridDataColumn FieldName="LrDate"              Caption="LR Date"     Width="100px" DisplayFormat="dd-MM-yyyy" />
-                            <DxGridDataColumn FieldName="LrJobNo"             Caption="Job No"      Width="80px" />
-                            <DxGridDataColumn FieldName="LrFromLocationId"    Caption="From"        Width="80px" />
-                            <DxGridDataColumn FieldName="LrToLocationId"      Caption="To"          Width="80px" />
-                            <DxGridDataColumn FieldName="LrVehicleId"         Caption="Vehicle"     Width="90px" />
-                            <DxGridDataColumn FieldName="LrLoadWt"            Caption="Load Wt"     Width="80px" />
-                            <DxGridDataColumn FieldName="LrUnloadWt"          Caption="Unload Wt"   Width="85px" />
-                            <DxGridDataColumn FieldName="LrRateBill"          Caption="Rate"        Width="70px" />
-                            <DxGridDataColumn FieldName="LrGrossFreightBill"  Caption="Gross Amt"   Width="90px" />
-                            <DxGridDataColumn FieldName="LrPaymentType"       Caption="Pay Type"    Width="90px" />
-                            <DxGridDataColumn FieldName="LrStatus"            Caption="Status"      Width="80px" />
+                            <DxGridDataColumn FieldName="SrNo"               Caption="Sr No"     Width="60px" />
+                            <DxGridDataColumn FieldName="LrNoStr"            Caption="LR No"     Width="90px" />
+                            <DxGridDataColumn FieldName="LrDate"             Caption="LR Date"   Width="100px" DisplayFormat="dd-MM-yyyy" />
+                            <DxGridDataColumn FieldName="LrJobNo"            Caption="Job No"    Width="80px" />
+                            <DxGridDataColumn FieldName="LrFromLocationId"   Caption="From"      Width="80px" />
+                            <DxGridDataColumn FieldName="LrToLocationId"     Caption="To"        Width="80px" />
+                            <DxGridDataColumn FieldName="LrVehicleId"        Caption="Vehicle"   Width="90px" />
+                            <DxGridDataColumn FieldName="LrLoadWt"           Caption="Load Wt"   Width="80px" />
+                            <DxGridDataColumn FieldName="LrUnloadWt"         Caption="Unload Wt" Width="85px" />
+                            <DxGridDataColumn FieldName="LrRateBill"         Caption="Rate"      Width="70px" />
+                            <DxGridDataColumn FieldName="LrGrossFreightBill" Caption="Gross Amt" Width="90px" />
+                            <DxGridDataColumn FieldName="LrPaymentType"      Caption="Pay Type"  Width="90px" />
+                            <DxGridDataColumn FieldName="LrStatus"           Caption="Status"    Width="80px" />
                         </Columns>
                     </DxGrid>
                 </div>
             </div>
         </div>
 
-        <!-- ══ SUMMARY STATS ══ -->
+        <!-- ══ STAT BADGES — only when rows selected ══ -->
         @if (selectedLrs.Any())
         {
             <div class="stat-row">
@@ -147,15 +158,15 @@
                 </div>
                 <div class="stat-badge">
                     <span class="stat-label">Net Bill</span>
-                    <span class="stat-value" style="color:var(--clr-success);">@bill.BillTotal.ToString("N2")</span>
+                    <span class="stat-value success">@bill.BillTotal.ToString("N2")</span>
                 </div>
             </div>
         }
 
-        <!-- ══ BILL DETAILS + SUMMARY ══ -->
+        <!-- ══ BILL DETAILS + SUMMARY (two columns) ══ -->
         <div class="two-col-layout">
 
-            <!-- LEFT: Bill Details Tabs -->
+            <!-- LEFT: Bill Detail Tabs -->
             <div class="pb-tabs-wrapper">
                 <DxTabs>
 
@@ -199,7 +210,7 @@
                             </div>
                             <div class="field-group">
                                 <label>Remarks</label>
-                                <DxMemo rows="2" @bind-Text="bill.BillRemarks" />
+                                <DxMemo Rows="2" @bind-Text="bill.BillRemarks" />
                             </div>
                         </div>
                     </DxTabPage>
@@ -208,7 +219,7 @@
                     <DxTabPage Text="Ship To">
                         <div class="pb-tab-body">
                             <div class="field-grid-2" style="margin-bottom:12px;">
-                                <div class="field-group" style="grid-column: span 2;">
+                                <div class="field-group span-2">
                                     <label>Ship To Party</label>
                                     <DxComboBox Data="partylist"
                                                 @bind-Value="bill.BillShipPartyId"
@@ -225,7 +236,7 @@
                                                 SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
                                 </div>
                                 <div class="field-group">
-                                    <label>PIN</label>
+                                    <label>PIN Code</label>
                                     <DxTextBox @bind-Text="bill.BillPincode" />
                                 </div>
                                 <div class="field-group">
@@ -244,7 +255,7 @@
                                     <label>BE No</label>
                                     <DxTextBox @bind-Text="bill.BillBlNo" />
                                 </div>
-                                <div class="field-group" style="grid-column: span 2;">
+                                <div class="field-group span-2">
                                     <label>Supply Type</label>
                                     <DxComboBox Data="@SupplyTypeList"
                                                 @bind-Value="bill.BillSupplyType"
@@ -255,7 +266,7 @@
                                                 SearchMode="ListSearchMode.AutoSearch"
                                                 SearchFilterCondition="ListSearchFilterCondition.StartsWith" />
                                 </div>
-                                <div class="field-group" style="grid-column: span 2;">
+                                <div class="field-group span-2">
                                     <label>Address</label>
                                     <DxMemo @bind-Text="bill.BillAddress1" Rows="2" />
                                 </div>
@@ -267,7 +278,7 @@
                     <DxTabPage Text="E-Invoice">
                         <div class="pb-tab-body">
                             <div class="field-grid-2">
-                                <div class="field-group">
+                                <div class="field-group span-2">
                                     <label>IRN No</label>
                                     <DxTextBox />
                                 </div>
@@ -314,7 +325,7 @@
                                     <td>Tax Amount</td>
                                     <td>@(bill.BillIsRcm ? "0.00" : CalculatedGstAmount.ToString("F2"))</td>
                                 </tr>
-                                <tr>
+                                <tr class="input-row">
                                     <td>Extra Charge</td>
                                     <td>
                                         <DxSpinEdit TValue="double"
@@ -323,7 +334,7 @@
                                                     ShowSpinButtons="false" />
                                     </td>
                                 </tr>
-                                <tr>
+                                <tr class="input-row">
                                     <td>Less Advance (−)</td>
                                     <td>
                                         <DxSpinEdit TValue="double"
@@ -366,10 +377,10 @@
                     <!-- Tax Summary -->
                     <DxTabPage Text="Tax Summary">
                         <div class="pb-tab-body">
-                            <div style="display:flex; flex-direction:column; gap:14px;">
+                            <div style="display:flex; flex-direction:column; gap:12px;">
 
                                 <div class="field-group">
-                                    <label>SAC</label>
+                                    <label>SAC Code</label>
                                     <DxTextBox />
                                 </div>
 
@@ -382,40 +393,29 @@
                                 </div>
 
                                 <div class="field-group">
-                                    <label>GST (%)</label>
+                                    <label>GST Slab (%)</label>
                                     <div class="gst-row">
-                                        <DxComboBox TData="GstSlab"
-                                                    TValue="GstSlab"
+                                        <DxComboBox TData="GstSlab" TValue="GstSlab"
                                                     Data="Gstperlist"
                                                     Value="@SelectedGstSlab"
                                                     ValueChanged="@((GstSlab v) => { SelectedGstSlab = v; RecalculateTotals(); })"
                                                     TextFieldName="GstSlabName" />
-                                        <DxTextBox Text="@CalculatedGstAmount.ToString("F2")"
-                                                   ReadOnly="true" />
+                                        <DxTextBox Text="@CalculatedGstAmount.ToString("F2")" ReadOnly="true" />
                                     </div>
                                 </div>
 
-                                <table class="summary-table" style="margin-top:4px;">
-                                    <tr>
-                                        <td>CGST</td>
-                                        <td>@bill.BillCgst.ToString("F2")</td>
-                                    </tr>
-                                    <tr>
-                                        <td>SGST</td>
-                                        <td>@bill.BillSgst.ToString("F2")</td>
-                                    </tr>
-                                    <tr>
-                                        <td>IGST</td>
-                                        <td>@bill.BillIgst.ToString("F2")</td>
-                                    </tr>
+                                <table class="summary-table">
+                                    <tr><td>CGST</td><td>@bill.BillCgst.ToString("F2")</td></tr>
+                                    <tr><td>SGST</td><td>@bill.BillSgst.ToString("F2")</td></tr>
+                                    <tr><td>IGST</td><td>@bill.BillIgst.ToString("F2")</td></tr>
                                     <tr class="highlight-row">
                                         <td>GST on Freight</td>
                                         <td>@bill.BillGstAmtFreight.ToString("F2")</td>
                                     </tr>
                                 </table>
 
-                                <div class="field-group" style="margin-top:8px;">
-                                    <label>SAC (Other)</label>
+                                <div class="field-group">
+                                    <label>SAC (Other Charges)</label>
                                     <DxTextBox />
                                 </div>
                                 <div class="field-group">
@@ -426,7 +426,6 @@
                                     <label>GST Amount (Other)</label>
                                     <DxTextBox Text="@bill.BillGstAmtCharge.ToString("F2")" ReadOnly="true" />
                                 </div>
-
                             </div>
                         </div>
                     </DxTabPage>
@@ -441,39 +440,44 @@
                 </DxTabs>
             </div>
 
-        </div>
+        </div><!-- /two-col-layout -->
 
-    </div>
+    </div><!-- /pb-form-scroll -->
 
-    <!-- ══ FOOTER ══ -->
+    <!-- ══ FOOTER — sticky inside grid row, same as lr-footer ══ -->
     <div class="pb-footer">
         <div class="pb-footer-meta">
             Party: <strong>@(partylist.FirstOrDefault(x => x.AccountId == lrs.LrPartyAccountId)?.AccountName ?? "—")</strong>
             &nbsp;|&nbsp;
             Net Total: <strong>@bill.BillTotal.ToString("N2")</strong>
         </div>
-        <button type="button" class="btn-back" style="margin-right:8px;">Cancel</button>
-        <button type="button" class="btn-save" @onclick="SaveBill">✓ Save Bill</button>
+        <button type="button" class="btn-back" style="margin-right:8px;"
+                @onclick='() => NavManager.NavigateTo("/")'>
+            Cancel
+        </button>
+        <button type="button" class="btn-save" @onclick="SaveBill">
+            ✓ Save Bill
+        </button>
     </div>
 
 </div>
 
 @code {
 
-    private Lr lrs = new Lr();
+    private Lr   lrs  = new Lr();
     private Bill bill = new Bill();
 
-    private IEnumerable<Account> partylist = new List<Account>();
-    private IEnumerable<Lr> lrslist = new List<Lr>();
-    private IEnumerable<GstSlab> Gstperlist = new List<GstSlab>();
-    private List<Lr> selectedLrs = new();
-    private List<Voucher> VoucherList = new();
-    private List<State> stateList = new();
+    private IEnumerable<Account> partylist   = new List<Account>();
+    private IEnumerable<Lr>      lrslist     = new List<Lr>();
+    private IEnumerable<GstSlab> Gstperlist  = new List<GstSlab>();
+    private List<Lr>             selectedLrs = new();
+    private List<Voucher>        VoucherList = new();
+    private List<State>          stateList   = new();
 
     private DateTime? fromDate;
     private DateTime? toDate;
 
-    private int TotalTrip;
+    private int    TotalTrip;
     private double GrossTotal;
     private double TotalWeight;
     private double ShortageAmount;
@@ -481,37 +485,32 @@
     private double LessAdvance;
     private double TotalBillAmount;
     private double NetTotal;
-
     private double CalculatedGstAmount;
     private GstSlab? SelectedGstSlab;
-    private bool IsInterState = false;
+    private bool   IsInterState = false;
 
-    public class SelectItem
-    {
-        public string Text { get; set; } = "";
-        public string Value { get; set; } = "";
-    }
+    public class SelectItem { public string Text { get; set; } = ""; public string Value { get; set; } = ""; }
 
-    private List<SelectItem> SupplyTypeList = new()
+    private readonly List<SelectItem> SupplyTypeList = new()
     {
-        new SelectItem { Text = "B2B",    Value = "B2B" },
-        new SelectItem { Text = "B2CS",   Value = "B2CS" },
-        new SelectItem { Text = "SEZWP",  Value = "SEZWP" },
-        new SelectItem { Text = "SEZWOP", Value = "SEZWOP" },
-        new SelectItem { Text = "EXPWP",  Value = "EXPWP" },
-        new SelectItem { Text = "EXPWOP", Value = "EXPWOP" },
-        new SelectItem { Text = "DEXP",   Value = "DEXP" }
+        new() { Text = "B2B",    Value = "B2B"    },
+        new() { Text = "B2CS",   Value = "B2CS"   },
+        new() { Text = "SEZWP",  Value = "SEZWP"  },
+        new() { Text = "SEZWOP", Value = "SEZWOP" },
+        new() { Text = "EXPWP",  Value = "EXPWP"  },
+        new() { Text = "EXPWOP", Value = "EXPWOP" },
+        new() { Text = "DEXP",   Value = "DEXP"   }
     };
 
     protected override async Task OnInitializedAsync()
     {
-        var list    = await AccountService.GetAllAsync();
-        var voucher = await VoucherService.GetAllAsync();
-        Gstperlist  = await GstSlabService.GetAllAsync();
-        stateList   = await StateService.GetStatesAsync();
+        var allAccounts = await AccountService.GetAllAsync();
+        var allVouchers = await VoucherService.GetAllAsync();
+        Gstperlist      = await GstSlabService.GetAllAsync();
+        stateList       = await StateService.GetStatesAsync();
 
-        VoucherList = voucher.Where(x => x.VoucherId == 1).ToList();
-        partylist   = list.Where(x => x.AccountTypeId == 18).ToList();
+        VoucherList = allVouchers.Where(x => x.VoucherId == 1).ToList();
+        partylist   = allAccounts.Where(x => x.AccountTypeId == 18).ToList();
     }
 
     private async Task SerchLrs()
@@ -522,22 +521,21 @@
 
     private void OnSelectionChanged(IEnumerable<object> items)
     {
-        var typedList = items?.Cast<Lr>().ToList() ?? new List<Lr>();
-        selectedLrs   = typedList;
-        CalculateSummary(typedList);
+        selectedLrs = items?.Cast<Lr>().ToList() ?? new();
+        CalculateSummary(selectedLrs);
     }
 
     private void CalculateSummary(List<Lr> selected)
     {
-        if (selected == null || !selected.Any())
+        if (!selected.Any())
         {
             TotalTrip = 0; GrossTotal = 0; TotalWeight = 0; ShortageAmount = 0;
         }
         else
         {
-            TotalTrip     = selected.Count;
-            GrossTotal    = selected.Sum(x => (double)x.LrRateBill);
-            TotalWeight   = Math.Round(selected.Sum(x => (double)x.LrLoadWt), 3);
+            TotalTrip      = selected.Count;
+            GrossTotal     = selected.Sum(x => (double)x.LrRateBill);
+            TotalWeight    = Math.Round(selected.Sum(x => (double)x.LrLoadWt), 3);
             ShortageAmount = 0;
         }
         RecalculateTotals();
@@ -565,33 +563,23 @@
         bill.BillAmount    = GrossTotal;
         bill.BillTotal     = Math.Round(NetTotal, 2);
         bill.BillNetAmount = (float)bill.BillTotal;
-
         StateHasChanged();
     }
 
     private void CalculateGst()
     {
-        if (bill.BillIsRcm)
+        if (bill.BillIsRcm || SelectedGstSlab == null || SelectedGstSlab.GstSlabType != "GST")
         {
-            bill.BillCgst = bill.BillSgst = bill.BillIgst = bill.BillGstAmtFreight = 0;
-            CalculatedGstAmount = 0;
-            return;
-        }
-
-        if (SelectedGstSlab == null || SelectedGstSlab.GstSlabType != "GST")
-        {
-            bill.BillCgst = bill.BillSgst = bill.BillIgst = bill.BillGstAmtFreight = 0;
-            CalculatedGstAmount = 0;
+            bill.BillCgst = bill.BillSgst = bill.BillIgst =
+            bill.BillGstAmtFreight = CalculatedGstAmount = 0;
             return;
         }
 
         double taxable = bill.BillTaxableAmt;
-
         if (IsInterState)
         {
             bill.BillIgst = Math.Round(taxable * SelectedGstSlab.GstSlabIgstPer / 100, 2);
-            bill.BillCgst = 0;
-            bill.BillSgst = 0;
+            bill.BillCgst = 0; bill.BillSgst = 0;
         }
         else
         {
@@ -600,9 +588,9 @@
             bill.BillIgst = 0;
         }
 
-        bill.BillGstAmtFreight  = bill.BillCgst + bill.BillSgst + bill.BillIgst;
-        bill.BillGstIdFreight   = SelectedGstSlab.GstSlabId;
-        CalculatedGstAmount     = bill.BillGstAmtFreight;
+        bill.BillGstAmtFreight = bill.BillCgst + bill.BillSgst + bill.BillIgst;
+        bill.BillGstIdFreight  = SelectedGstSlab.GstSlabId;
+        CalculatedGstAmount    = bill.BillGstAmtFreight;
     }
 
     private void OnPartyChanged(int partyId)
@@ -611,19 +599,18 @@
         var party = partylist.FirstOrDefault(x => x.AccountId == partyId);
         if (party == null) return;
 
-        bill.BillShipPartyId  = party.AccountId;
-        bill.BillAddress1     = party.AccountAddress1;
-        bill.BillPincode      = party.AccountPincode;
-        bill.BillContactNo    = party.AccountMobile;
-        bill.BillGstNo        = party.AccountGstNo;
-        bill.BillStateId      = party.AccountStateId ?? 0;
+        bill.BillShipPartyId   = party.AccountId;
+        bill.BillAddress1      = party.AccountAddress1;
+        bill.BillPincode       = party.AccountPincode;
+        bill.BillContactNo     = party.AccountMobile;
+        bill.BillGstNo         = party.AccountGstNo;
+        bill.BillStateId       = party.AccountStateId ?? 0;
         bill.BillPlaceOfSupply = party.AccountStateId ?? 0;
-
         StateHasChanged();
     }
 
     private async Task SaveBill()
     {
-        // TODO: wire up save logic
+        // TODO: save logic
     }
 }

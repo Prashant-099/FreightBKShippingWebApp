@@ -1030,25 +1030,26 @@
                     </DxTabs>
                 </div>
 
-                <!-- ══ FOOTER ══ -->
-                <div class="lr-footer">
-                    <div class="lr-footer-meta">
-                        @if (IsEditMode)
-                        {
-                            <span>Editing: </span>
-                        }
-                        LR No: <strong>@(string.IsNullOrWhiteSpace(model.LrNoStr) ? "—" : model.LrNoStr)</strong>
-                        &nbsp;|&nbsp;
-                        Date: <strong>@(model.LrDate.HasValue? model.LrDate.Value.ToString("dd MMM yyyy") : "—")</strong>
-                    </div>
-                    <button type="button" class="btn-back" style="margin-right:8px;" @onclick="GoBack">Cancel</button>
-                    <button type="submit" class="btn-save">✓ @(IsEditMode ? "Update LR" : "Save LR")</button>
-                </div>
-
             </EditForm>
 
         </div>
     }
+
+    <!-- ══ FOOTER — direct child of .lr-page grid row 3 ══ -->
+    <div class="lr-footer">
+        <div class="lr-footer-meta">
+            @if (IsEditMode)
+            {
+                <span>Editing: </span>
+            }
+            LR No: <strong>@(string.IsNullOrWhiteSpace(model.LrNoStr) ? "—" : model.LrNoStr)</strong>
+            &nbsp;|&nbsp;
+            Date: <strong>@(model.LrDate.HasValue? model.LrDate.Value.ToString("dd MMM yyyy") : "—")</strong>
+        </div>
+        <button type="button" class="btn-back" style="margin-right:8px;" @onclick="GoBack">Cancel</button>
+        <button type="button" class="btn-save" @onclick="Save">✓ @(IsEditMode ? "Update LR" : "Save LR")</button>
+    </div>
+
 </div>
 
 <FileUploadpopup IsVisible="@IsUploadPopupVisible"
