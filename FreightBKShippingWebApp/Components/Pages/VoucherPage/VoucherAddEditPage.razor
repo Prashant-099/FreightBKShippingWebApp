@@ -380,8 +380,11 @@ horizontalAlignment="HorizontalAlignment.Center"
 
             if (!success)
             {
-                ToastService.Error(isNew ? "Voucher creation failed!" : "Voucher update failed!");
-                return;
+               ToastService.Error(
+                VoucherService.LastError ??
+                (isNew ? "Voucher creation failed!" : "Voucher update failed!")
+            );
+            return;
             }
             AuditLogService.NotifyAuditChanged();
             ToastService.Success(isNew ? "Voucher created successfully!" : "Voucher updated successfully!");

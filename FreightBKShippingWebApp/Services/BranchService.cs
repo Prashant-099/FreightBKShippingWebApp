@@ -15,6 +15,7 @@ namespace FreightBKShippingWebApp.Services
         {
             _api = api;
         }
+        public string? LastError { get; private set; }
         // Get all branches
         public async Task<List<Branch>> GetAllAsync()
         {
@@ -68,10 +69,12 @@ namespace FreightBKShippingWebApp.Services
         {
             try
             {
+                LastError = null;
                 return await _api.PostAsync<bool, Branch>("api/Branches", branch);
             }
             catch (Exception ex)
             {
+                LastError = ex.Message;
                 Console.WriteLine($"❌ Error creating branch: {ex.Message}");
                 return false;
             }
@@ -82,10 +85,12 @@ namespace FreightBKShippingWebApp.Services
         {
             try
             {
+                LastError = null;
                 return await _api.PutAsync<bool, Branch>($"api/Branches/{branch.BranchId}", branch);
             }
             catch (Exception ex)
             {
+                LastError = ex.Message;
                 Console.WriteLine($"❌ Error updating branch: {ex.Message}");
                 return false;
             }

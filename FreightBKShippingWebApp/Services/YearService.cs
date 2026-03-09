@@ -12,7 +12,7 @@ namespace FreightBKShippingWebApp.Services
             _api = api;
             
         }
-
+        public string? LastError { get; private set; }
         public async Task<List<YearModel>> GetAllAsync()
         {
             try
@@ -47,11 +47,13 @@ namespace FreightBKShippingWebApp.Services
         {
             try
             {
+                LastError = null;
                 var result = await _api.PostAsync<bool, YearModel>("api/Years", year);
                 return result;
             }
             catch (Exception ex)
             {
+                LastError = ex.Message;
                 Console.WriteLine($"❌ Error creating year: {ex.Message}");
                 return false;
             }
@@ -63,11 +65,13 @@ namespace FreightBKShippingWebApp.Services
         {
             try
             {
+                LastError = null;
                 var result = await _api.PutAsync<bool, YearModel>($"api/Years/{year.YearId}", year);
                 return result;
             }
             catch (Exception ex)
             {
+                LastError = ex.Message;
                 Console.WriteLine($"❌ Error updating year: {ex.Message}");
                 return false;
             }

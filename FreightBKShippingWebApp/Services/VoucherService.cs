@@ -1,4 +1,5 @@
 ﻿
+using DocumentFormat.OpenXml.VariantTypes;
 using FreightBKShippingWebApp.Model;
 
 namespace FreightBKShippingWebApp.Services
@@ -13,7 +14,7 @@ namespace FreightBKShippingWebApp.Services
             _api = api;
             
         }
-
+        public string? LastError { get; private set; }
         public async Task<List<Voucher>> GetAllAsync()
         {
             try
@@ -49,11 +50,13 @@ namespace FreightBKShippingWebApp.Services
         {
             try
             {
+                LastError = null;
                 var result = await _api.PostAsync<bool, Voucher>("api/Vouchers", voucher);
                 return result;
             }
             catch (Exception ex)
             {
+                LastError = ex.Message;   // 👈 store API error
                 Console.WriteLine($"❌ Error creating voucher: {ex.Message}");
                 return false;
             }
@@ -65,11 +68,13 @@ namespace FreightBKShippingWebApp.Services
         {
             try
             {
+                LastError = null;
                 var result = await _api.PutAsync<bool, Voucher>($"api/Vouchers/{voucher.VoucherId}", voucher);
                 return result;
             }
             catch (Exception ex)
             {
+                LastError = ex.Message;   // 👈 store API error
                 Console.WriteLine($"❌ Error updating voucher: {ex.Message}");
                 return false;
             }
@@ -86,6 +91,7 @@ namespace FreightBKShippingWebApp.Services
             }
             catch (Exception ex)
             {
+                LastError = ex.Message;   // 👈 store API error
                 Console.WriteLine($"❌ Error deleting voucher: {ex.Message}");
                 return false;
             }

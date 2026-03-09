@@ -1533,7 +1533,7 @@ width:fit-content;
 
         return 100; // default
     }
-    private void OnBillAgainstChanged(int? selectedBillId)
+    private async Task OnBillAgainstChanged(int? selectedBillId)
     {
         if (!selectedBillId.HasValue)
         {
@@ -2003,7 +2003,7 @@ width:fit-content;
         StateHasChanged();
     }
 
-    public async void Show(Bill bill)
+    public async Task Show(Bill bill)
     {
 
         // ✅ Show loading only if critical data not loaded
@@ -2174,11 +2174,11 @@ width:fit-content;
             //       return;
             //   }
             //   EditModel.BillVoucherId = purchaseVoucherId;
-            OnJobDetailsChanged(EditModel.BillJobNo);
-            OnvoucherChanged(EditModel,EditModel.BillVoucherId);
+            await OnJobDetailsChanged(EditModel.BillJobNo);
+         await    OnvoucherChanged(EditModel,EditModel.BillVoucherId);
 
 
-            OnBillAgainstChanged(EditModel.BillQuatationId);
+          await   OnBillAgainstChanged(EditModel.BillQuatationId);
 
 
             // nextSNo = 1;
@@ -2362,7 +2362,7 @@ width:fit-content;
         shippartydetails(EditModel.BillPartyId);
     }
     // private EditContext? editContext;
-    private void OnJobDetailsChanged(string selectedjobno)
+    private async Task OnJobDetailsChanged(string selectedjobno)
     {
         if (string.IsNullOrWhiteSpace(selectedjobno))
             return;
