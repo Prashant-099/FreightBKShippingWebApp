@@ -70,15 +70,26 @@ builder.Services.AddDevExpressServerSideBlazorReportViewer();
 // ==========================================================
 // 4️⃣ AUTHENTICATION
 // ==========================================================
-builder.Services.AddAuthenticationCore();
-builder.Services.AddCascadingAuthenticationState();
-
-builder.Services.ConfigureApplicationCookie(options =>
+builder.Services.AddAuthentication(options =>
 {
+    options.DefaultAuthenticateScheme = "BlazorCookies";
+    options.DefaultChallengeScheme = "BlazorCookies";
+})
+.AddCookie("BlazorCookies", options =>
+{
+    options.LoginPath = "/login";
+    options.AccessDeniedPath = "/403";
     options.Cookie.HttpOnly = true;
-    options.Cookie.SecurePolicy = CookieSecurePolicy.Always; // HTTPS only
+    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
     options.Cookie.SameSite = SameSiteMode.Strict;
-});
+}); builder.Services.AddCascadingAuthenticationState();
+
+//builder.Services.ConfigureApplicationCookie(options =>
+//{
+//    options.Cookie.HttpOnly = true;
+//    options.Cookie.SecurePolicy = CookieSecurePolicy.Always; // HTTPS only
+//    options.Cookie.SameSite = SameSiteMode.Strict;
+//});
 
 // ==========================================================
 // 5️⃣ RESPONSE COMPRESSION
@@ -251,10 +262,32 @@ app.UseForwardedHeaders();
 // 2️⃣ Exception + HSTS (Production only)
 if (!app.Environment.IsDevelopment())
 {
-    app.UseExceptionHandler("/Error", createScopeForErrors: true);
+    // 500 — unhandled server errors
+    app.UseExceptionHandler("/500");
     app.UseHsts();
 }
+else
+{
+    // Development mein bhi 500 page show karo
+    app.UseExceptionHandler("/500");
+}
 
+app.UseStatusCodePages(async context =>
+{
+    var code = context.HttpContext.Response.StatusCode;
+    if (code == 403)
+    {
+        context.HttpContext.Response.Redirect("/403");
+    }
+    else if (code == 404)
+    {
+        context.HttpContext.Response.Redirect("/404");
+    }
+    else if (code == 500)
+    {
+        context.HttpContext.Response.Redirect("/500");
+    }
+});
 // 3️⃣ HTTPS
 app.UseHttpsRedirection();
 
@@ -279,5 +312,5 @@ app.UseOutputCache();
 // 🔟 Map Blazor
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
-
+app.MapControllers();
 app.Run();

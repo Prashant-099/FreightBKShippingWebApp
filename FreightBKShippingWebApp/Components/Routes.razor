@@ -1,7 +1,37 @@
-﻿@using Microsoft.AspNetCore.Components.Authorization
+﻿@* @using Microsoft.AspNetCore.Components.Authorization
 <Router AppAssembly="@typeof(Program).Assembly">
     <Found Context="routeData">
         <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(Layout.MainLayout)" />
         <FocusOnNavigate RouteData="@routeData" Selector="h1" />
     </Found>
+</Router> *@
+@using Microsoft.AspNetCore.Components.Authorization
+
+<Router AppAssembly="@typeof(Program).Assembly">
+    <Found Context="routeData">
+        <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(Layout.MainLayout)">
+            <NotAuthorized>
+                @* User logged in nahi hai ya permission nahi hai *@
+                @{
+                    var uri = Navigation.Uri;
+                    var isLoginPage = uri.Contains("/login") || uri.Contains("/register") ||
+                                      uri.Contains("/forgot") || uri.Contains("/reset-password");
+                }
+                @if (!isLoginPage)
+                {
+                    <RedirectTo Href="/403" />
+                }
+            </NotAuthorized>
+        </AuthorizeRouteView>
+        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+    </Found>
+    <NotFound>
+        @* Koi bhi unknown URL → 404 page *@
+        <PageTitle>404 – Not Found | FreightBook</PageTitle>
+        <RedirectTo Href="/404" />
+    </NotFound>
 </Router>
+
+@code {
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+}
