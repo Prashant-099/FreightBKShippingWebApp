@@ -1023,6 +1023,7 @@
                     BillDetailId = 0,
                     BillDetailQty = 1,
                     BillDetailRate = 0,
+                    BillDetailExchRate=1,
                     BillDetailActualRate = 0, // ✅ Initialize new field
                     BillDetailAmount = 0,
                     BillDetailTaxableAmt = 0,
@@ -1127,6 +1128,7 @@
             BillDetailUnit = source.BillDetailUnit,
             BillDetailUnitId = source.BillDetailUnitId,
             BillDetailRate = source.BillDetailRate,
+            BillDetailExchRate = source.BillDetailExchRate,
             BillDetailActualRate = source.BillDetailActualRate, // ✅ Clone purchase rate
             BillDetailQty = source.BillDetailQty,
             BillDetailAmount = source.BillDetailAmount,
@@ -1747,6 +1749,14 @@
 
     private async Task HandleValidSubmit(bool isPrint = false)
     {
+        if (EditModel.BillPartyId <= 0)
+        {
+
+            ToastService.Error(
+                    "Please Select the Party."
+                );
+            return;
+        }
         LoadingService.Show();
         try
         {
