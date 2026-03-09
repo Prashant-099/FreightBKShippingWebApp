@@ -1,4 +1,4 @@
-﻿using DevExpress.Drawing.Internal;
+using DevExpress.Drawing.Internal;
 using FreightBKShipping.Client.Services;
 using FreightBKShippingWebApp;
 using FreightBKShippingWebApp.Authentication;
@@ -18,7 +18,7 @@ var builder = WebApplication.CreateBuilder(args);
 DXDrawingEngine.ForceSkia(); // DevExpress drawing engine
 
 // ==========================================================
-// 1️⃣ RAZOR + BLAZOR SERVER
+// 1?? RAZOR + BLAZOR SERVER
 // ==========================================================
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
@@ -35,7 +35,7 @@ builder.Services.AddSignalR(options =>
 });
 
 // ==========================================================
-// 2️⃣ DATA PROTECTION (DO NOT CHANGE PATH IN PRODUCTION)
+// 2?? DATA PROTECTION (DO NOT CHANGE PATH IN PRODUCTION)
 // ==========================================================
 string keysPath;
 
@@ -45,7 +45,7 @@ if (builder.Environment.IsDevelopment())
 }
 else
 {
-    // ⚠️ Production path (Linux VPS)
+    // ?? Production path (Linux VPS)
     keysPath = "/var/lib/freightbkshipping/dataprotection-keys";
 }
 
@@ -57,7 +57,7 @@ builder.Services.AddDataProtection()
     .SetDefaultKeyLifetime(TimeSpan.FromDays(90));
 
 // ==========================================================
-// 3️⃣ DEVEXPRESS
+// 3?? DEVEXPRESS
 // ==========================================================
 builder.Services.AddDevExpressBlazor(options =>
 {
@@ -68,7 +68,7 @@ builder.Services.AddDevExpressBlazor(options =>
 builder.Services.AddDevExpressServerSideBlazorReportViewer();
 
 // ==========================================================
-// 4️⃣ AUTHENTICATION
+// 4?? AUTHENTICATION
 // ==========================================================
 builder.Services.AddAuthentication(options =>
 {
@@ -92,7 +92,7 @@ builder.Services.AddAuthentication(options =>
 //});
 
 // ==========================================================
-// 5️⃣ RESPONSE COMPRESSION
+// 5?? RESPONSE COMPRESSION
 // ==========================================================
 builder.Services.AddResponseCompression(options =>
 {
@@ -112,12 +112,12 @@ builder.Services.Configure<BrotliCompressionProviderOptions>(o =>
 });
 
 // ==========================================================
-// 6️⃣ OUTPUT CACHE
+// 6?? OUTPUT CACHE
 // ==========================================================
 builder.Services.AddOutputCache();
 
 // ==========================================================
-// 7️⃣ RATE LIMITING (GLOBAL SaaS PROTECTION)
+// 7?? RATE LIMITING (GLOBAL SaaS PROTECTION)
 // ==========================================================
 builder.Services.AddRateLimiter(options =>
 {
@@ -140,7 +140,7 @@ builder.Services.AddRateLimiter(options =>
 });
 
 // ==========================================================
-// 8️⃣ FORWARDED HEADERS (NGINX / LINUX VPS)
+// 8?? FORWARDED HEADERS (NGINX / LINUX VPS)
 // ==========================================================
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
@@ -153,30 +153,37 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 });
 
 // ==========================================================
-// 9️⃣ HTTP CLIENT
+// 9?? HTTP CLIENT
 // ==========================================================
 
-// 🔵 Local API
+// ?? Local API
+var apiBaseUrl = builder.Configuration["Api:BaseUrl"]
+    ?? throw new InvalidOperationException("Api:BaseUrl is not configured.");
 //builder.Services.AddHttpClient<ApiClient>(client =>
 //{
 //    client.BaseAddress = new Uri("https://localhost:5003/");
 //});
 
-// 🔴 Production API (Uncomment in production)
+// ?? Production API (Uncomment in production)
+//builder.Services.AddHttpClient<ApiClient>(client =>
+//{
+//    client.BaseAddress = new Uri("https://apihost.freightbook.in/");
+//});
 builder.Services.AddHttpClient<ApiClient>(client =>
 {
-    client.BaseAddress = new Uri("https://apihost.freightbook.in/");
+    client.BaseAddress = new Uri(apiBaseUrl);
 });
 
+
 // ==========================================================
-// 🔟 LOCALIZATION
+// ?? LOCALIZATION
 // ==========================================================
 builder.Services.AddLocalization();
 builder.Services.AddControllers();
 builder.Services.AddMvc();
 
 // ==========================================================
-// 1️⃣1️⃣ YOUR SCOPED SERVICES (UNCHANGED)
+// 1??1?? YOUR SCOPED SERVICES (UNCHANGED)
 // ==========================================================
 
 builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
@@ -225,6 +232,7 @@ builder.Services.AddScoped<GstExcelService>();
 builder.Services.AddScoped<Gstr2TemplateService>();
 builder.Services.AddScoped<Gstr3BTemplateService>();
 builder.Services.AddScoped<VehicleService>();
+builder.Services.AddSingleton<ShippingManagementService>();
 
 // PDF Services
 builder.Services.AddScoped<DataCleanupService>();
@@ -248,21 +256,21 @@ builder.Services.AddScoped<ITokenProvider, TokenProvider>();
 builder.Services.AddScoped<IGenericReportManager, GenericReportManager>();
 
 // ==========================================================
-// 🚀 BUILD APP
+// ?? BUILD APP
 // ==========================================================
 var app = builder.Build();
 
 // ==========================================================
-// 🔥 MIDDLEWARE ORDER (VERY IMPORTANT)
+// ?? MIDDLEWARE ORDER (VERY IMPORTANT)
 // ==========================================================
 
-// 1️⃣ Forwarded headers FIRST (Linux VPS)
+// 1?? Forwarded headers FIRST (Linux VPS)
 app.UseForwardedHeaders();
 
-// 2️⃣ Exception + HSTS (Production only)
+// 2?? Exception + HSTS (Production only)
 if (!app.Environment.IsDevelopment())
 {
-    // 500 — unhandled server errors
+    // 500 � unhandled server errors
     app.UseExceptionHandler("/500");
     app.UseHsts();
 }
@@ -288,29 +296,30 @@ app.UseStatusCodePages(async context =>
         context.HttpContext.Response.Redirect("/500");
     }
 });
-// 3️⃣ HTTPS
+// 3?? HTTPS
 app.UseHttpsRedirection();
 
-// 4️⃣ Compression
+// 4?? Compression
 app.UseResponseCompression();
 
-// 5️⃣ Security Headers (CSP)
+// 5?? Security Headers (CSP)
 app.UseSecurityHeaders();
 
-// 6️⃣ Static files
+// 6?? Static files
 app.UseStaticFiles();
 
-// 7️⃣ Anti-forgery
+// 7?? Anti-forgery
 app.UseAntiforgery();
 
-// 8️⃣ Rate limiter (BEFORE endpoints)
+// 8?? Rate limiter (BEFORE endpoints)
 app.UseRateLimiter();
 
-// 9️⃣ Output Cache
+// 9?? Output Cache
 app.UseOutputCache();
 
-// 🔟 Map Blazor
+// ?? Map Blazor
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 app.MapControllers();
 app.Run();
+
