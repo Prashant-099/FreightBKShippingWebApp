@@ -8,6 +8,341 @@
 @inject LrApiService LrService
 @inject NavigationManager NavManager
 @inject AuditLogService AuditLogService
+@inject LoadingService LoadingService
+@inject ToasteService ToastService
+@inject ConfirmationDialogService ConfirmDialogService
+@inject AccountService AccountService
+@inject VehicleService VehicleService
+@inject IJSRuntime JS
+
+<style>
+    /* ── Amount badges ─────────────────────────────────────────────── */
+    .amt-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 3px 10px;
+        border-radius: 5px;
+        font-weight: 700;
+        font-size: 12.5px;
+        cursor: default;
+        user-select: none;
+        letter-spacing: .01em;
+        transition: filter .15s;
+        white-space: nowrap;
+        min-width: max-content;
+        background: #eff6ff;
+        color: #1d4ed8;
+    }
+
+        .amt-badge:hover {
+            filter: brightness(.94);
+        }
+
+        .amt-badge.green {
+            background: #dcfce7;
+            color: #15803d;
+        }
+
+        .amt-badge.orange {
+            background: #ffedd5;
+            color: #c2410c;
+        }
+
+        .amt-badge.purple {
+            background: #ede9fe;
+            color: #6d28d9;
+        }
+
+        .amt-badge.red {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+
+        .amt-badge.teal {
+            background: #ccfbf1;
+            color: #0f766e;
+        }
+
+        .amt-badge .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+            opacity: .6;
+            flex-shrink: 0;
+        }
+
+    /* ── Grid cell overflow — never clip badge ── */
+    .dxbl-grid-data-cell,
+    .grid-size .dxbl-grid-data-cell {
+        overflow: visible !important;
+        vertical-align: middle !important;
+        padding: 2px 4px !important;
+    }
+
+        .dxbl-grid-data-cell *,
+        .dxbl-grid-data-cell > div,
+        .dxbl-grid-data-cell > span,
+        .dxbl-fl-ctr {
+            overflow: visible !important;
+            white-space: nowrap !important;
+        }
+
+    /* ── Override DevExpress table-layout:fixed so badge never clips ── */
+    .dxbl-grid table,
+    .grid-size .dxbl-grid table {
+        table-layout: auto !important;
+    }
+    /* Keep rows aligned but let badge columns breathe */
+    .dxbl-grid-data-cell .amt-badge {
+        display: inline-flex !important;
+        white-space: nowrap !important;
+        min-width: max-content !important;
+    }
+
+    /* ── Global tooltip ────────────────────────────────────────────── */
+    #lr-tt {
+        display: none;
+        position: fixed;
+        z-index: 2147483647;
+        background: #0f172a;
+        border: 1px solid #1e3a5f;
+        color: #e2e8f0;
+        border-radius: 10px;
+        padding: 0;
+        font-family: 'Segoe UI', system-ui, sans-serif;
+        font-size: 12.5px;
+        line-height: 1.5;
+        box-shadow: 0 12px 40px rgba(0,0,0,.55), 0 2px 8px rgba(0,0,0,.3);
+        pointer-events: none;
+        min-width: 260px;
+        max-width: 480px;
+        overflow: hidden;
+    }
+
+        #lr-tt.visible {
+            display: block;
+        }
+
+        /* arrow */
+        #lr-tt::before {
+            content: "";
+            position: absolute;
+            bottom: -7px;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 7px solid transparent;
+            border-top-color: #1e3a5f;
+            border-bottom: none;
+        }
+
+        #lr-tt::after {
+            content: "";
+            position: absolute;
+            bottom: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 6px solid transparent;
+            border-top-color: #0f172a;
+            border-bottom: none;
+        }
+
+        /* header strip */
+        #lr-tt .tt-head {
+            padding: 8px 14px 7px;
+            background: #1e3a5f;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: .07em;
+            text-transform: uppercase;
+            color: #7dd3fc;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+            #lr-tt .tt-head .tt-icon {
+                width: 16px;
+                height: 16px;
+                background: #38bdf8;
+                border-radius: 3px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 9px;
+                color: #0f172a;
+                font-weight: 900;
+            }
+
+        /* table */
+        #lr-tt table {
+            width: 100%;
+            border-collapse: collapse;
+            padding: 0 14px;
+        }
+
+        #lr-tt .tt-body {
+            padding: 8px 14px 10px;
+        }
+
+        #lr-tt thead tr th {
+            font-size: 10.5px;
+            font-weight: 600;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            padding: 4px 6px 5px 0;
+            border-bottom: 1px solid #1e293b;
+            white-space: nowrap;
+        }
+
+            #lr-tt thead tr th:last-child {
+                text-align: right;
+            }
+
+        #lr-tt tbody tr td {
+            padding: 4px 6px 4px 0;
+            vertical-align: middle;
+            border-bottom: 1px solid #0f1e30;
+            white-space: nowrap;
+        }
+
+        #lr-tt tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* name cell */
+        #lr-tt .tt-name {
+            color: #cbd5e1;
+            max-width: 240px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        /* mid (qty/ltr) */
+        #lr-tt .tt-mid {
+            color: #475569;
+            font-size: 11.5px;
+            text-align: center;
+            padding: 4px 10px;
+        }
+        /* amount */
+        #lr-tt .tt-amt {
+            text-align: right;
+            font-weight: 700;
+            color: #38bdf8;
+            font-variant-numeric: tabular-nums;
+            padding-left: 16px;
+        }
+
+        /* total row */
+        #lr-tt .tt-total {
+            margin: 6px 14px 10px;
+            padding: 6px 10px;
+            background: #1e293b;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+            #lr-tt .tt-total .tt-total-label {
+                font-size: 11px;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: .06em;
+                color: #64748b;
+            }
+
+            #lr-tt .tt-total .tt-total-amt {
+                font-size: 14px;
+                font-weight: 800;
+                color: #fbbf24;
+                font-variant-numeric: tabular-nums;
+            }
+
+        /* empty state */
+        #lr-tt .tt-empty {
+            padding: 12px 14px;
+            color: #475569;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        /* formula strip (shown below gross freight tooltip) */
+        #lr-tt .tt-formula {
+            background: #0a1628;
+            border-top: 1px solid #1e293b;
+            padding: 8px 14px 10px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 4px 2px;
+            font-size: 11px;
+        }
+
+        #lr-tt .tf-item {
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        #lr-tt .tf-gross {
+            background: #1e3a5f;
+            color: #7dd3fc;
+        }
+
+        #lr-tt .tf-plus {
+            background: #14532d;
+            color: #86efac;
+        }
+
+        #lr-tt .tf-minus {
+            background: #450a0a;
+            color: #fca5a5;
+        }
+
+        #lr-tt .tf-net {
+            background: #134e4a;
+            color: #5eead4;
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        #lr-tt .tf-neg {
+            background: #450a0a;
+            color: #f87171;
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        #lr-tt .tf-op {
+            color: #64748b;
+            font-weight: 700;
+            font-size: 13px;
+            padding: 0 1px;
+        }
+
+        #lr-tt .tf-plus-op {
+            color: #86efac;
+        }
+
+        #lr-tt .tf-minus-op {
+            color: #fca5a5;
+        }
+
+        #lr-tt .tf-eq {
+            color: #fbbf24;
+            font-weight: 900;
+            font-size: 14px;
+            padding: 0 3px;
+        }
+</style>
+
+<!-- Single global tooltip node — JS moves it to <body> to escape overflow:hidden -->
+<div id="lr-tt"></div>
+
 <DxGrid TItem="LrListVM"
         Data="@LrList"
         @ref="MyGrid"
@@ -25,7 +360,6 @@
         CssClass="grid-size"
         AllowSelectRowByClick="true">
 
-    <!-- ================= TOOLBAR ================= -->
     <ToolbarTemplate>
         <DxToolbar>
             <Items>
@@ -35,23 +369,19 @@
                 <DxToolbarItem Text="Delete" IconCssClass="bi bi-trash" Click="OnDelete"
                                Enabled="@(SelectedLrs?.Any() == true)" />
                 <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="LoadDataAsync" />
-
                 <DxToolbarItem Alignment="ToolbarItemAlignment.Right"
                                RenderStyle="ButtonRenderStyle.Secondary"
                                IconCssClass="bi bi-gear-wide-connected"
                                Click="ShowLayoutPopup" />
-
             </Items>
         </DxToolbar>
     </ToolbarTemplate>
 
-    <!-- ================= COLUMNS ================= -->
     <Columns>
 
-        <DxGridSelectionColumn Width="40"
-                               FixedPosition="GridColumnFixedPosition.Left" />
+        <DxGridSelectionColumn Width="40" FixedPosition="GridColumnFixedPosition.Left" />
 
-        <!-- Basic Info -->
+        <!-- LR No -->
         <DxGridDataColumn FieldName="LrNoStr" Caption="LR No"
                           Width="@(layoutManager?.GetColumnWidth("LrNoStr") ?? "120px")"
                           Visible="@(layoutManager?.GetColumnVisibility("LrNoStr") ?? true)">
@@ -61,98 +391,244 @@
                 }
                 <a href="javascript:void(0)"
                    style="color:#2563eb;font-weight:600;text-decoration:none;cursor:pointer;"
-                   @onclick="@(() => NavigateToEdit(lr.LrId))">
-                    @lr.LrNoStr
-                </a>
+                   @onclick="@(() => NavigateToEdit(lr.LrId))">@lr.LrNoStr</a>
             </CellDisplayTemplate>
         </DxGridDataColumn>
 
-        <DxGridDataColumn FieldName="LrDate" Caption="Date"
-                          DisplayFormat="dd-MM-yyyy"
-                          Width="@(layoutManager?.GetColumnWidth("LrDate") ?? "120px")"
+        <DxGridDataColumn FieldName="LrDate" Caption="Date" DisplayFormat="dd-MM-yyyy"
+                          Width="@(layoutManager?.GetColumnWidth("LrDate") ?? "110px")"
                           Visible="@(layoutManager?.GetColumnVisibility("LrDate") ?? true)" />
 
         <DxGridDataColumn FieldName="LrTripNo" Caption="Trip No"
-                          Width="@(layoutManager?.GetColumnWidth("LrTripNo") ?? "100px")"
+                          Width="@(layoutManager?.GetColumnWidth("LrTripNo") ?? "90px")"
                           Visible="@(layoutManager?.GetColumnVisibility("LrTripNo") ?? true)" />
 
-        <!-- Party Info -->
         <DxGridDataColumn FieldName="PartyName" Caption="Party"
-                          Width="@(layoutManager?.GetColumnWidth("PartyName") ?? "300px")"
+                          Width="@(layoutManager?.GetColumnWidth("PartyName") ?? "200px")"
                           Visible="@(layoutManager?.GetColumnVisibility("PartyName") ?? true)" />
 
         <DxGridDataColumn FieldName="SupplierName" Caption="Supplier"
-                          Width="@(layoutManager?.GetColumnWidth("SupplierName") ?? "300px")"
+                          Width="@(layoutManager?.GetColumnWidth("SupplierName") ?? "200px")"
                           Visible="@(layoutManager?.GetColumnVisibility("SupplierName") ?? true)" />
 
+        <!-- ── Vehicle — lookup by VehicleId ── -->
         <DxGridDataColumn FieldName="VehicleNo" Caption="Vehicle"
-                          Width="@(layoutManager?.GetColumnWidth("VehicleNo") ?? "170px")"
-                          Visible="@(layoutManager?.GetColumnVisibility("VehicleNo") ?? true)" />
+                          Width="@(layoutManager?.GetColumnWidth("VehicleNo") ?? "140px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("VehicleNo") ?? true)">
+            <CellDisplayTemplate Context="ctx">
+                @{
+                    var lr = (LrListVM)ctx.DataItem;
+                    // Try VehicleId lookup first, fallback to VehicleNo string field
+                    string vNo = "—";
+                    if (lr.LrVehicleId > 0 && _vehicleNames.TryGetValue(lr.LrVehicleId ?? 0, out var vn1))
+                        vNo = vn1;
+                    else if (!string.IsNullOrEmpty(lr.VehicleNo))
+                        vNo = lr.VehicleNo;
+                }
+                <span style="font-weight:600; color:#1e40af; font-size:12.5px; letter-spacing:.03em;">@vNo</span>
+            </CellDisplayTemplate>
+        </DxGridDataColumn>
 
         <DxGridDataColumn FieldName="DriverName" Caption="Driver"
-                          Width="@(layoutManager?.GetColumnWidth("DriverName") ?? "170px")"
+                          Width="@(layoutManager?.GetColumnWidth("DriverName") ?? "150px")"
                           Visible="@(layoutManager?.GetColumnVisibility("DriverName") ?? true)" />
 
-        <!-- Location -->
         <DxGridDataColumn FieldName="FromLocationName" Caption="From"
-                          Width="@(layoutManager?.GetColumnWidth("FromLocationName") ?? "210px")"
+                          Width="@(layoutManager?.GetColumnWidth("FromLocationName") ?? "180px")"
                           Visible="@(layoutManager?.GetColumnVisibility("FromLocationName") ?? true)" />
 
         <DxGridDataColumn FieldName="ToLocationName" Caption="To"
-                          Width="@(layoutManager?.GetColumnWidth("ToLocationName") ?? "210px")"
+                          Width="@(layoutManager?.GetColumnWidth("ToLocationName") ?? "180px")"
                           Visible="@(layoutManager?.GetColumnVisibility("ToLocationName") ?? true)" />
 
-        <!-- Weight -->
         <DxGridDataColumn FieldName="LrLoadWt" Caption="Load Wt"
-                          Width="@(layoutManager?.GetColumnWidth("LrLoadWt") ?? "110px")"
+                          Width="@(layoutManager?.GetColumnWidth("LrLoadWt") ?? "100px")"
                           Visible="@(layoutManager?.GetColumnVisibility("LrLoadWt") ?? true)" />
 
         <DxGridDataColumn FieldName="LrUnloadWt" Caption="Unload Wt"
-                          Width="@(layoutManager?.GetColumnWidth("LrUnloadWt") ?? "110px")"
+                          Width="@(layoutManager?.GetColumnWidth("LrUnloadWt") ?? "100px")"
                           Visible="@(layoutManager?.GetColumnVisibility("LrUnloadWt") ?? true)" />
 
         <DxGridDataColumn FieldName="LrShortWt" Caption="Short Wt"
-                          Width="@(layoutManager?.GetColumnWidth("LrShortWt") ?? "100px")"
+                          Width="@(layoutManager?.GetColumnWidth("LrShortWt") ?? "90px")"
                           Visible="@(layoutManager?.GetColumnVisibility("LrShortWt") ?? true)" />
 
-        <!-- Billing -->
         <DxGridDataColumn FieldName="LrBillTypeBill" Caption="Bill Type"
-                          Width="@(layoutManager?.GetColumnWidth("LrBillTypeBill") ?? "150px")"
+                          Width="@(layoutManager?.GetColumnWidth("LrBillTypeBill") ?? "140px")"
                           Visible="@(layoutManager?.GetColumnVisibility("LrBillTypeBill") ?? true)" />
 
         <DxGridDataColumn FieldName="LrRateBill" Caption="Rate"
-                          Width="@(layoutManager?.GetColumnWidth("LrRateBill") ?? "100px")"
+                          Width="@(layoutManager?.GetColumnWidth("LrRateBill") ?? "90px")"
                           Visible="@(layoutManager?.GetColumnVisibility("LrRateBill") ?? true)" />
 
+        <!-- ── Gross Freight — product breakdown on hover ── -->
         <DxGridDataColumn FieldName="LrGrossFreightBill" Caption="Gross Freight"
-                          Width="@(layoutManager?.GetColumnWidth("LrGrossFreightBill") ?? "130px")"
-                          Visible="@(layoutManager?.GetColumnVisibility("LrGrossFreightBill") ?? true)" />
+                          Width="@(layoutManager?.GetColumnWidth("LrGrossFreightBill") ?? "170px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("LrGrossFreightBill") ?? true)">
+            <CellDisplayTemplate Context="ctx">
+                @{
+                    var lr = (LrListVM)ctx.DataItem;
+                    var prods = GetProductDetails(lr.LrId);
+                    decimal gross = prods.Sum(p => p.Freight);
+                    decimal charges = GetJournalDetails(lr.LrId, "Charges").Sum(r => r.Amount);
+                    decimal advance = GetJournalDetails(lr.LrId, "Advance").Sum(r => r.Amount);
+                    decimal diesel = GetDieselDetails(lr.LrId).Sum(r => r.Amount);
+                    decimal expense = GetJournalDetails(lr.LrId, "Expense").Sum(r => r.Amount);
+                    decimal netCalc = gross + charges - advance - diesel - expense;
+                    string html = BuildProductHtml(prods, gross, charges, advance, diesel, expense, netCalc);
+                }
+                <span class="amt-badge"
+                      @onmouseenter="@(e => ShowTT(e, html))"
+                      @onmouseleave="HideTT">
+                    <span class="dot"></span>@gross.ToString("N2")
+                </span>
+            </CellDisplayTemplate>
+        </DxGridDataColumn>
 
-        <DxGridDataColumn FieldName="LrNetFreightBill" Caption="Net Freight"
-                          Width="@(layoutManager?.GetColumnWidth("LrNetFreightBill") ?? "130px")"
-                          Visible="@(layoutManager?.GetColumnVisibility("LrNetFreightBill") ?? true)" />
-
-        <!-- Truck -->
         <DxGridDataColumn FieldName="LrBillRateTruck" Caption="Truck Rate"
-                          Width="@(layoutManager?.GetColumnWidth("LrBillRateTruck") ?? "120px")"
+                          Width="@(layoutManager?.GetColumnWidth("LrBillRateTruck") ?? "110px")"
                           Visible="@(layoutManager?.GetColumnVisibility("LrBillRateTruck") ?? true)" />
 
         <DxGridDataColumn FieldName="LrNetFreightTruck" Caption="Truck Net"
-                          Width="@(layoutManager?.GetColumnWidth("LrNetFreightTruck") ?? "120px")"
+                          Width="@(layoutManager?.GetColumnWidth("LrNetFreightTruck") ?? "110px")"
                           Visible="@(layoutManager?.GetColumnVisibility("LrNetFreightTruck") ?? true)" />
 
-        <!-- GST -->
         <DxGridDataColumn FieldName="LrGstPercentage" Caption="GST %"
-                          Width="@(layoutManager?.GetColumnWidth("LrGstPercentage") ?? "90px")"
+                          Width="@(layoutManager?.GetColumnWidth("LrGstPercentage") ?? "80px")"
                           Visible="@(layoutManager?.GetColumnVisibility("LrGstPercentage") ?? true)" />
 
         <DxGridDataColumn FieldName="LrGstAmount" Caption="GST Amt"
-                          Width="@(layoutManager?.GetColumnWidth("LrGstAmount") ?? "100px")"
+                          Width="@(layoutManager?.GetColumnWidth("LrGstAmount") ?? "95px")"
                           Visible="@(layoutManager?.GetColumnVisibility("LrGstAmount") ?? true)" />
 
-        <!-- Status -->
+        <!-- ── Advance ── -->
+        <DxGridDataColumn Caption="Advance" FieldName="LrId"
+                          UnboundType="GridUnboundColumnType.Decimal"
+                          Width="@(layoutManager?.GetColumnWidth("AdvanceTotal") ?? "160px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("AdvanceTotal") ?? true)">
+            <CellDisplayTemplate Context="ctx">
+                @{
+                    var lr = (LrListVM)ctx.DataItem;
+                    var rows = GetJournalDetails(lr.LrId, "Advance");
+                    decimal tot = rows.Sum(r => r.Amount);
+                    string html = BuildJournalHtml("Advance Paid", "💳", rows, tot, false);
+                }
+                <span class="amt-badge green"
+                      @onmouseenter="@(e => ShowTT(e, html))"
+                      @onmouseleave="HideTT">
+                    <span class="dot"></span>@tot.ToString("N2")
+                </span>
+            </CellDisplayTemplate>
+        </DxGridDataColumn>
+
+        <!-- ── Diesel ── -->
+        <DxGridDataColumn Caption="Diesel" FieldName="LrId"
+                          UnboundType="GridUnboundColumnType.Decimal"
+                          Width="@(layoutManager?.GetColumnWidth("DieselTotal") ?? "160px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("DieselTotal") ?? true)">
+            <CellDisplayTemplate Context="ctx">
+                @{
+                    var lr = (LrListVM)ctx.DataItem;
+                    var rows = GetDieselDetails(lr.LrId);
+                    decimal tot = rows.Sum(r => r.Amount);
+                    string html = BuildJournalHtml("Diesel", "⛽", rows, tot, true);
+                }
+                <span class="amt-badge orange"
+                      @onmouseenter="@(e => ShowTT(e, html))"
+                      @onmouseleave="HideTT">
+                    <span class="dot"></span>@tot.ToString("N2")
+                </span>
+            </CellDisplayTemplate>
+        </DxGridDataColumn>
+
+        <!-- ── Charges ── -->
+        <DxGridDataColumn Caption="Charges" FieldName="LrId"
+                          UnboundType="GridUnboundColumnType.Decimal"
+                          Width="@(layoutManager?.GetColumnWidth("ChargesTotal") ?? "160px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("ChargesTotal") ?? true)">
+            <CellDisplayTemplate Context="ctx">
+                @{
+                    var lr = (LrListVM)ctx.DataItem;
+                    var rows = GetJournalDetails(lr.LrId, "Charges");
+                    decimal tot = rows.Sum(r => r.Amount);
+                    string html = BuildJournalHtml("Charges", "📋", rows, tot, false);
+                }
+                <span class="amt-badge purple"
+                      @onmouseenter="@(e => ShowTT(e, html))"
+                      @onmouseleave="HideTT">
+                    <span class="dot"></span>@tot.ToString("N2")
+                </span>
+            </CellDisplayTemplate>
+        </DxGridDataColumn>
+
+        <!-- ── Expense ── -->
+        <DxGridDataColumn Caption="Expense" FieldName="LrId"
+                          UnboundType="GridUnboundColumnType.Decimal"
+                          Width="@(layoutManager?.GetColumnWidth("ExpenseTotal") ?? "160px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("ExpenseTotal") ?? true)">
+            <CellDisplayTemplate Context="ctx">
+                @{
+                    var lr = (LrListVM)ctx.DataItem;
+                    var rows = GetJournalDetails(lr.LrId, "Expense");
+                    decimal tot = rows.Sum(r => r.Amount);
+                    string html = BuildJournalHtml("Expenses", "💸", rows, tot, false);
+                }
+                <span class="amt-badge red"
+                      @onmouseenter="@(e => ShowTT(e, html))"
+                      @onmouseleave="HideTT">
+                    <span class="dot"></span>@tot.ToString("N2")
+                </span>
+            </CellDisplayTemplate>
+        </DxGridDataColumn>
+
+        <!-- ── Advance Received ── -->
+        <DxGridDataColumn Caption="Adv. Received" FieldName="LrId"
+                          UnboundType="GridUnboundColumnType.Decimal"
+                          Width="@(layoutManager?.GetColumnWidth("AdvRecTotal") ?? "170px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("AdvRecTotal") ?? true)">
+            <CellDisplayTemplate Context="ctx">
+                @{
+                    var lr = (LrListVM)ctx.DataItem;
+                    var rows = GetJournalDetails(lr.LrId, "AdvanceReceived");
+                    decimal tot = rows.Sum(r => r.Amount);
+                    string html = BuildAdvRecHtml(rows, tot);
+                }
+                <span class="amt-badge teal"
+                      @onmouseenter="@(e => ShowTT(e, html))"
+                      @onmouseleave="HideTT">
+                    <span class="dot"></span>@tot.ToString("N2")
+                </span>
+            </CellDisplayTemplate>
+        </DxGridDataColumn>
+
+        <!-- ── Net Freight (Calculated) = Gross + Charges - Advance - Diesel - Expense ── -->
+        <DxGridDataColumn Caption="Net Freight" FieldName="LrId"
+                          UnboundType="GridUnboundColumnType.Decimal"
+                          Width="@(layoutManager?.GetColumnWidth("NetFreightCalc") ?? "190px")"
+                          Visible="@(layoutManager?.GetColumnVisibility("NetFreightCalc") ?? true)">
+            <CellDisplayTemplate Context="ctx">
+                @{
+                    var lr = (LrListVM)ctx.DataItem;
+                    decimal gross = GetProductDetails(lr.LrId).Sum(p => p.Freight);
+                    decimal charges = GetJournalDetails(lr.LrId, "Charges").Sum(r => r.Amount);
+                    decimal advance = GetJournalDetails(lr.LrId, "Advance").Sum(r => r.Amount);
+                    decimal diesel = GetDieselDetails(lr.LrId).Sum(r => r.Amount);
+                    decimal expense = GetJournalDetails(lr.LrId, "Expense").Sum(r => r.Amount);
+                    decimal net = gross + charges - advance - diesel - expense;
+                    string html = BuildNetFreightHtml(gross, charges, advance, diesel, expense, net);
+                }
+                <span class="amt-badge @(net < 0 ? "red" : "teal")"
+                      style="font-size:13px;font-weight:800;"
+                      @onmouseenter="@(e => ShowTT(e, html))"
+                      @onmouseleave="HideTT">
+                    <span class="dot"></span>@net.ToString("N2")
+                </span>
+            </CellDisplayTemplate>
+        </DxGridDataColumn>
+
+        <!-- ── Status ── -->
         <DxGridDataColumn FieldName="LrStatus" Caption="Status"
-                          Width="@(layoutManager?.GetColumnWidth("LrStatus") ?? "100px")"
+                          Width="@(layoutManager?.GetColumnWidth("LrStatus") ?? "90px")"
                           Visible="@(layoutManager?.GetColumnVisibility("LrStatus") ?? true)">
             <CellDisplayTemplate Context="ctx">
                 @{
@@ -164,6 +640,7 @@
                 }
                 else
                 {
+
                     <span class="badge bg-danger">Cancelled</span>
                 }
             </CellDisplayTemplate>
@@ -171,6 +648,7 @@
 
     </Columns>
 </DxGrid>
+
 <ConfirmationDialog />
 
 <GridLayoutpPopup @ref="layoutManager"
@@ -180,109 +658,430 @@
 
 @code {
 
+    // ══ JS tooltip ════════════════════════════════════════════════════
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("eval", @"
+                (function(){
+                    var el = document.getElementById('lr-tt');
+                    if(el && el.parentNode !== document.body)
+                        document.body.appendChild(el);
+                })();
+            ");
+        }
+    }
+
+    private async Task ShowTT(MouseEventArgs e, string html)
+    {
+        if (string.IsNullOrEmpty(html)) return;
+        var jsonHtml = System.Text.Json.JsonSerializer.Serialize(html);
+        var cx = e.ClientX.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        var cy = e.ClientY.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        await JS.InvokeVoidAsync("eval", $@"
+            (function(){{
+                var t = document.getElementById('lr-tt');
+                if(!t) return;
+                t.innerHTML = {jsonHtml};
+                t.classList.add('visible');
+                requestAnimationFrame(function(){{
+                    var x={cx}, y={cy};
+                    var tw=t.offsetWidth, th=t.offsetHeight;
+                    var left = x - tw/2;
+                    if(left < 8) left = 8;
+                    if(left+tw > window.innerWidth-8) left = window.innerWidth-tw-8;
+                    var top = y - th - 16;
+                    if(top < 8) top = y + 24;
+                    t.style.left = left+'px';
+                    t.style.top  = top+'px';
+                }});
+            }})();
+        ");
+    }
+
+    private async Task HideTT()
+    {
+        await JS.InvokeVoidAsync("eval",
+            "(function(){ var t=document.getElementById('lr-tt'); if(t) t.classList.remove('visible'); })();");
+    }
+
+    // ══ Tooltip HTML builders ══════════════════════════════════════════
+
+    private static string E(string s) => System.Web.HttpUtility.HtmlEncode(s);
+
+    // Products tooltip — shows each product + full formula at bottom
+    private string BuildProductHtml(List<ProductDetail> products, decimal gross,
+        decimal charges, decimal advance, decimal diesel, decimal expense, decimal net)
+    {
+        var active = products.Where(p => p.Freight != 0).ToList();
+        var sb = new System.Text.StringBuilder();
+
+        sb.Append("<div class='tt-head'><span class='tt-icon'>📦</span>Products &amp; Freight</div>");
+        sb.Append("<div class='tt-body'>");
+
+        if (!active.Any())
+        {
+            sb.Append("<div class='tt-empty'>No freight data</div>");
+        }
+        else
+        {
+            sb.Append("<table>");
+            sb.Append("<thead><tr><th>Product</th><th style='text-align:right;'>Freight</th></tr></thead>");
+            sb.Append("<tbody>");
+            foreach (var p in active)
+            {
+                sb.Append("<tr>");
+                sb.Append($"<td class='tt-name'>{E(p.ProductName)}</td>");
+                sb.Append($"<td class='tt-amt'>₹ {p.Freight:N2}</td>");
+                sb.Append("</tr>");
+            }
+            sb.Append("</tbody></table>");
+        }
+
+        sb.Append("</div>");
+        sb.Append($"<div class='tt-total'><span class='tt-total-label'>Gross Freight</span><span class='tt-total-amt'>₹ {gross:N2}</span></div>");
+
+        // formula strip: Gross + Charges - Advance - Diesel - Expense = Net
+        sb.Append("<div class='tt-formula'>");
+        sb.Append($"<span class='tf-item tf-gross'>₹ {gross:N2}</span>");
+        sb.Append($"<span class='tf-op tf-plus-op'>+</span><span class='tf-item tf-plus'>Charges ₹ {charges:N2}</span>");
+        sb.Append($"<span class='tf-op tf-minus-op'>−</span><span class='tf-item tf-minus'>Advance ₹ {advance:N2}</span>");
+        sb.Append($"<span class='tf-op tf-minus-op'>−</span><span class='tf-item tf-minus'>Diesel ₹ {diesel:N2}</span>");
+        sb.Append($"<span class='tf-op tf-minus-op'>−</span><span class='tf-item tf-minus'>Expense ₹ {expense:N2}</span>");
+        sb.Append($"<span class='tf-eq'>=</span><span class='tf-item {(net < 0 ? "tf-neg" : "tf-net")}'>Net ₹ {net:N2}</span>");
+        sb.Append("</div>");
+
+        return sb.ToString();
+    }
+
+    // Net Freight tooltip — full formula breakdown table
+    private string BuildNetFreightHtml(decimal gross, decimal charges,
+        decimal advance, decimal diesel, decimal expense, decimal net)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.Append("<div class='tt-head'><span class='tt-icon'>🧮</span>Net Freight Calculation</div>");
+        sb.Append("<div class='tt-body'>");
+        sb.Append("<table>");
+        sb.Append("<thead><tr><th>Component</th><th style='text-align:center;'>Sign</th><th style='text-align:right;'>Amount</th></tr></thead>");
+        sb.Append("<tbody>");
+        sb.Append($"<tr><td class='tt-name'>Gross Freight</td><td class='tt-mid' style='color:#38bdf8;font-weight:700;font-size:14px;'>+</td><td class='tt-amt'>₹ {gross:N2}</td></tr>");
+        sb.Append($"<tr><td class='tt-name'>Charges</td><td class='tt-mid' style='color:#38bdf8;font-weight:700;font-size:14px;'>+</td><td class='tt-amt'>₹ {charges:N2}</td></tr>");
+        sb.Append($"<tr><td class='tt-name'>Advance</td><td class='tt-mid' style='color:#f87171;font-weight:700;font-size:14px;'>−</td><td class='tt-amt' style='color:#f87171;'>₹ {advance:N2}</td></tr>");
+        sb.Append($"<tr><td class='tt-name'>Diesel</td><td class='tt-mid' style='color:#f87171;font-weight:700;font-size:14px;'>−</td><td class='tt-amt' style='color:#f87171;'>₹ {diesel:N2}</td></tr>");
+        sb.Append($"<tr><td class='tt-name'>Expense</td><td class='tt-mid' style='color:#f87171;font-weight:700;font-size:14px;'>−</td><td class='tt-amt' style='color:#f87171;'>₹ {expense:N2}</td></tr>");
+        sb.Append("</tbody></table>");
+        sb.Append("</div>");
+        var netStyle = net < 0 ? "color:#f87171;" : "";
+        sb.Append($"<div class='tt-total'><span class='tt-total-label'>= Net Freight</span><span class='tt-total-amt' style='{netStyle}'>₹ {net:N2}</span></div>");
+        return sb.ToString();
+    }
+
+    // Generic journal tooltip (Advance / Charges / Expense)
+    private string BuildJournalHtml(string title, string icon,
+        List<JournalDetail> rows, decimal total, bool showQty)
+    {
+        var active = rows.Where(r => r.Amount != 0).ToList();
+        var sb = new System.Text.StringBuilder();
+
+        sb.Append($"<div class='tt-head'><span class='tt-icon'>{icon}</span>{E(title)}</div>");
+        sb.Append("<div class='tt-body'>");
+
+        if (!active.Any())
+        {
+            sb.Append("<div class='tt-empty'>No entries</div>");
+        }
+        else
+        {
+            sb.Append("<table><thead><tr>");
+            sb.Append("<th>Account</th>");
+            if (showQty) sb.Append("<th style='text-align:center;'>Litres</th>");
+            sb.Append("<th style='text-align:right;'>Amount</th>");
+            sb.Append("</tr></thead><tbody>");
+
+            foreach (var r in active)
+            {
+                sb.Append("<tr>");
+                sb.Append($"<td class='tt-name'>{E(r.AccountName)}</td>");
+                if (showQty)
+                    sb.Append($"<td class='tt-mid'>{r.Qty:N2} L</td>");
+                sb.Append($"<td class='tt-amt'>₹ {r.Amount:N2}</td>");
+                sb.Append("</tr>");
+            }
+
+            sb.Append("</tbody></table>");
+        }
+
+        sb.Append("</div>");
+        sb.Append($"<div class='tt-total'><span class='tt-total-label'>Total</span><span class='tt-total-amt'>₹ {total:N2}</span></div>");
+
+        return sb.ToString();
+    }
+
+    // Advance Received tooltip
+    private string BuildAdvRecHtml(List<JournalDetail> rows, decimal total)
+    {
+        var active = rows.Where(r => r.Amount != 0).ToList();
+        var sb = new System.Text.StringBuilder();
+
+        sb.Append("<div class='tt-head'><span class='tt-icon'>💰</span>Advance Received</div>");
+        sb.Append("<div class='tt-body'>");
+
+        if (!active.Any())
+        {
+            sb.Append("<div class='tt-empty'>No entries</div>");
+        }
+        else
+        {
+            sb.Append("<table><thead><tr>");
+            sb.Append("<th>Account</th><th style='text-align:center;'>Diesel Qty</th><th style='text-align:right;'>Amount</th>");
+            sb.Append("</tr></thead><tbody>");
+
+            foreach (var r in active)
+            {
+                sb.Append("<tr>");
+                sb.Append($"<td class='tt-name'>{E(r.AccountName)}</td>");
+                sb.Append($"<td class='tt-mid'>{(r.Qty > 0 ? r.Qty.ToString("N2") + " L" : "—")}</td>");
+                sb.Append($"<td class='tt-amt'>₹ {r.Amount:N2}</td>");
+                sb.Append("</tr>");
+            }
+
+            sb.Append("</tbody></table>");
+        }
+
+        sb.Append("</div>");
+        sb.Append($"<div class='tt-total'><span class='tt-total-label'>Total Received</span><span class='tt-total-amt'>₹ {total:N2}</span></div>");
+
+        return sb.ToString();
+    }
+
+    // ══ Helper models ═════════════════════════════════════════════════
+
+    private class ProductDetail
+    {
+        public string ProductName { get; set; } = "";
+        public decimal Freight { get; set; }
+    }
+
+    private class JournalDetail
+    {
+        public string AccountName { get; set; } = "";
+        public decimal Amount { get; set; }
+        public decimal Qty { get; set; }
+    }
+
+    // ══ Caches ════════════════════════════════════════════════════════
+
+    private Dictionary<int, string> _accountNames = new();
+    private Dictionary<int, string> _vehicleNames = new();
+    private Dictionary<int, List<ProductDetail>> _productCache = new();
+    private Dictionary<int, List<JournalDetail>> _advanceCache = new();
+    private Dictionary<int, List<JournalDetail>> _dieselCache = new();
+    private Dictionary<int, List<JournalDetail>> _chargesCache = new();
+    private Dictionary<int, List<JournalDetail>> _expenseCache = new();
+    private Dictionary<int, List<JournalDetail>> _advRecCache = new();
+
+    private List<ProductDetail> GetProductDetails(int id) =>
+        _productCache.TryGetValue(id, out var v) ? v : new();
+
+    private List<JournalDetail> GetJournalDetails(int id, string group) => group switch
+    {
+        "Advance" => _advanceCache.TryGetValue(id, out var v) ? v : new(),
+        "Charges" => _chargesCache.TryGetValue(id, out var v) ? v : new(),
+        "Expense" => _expenseCache.TryGetValue(id, out var v) ? v : new(),
+        "AdvanceReceived" => _advRecCache.TryGetValue(id, out var v) ? v : new(),
+        _ => new()
+    };
+
+    private List<JournalDetail> GetDieselDetails(int id) =>
+        _dieselCache.TryGetValue(id, out var v) ? v : new();
+
+    // ══ Grid / selection ═════════════════════════════════════════════
+
     private DxGrid MyGrid;
     private List<LrListVM> LrList = new();
     private IReadOnlyList<object> SelectedLrs;
-
     private GridLayoutpPopup? layoutManager;
-    private List<GridColumnLayout> allColumns = [];
-    private async void ShowLayoutPopup()
+    private List<GridColumnLayout> allColumns = new();
+
+    private async void ShowLayoutPopup() =>
+        await InvokeAsync(() => layoutManager?.ShowPopup());
+
+    private async Task HandleLayoutChanged(List<GridColumnLayout> cols)
     {
-        await InvokeAsync(() =>
-        {
-            layoutManager?.ShowPopup();
-        });
-    }
-    private async Task HandleLayoutChanged(List<GridColumnLayout> updatedLayout)
-    {
-        allColumns = updatedLayout;
-        // Force the grid to re-render with new layout
+        allColumns = cols;
         await InvokeAsync(StateHasChanged);
     }
+
+    // ══ Init ══════════════════════════════════════════════════════════
 
     protected override async Task OnInitializedAsync()
     {
         InitializeColumns();
         await LoadDataAsync();
     }
+
     private void InitializeColumns()
     {
         allColumns = new List<GridColumnLayout>
-    {
-        // Selection column (optional – usually handled separately)
-        // new() { FieldName = "Selection", Caption = "", Visible = true, Width = 40, DisplayIndex = 0 },
-
-        // Basic Info
-        new() { FieldName = "LrNoStr", Caption = "LR No", Visible = true, Width = 120, DisplayIndex = 1 },
-        new() { FieldName = "LrDate", Caption = "Date", Visible = true, Width = 120, DisplayIndex = 2 },
-        new() { FieldName = "LrTripNo", Caption = "Trip No", Visible = true, Width = 100, DisplayIndex = 3 },
-
-        // Party Info
-        new() { FieldName = "PartyName", Caption = "Party", Visible = true, Width = 300, DisplayIndex = 4 },
-        new() { FieldName = "SupplierName", Caption = "Supplier", Visible = true, Width = 300, DisplayIndex = 5 },
-        new() { FieldName = "VehicleNo", Caption = "Vehicle", Visible = true, Width = 170, DisplayIndex = 6 },
-        new() { FieldName = "DriverName", Caption = "Driver", Visible = true, Width = 170, DisplayIndex = 7 },
-
-        // Location
-        new() { FieldName = "FromLocationName", Caption = "From", Visible = true, Width = 210, DisplayIndex = 8 },
-        new() { FieldName = "ToLocationName", Caption = "To", Visible = true, Width = 210, DisplayIndex = 9 },
-
-        // Weight
-        new() { FieldName = "LrLoadWt", Caption = "Load Wt", Visible = true, Width = 110, DisplayIndex = 10 },
-        new() { FieldName = "LrUnloadWt", Caption = "Unload Wt", Visible = true, Width = 110, DisplayIndex = 11 },
-        new() { FieldName = "LrShortWt", Caption = "Short Wt", Visible = true, Width = 100, DisplayIndex = 12 },
-
-        // Billing
-        new() { FieldName = "LrBillTypeBill", Caption = "Bill Type", Visible = true, Width = 150, DisplayIndex = 13 },
-        new() { FieldName = "LrRateBill", Caption = "Rate", Visible = true, Width = 100, DisplayIndex = 14 },
-        new() { FieldName = "LrGrossFreightBill", Caption = "Gross Freight", Visible = true, Width = 130, DisplayIndex = 15 },
-        new() { FieldName = "LrNetFreightBill", Caption = "Net Freight", Visible = true, Width = 130, DisplayIndex = 16 },
-
-        // Truck
-        new() { FieldName = "LrBillRateTruck", Caption = "Truck Rate", Visible = true, Width = 120, DisplayIndex = 17 },
-        new() { FieldName = "LrNetFreightTruck", Caption = "Truck Net", Visible = true, Width = 120, DisplayIndex = 18 },
-
-        // GST
-        new() { FieldName = "LrGstPercentage", Caption = "GST %", Visible = true, Width = 90, DisplayIndex = 19 },
-        new() { FieldName = "LrGstAmount", Caption = "GST Amt", Visible = true, Width = 100, DisplayIndex = 20 },
-
-        // Status
-        new() { FieldName = "LrStatus", Caption = "Status", Visible = true, Width = 100, DisplayIndex = 21 }
-    };
+        {
+            new() { FieldName = "LrNoStr",            Caption = "LR No",        Visible = true, Width = 120, DisplayIndex = 1  },
+            new() { FieldName = "LrDate",             Caption = "Date",          Visible = true, Width = 110, DisplayIndex = 2  },
+            new() { FieldName = "LrTripNo",           Caption = "Trip No",       Visible = true, Width = 90,  DisplayIndex = 3  },
+            new() { FieldName = "PartyName",          Caption = "Party",         Visible = true, Width = 200, DisplayIndex = 4  },
+            new() { FieldName = "SupplierName",       Caption = "Supplier",      Visible = true, Width = 200, DisplayIndex = 5  },
+            new() { FieldName = "VehicleNo",          Caption = "Vehicle",       Visible = true, Width = 130, DisplayIndex = 6  },
+            new() { FieldName = "DriverName",         Caption = "Driver",        Visible = true, Width = 150, DisplayIndex = 7  },
+            new() { FieldName = "FromLocationName",   Caption = "From",          Visible = true, Width = 180, DisplayIndex = 8  },
+            new() { FieldName = "ToLocationName",     Caption = "To",            Visible = true, Width = 180, DisplayIndex = 9  },
+            new() { FieldName = "LrLoadWt",           Caption = "Load Wt",       Visible = true, Width = 100, DisplayIndex = 10 },
+            new() { FieldName = "LrUnloadWt",         Caption = "Unload Wt",     Visible = true, Width = 100, DisplayIndex = 11 },
+            new() { FieldName = "LrShortWt",          Caption = "Short Wt",      Visible = true, Width = 90,  DisplayIndex = 12 },
+            new() { FieldName = "LrBillTypeBill",     Caption = "Bill Type",     Visible = true, Width = 140, DisplayIndex = 13 },
+            new() { FieldName = "LrRateBill",         Caption = "Rate",          Visible = true, Width = 90,  DisplayIndex = 14 },
+            new() { FieldName = "LrGrossFreightBill", Caption = "Gross Freight", Visible = true, Width = 165, DisplayIndex = 15 },
+            new() { FieldName = "LrBillRateTruck",    Caption = "Truck Rate",    Visible = true, Width = 110, DisplayIndex = 17 },
+            new() { FieldName = "LrNetFreightTruck",  Caption = "Truck Net",     Visible = true, Width = 110, DisplayIndex = 18 },
+            new() { FieldName = "LrGstPercentage",    Caption = "GST %",         Visible = true, Width = 80,  DisplayIndex = 19 },
+            new() { FieldName = "LrGstAmount",        Caption = "GST Amt",       Visible = true, Width = 95,  DisplayIndex = 20 },
+            new() { FieldName = "AdvanceTotal",       Caption = "Advance",       Visible = true, Width = 160, DisplayIndex = 21 },
+            new() { FieldName = "DieselTotal",        Caption = "Diesel",        Visible = true, Width = 160, DisplayIndex = 22 },
+            new() { FieldName = "ChargesTotal",       Caption = "Charges",       Visible = true, Width = 160, DisplayIndex = 23 },
+            new() { FieldName = "ExpenseTotal",       Caption = "Expense",       Visible = true, Width = 160, DisplayIndex = 24 },
+            new() { FieldName = "AdvRecTotal",        Caption = "Adv. Received", Visible = true, Width = 165, DisplayIndex = 25 },
+            new() { FieldName = "NetFreightCalc",      Caption = "Net Freight",   Visible = true, Width = 190, DisplayIndex = 26 },
+            new() { FieldName = "LrStatus",           Caption = "Status",        Visible = true, Width = 90,  DisplayIndex = 27 },
+        };
     }
+
+    // ══ Data loading ══════════════════════════════════════════════════
+
     private async Task LoadDataAsync()
     {
+        if (_accountNames.Count == 0)
+        {
+            var accounts = await AccountService.GetAllAsync();
+            _accountNames = accounts.ToDictionary(a => a.AccountId, a => a.AccountName ?? "");
+        }
+
+        if (_vehicleNames.Count == 0)
+        {
+            var vehicles = await VehicleService.GetAllAsync();
+            _vehicleNames = vehicles.ToDictionary(v => v.VehicleId, v => v.VehicleNo ?? "");
+        }
+
         LrList = await LrService.GetListAsync();
+
+        _productCache.Clear(); _advanceCache.Clear(); _dieselCache.Clear();
+        _chargesCache.Clear(); _expenseCache.Clear(); _advRecCache.Clear();
+
+        foreach (var lr in LrList)
+        {
+            try
+            {
+                var dto = await LrService.GetEntryAsync(lr.LrId);
+                if (dto == null) continue;
+
+                _productCache[lr.LrId] = (dto.Details ?? new())
+                    .Where(d => d.LrDetailGrossFreight.HasValue && d.LrDetailGrossFreight != 0)
+                    .Select(d => new ProductDetail
+                    {
+                        ProductName = d.LrDetailCargoName ?? $"Product {d.LrDetailProductId}",
+                        Freight = d.LrDetailGrossFreight ?? 0
+                    }).ToList();
+
+                var j = dto.Journals ?? new();
+                _advanceCache[lr.LrId] = MapJournalCache(j, "Advance");
+                _chargesCache[lr.LrId] = MapJournalCache(j, "Charges");
+                _expenseCache[lr.LrId] = MapJournalCache(j, "Expense");
+                _dieselCache[lr.LrId] = MapDieselCache(j);
+                _advRecCache[lr.LrId] = MapAdvRecCache(j);
+            }
+            catch { /* silently skip on error */ }
+        }
+
+        await InvokeAsync(StateHasChanged);
     }
 
-    private void OnSelectedLrsChanged(IReadOnlyList<object> items)
-    {
-        SelectedLrs = items;
-    }
+    private List<JournalDetail> MapJournalCache(List<LRJournal> journals, string group) =>
+        journals
+            .Where(j => j.JournalGroup?.ToString() == group && j.Amount.HasValue && j.Amount != 0)
+            .Select(j => new JournalDetail
+            {
+                AccountName = j.AccountId.HasValue && _accountNames.TryGetValue(j.AccountId.Value, out var n)
+                                ? n : $"Account {j.AccountId}",
+                Amount = j.Amount.HasValue ? Convert.ToDecimal(j.Amount) : 0
+            }).ToList();
 
-    // ── Navigation ────────────────────────────────────────────────────
+    private List<JournalDetail> MapDieselCache(List<LRJournal> journals) =>
+        journals
+            .Where(j => j.JournalGroup?.ToString() == "Diesel" && j.UreaAmount.HasValue && j.UreaAmount != 0)
+            .Select(j => new JournalDetail
+            {
+                AccountName = j.PumpBillId.HasValue && _accountNames.TryGetValue(j.PumpBillId.Value, out var n)
+                                ? n : $"Pump {j.PumpBillId}",
+                Amount = j.UreaAmount.HasValue ? Convert.ToDecimal(j.UreaAmount) : 0,
+                Qty = j.UreaQty.HasValue ? Convert.ToDecimal(j.UreaQty) : 0
+            }).ToList();
 
-    private void OnCreateNew()
-    {
-        NavManager.NavigateTo("/lrentry");
-    }
+    private List<JournalDetail> MapAdvRecCache(List<LRJournal> journals) =>
+        journals
+            .Where(j => j.JournalGroup?.ToString() == "AdvanceReceived" && j.Amount.HasValue && j.Amount != 0)
+            .Select(j => new JournalDetail
+            {
+                AccountName = j.AccountId.HasValue && _accountNames.TryGetValue(j.AccountId.Value, out var n)
+                                ? n : $"Account {j.AccountId}",
+                Amount = j.Amount.HasValue ? Convert.ToDecimal(j.Amount) : 0,
+                Qty = j.UreaQty.HasValue ? Convert.ToDecimal(j.UreaQty) : 0
+            }).ToList();
 
+    // ══ Selection / navigation / delete ═════════════════════════════
+
+    private void OnSelectedLrsChanged(IReadOnlyList<object> items) => SelectedLrs = items;
+    private void OnCreateNew() => NavManager.NavigateTo("/lrentry");
     private void OnEdit()
     {
         if (SelectedLrs?.Count == 1)
+            NavigateToEdit(((LrListVM)SelectedLrs.First()).LrId);
+    }
+    private void NavigateToEdit(int lrId) => NavManager.NavigateTo($"/lrentry/{lrId}");
+
+    private async Task ClearSelectionManual()
+    {
+        try { MyGrid?.ClearSelection(); SelectedLrs = new List<Lr>(); }
+        catch (Exception ex) { Console.WriteLine($"Clear selection error: {ex.Message}"); }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OnDelete()
+    {
+        if (SelectedLrs == null || SelectedLrs.Count == 0)
         {
-            var lr = (LrListVM)SelectedLrs.First();
-            NavigateToEdit(lr.LrId);
+            ToastService.Warning("Please select at least one LR to delete.");
+            return;
         }
-    }
-
-    private void NavigateToEdit(int lrId)
-    {
-        NavManager.NavigateTo($"/lrentry/{lrId}");
-    }
-
-    private void OnDelete()
-    {
-        // delete logic
+        var selectedList = SelectedLrs.Cast<LrListVM>().ToList();
+        var confirm = await ConfirmDialogService.ShowAsync(
+            $"Are you sure you want to delete {SelectedLrs.Count} selected LR(s)?");
+        if (!confirm) { await ClearSelectionManual(); return; }
+        try
+        {
+            LoadingService.Show("Deleting...");
+            int ok = 0, fail = 0;
+            foreach (var lrs in selectedList)
+            {
+                if (await LrService.DeleteAsync(lrs.LrId)) { ok++; AuditLogService.NotifyAuditChanged(); }
+                else fail++;
+            }
+            if (ok > 0) ToastService.Success($"{ok} LR(s) deleted successfully.");
+            if (fail > 0) ToastService.Error($"{fail} LR(s) failed to delete.");
+            await LoadDataAsync();
+        }
+        finally
+        {
+            LoadingService.Hide();
+            await ClearSelectionManual();
+        }
     }
 }

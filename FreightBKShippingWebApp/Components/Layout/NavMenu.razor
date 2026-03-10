@@ -1,4 +1,4 @@
-﻿@using FreightBKShippingWebApp.Authentication
+@using FreightBKShippingWebApp.Authentication
 @using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Services
 @using Microsoft.AspNetCore.Components.Authorization
@@ -21,13 +21,13 @@
     <nav class="sb-nav">
 
         <!-- Home -->
-        <NavLink class="sb-item" href="/" Match="NavLinkMatch.All"
+        <NavLink class="sb-item" href="/dashboard" Match="NavLinkMatch.All"
                  ActiveClass="sb-item-active" @onclick="NavClicked">
             <i class="bi bi-house-door-fill sb-icon" style="color:#3b82f6"></i>
             <span>Home</span>
         </NavLink>
 
-        <!-- ── ADMINISTRATION ─────────────────── -->
+        <!-- -- ADMINISTRATION ------------------- -->
         @if (ShowGroup("Administration", adminItems))
         {
             <div class="sb-label">Administration</div>
@@ -53,7 +53,7 @@
             </div>
         }
 
-        <!-- ── MASTERS ───────────────────────── -->
+        <!-- -- MASTERS ------------------------- -->
         @if (ShowGroup("Masters", masterItems))
         {
             <div class="sb-label">Masters</div>
@@ -79,7 +79,7 @@
             </div>
         }
 
-        <!-- ── OPERATIONS ────────────────────── -->
+        <!-- -- OPERATIONS ---------------------- -->
         @if (ShowGroup("Operations", shipItems) || ShowGroup("Transport", transportItems))
         {
             <div class="sb-label">Operations</div>
@@ -139,7 +139,7 @@
             }
         }
 
-        <!-- ── ACCOUNTING ────────────────────── -->
+        <!-- -- ACCOUNTING ---------------------- -->
         @if (ShowGroup("Accounting", voucherItems))
         {
             <div class="sb-label">Accounting</div>
@@ -165,7 +165,7 @@
             </div>
         }
 
-        <!-- ── ANALYTICS ─────────────────────── -->
+        <!-- -- ANALYTICS ----------------------- -->
         @if (ShowGroup("Analytics", reportItems))
         {
             <div class="sb-label">Analytics</div>
@@ -277,7 +277,7 @@
     };
 
     private List<M> shipItems = new()
-    {
+    {      
         new("Import Job", "/jobimport", "bi bi-box-arrow-in-down"),
         new("Export Job", "/jobexport", "bi bi-box-arrow-up"),
     };
@@ -328,3 +328,4 @@
 
     private async Task NavClicked() => await OnNavClick.InvokeAsync();
 }
+

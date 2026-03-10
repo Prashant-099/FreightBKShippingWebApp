@@ -232,7 +232,7 @@ builder.Services.AddScoped<GstExcelService>();
 builder.Services.AddScoped<Gstr2TemplateService>();
 builder.Services.AddScoped<Gstr3BTemplateService>();
 builder.Services.AddScoped<VehicleService>();
-builder.Services.AddSingleton<ShippingManagementService>();
+
 
 // PDF Services
 builder.Services.AddScoped<DataCleanupService>();

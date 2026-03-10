@@ -595,6 +595,8 @@ namespace FreightBKShippingWebApp.Model
         // Party Info (Names only)
         public string? PartyName { get; set; }
         public string? SupplierName { get; set; }
+        public int? LrVehicleId { get; set; }
+
         public string? VehicleNo { get; set; }
         public string? DriverName { get; set; }
 
@@ -623,5 +625,6 @@ namespace FreightBKShippingWebApp.Model
 
         // Status
         public int LrStatus { get; set; }
+
     }
 }
