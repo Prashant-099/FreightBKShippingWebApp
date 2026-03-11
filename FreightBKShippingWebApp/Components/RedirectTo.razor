@@ -1,0 +1,11 @@
+﻿@* Helper component: client-side redirect without full page reload *@
+@inject NavigationManager Navigation
+
+@code {
+    [Parameter, EditorRequired] public string Href { get; set; } = "/";
+
+    protected override void OnInitialized()
+    {
+        Navigation.NavigateTo(Href, replace: true);
+    }
+}

@@ -3,154 +3,255 @@
 
 <PageTitle>403 – Access Denied | FreightBook</PageTitle>
 
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
 <style>
-    @@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=JetBrains+Mono:wght@500&display=swap');
-    *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
-
-    body, .err-shell { background:#f0f4f8; font-family:'Sora',sans-serif; }
-    .err-shell { min-height:100vh; display:flex; flex-direction:column; }
-
-    .err-header {
-        height:60px;
-        background:linear-gradient(90deg,#1a73e8 0%,#1557b0 100%);
-        display:flex; align-items:center; padding:0 1.25rem; gap:.75rem;
-        box-shadow:0 2px 8px rgba(21,87,176,.3); flex-shrink:0;
+    *, *::before, *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
     }
-    .err-header img { height:36px; width:36px; border-radius:8px; border:2px solid rgba(255,255,255,.3); }
-    .hdr-brand { display:flex; flex-direction:column; line-height:1.2; }
-    .hdr-brand-name { font-size:1rem; font-weight:800; color:#fff; letter-spacing:-.3px; }
-    .hdr-brand-sub  { font-size:.65rem; color:rgba(255,255,255,.7); }
-    .hdr-marquee {
-        flex:1; overflow:hidden;
-        mask-image:linear-gradient(90deg,transparent,#000 6%,#000 94%,transparent);
-    }
-    .hdr-marquee-inner {
-        display:inline-flex; white-space:nowrap;
-        animation:marquee 20s linear infinite;
-        font-size:.78rem; color:rgba(255,255,255,.85);
-        font-family:'JetBrains Mono',monospace;
-    }
-    @@keyframes marquee { from{transform:translateX(0)} to{transform:translateX(-50%)} }
 
-    .err-body  { flex:1; display:flex; align-items:center; justify-content:center; padding:32px 20px; }
-    .err-wrap  { width:100%; max-width:540px; animation:fadeUp .45s ease both; }
+    .err-shell {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #edf1f8;
+        background-image: radial-gradient(ellipse 80% 60% at 10% 0%, rgba(26,115,232,.12) 0%, transparent 60%), radial-gradient(ellipse 60% 50% at 90% 100%, rgba(239,68,68,.08) 0%, transparent 55%);
+        font-family: 'Sora', sans-serif;
+        padding: 2rem 1rem;
+    }
+
+    .err-wrap {
+        width: 100%;
+        max-width: 500px;
+        animation: fadeUp .4s ease both;
+    }
 
     .err-banner {
-        background:linear-gradient(135deg,#dc2626 0%,#b91c1c 100%);
-        border-radius:16px; padding:22px 24px; margin-bottom:16px;
-        display:flex; align-items:center; justify-content:space-between;
-        box-shadow:0 4px 16px rgba(185,28,28,.25);
+        background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+        border-radius: 16px;
+        padding: 20px 22px;
+        margin-bottom: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        box-shadow: 0 4px 18px rgba(185,28,28,.28);
     }
-    .err-banner h2 { font-size:1.15rem; font-weight:800; color:#fff; margin-bottom:3px; letter-spacing:-.3px; }
-    .err-banner p  { font-size:.78rem; color:rgba(255,255,255,.75); font-family:'JetBrains Mono',monospace; }
+
+        .err-banner h2 {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: #fff;
+            margin-bottom: 3px;
+        }
+
+        .err-banner p {
+            font-size: .75rem;
+            color: rgba(255,255,255,.75);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
     .err-badge {
-        background:rgba(255,255,255,.2); border:1px solid rgba(255,255,255,.3);
-        color:#fff; font-size:.7rem; font-weight:700;
-        font-family:'JetBrains Mono',monospace;
-        padding:.3rem .85rem; border-radius:100px;
-        letter-spacing:1px; text-transform:uppercase;
+        background: rgba(255,255,255,.2);
+        border: 1px solid rgba(255,255,255,.3);
+        color: #fff;
+        font-size: .68rem;
+        font-weight: 700;
+        font-family: 'JetBrains Mono', monospace;
+        padding: .28rem .8rem;
+        border-radius: 100px;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        white-space: nowrap;
     }
 
     .err-card {
-        background:#fff; border-radius:16px; border:1px solid #e2e8f0;
-        padding:2.5rem 2rem 2.25rem; text-align:center;
-        box-shadow:0 2px 12px rgba(0,0,0,.06);
-        position:relative; overflow:hidden;
+        background: #fff;
+        border-radius: 18px;
+        border: 1px solid #dce5f2;
+        padding: 2.5rem 2rem 2.25rem;
+        text-align: center;
+        box-shadow: 0 4px 24px rgba(21,87,176,.10);
+        position: relative;
+        overflow: hidden;
     }
-    .err-card::before {
-        content:''; position:absolute;
-        top:0; left:0; right:0; height:4px;
-        background:linear-gradient(90deg,#ef4444,#f87171);
-    }
+
+        .err-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #ef4444, #f87171);
+        }
 
     .err-icon-box {
-        width:72px; height:72px; border-radius:16px;
-        display:flex; align-items:center; justify-content:center;
-        margin:0 auto 1.5rem; font-size:1.9rem;
-        background:#ef4444; color:#fff;
-        animation:lockShake 5s ease-in-out infinite;
+        width: 76px;
+        height: 76px;
+        border-radius: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1.4rem;
+        font-size: 2rem;
+        background: #ef4444;
+        color: #fff;
+        animation: lockShake 5s ease-in-out infinite;
     }
+
     @@keyframes lockShake {
-        0%,75%,100% { transform:rotate(0deg); }
-        78%  { transform:rotate(-8deg); }
-        82%  { transform:rotate(8deg); }
-        86%  { transform:rotate(-4deg); }
+        0%, 75%, 100% {
+            transform: rotate(0deg);
+        }
+
+        78% {
+            transform: rotate(-8deg);
+        }
+
+        82% {
+            transform: rotate(8deg);
+        }
+
+        86% {
+            transform: rotate(-4deg);
+        }
     }
 
-    .err-label   { font-size:.65rem; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:1.5px; font-family:'JetBrains Mono',monospace; margin-bottom:.35rem; }
-    .err-code    { font-family:'JetBrains Mono',monospace; font-size:clamp(4.5rem,15vw,7rem); font-weight:700; line-height:1; letter-spacing:-3px; color:#ef4444; margin-bottom:.2rem; }
-    .err-divider { width:40px; height:3px; background:linear-gradient(90deg,#ef4444,#f87171); margin:.65rem auto .9rem; border-radius:2px; }
-    .err-title   { font-size:1.2rem; font-weight:700; color:#1e293b; letter-spacing:-.3px; margin-bottom:.45rem; }
-    .err-sub     { font-size:.83rem; color:#64748b; line-height:1.65; max-width:360px; margin:0 auto 2rem; }
+    .err-label {
+        font-size: .62rem;
+        font-weight: 700;
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        font-family: 'JetBrains Mono', monospace;
+        margin-bottom: .3rem;
+    }
 
-    .err-actions { display:flex; gap:.75rem; justify-content:center; flex-wrap:wrap; }
+    .err-code {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: clamp(4rem,14vw,6.5rem);
+        font-weight: 700;
+        line-height: 1;
+        letter-spacing: -3px;
+        color: #ef4444;
+        margin-bottom: .2rem;
+    }
+
+    .err-divider {
+        width: 38px;
+        height: 3px;
+        background: linear-gradient(90deg,#ef4444,#f87171);
+        margin: .6rem auto .85rem;
+        border-radius: 2px;
+    }
+
+    .err-title {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #1e293b;
+        letter-spacing: -.3px;
+        margin-bottom: .4rem;
+    }
+
+    .err-sub {
+        font-size: .82rem;
+        color: #64748b;
+        line-height: 1.65;
+        max-width: 340px;
+        margin: 0 auto 1.75rem;
+    }
+
+    .err-actions {
+        display: flex;
+        gap: .75rem;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
     .btn-primary {
-        display:inline-flex; align-items:center; gap:.45rem;
-        padding:.6rem 1.5rem; background:#ef4444; color:#fff;
-        border:none; border-radius:10px;
-        font-family:'Sora',sans-serif; font-size:.85rem; font-weight:700;
-        cursor:pointer; text-decoration:none;
-        box-shadow:0 4px 12px rgba(239,68,68,.35);
-        transition:background .18s,transform .18s,box-shadow .18s;
+        display: inline-flex;
+        align-items: center;
+        gap: .4rem;
+        padding: .58rem 1.4rem;
+        background: #ef4444;
+        color: #fff;
+        border: none;
+        border-radius: 10px;
+        font-family: 'Sora', sans-serif;
+        font-size: .83rem;
+        font-weight: 700;
+        cursor: pointer;
+        text-decoration: none;
+        box-shadow: 0 4px 14px rgba(239,68,68,.32);
+        transition: background .18s, transform .18s, box-shadow .18s;
     }
-    .btn-primary:hover { background:#dc2626; transform:translateY(-2px); box-shadow:0 8px 20px rgba(239,68,68,.45); }
-    .btn-ghost {
-        display:inline-flex; align-items:center; gap:.45rem;
-        padding:.6rem 1.5rem; background:#f1f5f9; color:#64748b;
-        border:1px solid #e2e8f0; border-radius:10px;
-        font-family:'Sora',sans-serif; font-size:.85rem;
-        cursor:pointer; text-decoration:none;
-        transition:background .18s,color .18s;
-    }
-    .btn-ghost:hover { background:#e2e8f0; color:#334155; }
 
-    .err-footer {
-        height:40px; background:#fff; border-top:1px solid #e2e8f0;
-        display:flex; align-items:center; justify-content:center;
-        font-size:.75rem; color:#94a3b8; font-family:'JetBrains Mono',monospace;
+        .btn-primary:hover {
+            background: #dc2626;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 22px rgba(239,68,68,.42);
+        }
+
+    .btn-ghost {
+        display: inline-flex;
+        align-items: center;
+        gap: .4rem;
+        padding: .58rem 1.4rem;
+        background: #f1f5f9;
+        color: #64748b;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        font-family: 'Sora', sans-serif;
+        font-size: .83rem;
+        cursor: pointer;
+        text-decoration: none;
+        transition: background .18s, color .18s;
     }
-    @@keyframes fadeUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+
+        .btn-ghost:hover {
+            background: #e2e8f0;
+            color: #334155;
+        }
+
+    @@keyframes fadeUp {
+        from {
+            opacity: 0;
+            transform: translateY(16px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
 </style>
 
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
-
 <div class="err-shell">
-    <header class="err-header">
-        <img src="images/freightbook.jpg" alt="FB" />
-        <div class="hdr-brand">
-            <span class="hdr-brand-name">FreightBook</span>
-            <span class="hdr-brand-sub">Shipping Management</span>
-        </div>
-        <div class="hdr-marquee">
-            <div class="hdr-marquee-inner">
-                <span>FREIGHTBOOKSHIPPING &nbsp;&nbsp;<i class="bi bi-headset"></i> 9409309616 &nbsp;&nbsp;&nbsp;&nbsp; FREIGHTBOOKSHIPPING &nbsp;&nbsp;<i class="bi bi-headset"></i> 9409309616 &nbsp;&nbsp;&nbsp;&nbsp;</span>
+    <div class="err-wrap">
+        <div class="err-banner">
+            <div>
+                <h2>🔒 Access Restricted</h2>
+                <p>HTTP 403 · Unauthorized</p>
             </div>
+            <span class="err-badge">Error 403</span>
         </div>
-    </header>
-
-    <div class="err-body">
-        <div class="err-wrap">
-            <div class="err-banner">
-                <div>
-                    <h2>🔒 Access Restricted</h2>
-                    <p>HTTP 403 · Unauthorized</p>
-                </div>
-                <span class="err-badge">Error 403</span>
-            </div>
-            <div class="err-card">
-                <div class="err-icon-box"><i class="bi bi-lock-fill"></i></div>
-                <div class="err-label">Status Code</div>
-                <div class="err-code">403</div>
-                <div class="err-divider"></div>
-                <div class="err-title">Access Denied</div>
-                <p class="err-sub">You don't have permission to view this page. Contact your administrator if you believe this is a mistake.</p>
-                <div class="err-actions">
-                    <a href="/" class="btn-primary"><i class="bi bi-house-fill"></i> Back to Dashboard</a>
-                    <a href="javascript:history.back()" class="btn-ghost"><i class="bi bi-arrow-left"></i> Go Back</a>
-                </div>
+        <div class="err-card">
+            <div class="err-icon-box"><i class="bi bi-lock-fill"></i></div>
+            <div class="err-label">Status Code</div>
+            <div class="err-code">403</div>
+            <div class="err-divider"></div>
+            <div class="err-title">Access Denied</div>
+            <p class="err-sub">You don't have permission to view this page. Contact your administrator if you believe this is a mistake.</p>
+            <div class="err-actions">
+                <a href="/" class="btn-primary"><i class="bi bi-house-fill"></i> Back to Dashboard</a>
+                <a href="javascript:history.back()" class="btn-ghost"><i class="bi bi-arrow-left"></i> Go Back</a>
             </div>
         </div>
     </div>
-
-    <footer class="err-footer"><i class="bi bi-headset me-1"></i>&nbsp;Support: 9409309616</footer>
 </div>

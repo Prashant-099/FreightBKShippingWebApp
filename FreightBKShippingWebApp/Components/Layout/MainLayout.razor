@@ -14,6 +14,7 @@
 @inject YearStatechangeService YearStatechangeService
 @inject IJSRuntime JS
 @inject AuditLogService AuditLogService
+
 <DxLoadingPanel Visible="@LoadingService.IsLoading"
                 PositionTarget="body"
                 ApplyBackgroundShading="true"
@@ -309,15 +310,21 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender && _shouldRedirect)
-            NavigationManager.NavigateTo("/", forceLoad: true);
+            NavigationManager.NavigateTo("/login", forceLoad: true);
     }
+
+    // private async Task Logout()
+    // {
+    //     _profileOpen = false;
+    //     if (AuthStateProvider is CustomAuthStateProvider cp)
+    //         await cp.MarkUserAsLoggedOut();
+    //     NavigationManager.NavigateTo("/", true);
+    // }
 
     private async Task Logout()
     {
         _profileOpen = false;
-        if (AuthStateProvider is CustomAuthStateProvider cp)
-            await cp.MarkUserAsLoggedOut();
-        NavigationManager.NavigateTo("/", true);
+        await AuthService.LogoutAsync(); // ← AuthService.LogoutAsync use karo (already /login pe redirect karta hai)
     }
 
     public void Dispose()
