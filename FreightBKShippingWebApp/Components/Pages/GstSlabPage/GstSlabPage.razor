@@ -219,7 +219,7 @@
 
             if (freshData != null)
                 popup.Show(freshData);
-        
+
         }
         else
             ToastService.Warning("Please select a GST Slab to edit.");
@@ -245,21 +245,27 @@
         {
             LoadingService.Show("Deleting...");
             int successCount = 0, failCount = 0;
+            List<string> errorMessages = new();
             foreach (var slab in selectedList)
             {
                 var result = await GstSlabService.DeleteAsync(slab.GstSlabId);
-                if (result)
+                if (result.Success)
                 {
                     successCount++;
                     AuditLogService.NotifyAuditChanged();
                 }
-                else failCount++;
+                else 
+                {
+                    failCount++;
+                    errorMessages.Add(result.Error);
+                }
+
             }
 
         if (successCount > 0)
             ToastService.Success($"{successCount} GST Slab(s) deleted successfully.");
         if (failCount > 0)
-            ToastService.Error($"{failCount} GST Slab(s) failed to delete.");
+            ToastService.Error($"{failCount} GST Slab(s) Failed To Delete.\nDetails: {string.Join("\n", errorMessages.Distinct())}");
 
         await LoadGstSlabsAsync();
         }

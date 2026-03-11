@@ -238,25 +238,29 @@
         {
             LoadingService.Show("Deleting...");
             int successCount = 0, failCount = 0;
-
+            List<string> errorMessages = new();
 
             foreach (var group in selectedList)
             {
                 var result = await ServiceGroupService.DeleteAsync(group.ServiceGroupsId);
-                if (result)
+                if (result.Success)
                 {
                     successCount++;
                     AuditLogService.NotifyAuditChanged();
 
                 }
-                else failCount++;
+                else
+                { 
+                    errorMessages.Add(result.Error);
+                    failCount++; 
+                }
             }
 
         if (successCount > 0)
             ToastService.Success($"{successCount} Group(s) Deleted Successfully.");
 
         if (failCount > 0)
-            ToastService.Error($"{failCount} Group(s) Failed To Delete.");
+            ToastService.Error($"{failCount} ServiceGroup(s) Failed To Delete.\nDetails: {string.Join("\n", errorMessages.Distinct())}");
 
         await LoadServiceGroupsAsync();
         }

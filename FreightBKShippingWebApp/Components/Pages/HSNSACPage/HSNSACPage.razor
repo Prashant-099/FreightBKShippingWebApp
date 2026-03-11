@@ -244,22 +244,23 @@
         {
             LoadingService.Show("Deleting...");
             int successCount = 0, failCount = 0;
+            List<string> errorMessages = new();
             foreach (var item in selectedList)
         {
             var result = await HsnSacService.DeleteAsync(item.HsnId);
-            if (result)
+            if (result.Success)
 {
                 successCount++;
                     AuditLogService.NotifyAuditChanged();
 } else
                 failCount++;
+                errorMessages.Add(result.Error);
         }
 
         if (successCount > 0)
             ToastService.Success($"{successCount} record(s) deleted successfully.");
         if (failCount > 0)
-            ToastService.Error($"{failCount} record(s) failed to delete.");
-
+            ToastService.Error($"{failCount} HSN/SAC Failed To Delete.\nDetails: {string.Join("\n", errorMessages.Distinct())}");
         await LoadHsnAsync();
         }
         finally
