@@ -144,28 +144,38 @@
                   Click="ClosePopup" />
     </FooterContentTemplate>
 </DxPopup>
-
-<!-- 🔵 ADDED: PREVIEW POPUP -->
 <DxPopup @bind-Visible="IsPreviewVisible"
          HeaderText="Document Preview"
          Width="900px"
-         Height="650px" 
+         Height="650px"
          ShowCloseButton="true"
          CloseOnOutsideClick="true">
 
     <BodyContentTemplate>
-        @if (PreviewFile != null)
+
+        @if (!string.IsNullOrEmpty(PreviewSasUrl))
         {
-            <!-- iframe works for PDF, images, txt -->
-            @if (!string.IsNullOrEmpty(PreviewSasUrl))
+            @if (PreviewSasUrl.Contains(".pdf"))
             {
                 <iframe src="@PreviewSasUrl"
-                        style="width:100%; height:100%; border:none;">
+                        width="100%"
+                        height="600"
+                        style="border:none">
                 </iframe>
             }
-
-
+            else
+            {
+                <img src="@PreviewSasUrl"
+                     style="max-width:100%; max-height:600px;" />
+            }
         }
+        else
+        {
+            <div style="text-align:center;padding:20px;">
+                Loading preview...
+            </div>
+        }
+
     </BodyContentTemplate>
 
 </DxPopup>
@@ -286,16 +296,18 @@
     {
         PreviewFile = file;
 
-        PreviewSasUrl =
-            await FileUploadService.GetSasUrlAsync(file.DocumentId, 10);
+        var sas = await FileUploadService.GetSasUrlAsync(file.DocumentId, 10);
 
-        if (string.IsNullOrEmpty(PreviewSasUrl))
+        if (string.IsNullOrWhiteSpace(sas))
         {
             ToasteService.Error("Unable to generate preview link");
             return;
         }
 
+        PreviewSasUrl = sas;
         IsPreviewVisible = true;
+
+        StateHasChanged();
     }
 
     public async Task DeleteDocumentAsync(long documentId)

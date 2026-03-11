@@ -15,7 +15,7 @@
                     "img-src 'self' data: blob:; " +
                     "font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net; " +
                     "connect-src 'self' wss:; " + // 'wss:' is required for Blazor Server SignalR
-                    "frame-src 'self'; " +
+                    "frame-src 'self' https://freightbookstorage.blob.core.windows.net; " +
                     "form-action 'self'; " + // Prevents form data from being sent to other domains
                     "upgrade-insecure-requests;"; // Forces browser to use HTTPS for any HTTP links
 
