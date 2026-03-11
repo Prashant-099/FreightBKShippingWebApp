@@ -12,7 +12,7 @@ namespace FreightBKShippingWebApp.Services
             _api = api;
             
         }
-
+        public string? LastError { get; private set; }
         public async Task<List<Account>> GetAllAsync(int page = 1, int pageSize = 1000)
         {
             try
@@ -50,11 +50,13 @@ namespace FreightBKShippingWebApp.Services
           
             try
             {
+                LastError = null;
                 var created = await _api.PostAsync<Account, Account>("api/Accounts", account);
                 return created;
             }
             catch (Exception ex)
             {
+                LastError = ex.Message;
                 Console.WriteLine($"❌ Error creating account: {ex.Message}");
                 return null;
             }
@@ -66,6 +68,7 @@ namespace FreightBKShippingWebApp.Services
         {
             try
             {
+                LastError = null;
                 var result = await _api.PutAsync<Account, Account>(
                     $"api/Accounts/{account.AccountId}", account);
 
@@ -73,6 +76,7 @@ namespace FreightBKShippingWebApp.Services
             }
             catch (Exception ex)
             {
+                LastError = ex.Message;
                 Console.WriteLine($"❌ Error updating account: {ex.Message}");
                 return null;
             }

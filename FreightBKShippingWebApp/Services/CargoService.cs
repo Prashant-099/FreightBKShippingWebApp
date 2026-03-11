@@ -13,7 +13,7 @@ namespace FreightBKShippingWebApp.Services
             _api = api;
             
         }
-
+        public string? LastError { get; private set; }
         public async Task<List<Cargo>> GetAllAsync()
         {
             try
@@ -49,11 +49,13 @@ namespace FreightBKShippingWebApp.Services
         {
             try
             {
+                LastError = null;
                 var result = await _api.PostAsync<bool, Cargo>("api/Cargo", cargo);
                 return result;
             }
             catch (Exception ex)
             {
+                LastError = ex.Message;
                 Console.WriteLine($"❌ Error creating cargo: {ex.Message}");
                 return false;
             }
@@ -65,11 +67,13 @@ namespace FreightBKShippingWebApp.Services
         {
             try
             {
+                LastError = null;
                 var result = await _api.PutAsync<bool, Cargo>($"api/Cargo/{cargo.CargoId}", cargo);
                 return result;
             }
             catch (Exception ex)
             {
+                LastError = ex.Message;
                 Console.WriteLine($"❌ Error updating cargo: {ex.Message}");
                 return false;
             }

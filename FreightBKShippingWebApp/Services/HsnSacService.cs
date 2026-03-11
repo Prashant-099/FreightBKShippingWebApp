@@ -13,7 +13,7 @@ namespace FreightBKShippingWebApp.Services
             _api = api;
             
         }
-
+        public string? LastError { get; private set; }
         public async Task<List<HsnSac>> GetAllAsync()
         {
             try
@@ -49,11 +49,13 @@ namespace FreightBKShippingWebApp.Services
         {
             try
             {
+                LastError = null;
                 var result = await _api.PostAsync<bool, HsnSac>("api/HsnSac", hsn);
                 return result;
             }
             catch (Exception ex)
             {
+                LastError = ex.Message;
                 Console.WriteLine($"❌ Error creating HSN/SAC: {ex.Message}");
                 return false;
             }
@@ -65,11 +67,13 @@ namespace FreightBKShippingWebApp.Services
         {
             try
             {
+                LastError = null;
                 var result = await _api.PutAsync<bool, HsnSac>($"api/HsnSac/{hsn.HsnId}", hsn);
                 return result;
             }
             catch (Exception ex)
             {
+                LastError = ex.Message;
                 Console.WriteLine($"❌ Error updating HSN/SAC: {ex.Message}");
                 return false;
             }
@@ -77,17 +81,17 @@ namespace FreightBKShippingWebApp.Services
            
         }
 
-        public async Task<bool> DeleteAsync(int hsnId)
+        public async Task<(bool Success, string Error)> DeleteAsync(int hsnId)
         {
             try
             {
                 var result = await _api.DeleteAsync<bool>($"api/HsnSac/{hsnId}");
-                return result;
+                return (true, null); 
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Error deleting HSN/SAC: {ex.Message}");
-                return false;
+                return (false, ex.Message); 
             }
            
            

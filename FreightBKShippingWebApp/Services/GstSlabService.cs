@@ -13,7 +13,7 @@ namespace FreightBKShippingWebApp.Services
             _api = api;
             
         }
-
+        public string? LastError { get; private set; }
         public async Task<List<GstSlab>> GetAllAsync()
         {
             try
@@ -49,11 +49,13 @@ namespace FreightBKShippingWebApp.Services
         {
             try
             {
+                LastError = null;
                 var result = await _api.PostAsync<bool, GstSlab>("api/GstSlab", gstSlab);
                 return result;
             }
             catch (Exception ex)
             {
+                LastError = ex.Message;
                 Console.WriteLine($"❌ Error creating GST slab: {ex.Message}");
                 return false;
             }
@@ -65,11 +67,13 @@ namespace FreightBKShippingWebApp.Services
         {
             try
             {
+                LastError = null;
                 var result = await _api.PutAsync<bool, GstSlab>($"api/GstSlab/{gstSlab.GstSlabId}", gstSlab);
                 return result;
             }
             catch (Exception ex)
             {
+                LastError = ex.Message;
                 Console.WriteLine($"❌ Error updating GST slab: {ex.Message}");
                 return false;
             }
@@ -77,17 +81,17 @@ namespace FreightBKShippingWebApp.Services
            
         }
 
-        public async Task<bool> DeleteAsync(int gstSlabId)
+        public async Task<(bool Success, string Error)> DeleteAsync(int gstSlabId)
         {
             try
             {
                 var result = await _api.DeleteAsync<bool>($"api/GstSlab/{gstSlabId}");
-                return result;
+                return (true, null);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Error deleting GST slab: {ex.Message}");
-                return false;
+                return (false, ex.Message);
             }
            
            

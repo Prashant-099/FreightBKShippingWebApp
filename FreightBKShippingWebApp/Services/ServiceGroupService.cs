@@ -13,7 +13,7 @@ namespace FreightBKShippingWebApp.Services
             _api = api;
             
         }
-
+        public string? LastError { get; private set; }
         // ✅ GET ALL
         public async Task<List<ServiceGroup>> GetAllAsync()
         {
@@ -52,11 +52,13 @@ namespace FreightBKShippingWebApp.Services
         {
             try
             {
+                LastError = null;
                 var result = await _api.PostAsync<bool, ServiceGroup>("api/ServiceGroups", serviceGroup);
                 return result;
             }
             catch (Exception ex)
             {
+                LastError = ex.Message;
                 Console.WriteLine($"❌ Error creating service group: {ex.Message}");
                 return false;
             }
@@ -69,11 +71,13 @@ namespace FreightBKShippingWebApp.Services
         {
             try
             {
+                LastError = null;
                 var result = await _api.PutAsync<bool, ServiceGroup>($"api/ServiceGroups/{serviceGroup.ServiceGroupsId}", serviceGroup);
                 return result;
             }
             catch (Exception ex)
             {
+                LastError = ex.Message;
                 Console.WriteLine($"❌ Error updating service group: {ex.Message}");
                 return false;
             }
@@ -82,17 +86,17 @@ namespace FreightBKShippingWebApp.Services
         }
 
         // ✅ DELETE
-        public async Task<bool> DeleteAsync(int serviceGroupId)
+        public async Task<(bool Success, string Error)> DeleteAsync(int serviceGroupId)
         {
             try
             {
                 var result = await _api.DeleteAsync<bool>($"api/ServiceGroups/{serviceGroupId}");
-                return result;
+                return (true, null);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Error deleting service group: {ex.Message}");
-                return false;
+                return (false, ex.Message);
             }
            
             
