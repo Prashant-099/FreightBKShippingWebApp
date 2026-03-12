@@ -39,29 +39,56 @@
         --shadow-footer: 0 -2px 12px rgba(0,0,0,.08);
         --font-main: 'Sora', 'Segoe UI', sans-serif;
     }
+
+    .dxbl-grid-header-cell,
+    .dxbl-grid-header-cell button,
+    .dxbl-grid-header-cell a {
+        outline: none !important;
+    }
+
+    .dxbl-grid-header-row {
+        pointer-events: auto;
+    }
+    .dxbl-grid-header-row *:not(button):not(a):not(input) {
+        pointer-events: none;
+    }
 </style>
 
 <script>
-    // ══ Alt+1..9 shortcut registration ══
-    window.lrRegisterShortcuts = function (dotnetRef) {
-        if (window._lrShortcutHandler) {
-            document.removeEventListener('keydown', window._lrShortcutHandler);
+window.lrRegisterShortcuts = function (dotnetRef) {
+    if (window._lrShortcutHandler) document.removeEventListener('keydown', window._lrShortcutHandler, true);
+    if (window._lrFocusHandler)    document.removeEventListener('focusin', window._lrFocusHandler,    true);
+
+    window._lrFocusHandler = function (e) {
+        var el = e.target;
+        if (!el) return;
+        var thead = el.closest('thead');
+        if (!thead) return;
+        var table = thead.closest('table');
+        if (!table) return;
+        var firstCell = table.querySelector('tbody tr td[tabindex="0"]');
+        if (firstCell) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            setTimeout(function () { firstCell.focus(); }, 0);
         }
-        window._lrShortcutHandler = function (e) {
-            if (e.altKey && e.key >= '1' && e.key <= '9') {
-                e.preventDefault();
-                dotnetRef.invokeMethodAsync('OnAltTabKey', parseInt(e.key) - 1);
-            }
-        };
-        document.addEventListener('keydown', window._lrShortcutHandler);
     };
 
-    window.lrUnregisterShortcuts = function () {
-        if (window._lrShortcutHandler) {
-            document.removeEventListener('keydown', window._lrShortcutHandler);
-            window._lrShortcutHandler = null;
+    window._lrShortcutHandler = function (e) {
+        if (e.altKey && e.key >= '1' && e.key <= '9') {
+            e.preventDefault();
+            dotnetRef.invokeMethodAsync('OnAltTabKey', parseInt(e.key) - 1);
         }
     };
+
+    document.addEventListener('focusin', window._lrFocusHandler,    true);
+    document.addEventListener('keydown', window._lrShortcutHandler, true);
+};
+
+window.lrUnregisterShortcuts = function () {
+    if (window._lrShortcutHandler) { document.removeEventListener('keydown', window._lrShortcutHandler, true); window._lrShortcutHandler = null; }
+    if (window._lrFocusHandler)    { document.removeEventListener('focusin', window._lrFocusHandler,    true); window._lrFocusHandler = null; }
+};
 </script>
 
 <div class="lr-page">
@@ -368,31 +395,26 @@
                                         @ref="ProductGrid"
                                         EditMode="GridEditMode.EditCell"
                                         EditorRenderMode="GridEditorRenderMode.Integrated"
-                                        KeyboardNavigationEnabled="true"
-                                        EditOnKeyPress="true"
                                         EditModelSaving="Product_EditModelSaving"
                                         CustomizeEditModel="Product_CustomizeEditModel"
-                                        CustomizeElement="Product_CustomizeElement"
+                                        CustomizeElement="Grid_CustomizeElement"
                                         KeyFieldName="SrNo"
                                         ColumnResizeMode="GridColumnResizeMode.ColumnsContainer">
                                     <Columns>
-                                        <DxGridCommandColumn Width="80px"
+                                        <DxGridCommandColumn Width="110px"
                                                              EditButtonVisible="false"
                                                              FixedPosition="GridColumnFixedPosition.Left"
                                                              CancelButtonVisible="false"
                                                              SaveButtonVisible="false"
                                                              NewButtonVisible="false">
-                                            <HeaderCaptionTemplate Context="ctx">
+                                            <HeaderCaptionTemplate Context="ctx"></HeaderCaptionTemplate>
+                                            <CellEditTemplate Context="editCtx"></CellEditTemplate>
+                                            <CellDisplayTemplate Context="dispCtx">
+                                                @{ var row = (LrProductRow)dispCtx.DataItem; }
+                                                <DxButton IconCssClass="bi bi-trash" RenderStyle="ButtonRenderStyle.Link" Click="@(() => DeleteProductRow(row))" style="padding:1px" />
                                                 <DxButton IconCssClass="bi bi-plus-circle-dotted" RenderStyle="ButtonRenderStyle.Link" Click="@AddNewProduct" style="padding:1px" />
                                                 <DxButton IconCssClass="bi bi-arrow-clockwise" RenderStyle="ButtonRenderStyle.Link" Click="@RevertProductGrid" style="padding:1px" />
                                                 <DxButton IconCssClass="bi bi-three-dots" RenderStyle="ButtonRenderStyle.Link" Click="@(() => ProductLayoutMgr?.ShowPopup())" style="padding:1px" />
-                                            </HeaderCaptionTemplate>
-                                            <CellEditTemplate Context="editCtx">
-                                                <DxButton Enabled="false" IconCssClass="bi bi-trash" RenderStyle="ButtonRenderStyle.Link" />
-                                            </CellEditTemplate>
-                                            <CellDisplayTemplate Context="dispCtx">
-                                                @{ var row = (LrProductRow)dispCtx.DataItem; }
-                                                <DxButton IconCssClass="bi bi-trash" RenderStyle="ButtonRenderStyle.Link" Click="@(() => DeleteProductRow(row))" />
                                             </CellDisplayTemplate>
                                         </DxGridCommandColumn>
 
@@ -601,31 +623,114 @@
                             <div class="lr-tab-body">
                                 <DxGrid Data="@AdvanceRows" @ref="AdvanceGrid" TItem="LRJournalRowVM"
                                         KeyFieldName="RowId" EditMode="GridEditMode.EditCell"
-                                        EditModelSaving="Advance_EditModelSaving">
+                                        EditorRenderMode="GridEditorRenderMode.Integrated"
+                                        EditModelSaving="Advance_EditModelSaving"
+                                        CustomizeEditModel="Advance_CustomizeEditModel"
+                                        CustomizeElement="Grid_CustomizeElement">
                                     <Columns>
-                                        <DxGridCommandColumn Width="80px" EditButtonVisible="false" FixedPosition="GridColumnFixedPosition.Left" CancelButtonVisible="false" SaveButtonVisible="false" NewButtonVisible="false">
-                                            <HeaderCaptionTemplate Context="headerCtx">
+                                        <DxGridCommandColumn Width="110px" EditButtonVisible="false"
+                                                             FixedPosition="GridColumnFixedPosition.Left"
+                                                             CancelButtonVisible="false" SaveButtonVisible="false" NewButtonVisible="false">
+                                            <HeaderCaptionTemplate Context="ctx"></HeaderCaptionTemplate>
+                                            <CellEditTemplate Context="editCtx"></CellEditTemplate>
+                                            <CellDisplayTemplate Context="dispCtx">
+                                                @{ var row = (LRJournalRowVM)dispCtx.DataItem; }
+                                                <DxButton IconCssClass="bi bi-trash" RenderStyle="ButtonRenderStyle.Link" Click="@(() => DeleteAdvanceRow(row))" style="padding:1px" />
                                                 <DxButton IconCssClass="bi bi-plus-circle-dotted" RenderStyle="ButtonRenderStyle.Link" Click="@AddNewAdvance" style="padding:1px" />
                                                 <DxButton IconCssClass="bi bi-arrow-clockwise" RenderStyle="ButtonRenderStyle.Link" Click="@RevertAdvanceGrid" style="padding:1px" />
                                                 <DxButton IconCssClass="bi bi-three-dots" RenderStyle="ButtonRenderStyle.Link" Click="@(() => AdvanceLayoutMgr?.ShowPopup())" style="padding:1px" />
-                                            </HeaderCaptionTemplate>
-                                            <CellDisplayTemplate Context="rowCtx">
-                                                @{ var row = (LRJournalRowVM)rowCtx.DataItem; }
-                                                <DxButton IconCssClass="bi bi-trash" RenderStyle="ButtonRenderStyle.Link" Click="@(() => DeleteAdvanceRow(row))" />
                                             </CellDisplayTemplate>
                                         </DxGridCommandColumn>
-                                        <DxGridDataColumn FieldName="Sno" Caption="Sr No" Width="@(AdvanceLayoutMgr?.GetColumnWidth("Sno") ?? "70px")" ReadOnly="true" Visible="@(AdvanceLayoutMgr?.GetColumnVisibility("Sno") ?? true)" />
-                                        <DxGridDataColumn FieldName="JournalDate" Caption="Date" Width="@(AdvanceLayoutMgr?.GetColumnWidth("JournalDate") ?? "130px")" Visible="@(AdvanceLayoutMgr?.GetColumnVisibility("JournalDate") ?? true)">
-                                            <EditSettings><DxDateEditSettings PickerDisplayMode="DatePickerDisplayMode.ScrollPicker" DisplayFormat="dd/MM/yyyy" EditFormat="dd/MM/yyyy" /></EditSettings>
-                                            <CellDisplayTemplate Context="d">@{ var r = (LRJournalRowVM)d.DataItem; }<span>@r.JournalDate.ToString("dd/MM/yyyy")</span></CellDisplayTemplate>
+
+                                        <DxGridDataColumn FieldName="Sno" Caption="Sr No"
+                                                          Width="@(AdvanceLayoutMgr?.GetColumnWidth("Sno") ?? "70px")"
+                                                          ReadOnly="true"
+                                                          Visible="@(AdvanceLayoutMgr?.GetColumnVisibility("Sno") ?? true)" />
+
+                                        <DxGridDataColumn FieldName="JournalDate" Caption="Date"
+                                                          Width="@(AdvanceLayoutMgr?.GetColumnWidth("JournalDate") ?? "130px")"
+                                                          Visible="@(AdvanceLayoutMgr?.GetColumnVisibility("JournalDate") ?? true)">
+                                            <CellDisplayTemplate Context="d">
+                                                @{ var r = (LRJournalRowVM)d.DataItem; }
+                                                <span>@r.JournalDate.ToString("dd/MM/yyyy")</span>
+                                            </CellDisplayTemplate>
+                                            <CellEditTemplate Context="editCtx">
+                                                @{ var edit = (LRJournalRowVM)editCtx.EditModel; }
+                                                <DxDateEdit T="DateTime"
+                                                            Date="@edit.JournalDate"
+                                                            DateExpression="@(() => edit.JournalDate)"
+                                                            DateChanged="@((DateTime v) => {
+                                                                edit.JournalDate = v;
+                                                                var existing = AdvanceRows?.FirstOrDefault(r => r.RowId == edit.RowId);
+                                                                if (existing != null) existing.JournalDate = v;
+                                                                InvokeAsync(StateHasChanged);
+                                                            })"
+                                                            DisplayFormat="dd/MM/yyyy" EditFormat="dd/MM/yyyy" />
+                                            </CellEditTemplate>
                                         </DxGridDataColumn>
-                                        <DxGridDataColumn FieldName="AccountId" Caption="Account" Width="@(AdvanceLayoutMgr?.GetColumnWidth("AccountId") ?? "310px")" Visible="@(AdvanceLayoutMgr?.GetColumnVisibility("AccountId") ?? true)">
-                                            <EditSettings><DxComboBoxSettings Data="@BankCashList" TextFieldName="AccountName" ValueFieldName="AccountId" SearchMode="ListSearchMode.AutoSearch" SearchFilterCondition="ListSearchFilterCondition.Contains" /></EditSettings>
+
+                                        <DxGridDataColumn FieldName="AccountId" Caption="Account"
+                                                          Width="@(AdvanceLayoutMgr?.GetColumnWidth("AccountId") ?? "310px")"
+                                                          Visible="@(AdvanceLayoutMgr?.GetColumnVisibility("AccountId") ?? true)">
+                                            <CellDisplayTemplate Context="d">
+                                                @{ var r = (LRJournalRowVM)d.DataItem; }
+                                                <span>@(BankCashList?.FirstOrDefault(a => a.AccountId == r.AccountId)?.AccountName ?? "")</span>
+                                            </CellDisplayTemplate>
+                                            <CellEditTemplate Context="editCtx">
+                                                @{ var edit = (LRJournalRowVM)editCtx.EditModel; }
+                                                <DxComboBox Data="@BankCashList"
+                                                            TData="Account" TValue="int?"
+                                                            TextFieldName="AccountName" ValueFieldName="AccountId"
+                                                            NullText="Select Account..."
+                                                            Value="@edit.AccountId"
+                                                            ValueExpression="@(() => edit.AccountId)"
+                                                            ValueChanged="@((int? v) => {
+                                                                edit.AccountId = v;
+                                                                var existing = AdvanceRows?.FirstOrDefault(r => r.RowId == edit.RowId);
+                                                                if (existing != null) existing.AccountId = v;
+                                                                InvokeAsync(StateHasChanged);
+                                                            })"
+                                                            SearchMode="ListSearchMode.AutoSearch"
+                                                            SearchFilterCondition="ListSearchFilterCondition.Contains" />
+                                            </CellEditTemplate>
                                         </DxGridDataColumn>
-                                        <DxGridDataColumn FieldName="Amount" Caption="Amount" Width="@(AdvanceLayoutMgr?.GetColumnWidth("Amount") ?? "150px")" Visible="@(AdvanceLayoutMgr?.GetColumnVisibility("Amount") ?? true)">
-                                            <EditSettings><DxSpinEditSettings ShowSpinButtons="false" /></EditSettings>
+
+                                        <DxGridDataColumn FieldName="Amount" Caption="Amount"
+                                                          Width="@(AdvanceLayoutMgr?.GetColumnWidth("Amount") ?? "150px")"
+                                                          Visible="@(AdvanceLayoutMgr?.GetColumnVisibility("Amount") ?? true)">
+                                            <CellDisplayTemplate Context="d">
+                                                @{ var r = (LRJournalRowVM)d.DataItem; }
+                                                <span style="color:#2563eb;font-weight:600;">@(r.Amount.HasValue ? r.Amount.Value.ToString("N2") : "")</span>
+                                            </CellDisplayTemplate>
+                                            <CellEditTemplate Context="editCtx">
+                                                @{ var edit = (LRJournalRowVM)editCtx.EditModel; }
+                                                <DxSpinEdit TValue="decimal?" Value="@edit.Amount"
+                                                            ValueExpression="@(() => edit.Amount)"
+                                                            ValueChanged="@((decimal? v) => {
+                                                                edit.Amount = v;
+                                                                var existing = AdvanceRows?.FirstOrDefault(r => r.RowId == edit.RowId);
+                                                                if (existing != null) existing.Amount = v;
+                                                                InvokeAsync(StateHasChanged);
+                                                            })"
+                                                            ShowSpinButtons="false" />
+                                            </CellEditTemplate>
                                         </DxGridDataColumn>
-                                        <DxGridDataColumn FieldName="Remarks" Caption="Remarks" Width="@(AdvanceLayoutMgr?.GetColumnWidth("Remarks") ?? "483px")" Visible="@(AdvanceLayoutMgr?.GetColumnVisibility("Remarks") ?? true)" />
+
+                                        <DxGridDataColumn FieldName="Remarks" Caption="Remarks"
+                                                          Width="@(AdvanceLayoutMgr?.GetColumnWidth("Remarks") ?? "483px")"
+                                                          Visible="@(AdvanceLayoutMgr?.GetColumnVisibility("Remarks") ?? true)">
+                                            <CellEditTemplate Context="editCtx">
+                                                @{ var edit = (LRJournalRowVM)editCtx.EditModel; }
+                                                <DxTextBox Text="@edit.Remarks"
+                                                           TextExpression="@(() => edit.Remarks)"
+                                                           TextChanged="@((string v) => {
+                                                               edit.Remarks = v;
+                                                               var existing = AdvanceRows?.FirstOrDefault(r => r.RowId == edit.RowId);
+                                                               if (existing != null) existing.Remarks = v;
+                                                               InvokeAsync(StateHasChanged);
+                                                           })" />
+                                            </CellEditTemplate>
+                                        </DxGridDataColumn>
                                     </Columns>
                                 </DxGrid>
                             </div>
@@ -634,37 +739,138 @@
                         <!-- ── Diesel (Alt+3) ── -->
                         <DxTabPage Text="Diesel (⌥3)">
                             <div class="lr-tab-body">
-                                <DxGrid Data="@DieselRows" TItem="LRJournalRowVM" @ref="DieselGrid" KeyFieldName="Sno"
-                                        EditMode="GridEditMode.EditCell" EditModelSaving="Diesel_EditModelSaving" CustomizeEditModel="Diesel_Customize">
+                                <DxGrid Data="@DieselRows" TItem="LRJournalRowVM" @ref="DieselGrid"
+                                        KeyFieldName="RowId" EditMode="GridEditMode.EditCell"
+                                        EditorRenderMode="GridEditorRenderMode.Integrated"
+                                        EditModelSaving="Diesel_EditModelSaving"
+                                        CustomizeEditModel="Diesel_CustomizeEditModel"
+                                        CustomizeElement="Grid_CustomizeElement">
                                     <Columns>
-                                        <DxGridCommandColumn Width="80px" EditButtonVisible="false" FixedPosition="GridColumnFixedPosition.Left" CancelButtonVisible="false" SaveButtonVisible="false" NewButtonVisible="false">
-                                            <HeaderCaptionTemplate Context="ctx">
+                                        <DxGridCommandColumn Width="110px" EditButtonVisible="false"
+                                                             FixedPosition="GridColumnFixedPosition.Left"
+                                                             CancelButtonVisible="false" SaveButtonVisible="false" NewButtonVisible="false">
+                                            <HeaderCaptionTemplate Context="ctx"></HeaderCaptionTemplate>
+                                            <CellEditTemplate Context="editCtx"></CellEditTemplate>
+                                            <CellDisplayTemplate Context="dispCtx">
+                                                @{ var row = (LRJournalRowVM)dispCtx.DataItem; }
+                                                <DxButton IconCssClass="bi bi-trash" RenderStyle="ButtonRenderStyle.Link" Click="@(() => DeleteDieselRow(row))" style="padding:1px" />
                                                 <DxButton IconCssClass="bi bi-plus-circle-dotted" RenderStyle="ButtonRenderStyle.Link" Click="@AddNewDiesel" style="padding:1px" />
                                                 <DxButton IconCssClass="bi bi-arrow-clockwise" RenderStyle="ButtonRenderStyle.Link" Click="@RevertDieselGrid" style="padding:1px" />
                                                 <DxButton IconCssClass="bi bi-three-dots" RenderStyle="ButtonRenderStyle.Link" Click="@(() => DieselLayoutMgr?.ShowPopup())" style="padding:1px" />
-                                            </HeaderCaptionTemplate>
-                                            <CellEditTemplate Context="editCtx"><DxButton Enabled="false" IconCssClass="bi bi-trash" RenderStyle="ButtonRenderStyle.Link" /></CellEditTemplate>
-                                            <CellDisplayTemplate Context="dispCtx">
-                                                @{ var row = (LRJournalRowVM)dispCtx.DataItem; }
-                                                <DxButton IconCssClass="bi bi-trash" RenderStyle="ButtonRenderStyle.Link" Click="@(() => DeleteDieselRow(row))" />
                                             </CellDisplayTemplate>
                                         </DxGridCommandColumn>
-                                        <DxGridDataColumn FieldName="Sno" Caption="Sr No" Width="@(DieselLayoutMgr?.GetColumnWidth("Sno") ?? "70px")" ReadOnly="true" Visible="@(DieselLayoutMgr?.GetColumnVisibility("Sno") ?? true)" />
-                                        <DxGridDataColumn FieldName="JournalDate" Caption="Date" Width="@(DieselLayoutMgr?.GetColumnWidth("JournalDate") ?? "130px")" Visible="@(DieselLayoutMgr?.GetColumnVisibility("JournalDate") ?? true)">
-                                            <EditSettings><DxDateEditSettings DisplayFormat="dd/MM/yyyy" EditFormat="dd/MM/yyyy" /></EditSettings>
-                                            <CellDisplayTemplate Context="d">@{ var r = (LRJournalRowVM)d.DataItem; }<span>@r.JournalDate.ToString("dd/MM/yyyy")</span></CellDisplayTemplate>
+
+                                        <DxGridDataColumn FieldName="Sno" Caption="Sr No"
+                                                          Width="@(DieselLayoutMgr?.GetColumnWidth("Sno") ?? "70px")"
+                                                          ReadOnly="true"
+                                                          Visible="@(DieselLayoutMgr?.GetColumnVisibility("Sno") ?? true)" />
+
+                                        <DxGridDataColumn FieldName="JournalDate" Caption="Date"
+                                                          Width="@(DieselLayoutMgr?.GetColumnWidth("JournalDate") ?? "130px")"
+                                                          Visible="@(DieselLayoutMgr?.GetColumnVisibility("JournalDate") ?? true)">
+                                            <CellDisplayTemplate Context="d">
+                                                @{ var r = (LRJournalRowVM)d.DataItem; }
+                                                <span>@r.JournalDate.ToString("dd/MM/yyyy")</span>
+                                            </CellDisplayTemplate>
+                                            <CellEditTemplate Context="editCtx">
+                                                @{ var edit = (LRJournalRowVM)editCtx.EditModel; }
+                                                <DxDateEdit T="DateTime"
+                                                            Date="@edit.JournalDate"
+                                                            DateExpression="@(() => edit.JournalDate)"
+                                                            DateChanged="@((DateTime v) => {
+                                                                edit.JournalDate = v;
+                                                                var existing = DieselRows?.FirstOrDefault(r => r.RowId == edit.RowId);
+                                                                if (existing != null) existing.JournalDate = v;
+                                                                InvokeAsync(StateHasChanged);
+                                                            })"
+                                                            DisplayFormat="dd/MM/yyyy" EditFormat="dd/MM/yyyy" />
+                                            </CellEditTemplate>
                                         </DxGridDataColumn>
-                                        <DxGridDataColumn FieldName="PumpBillId" Caption="Petrol Pump" Width="@(DieselLayoutMgr?.GetColumnWidth("PumpBillId") ?? "380px")" Visible="@(DieselLayoutMgr?.GetColumnVisibility("PumpBillId") ?? true)">
-                                            <EditSettings><DxComboBoxSettings Data="@PumpList" TextFieldName="AccountName" ValueFieldName="AccountId" SearchMode="ListSearchMode.AutoSearch" SearchFilterCondition="ListSearchFilterCondition.Contains" /></EditSettings>
+
+                                        <DxGridDataColumn FieldName="PumpBillId" Caption="Petrol Pump"
+                                                          Width="@(DieselLayoutMgr?.GetColumnWidth("PumpBillId") ?? "380px")"
+                                                          Visible="@(DieselLayoutMgr?.GetColumnVisibility("PumpBillId") ?? true)">
+                                            <CellDisplayTemplate Context="d">
+                                                @{ var r = (LRJournalRowVM)d.DataItem; }
+                                                <span>@(PumpList?.FirstOrDefault(a => a.AccountId == r.PumpBillId)?.AccountName ?? "")</span>
+                                            </CellDisplayTemplate>
+                                            <CellEditTemplate Context="editCtx">
+                                                @{ var edit = (LRJournalRowVM)editCtx.EditModel; }
+                                                <DxComboBox Data="@PumpList"
+                                                            TData="Account" TValue="int?"
+                                                            TextFieldName="AccountName" ValueFieldName="AccountId"
+                                                            NullText="Select Pump..."
+                                                            Value="@edit.PumpBillId"
+                                                            ValueExpression="@(() => edit.PumpBillId)"
+                                                            ValueChanged="@((int? v) => {
+                                                                edit.PumpBillId = v;
+                                                                var existing = DieselRows?.FirstOrDefault(r => r.RowId == edit.RowId);
+                                                                if (existing != null) existing.PumpBillId = v;
+                                                                InvokeAsync(StateHasChanged);
+                                                            })"
+                                                            SearchMode="ListSearchMode.AutoSearch"
+                                                            SearchFilterCondition="ListSearchFilterCondition.Contains" />
+                                            </CellEditTemplate>
                                         </DxGridDataColumn>
-                                        <DxGridDataColumn FieldName="UreaRate" Caption="Rate" Width="@(DieselLayoutMgr?.GetColumnWidth("UreaRate") ?? "170px")" Visible="@(DieselLayoutMgr?.GetColumnVisibility("UreaRate") ?? true)">
-                                            <EditSettings><DxSpinEditSettings ShowSpinButtons="false" /></EditSettings>
+
+                                        <DxGridDataColumn FieldName="UreaRate" Caption="Rate"
+                                                          Width="@(DieselLayoutMgr?.GetColumnWidth("UreaRate") ?? "170px")"
+                                                          Visible="@(DieselLayoutMgr?.GetColumnVisibility("UreaRate") ?? true)">
+                                            <CellDisplayTemplate Context="d">
+                                                @{ var r = (LRJournalRowVM)d.DataItem; }
+                                                <span>@(r.UreaRate.HasValue ? r.UreaRate.Value.ToString("N2") : "")</span>
+                                            </CellDisplayTemplate>
+                                            <CellEditTemplate Context="editCtx">
+                                                @{ var edit = (LRJournalRowVM)editCtx.EditModel; }
+                                                <DxSpinEdit TValue="decimal?" Value="@edit.UreaRate"
+                                                            ValueExpression="@(() => edit.UreaRate)"
+                                                            ValueChanged="@((decimal? v) => {
+                                                                edit.UreaRate = v;
+                                                                edit.UreaAmount = (v ?? 0) * (edit.UreaQty ?? 0);
+                                                                var existing = DieselRows?.FirstOrDefault(r => r.RowId == edit.RowId);
+                                                                if (existing != null) { existing.UreaRate = v; existing.UreaAmount = edit.UreaAmount; }
+                                                                InvokeAsync(StateHasChanged);
+                                                            })"
+                                                            ShowSpinButtons="false" />
+                                            </CellEditTemplate>
                                         </DxGridDataColumn>
-                                        <DxGridDataColumn FieldName="UreaQty" Caption="Ltr" Width="@(DieselLayoutMgr?.GetColumnWidth("UreaQty") ?? "170px")" Visible="@(DieselLayoutMgr?.GetColumnVisibility("UreaQty") ?? true)">
-                                            <EditSettings><DxSpinEditSettings ShowSpinButtons="false" /></EditSettings>
+
+                                        <DxGridDataColumn FieldName="UreaQty" Caption="Ltr"
+                                                          Width="@(DieselLayoutMgr?.GetColumnWidth("UreaQty") ?? "170px")"
+                                                          Visible="@(DieselLayoutMgr?.GetColumnVisibility("UreaQty") ?? true)">
+                                            <CellDisplayTemplate Context="d">
+                                                @{ var r = (LRJournalRowVM)d.DataItem; }
+                                                <span>@(r.UreaQty.HasValue ? r.UreaQty.Value.ToString("N2") : "")</span>
+                                            </CellDisplayTemplate>
+                                            <CellEditTemplate Context="editCtx">
+                                                @{ var edit = (LRJournalRowVM)editCtx.EditModel; }
+                                                <DxSpinEdit TValue="decimal?" Value="@edit.UreaQty"
+                                                            ValueExpression="@(() => edit.UreaQty)"
+                                                            ValueChanged="@((decimal? v) => {
+                                                                edit.UreaQty = v;
+                                                                edit.UreaAmount = (edit.UreaRate ?? 0) * (v ?? 0);
+                                                                var existing = DieselRows?.FirstOrDefault(r => r.RowId == edit.RowId);
+                                                                if (existing != null) { existing.UreaQty = v; existing.UreaAmount = edit.UreaAmount; }
+                                                                InvokeAsync(StateHasChanged);
+                                                            })"
+                                                            ShowSpinButtons="false" />
+                                            </CellEditTemplate>
                                         </DxGridDataColumn>
-                                        <DxGridDataColumn FieldName="UreaAmount" Caption="Amount" Width="@(DieselLayoutMgr?.GetColumnWidth("UreaAmount") ?? "223px")" Visible="@(DieselLayoutMgr?.GetColumnVisibility("UreaAmount") ?? true)">
-                                            <EditSettings><DxSpinEditSettings ShowSpinButtons="false" /></EditSettings>
+
+                                        <DxGridDataColumn FieldName="UreaAmount" Caption="Amount"
+                                                          Width="@(DieselLayoutMgr?.GetColumnWidth("UreaAmount") ?? "223px")"
+                                                          ReadOnly="true"
+                                                          Visible="@(DieselLayoutMgr?.GetColumnVisibility("UreaAmount") ?? true)">
+                                            <CellDisplayTemplate Context="d">
+                                                @{ var r = (LRJournalRowVM)d.DataItem; var actualRow = DieselRows?.FirstOrDefault(x => x.RowId == r.RowId); }
+                                                <span style="color:#2563eb;font-weight:600;">@((actualRow?.UreaAmount ?? r.UreaAmount).HasValue ? (actualRow?.UreaAmount ?? r.UreaAmount)!.Value.ToString("N2") : "0.00")</span>
+                                            </CellDisplayTemplate>
+                                            <CellEditTemplate Context="editCtx">
+                                                @{ var edit = (LRJournalRowVM)editCtx.EditModel; }
+                                                <span style="padding:4px 8px;display:block;color:#2563eb;font-weight:600;">
+                                                    @(edit.UreaAmount.HasValue ? edit.UreaAmount.Value.ToString("N2") : "0.00")
+                                                </span>
+                                            </CellEditTemplate>
                                         </DxGridDataColumn>
                                     </Columns>
                                 </DxGrid>
@@ -674,33 +880,116 @@
                         <!-- ── Charges (Alt+4) ── -->
                         <DxTabPage Text="Charges (⌥4)">
                             <div class="lr-tab-body">
-                                <DxGrid Data="@ChargesRows" TItem="LRJournalRowVM" @ref="ChargesGrid" KeyFieldName="Sno"
-                                        EditMode="GridEditMode.EditCell" EditModelSaving="Charges_EditModelSaving" CustomizeEditModel="Charges_Customize">
+                                <DxGrid Data="@ChargesRows" TItem="LRJournalRowVM" @ref="ChargesGrid"
+                                        KeyFieldName="RowId" EditMode="GridEditMode.EditCell"
+                                        EditorRenderMode="GridEditorRenderMode.Integrated"
+                                        EditModelSaving="Charges_EditModelSaving"
+                                        CustomizeEditModel="Charges_CustomizeEditModel"
+                                        CustomizeElement="Grid_CustomizeElement">
                                     <Columns>
-                                        <DxGridCommandColumn Width="80px" EditButtonVisible="false" FixedPosition="GridColumnFixedPosition.Left" CancelButtonVisible="false" SaveButtonVisible="false" NewButtonVisible="false">
-                                            <HeaderCaptionTemplate Context="ctx">
+                                        <DxGridCommandColumn Width="110px" EditButtonVisible="false"
+                                                             FixedPosition="GridColumnFixedPosition.Left"
+                                                             CancelButtonVisible="false" SaveButtonVisible="false" NewButtonVisible="false">
+                                            <HeaderCaptionTemplate Context="ctx"></HeaderCaptionTemplate>
+                                            <CellEditTemplate Context="editCtx"></CellEditTemplate>
+                                            <CellDisplayTemplate Context="dispCtx">
+                                                @{ var row = (LRJournalRowVM)dispCtx.DataItem; }
+                                                <DxButton IconCssClass="bi bi-trash" RenderStyle="ButtonRenderStyle.Link" Click="@(() => DeleteChargesRow(row))" style="padding:1px" />
                                                 <DxButton IconCssClass="bi bi-plus-circle-dotted" RenderStyle="ButtonRenderStyle.Link" Click="@AddNewCharges" style="padding:1px" />
                                                 <DxButton IconCssClass="bi bi-arrow-clockwise" RenderStyle="ButtonRenderStyle.Link" Click="@RevertChargesGrid" style="padding:1px" />
                                                 <DxButton IconCssClass="bi bi-three-dots" RenderStyle="ButtonRenderStyle.Link" Click="@(() => ChargesLayoutMgr?.ShowPopup())" style="padding:1px" />
-                                            </HeaderCaptionTemplate>
-                                            <CellEditTemplate Context="editCtx"><DxButton Enabled="false" IconCssClass="bi bi-trash" RenderStyle="ButtonRenderStyle.Link" /></CellEditTemplate>
-                                            <CellDisplayTemplate Context="dispCtx">
-                                                @{ var row = (LRJournalRowVM)dispCtx.DataItem; }
-                                                <DxButton IconCssClass="bi bi-trash" RenderStyle="ButtonRenderStyle.Link" Click="@(() => DeleteChargesRow(row))" />
                                             </CellDisplayTemplate>
                                         </DxGridCommandColumn>
-                                        <DxGridDataColumn FieldName="Sno" Caption="Sr No" Width="@(ChargesLayoutMgr?.GetColumnWidth("Sno") ?? "70px")" ReadOnly="true" Visible="@(ChargesLayoutMgr?.GetColumnVisibility("Sno") ?? true)" />
-                                        <DxGridDataColumn FieldName="JournalDate" Caption="Date" Width="@(ChargesLayoutMgr?.GetColumnWidth("JournalDate") ?? "130px")" Visible="@(ChargesLayoutMgr?.GetColumnVisibility("JournalDate") ?? true)">
-                                            <EditSettings><DxDateEditSettings DisplayFormat="dd/MM/yyyy" EditFormat="dd/MM/yyyy" /></EditSettings>
-                                            <CellDisplayTemplate Context="d">@{ var r = (LRJournalRowVM)d.DataItem; }<span>@r.JournalDate.ToString("dd/MM/yyyy")</span></CellDisplayTemplate>
+
+                                        <DxGridDataColumn FieldName="Sno" Caption="Sr No"
+                                                          Width="@(ChargesLayoutMgr?.GetColumnWidth("Sno") ?? "70px")"
+                                                          ReadOnly="true"
+                                                          Visible="@(ChargesLayoutMgr?.GetColumnVisibility("Sno") ?? true)" />
+
+                                        <DxGridDataColumn FieldName="JournalDate" Caption="Date"
+                                                          Width="@(ChargesLayoutMgr?.GetColumnWidth("JournalDate") ?? "130px")"
+                                                          Visible="@(ChargesLayoutMgr?.GetColumnVisibility("JournalDate") ?? true)">
+                                            <CellDisplayTemplate Context="d">
+                                                @{ var r = (LRJournalRowVM)d.DataItem; }
+                                                <span>@r.JournalDate.ToString("dd/MM/yyyy")</span>
+                                            </CellDisplayTemplate>
+                                            <CellEditTemplate Context="editCtx">
+                                                @{ var edit = (LRJournalRowVM)editCtx.EditModel; }
+                                                <DxDateEdit T="DateTime"
+                                                            Date="@edit.JournalDate"
+                                                            DateExpression="@(() => edit.JournalDate)"
+                                                            DateChanged="@((DateTime v) => {
+                                                                edit.JournalDate = v;
+                                                                var existing = ChargesRows?.FirstOrDefault(r => r.RowId == edit.RowId);
+                                                                if (existing != null) existing.JournalDate = v;
+                                                                InvokeAsync(StateHasChanged);
+                                                            })"
+                                                            DisplayFormat="dd/MM/yyyy" EditFormat="dd/MM/yyyy" />
+                                            </CellEditTemplate>
                                         </DxGridDataColumn>
-                                        <DxGridDataColumn FieldName="AccountId" Caption="Account" Width="@(ChargesLayoutMgr?.GetColumnWidth("AccountId") ?? "310px")" Visible="@(ChargesLayoutMgr?.GetColumnVisibility("AccountId") ?? true)">
-                                            <EditSettings><DxComboBoxSettings Data="@BankCashList" TextFieldName="AccountName" ValueFieldName="AccountId" SearchMode="ListSearchMode.AutoSearch" SearchFilterCondition="ListSearchFilterCondition.Contains" /></EditSettings>
+
+                                        <DxGridDataColumn FieldName="AccountId" Caption="Account"
+                                                          Width="@(ChargesLayoutMgr?.GetColumnWidth("AccountId") ?? "310px")"
+                                                          Visible="@(ChargesLayoutMgr?.GetColumnVisibility("AccountId") ?? true)">
+                                            <CellDisplayTemplate Context="d">
+                                                @{ var r = (LRJournalRowVM)d.DataItem; }
+                                                <span>@(BankCashList?.FirstOrDefault(a => a.AccountId == r.AccountId)?.AccountName ?? "")</span>
+                                            </CellDisplayTemplate>
+                                            <CellEditTemplate Context="editCtx">
+                                                @{ var edit = (LRJournalRowVM)editCtx.EditModel; }
+                                                <DxComboBox Data="@BankCashList"
+                                                            TData="Account" TValue="int?"
+                                                            TextFieldName="AccountName" ValueFieldName="AccountId"
+                                                            NullText="Select Account..."
+                                                            Value="@edit.AccountId"
+                                                            ValueExpression="@(() => edit.AccountId)"
+                                                            ValueChanged="@((int? v) => {
+                                                                edit.AccountId = v;
+                                                                var existing = ChargesRows?.FirstOrDefault(r => r.RowId == edit.RowId);
+                                                                if (existing != null) existing.AccountId = v;
+                                                                InvokeAsync(StateHasChanged);
+                                                            })"
+                                                            SearchMode="ListSearchMode.AutoSearch"
+                                                            SearchFilterCondition="ListSearchFilterCondition.Contains" />
+                                            </CellEditTemplate>
                                         </DxGridDataColumn>
-                                        <DxGridDataColumn FieldName="Amount" Caption="Amount" Width="@(ChargesLayoutMgr?.GetColumnWidth("Amount") ?? "150px")" Visible="@(ChargesLayoutMgr?.GetColumnVisibility("Amount") ?? true)">
-                                            <EditSettings><DxSpinEditSettings ShowSpinButtons="false" /></EditSettings>
+
+                                        <DxGridDataColumn FieldName="Amount" Caption="Amount"
+                                                          Width="@(ChargesLayoutMgr?.GetColumnWidth("Amount") ?? "150px")"
+                                                          Visible="@(ChargesLayoutMgr?.GetColumnVisibility("Amount") ?? true)">
+                                            <CellDisplayTemplate Context="d">
+                                                @{ var r = (LRJournalRowVM)d.DataItem; }
+                                                <span style="color:#2563eb;font-weight:600;">@(r.Amount.HasValue ? r.Amount.Value.ToString("N2") : "")</span>
+                                            </CellDisplayTemplate>
+                                            <CellEditTemplate Context="editCtx">
+                                                @{ var edit = (LRJournalRowVM)editCtx.EditModel; }
+                                                <DxSpinEdit TValue="decimal?" Value="@edit.Amount"
+                                                            ValueExpression="@(() => edit.Amount)"
+                                                            ValueChanged="@((decimal? v) => {
+                                                                edit.Amount = v;
+                                                                var existing = ChargesRows?.FirstOrDefault(r => r.RowId == edit.RowId);
+                                                                if (existing != null) existing.Amount = v;
+                                                                InvokeAsync(StateHasChanged);
+                                                            })"
+                                                            ShowSpinButtons="false" />
+                                            </CellEditTemplate>
                                         </DxGridDataColumn>
-                                        <DxGridDataColumn FieldName="Remarks" Caption="Remarks" Width="@(ChargesLayoutMgr?.GetColumnWidth("Remarks") ?? "483px")" Visible="@(ChargesLayoutMgr?.GetColumnVisibility("Remarks") ?? true)" />
+
+                                        <DxGridDataColumn FieldName="Remarks" Caption="Remarks"
+                                                          Width="@(ChargesLayoutMgr?.GetColumnWidth("Remarks") ?? "483px")"
+                                                          Visible="@(ChargesLayoutMgr?.GetColumnVisibility("Remarks") ?? true)">
+                                            <CellEditTemplate Context="editCtx">
+                                                @{ var edit = (LRJournalRowVM)editCtx.EditModel; }
+                                                <DxTextBox Text="@edit.Remarks"
+                                                           TextExpression="@(() => edit.Remarks)"
+                                                           TextChanged="@((string v) => {
+                                                               edit.Remarks = v;
+                                                               var existing = ChargesRows?.FirstOrDefault(r => r.RowId == edit.RowId);
+                                                               if (existing != null) existing.Remarks = v;
+                                                               InvokeAsync(StateHasChanged);
+                                                           })" />
+                                            </CellEditTemplate>
+                                        </DxGridDataColumn>
                                     </Columns>
                                 </DxGrid>
                             </div>
@@ -709,33 +998,116 @@
                         <!-- ── Expense (Alt+5) ── -->
                         <DxTabPage Text="Expense (⌥5)">
                             <div class="lr-tab-body">
-                                <DxGrid Data="@ExpenseRows" TItem="LRJournalRowVM" @ref="ExpenseGrid" KeyFieldName="Sno"
-                                        EditMode="GridEditMode.EditCell" EditModelSaving="Expense_EditModelSaving" CustomizeEditModel="Expense_Customize">
+                                <DxGrid Data="@ExpenseRows" TItem="LRJournalRowVM" @ref="ExpenseGrid"
+                                        KeyFieldName="RowId" EditMode="GridEditMode.EditCell"
+                                        EditorRenderMode="GridEditorRenderMode.Integrated"
+                                        EditModelSaving="Expense_EditModelSaving"
+                                        CustomizeEditModel="Expense_CustomizeEditModel"
+                                        CustomizeElement="Grid_CustomizeElement">
                                     <Columns>
-                                        <DxGridCommandColumn Width="80px" EditButtonVisible="false" FixedPosition="GridColumnFixedPosition.Left" CancelButtonVisible="false" SaveButtonVisible="false" NewButtonVisible="false">
-                                            <HeaderCaptionTemplate Context="ctx">
+                                        <DxGridCommandColumn Width="110px" EditButtonVisible="false"
+                                                             FixedPosition="GridColumnFixedPosition.Left"
+                                                             CancelButtonVisible="false" SaveButtonVisible="false" NewButtonVisible="false">
+                                            <HeaderCaptionTemplate Context="ctx"></HeaderCaptionTemplate>
+                                            <CellEditTemplate Context="editCtx"></CellEditTemplate>
+                                            <CellDisplayTemplate Context="dispCtx">
+                                                @{ var row = (LRJournalRowVM)dispCtx.DataItem; }
+                                                <DxButton IconCssClass="bi bi-trash" RenderStyle="ButtonRenderStyle.Link" Click="@(() => DeleteExpenseRow(row))" style="padding:1px" />
                                                 <DxButton IconCssClass="bi bi-plus-circle-dotted" RenderStyle="ButtonRenderStyle.Link" Click="@AddNewExpense" style="padding:1px" />
                                                 <DxButton IconCssClass="bi bi-arrow-clockwise" RenderStyle="ButtonRenderStyle.Link" Click="@RevertExpenseGrid" style="padding:1px" />
                                                 <DxButton IconCssClass="bi bi-three-dots" RenderStyle="ButtonRenderStyle.Link" Click="@(() => ExpenseLayoutMgr?.ShowPopup())" style="padding:1px" />
-                                            </HeaderCaptionTemplate>
-                                            <CellEditTemplate Context="editCtx"><DxButton Enabled="false" IconCssClass="bi bi-trash" RenderStyle="ButtonRenderStyle.Link" /></CellEditTemplate>
-                                            <CellDisplayTemplate Context="dispCtx">
-                                                @{ var row = (LRJournalRowVM)dispCtx.DataItem; }
-                                                <DxButton IconCssClass="bi bi-trash" RenderStyle="ButtonRenderStyle.Link" Click="@(() => DeleteExpenseRow(row))" />
                                             </CellDisplayTemplate>
                                         </DxGridCommandColumn>
-                                        <DxGridDataColumn FieldName="Sno" Caption="Sr No" Width="@(ExpenseLayoutMgr?.GetColumnWidth("Sno") ?? "70px")" ReadOnly="true" Visible="@(ExpenseLayoutMgr?.GetColumnVisibility("Sno") ?? true)" />
-                                        <DxGridDataColumn FieldName="JournalDate" Caption="Date" Width="@(ExpenseLayoutMgr?.GetColumnWidth("JournalDate") ?? "130px")" Visible="@(ExpenseLayoutMgr?.GetColumnVisibility("JournalDate") ?? true)">
-                                            <EditSettings><DxDateEditSettings DisplayFormat="dd/MM/yyyy" EditFormat="dd/MM/yyyy" /></EditSettings>
-                                            <CellDisplayTemplate Context="d">@{ var r = (LRJournalRowVM)d.DataItem; }<span>@r.JournalDate.ToString("dd/MM/yyyy")</span></CellDisplayTemplate>
+
+                                        <DxGridDataColumn FieldName="Sno" Caption="Sr No"
+                                                          Width="@(ExpenseLayoutMgr?.GetColumnWidth("Sno") ?? "70px")"
+                                                          ReadOnly="true"
+                                                          Visible="@(ExpenseLayoutMgr?.GetColumnVisibility("Sno") ?? true)" />
+
+                                        <DxGridDataColumn FieldName="JournalDate" Caption="Date"
+                                                          Width="@(ExpenseLayoutMgr?.GetColumnWidth("JournalDate") ?? "130px")"
+                                                          Visible="@(ExpenseLayoutMgr?.GetColumnVisibility("JournalDate") ?? true)">
+                                            <CellDisplayTemplate Context="d">
+                                                @{ var r = (LRJournalRowVM)d.DataItem; }
+                                                <span>@r.JournalDate.ToString("dd/MM/yyyy")</span>
+                                            </CellDisplayTemplate>
+                                            <CellEditTemplate Context="editCtx">
+                                                @{ var edit = (LRJournalRowVM)editCtx.EditModel; }
+                                                <DxDateEdit T="DateTime"
+                                                            Date="@edit.JournalDate"
+                                                            DateExpression="@(() => edit.JournalDate)"
+                                                            DateChanged="@((DateTime v) => {
+                                                                edit.JournalDate = v;
+                                                                var existing = ExpenseRows?.FirstOrDefault(r => r.RowId == edit.RowId);
+                                                                if (existing != null) existing.JournalDate = v;
+                                                                InvokeAsync(StateHasChanged);
+                                                            })"
+                                                            DisplayFormat="dd/MM/yyyy" EditFormat="dd/MM/yyyy" />
+                                            </CellEditTemplate>
                                         </DxGridDataColumn>
-                                        <DxGridDataColumn FieldName="AccountId" Caption="Account" Width="@(ExpenseLayoutMgr?.GetColumnWidth("AccountId") ?? "310px")" Visible="@(ExpenseLayoutMgr?.GetColumnVisibility("AccountId") ?? true)">
-                                            <EditSettings><DxComboBoxSettings Data="@BankCashList" TextFieldName="AccountName" ValueFieldName="AccountId" SearchMode="ListSearchMode.AutoSearch" SearchFilterCondition="ListSearchFilterCondition.Contains" /></EditSettings>
+
+                                        <DxGridDataColumn FieldName="AccountId" Caption="Account"
+                                                          Width="@(ExpenseLayoutMgr?.GetColumnWidth("AccountId") ?? "310px")"
+                                                          Visible="@(ExpenseLayoutMgr?.GetColumnVisibility("AccountId") ?? true)">
+                                            <CellDisplayTemplate Context="d">
+                                                @{ var r = (LRJournalRowVM)d.DataItem; }
+                                                <span>@(BankCashList?.FirstOrDefault(a => a.AccountId == r.AccountId)?.AccountName ?? "")</span>
+                                            </CellDisplayTemplate>
+                                            <CellEditTemplate Context="editCtx">
+                                                @{ var edit = (LRJournalRowVM)editCtx.EditModel; }
+                                                <DxComboBox Data="@BankCashList"
+                                                            TData="Account" TValue="int?"
+                                                            TextFieldName="AccountName" ValueFieldName="AccountId"
+                                                            NullText="Select Account..."
+                                                            Value="@edit.AccountId"
+                                                            ValueExpression="@(() => edit.AccountId)"
+                                                            ValueChanged="@((int? v) => {
+                                                                edit.AccountId = v;
+                                                                var existing = ExpenseRows?.FirstOrDefault(r => r.RowId == edit.RowId);
+                                                                if (existing != null) existing.AccountId = v;
+                                                                InvokeAsync(StateHasChanged);
+                                                            })"
+                                                            SearchMode="ListSearchMode.AutoSearch"
+                                                            SearchFilterCondition="ListSearchFilterCondition.Contains" />
+                                            </CellEditTemplate>
                                         </DxGridDataColumn>
-                                        <DxGridDataColumn FieldName="Amount" Caption="Amount" Width="@(ExpenseLayoutMgr?.GetColumnWidth("Amount") ?? "150px")" Visible="@(ExpenseLayoutMgr?.GetColumnVisibility("Amount") ?? true)">
-                                            <EditSettings><DxSpinEditSettings ShowSpinButtons="false" /></EditSettings>
+
+                                        <DxGridDataColumn FieldName="Amount" Caption="Amount"
+                                                          Width="@(ExpenseLayoutMgr?.GetColumnWidth("Amount") ?? "150px")"
+                                                          Visible="@(ExpenseLayoutMgr?.GetColumnVisibility("Amount") ?? true)">
+                                            <CellDisplayTemplate Context="d">
+                                                @{ var r = (LRJournalRowVM)d.DataItem; }
+                                                <span style="color:#2563eb;font-weight:600;">@(r.Amount.HasValue ? r.Amount.Value.ToString("N2") : "")</span>
+                                            </CellDisplayTemplate>
+                                            <CellEditTemplate Context="editCtx">
+                                                @{ var edit = (LRJournalRowVM)editCtx.EditModel; }
+                                                <DxSpinEdit TValue="decimal?" Value="@edit.Amount"
+                                                            ValueExpression="@(() => edit.Amount)"
+                                                            ValueChanged="@((decimal? v) => {
+                                                                edit.Amount = v;
+                                                                var existing = ExpenseRows?.FirstOrDefault(r => r.RowId == edit.RowId);
+                                                                if (existing != null) existing.Amount = v;
+                                                                InvokeAsync(StateHasChanged);
+                                                            })"
+                                                            ShowSpinButtons="false" />
+                                            </CellEditTemplate>
                                         </DxGridDataColumn>
-                                        <DxGridDataColumn FieldName="Remarks" Caption="Remarks" Width="@(ExpenseLayoutMgr?.GetColumnWidth("Remarks") ?? "483px")" Visible="@(ExpenseLayoutMgr?.GetColumnVisibility("Remarks") ?? true)" />
+
+                                        <DxGridDataColumn FieldName="Remarks" Caption="Remarks"
+                                                          Width="@(ExpenseLayoutMgr?.GetColumnWidth("Remarks") ?? "483px")"
+                                                          Visible="@(ExpenseLayoutMgr?.GetColumnVisibility("Remarks") ?? true)">
+                                            <CellEditTemplate Context="editCtx">
+                                                @{ var edit = (LRJournalRowVM)editCtx.EditModel; }
+                                                <DxTextBox Text="@edit.Remarks"
+                                                           TextExpression="@(() => edit.Remarks)"
+                                                           TextChanged="@((string v) => {
+                                                               edit.Remarks = v;
+                                                               var existing = ExpenseRows?.FirstOrDefault(r => r.RowId == edit.RowId);
+                                                               if (existing != null) existing.Remarks = v;
+                                                               InvokeAsync(StateHasChanged);
+                                                           })" />
+                                            </CellEditTemplate>
+                                        </DxGridDataColumn>
                                     </Columns>
                                 </DxGrid>
                             </div>
@@ -744,36 +1116,137 @@
                         <!-- ── Advance Received (Alt+6) ── -->
                         <DxTabPage Text="Advance Received (⌥6)">
                             <div class="lr-tab-body">
-                                <DxGrid Data="@AdvanceReceivedRows" TItem="LRJournalRowVM" @ref="AdvanceReceivedGrid" KeyFieldName="Sno"
-                                        EditMode="GridEditMode.EditCell" EditModelSaving="AdvanceReceived_EditModelSaving" CustomizeEditModel="AdvanceReceived_Customize">
+                                <DxGrid Data="@AdvanceReceivedRows" TItem="LRJournalRowVM" @ref="AdvanceReceivedGrid"
+                                        KeyFieldName="RowId" EditMode="GridEditMode.EditCell"
+                                        EditorRenderMode="GridEditorRenderMode.Integrated"
+                                        EditModelSaving="AdvanceReceived_EditModelSaving"
+                                        CustomizeEditModel="AdvanceReceived_CustomizeEditModel"
+                                        CustomizeElement="Grid_CustomizeElement">
                                     <Columns>
-                                        <DxGridCommandColumn Width="80px" EditButtonVisible="false" FixedPosition="GridColumnFixedPosition.Left" CancelButtonVisible="false" SaveButtonVisible="false" NewButtonVisible="false">
-                                            <HeaderCaptionTemplate Context="ctx">
+                                        <DxGridCommandColumn Width="110px" EditButtonVisible="false"
+                                                             FixedPosition="GridColumnFixedPosition.Left"
+                                                             CancelButtonVisible="false" SaveButtonVisible="false" NewButtonVisible="false">
+                                            <HeaderCaptionTemplate Context="ctx"></HeaderCaptionTemplate>
+                                            <CellEditTemplate Context="editCtx"></CellEditTemplate>
+                                            <CellDisplayTemplate Context="dispCtx">
+                                                @{ var row = (LRJournalRowVM)dispCtx.DataItem; }
+                                                <DxButton IconCssClass="bi bi-trash" RenderStyle="ButtonRenderStyle.Link" Click="@(() => DeleteAdvanceReceivedRow(row))" style="padding:1px" />
                                                 <DxButton IconCssClass="bi bi-plus-circle-dotted" RenderStyle="ButtonRenderStyle.Link" Click="@AddNewAdvanceReceived" style="padding:1px" />
                                                 <DxButton IconCssClass="bi bi-arrow-clockwise" RenderStyle="ButtonRenderStyle.Link" Click="@RevertAdvanceReceivedGrid" style="padding:1px" />
                                                 <DxButton IconCssClass="bi bi-three-dots" RenderStyle="ButtonRenderStyle.Link" Click="@(() => AdvanceReceivedLayoutMgr?.ShowPopup())" style="padding:1px" />
-                                            </HeaderCaptionTemplate>
-                                            <CellEditTemplate Context="editCtx"><DxButton Enabled="false" IconCssClass="bi bi-trash" RenderStyle="ButtonRenderStyle.Link" /></CellEditTemplate>
-                                            <CellDisplayTemplate Context="dispCtx">
-                                                @{ var row = (LRJournalRowVM)dispCtx.DataItem; }
-                                                <DxButton IconCssClass="bi bi-trash" RenderStyle="ButtonRenderStyle.Link" Click="@(() => DeleteAdvanceReceivedRow(row))" />
                                             </CellDisplayTemplate>
                                         </DxGridCommandColumn>
-                                        <DxGridDataColumn FieldName="Sno" Caption="Sr No" Width="@(AdvanceReceivedLayoutMgr?.GetColumnWidth("Sno") ?? "70px")" ReadOnly="true" Visible="@(AdvanceReceivedLayoutMgr?.GetColumnVisibility("Sno") ?? true)" />
-                                        <DxGridDataColumn FieldName="JournalDate" Caption="Date" Width="@(AdvanceReceivedLayoutMgr?.GetColumnWidth("JournalDate") ?? "130px")" Visible="@(AdvanceReceivedLayoutMgr?.GetColumnVisibility("JournalDate") ?? true)">
-                                            <EditSettings><DxDateEditSettings DisplayFormat="dd/MM/yyyy" EditFormat="dd/MM/yyyy" /></EditSettings>
-                                            <CellDisplayTemplate Context="d">@{ var r = (LRJournalRowVM)d.DataItem; }<span>@r.JournalDate.ToString("dd/MM/yyyy")</span></CellDisplayTemplate>
+
+                                        <DxGridDataColumn FieldName="Sno" Caption="Sr No"
+                                                          Width="@(AdvanceReceivedLayoutMgr?.GetColumnWidth("Sno") ?? "70px")"
+                                                          ReadOnly="true"
+                                                          Visible="@(AdvanceReceivedLayoutMgr?.GetColumnVisibility("Sno") ?? true)" />
+
+                                        <DxGridDataColumn FieldName="JournalDate" Caption="Date"
+                                                          Width="@(AdvanceReceivedLayoutMgr?.GetColumnWidth("JournalDate") ?? "130px")"
+                                                          Visible="@(AdvanceReceivedLayoutMgr?.GetColumnVisibility("JournalDate") ?? true)">
+                                            <CellDisplayTemplate Context="d">
+                                                @{ var r = (LRJournalRowVM)d.DataItem; }
+                                                <span>@r.JournalDate.ToString("dd/MM/yyyy")</span>
+                                            </CellDisplayTemplate>
+                                            <CellEditTemplate Context="editCtx">
+                                                @{ var edit = (LRJournalRowVM)editCtx.EditModel; }
+                                                <DxDateEdit T="DateTime"
+                                                            Date="@edit.JournalDate"
+                                                            DateExpression="@(() => edit.JournalDate)"
+                                                            DateChanged="@((DateTime v) => {
+                                                                edit.JournalDate = v;
+                                                                var existing = AdvanceReceivedRows?.FirstOrDefault(r => r.RowId == edit.RowId);
+                                                                if (existing != null) existing.JournalDate = v;
+                                                                InvokeAsync(StateHasChanged);
+                                                            })"
+                                                            DisplayFormat="dd/MM/yyyy" EditFormat="dd/MM/yyyy" />
+                                            </CellEditTemplate>
                                         </DxGridDataColumn>
-                                        <DxGridDataColumn FieldName="AccountId" Caption="Account" Width="@(AdvanceReceivedLayoutMgr?.GetColumnWidth("AccountId") ?? "310px")" Visible="@(AdvanceReceivedLayoutMgr?.GetColumnVisibility("AccountId") ?? true)">
-                                            <EditSettings><DxComboBoxSettings Data="@accountpartylist" TextFieldName="AccountName" ValueFieldName="AccountId" SearchMode="ListSearchMode.AutoSearch" SearchFilterCondition="ListSearchFilterCondition.Contains" /></EditSettings>
+
+                                        <DxGridDataColumn FieldName="AccountId" Caption="Account"
+                                                          Width="@(AdvanceReceivedLayoutMgr?.GetColumnWidth("AccountId") ?? "310px")"
+                                                          Visible="@(AdvanceReceivedLayoutMgr?.GetColumnVisibility("AccountId") ?? true)">
+                                            <CellDisplayTemplate Context="d">
+                                                @{ var r = (LRJournalRowVM)d.DataItem; }
+                                                <span>@(accountpartylist?.FirstOrDefault(a => a.AccountId == r.AccountId)?.AccountName ?? "")</span>
+                                            </CellDisplayTemplate>
+                                            <CellEditTemplate Context="editCtx">
+                                                @{ var edit = (LRJournalRowVM)editCtx.EditModel; }
+                                                <DxComboBox Data="@accountpartylist"
+                                                            TData="Account" TValue="int?"
+                                                            TextFieldName="AccountName" ValueFieldName="AccountId"
+                                                            NullText="Select Account..."
+                                                            Value="@edit.AccountId"
+                                                            ValueExpression="@(() => edit.AccountId)"
+                                                            ValueChanged="@((int? v) => {
+                                                                edit.AccountId = v;
+                                                                var existing = AdvanceReceivedRows?.FirstOrDefault(r => r.RowId == edit.RowId);
+                                                                if (existing != null) existing.AccountId = v;
+                                                                InvokeAsync(StateHasChanged);
+                                                            })"
+                                                            SearchMode="ListSearchMode.AutoSearch"
+                                                            SearchFilterCondition="ListSearchFilterCondition.Contains" />
+                                            </CellEditTemplate>
                                         </DxGridDataColumn>
-                                        <DxGridDataColumn FieldName="Amount" Caption="Amount" Width="@(AdvanceReceivedLayoutMgr?.GetColumnWidth("Amount") ?? "120px")" Visible="@(AdvanceReceivedLayoutMgr?.GetColumnVisibility("Amount") ?? true)">
-                                            <EditSettings><DxSpinEditSettings ShowSpinButtons="false" /></EditSettings>
+
+                                        <DxGridDataColumn FieldName="Amount" Caption="Amount"
+                                                          Width="@(AdvanceReceivedLayoutMgr?.GetColumnWidth("Amount") ?? "120px")"
+                                                          Visible="@(AdvanceReceivedLayoutMgr?.GetColumnVisibility("Amount") ?? true)">
+                                            <CellDisplayTemplate Context="d">
+                                                @{ var r = (LRJournalRowVM)d.DataItem; }
+                                                <span style="color:#2563eb;font-weight:600;">@(r.Amount.HasValue ? r.Amount.Value.ToString("N2") : "")</span>
+                                            </CellDisplayTemplate>
+                                            <CellEditTemplate Context="editCtx">
+                                                @{ var edit = (LRJournalRowVM)editCtx.EditModel; }
+                                                <DxSpinEdit TValue="decimal?" Value="@edit.Amount"
+                                                            ValueExpression="@(() => edit.Amount)"
+                                                            ValueChanged="@((decimal? v) => {
+                                                                edit.Amount = v;
+                                                                var existing = AdvanceReceivedRows?.FirstOrDefault(r => r.RowId == edit.RowId);
+                                                                if (existing != null) existing.Amount = v;
+                                                                InvokeAsync(StateHasChanged);
+                                                            })"
+                                                            ShowSpinButtons="false" />
+                                            </CellEditTemplate>
                                         </DxGridDataColumn>
-                                        <DxGridDataColumn FieldName="UreaQty" Caption="Qty (Diesel)" Width="@(AdvanceReceivedLayoutMgr?.GetColumnWidth("UreaQty") ?? "120px")" Visible="@(AdvanceReceivedLayoutMgr?.GetColumnVisibility("UreaQty") ?? true)">
-                                            <EditSettings><DxSpinEditSettings ShowSpinButtons="false" /></EditSettings>
+
+                                        <DxGridDataColumn FieldName="UreaQty" Caption="Qty (Diesel)"
+                                                          Width="@(AdvanceReceivedLayoutMgr?.GetColumnWidth("UreaQty") ?? "120px")"
+                                                          Visible="@(AdvanceReceivedLayoutMgr?.GetColumnVisibility("UreaQty") ?? true)">
+                                            <CellDisplayTemplate Context="d">
+                                                @{ var r = (LRJournalRowVM)d.DataItem; }
+                                                <span>@(r.UreaQty.HasValue ? r.UreaQty.Value.ToString("N2") : "")</span>
+                                            </CellDisplayTemplate>
+                                            <CellEditTemplate Context="editCtx">
+                                                @{ var edit = (LRJournalRowVM)editCtx.EditModel; }
+                                                <DxSpinEdit TValue="decimal?" Value="@edit.UreaQty"
+                                                            ValueExpression="@(() => edit.UreaQty)"
+                                                            ValueChanged="@((decimal? v) => {
+                                                                edit.UreaQty = v;
+                                                                var existing = AdvanceReceivedRows?.FirstOrDefault(r => r.RowId == edit.RowId);
+                                                                if (existing != null) existing.UreaQty = v;
+                                                                InvokeAsync(StateHasChanged);
+                                                            })"
+                                                            ShowSpinButtons="false" />
+                                            </CellEditTemplate>
                                         </DxGridDataColumn>
-                                        <DxGridDataColumn FieldName="Remarks" Caption="Remarks" Width="@(AdvanceReceivedLayoutMgr?.GetColumnWidth("Remarks") ?? "393px")" Visible="@(AdvanceReceivedLayoutMgr?.GetColumnVisibility("Remarks") ?? true)" />
+
+                                        <DxGridDataColumn FieldName="Remarks" Caption="Remarks"
+                                                          Width="@(AdvanceReceivedLayoutMgr?.GetColumnWidth("Remarks") ?? "393px")"
+                                                          Visible="@(AdvanceReceivedLayoutMgr?.GetColumnVisibility("Remarks") ?? true)">
+                                            <CellEditTemplate Context="editCtx">
+                                                @{ var edit = (LRJournalRowVM)editCtx.EditModel; }
+                                                <DxTextBox Text="@edit.Remarks"
+                                                           TextExpression="@(() => edit.Remarks)"
+                                                           TextChanged="@((string v) => {
+                                                               edit.Remarks = v;
+                                                               var existing = AdvanceReceivedRows?.FirstOrDefault(r => r.RowId == edit.RowId);
+                                                               if (existing != null) existing.Remarks = v;
+                                                               InvokeAsync(StateHasChanged);
+                                                           })" />
+                                            </CellEditTemplate>
+                                        </DxGridDataColumn>
                                     </Columns>
                                 </DxGrid>
                             </div>
@@ -878,7 +1351,13 @@
 @code {
 
     // ══ TAB SHORTCUT (Alt+1..9) ══════════════════════════════════════
-    private int ActiveTabIndex { get; set; } = 0;
+    private int _activeTabIndex = 0;
+    private int ActiveTabIndex
+    {
+        get => _activeTabIndex;
+        set { _activeTabIndex = value; }
+    }
+
     private object? _dotNetRef;
 
     [JSInvokable]
@@ -890,16 +1369,34 @@
         if (_dotNetRef is IDisposable d) d.Dispose();
     }
 
-    // ══ OnAfterRenderAsync ═══════════════════════════════════════════
-    // - firstRender: Alt shortcut register karo
-    // - ProductGrid ready hone ke baad Tab→Enter handler attach karo (sirf ek baar)
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        try
         {
-            var dotNetRef = DotNetObjectReference.Create(this);
-            _dotNetRef = dotNetRef;
-            await JS.InvokeVoidAsync("lrRegisterShortcuts", dotNetRef);
+            if (firstRender)
+            {
+                var dotNetRef = DotNetObjectReference.Create(this);
+                _dotNetRef = dotNetRef;
+                await JS.InvokeVoidAsync("lrRegisterShortcuts", dotNetRef);
+            }
+        }
+        catch (JSDisconnectedException) { }
+    }
+
+    // ══ SHARED CustomizeElement for ALL grids ════════════════════════
+    void Grid_CustomizeElement(GridCustomizeElementEventArgs e)
+    {
+        if (e.ElementType == GridElementType.DataCell)
+        {
+            e.Attributes["tabindex"] = "0";
+            e.Attributes["onfocus"] =
+                "(function(el,ev){" +
+                    "var rt=ev.relatedTarget;" +
+                    "if(!rt) return;" +
+                    "if(rt.tagName==='BUTTON') return;" +
+                    "if(rt.closest('thead')) return;" +
+                    "el.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',code:'Enter',keyCode:13,bubbles:true,cancelable:true}));" +
+                "})(this,event)";
         }
     }
 
@@ -1345,15 +1842,15 @@
                 LrDetailProductId    = row.ProductId,
                 LrDetailUnit         = row.NtUnit,
                 LrDetailBillType     = row.LrBillTypeBill,
-                LrDetailGrossWt      = row.GrossWt.HasValue    ? (decimal?)Convert.ToDecimal(row.GrossWt)       : null,
-                LrDetailTareWt       = row.TareWt.HasValue     ? (decimal?)Convert.ToDecimal(row.TareWt)        : null,
+                LrDetailGrossWt      = row.GrossWt.HasValue    ? (decimal?)Convert.ToDecimal(row.GrossWt)        : null,
+                LrDetailTareWt       = row.TareWt.HasValue     ? (decimal?)Convert.ToDecimal(row.TareWt)         : null,
                 LrDetailNetWt        = row.NetWt,
-                LrDetailLoadWt       = row.LoadWt.HasValue     ? (decimal?)Convert.ToDecimal(row.LoadWt)        : null,
-                LrDetailUnloadWt     = row.UnLoadWt.HasValue   ? (decimal?)Convert.ToDecimal(row.UnLoadWt)      : null,
-                LrDetailChargeQty    = row.ChargeQty.HasValue  ? (decimal?)Convert.ToDecimal(row.ChargeQty)     : null,
-                LrDetailBillRate     = row.RateBill.HasValue   ? (decimal?)Convert.ToDecimal(row.RateBill)      : null,
-                LrDetailGrossFreight = row.GrossFreight.HasValue ? (decimal?)Convert.ToDecimal(row.GrossFreight): null,
-                LrDetailTotalBags    = row.TotalBags.HasValue  ? (int?)Convert.ToInt32(row.TotalBags)           : null,
+                LrDetailLoadWt       = row.LoadWt.HasValue     ? (decimal?)Convert.ToDecimal(row.LoadWt)         : null,
+                LrDetailUnloadWt     = row.UnLoadWt.HasValue   ? (decimal?)Convert.ToDecimal(row.UnLoadWt)       : null,
+                LrDetailChargeQty    = row.ChargeQty.HasValue  ? (decimal?)Convert.ToDecimal(row.ChargeQty)      : null,
+                LrDetailBillRate     = row.RateBill.HasValue   ? (decimal?)Convert.ToDecimal(row.RateBill)       : null,
+                LrDetailGrossFreight = row.GrossFreight.HasValue ? (decimal?)Convert.ToDecimal(row.GrossFreight) : null,
+                LrDetailTotalBags    = row.TotalBags.HasValue  ? (int?)Convert.ToInt32(row.TotalBags)            : null,
                 LrDetailCargoName    = row.ProductName,
                 LrDetailInvoiceNo    = row.InvoiceNo,
             });
@@ -1435,19 +1932,6 @@
         StateHasChanged();
     }
 
-    // ══ Tab se cell focus hote hi edit mode open karo ════════════════
-    // DataCell ko onfocus event dete hain jo Enter simulate karta hai
-    // Enter = DevExpress ka built-in "edit mode open" shortcut
-    void Product_CustomizeElement(GridCustomizeElementEventArgs e)
-    {
-        if (e.ElementType == GridElementType.DataCell)
-        {
-            e.Attributes["tabindex"] = "0";
-            e.Attributes["onfocus"] =
-                "this.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',code:'Enter',keyCode:13,bubbles:true,cancelable:true}))";
-        }
-    }
-
     void AddNewProduct()
     {
         int next = ProductRows.Count > 0 ? ProductRows.Max(r => r.SrNo) + 1 : 1;
@@ -1469,6 +1953,99 @@
         model.LrNtUnit=first.NtUnit; model.LrInvoiceNo=first.InvoiceNo;
         model.LrEwayBillNo=first.EwayBillNo; model.LrTotalBags=first.TotalBags??0;
         model.LrRemarks=first.ProductName;
+    }
+
+    // ══ Journal CustomizeEditModel helpers ═══════════════════════════
+    // These sync the edit model from the data item before editing begins.
+    void Advance_CustomizeEditModel(GridCustomizeEditModelEventArgs e)
+    {
+        if (e.DataItem is LRJournalRowVM src)
+        {
+            var edit = (LRJournalRowVM)e.EditModel;
+            edit.JournalDate=src.JournalDate; edit.AccountId=src.AccountId;
+            edit.Amount=src.Amount; edit.Remarks=src.Remarks;
+            edit.JournalGroup=src.JournalGroup; edit.VchType=src.VchType;
+        }
+    }
+
+    void Diesel_CustomizeEditModel(GridCustomizeEditModelEventArgs e)
+    {
+        if (e.DataItem is LRJournalRowVM src)
+        {
+            var edit = (LRJournalRowVM)e.EditModel;
+            edit.JournalDate=src.JournalDate; edit.PumpBillId=src.PumpBillId;
+            edit.UreaRate=src.UreaRate; edit.UreaQty=src.UreaQty; edit.UreaAmount=src.UreaAmount;
+            edit.JournalGroup=src.JournalGroup; edit.VchType=src.VchType;
+        }
+    }
+
+    void Charges_CustomizeEditModel(GridCustomizeEditModelEventArgs e)
+    {
+        if (e.DataItem is LRJournalRowVM src)
+        {
+            var edit = (LRJournalRowVM)e.EditModel;
+            edit.JournalDate=src.JournalDate; edit.AccountId=src.AccountId;
+            edit.Amount=src.Amount; edit.Remarks=src.Remarks;
+            edit.JournalGroup=src.JournalGroup; edit.VchType=src.VchType;
+        }
+    }
+
+    void Expense_CustomizeEditModel(GridCustomizeEditModelEventArgs e)
+    {
+        if (e.DataItem is LRJournalRowVM src)
+        {
+            var edit = (LRJournalRowVM)e.EditModel;
+            edit.JournalDate=src.JournalDate; edit.AccountId=src.AccountId;
+            edit.Amount=src.Amount; edit.Remarks=src.Remarks;
+            edit.JournalGroup=src.JournalGroup; edit.VchType=src.VchType;
+        }
+    }
+
+    void AdvanceReceived_CustomizeEditModel(GridCustomizeEditModelEventArgs e)
+    {
+        if (e.DataItem is LRJournalRowVM src)
+        {
+            var edit = (LRJournalRowVM)e.EditModel;
+            edit.JournalDate=src.JournalDate; edit.AccountId=src.AccountId;
+            edit.Amount=src.Amount; edit.UreaQty=src.UreaQty; edit.Remarks=src.Remarks;
+            edit.JournalGroup=src.JournalGroup; edit.VchType=src.VchType;
+        }
+    }
+
+    // ══ Journal EditModelSaving handlers ════════════════════════════
+    void Advance_EditModelSaving(GridEditModelSavingEventArgs e)
+    {
+        var ed=(LRJournalRowVM)e.EditModel; var r=(LRJournalRowVM)e.DataItem;
+        r.JournalDate=ed.JournalDate; r.AccountId=ed.AccountId; r.Amount=ed.Amount; r.Remarks=ed.Remarks;
+        StateHasChanged();
+    }
+
+    void Diesel_EditModelSaving(GridEditModelSavingEventArgs e)
+    {
+        var ed=(LRJournalRowVM)e.EditModel; var d=(LRJournalRowVM)e.DataItem;
+        d.JournalDate=ed.JournalDate; d.PumpBillId=ed.PumpBillId; d.UreaRate=ed.UreaRate;
+        d.UreaQty=ed.UreaQty; d.UreaAmount=ed.UreaAmount; StateHasChanged();
+    }
+
+    void Charges_EditModelSaving(GridEditModelSavingEventArgs e)
+    {
+        var ed=(LRJournalRowVM)e.EditModel; var d=(LRJournalRowVM)e.DataItem;
+        d.JournalDate=ed.JournalDate; d.AccountId=ed.AccountId; d.Amount=ed.Amount; d.Remarks=ed.Remarks;
+        StateHasChanged();
+    }
+
+    void Expense_EditModelSaving(GridEditModelSavingEventArgs e)
+    {
+        var ed=(LRJournalRowVM)e.EditModel; var d=(LRJournalRowVM)e.DataItem;
+        d.JournalDate=ed.JournalDate; d.AccountId=ed.AccountId; d.Amount=ed.Amount; d.Remarks=ed.Remarks;
+        StateHasChanged();
+    }
+
+    void AdvanceReceived_EditModelSaving(GridEditModelSavingEventArgs e)
+    {
+        var ed=(LRJournalRowVM)e.EditModel; var d=(LRJournalRowVM)e.DataItem;
+        d.JournalDate=ed.JournalDate; d.AccountId=ed.AccountId; d.Amount=ed.Amount;
+        d.UreaQty=ed.UreaQty; d.Remarks=ed.Remarks; StateHasChanged();
     }
 
     // ══ Journal helpers ══════════════════════════════════════════════
@@ -1493,50 +2070,11 @@
     void DeleteExpenseRow(LRJournalRowVM row)         => DeleteJournalRow(ExpenseRows,         row);
     void DeleteAdvanceReceivedRow(LRJournalRowVM row) => DeleteJournalRow(AdvanceReceivedRows, row);
 
-    void Advance_Customize(GridCustomizeEditModelEventArgs e) { }
-    void Advance_EditModelSaving(GridEditModelSavingEventArgs e)
-    {
-        var ed=(LRJournalRowVM)e.EditModel; var r=(LRJournalRowVM)e.DataItem;
-        r.JournalDate=ed.JournalDate; r.AccountId=ed.AccountId; r.Amount=ed.Amount; r.Remarks=ed.Remarks;
-        StateHasChanged();
-    }
-    async Task RevertAdvanceGrid() { await AdvanceGrid.CancelEditAsync(); AdvanceRows=CreateJournalRows(LrJournalGroup.Advance,LrJournalVchType.Payment); }
-
-    void Diesel_Customize(GridCustomizeEditModelEventArgs e) { }
-    void Diesel_EditModelSaving(GridEditModelSavingEventArgs e)
-    {
-        var ed=(LRJournalRowVM)e.EditModel; var d=(LRJournalRowVM)e.DataItem;
-        d.JournalDate=ed.JournalDate; d.PumpBillId=ed.PumpBillId; d.UreaRate=ed.UreaRate;
-        d.UreaQty=ed.UreaQty; d.UreaAmount=ed.UreaAmount; StateHasChanged();
-    }
-    async Task RevertDieselGrid() { await DieselGrid.CancelEditAsync(); DieselRows=CreateJournalRows(LrJournalGroup.Diesel,LrJournalVchType.Payment); }
-
-    void Charges_Customize(GridCustomizeEditModelEventArgs e) { }
-    void Charges_EditModelSaving(GridEditModelSavingEventArgs e)
-    {
-        var ed=(LRJournalRowVM)e.EditModel; var d=(LRJournalRowVM)e.DataItem;
-        d.JournalDate=ed.JournalDate; d.AccountId=ed.AccountId; d.Amount=ed.Amount; d.Remarks=ed.Remarks;
-        StateHasChanged();
-    }
-    async Task RevertChargesGrid() { await ChargesGrid.CancelEditAsync(); ChargesRows=CreateJournalRows(LrJournalGroup.Charges,LrJournalVchType.Payment); }
-
-    void Expense_Customize(GridCustomizeEditModelEventArgs e) { }
-    void Expense_EditModelSaving(GridEditModelSavingEventArgs e)
-    {
-        var ed=(LRJournalRowVM)e.EditModel; var d=(LRJournalRowVM)e.DataItem;
-        d.JournalDate=ed.JournalDate; d.AccountId=ed.AccountId; d.Amount=ed.Amount; d.Remarks=ed.Remarks;
-        StateHasChanged();
-    }
-    async Task RevertExpenseGrid() { await ExpenseGrid.CancelEditAsync(); ExpenseRows=CreateJournalRows(LrJournalGroup.Expense,LrJournalVchType.Payment); }
-
-    void AdvanceReceived_Customize(GridCustomizeEditModelEventArgs e) { }
-    void AdvanceReceived_EditModelSaving(GridEditModelSavingEventArgs e)
-    {
-        var ed=(LRJournalRowVM)e.EditModel; var d=(LRJournalRowVM)e.DataItem;
-        d.JournalDate=ed.JournalDate; d.AccountId=ed.AccountId; d.Amount=ed.Amount;
-        d.UreaQty=ed.UreaQty; d.Remarks=ed.Remarks; StateHasChanged();
-    }
-    async Task RevertAdvanceReceivedGrid() { await AdvanceReceivedGrid.CancelEditAsync(); AdvanceReceivedRows=CreateJournalRows(LrJournalGroup.AdvanceReceived,LrJournalVchType.Receipt); }
+    async Task RevertAdvanceGrid()         { await AdvanceGrid.CancelEditAsync();         AdvanceRows         = CreateJournalRows(LrJournalGroup.Advance,         LrJournalVchType.Payment); }
+    async Task RevertDieselGrid()          { await DieselGrid.CancelEditAsync();          DieselRows          = CreateJournalRows(LrJournalGroup.Diesel,          LrJournalVchType.Payment); }
+    async Task RevertChargesGrid()         { await ChargesGrid.CancelEditAsync();         ChargesRows         = CreateJournalRows(LrJournalGroup.Charges,         LrJournalVchType.Payment); }
+    async Task RevertExpenseGrid()         { await ExpenseGrid.CancelEditAsync();         ExpenseRows         = CreateJournalRows(LrJournalGroup.Expense,         LrJournalVchType.Payment); }
+    async Task RevertAdvanceReceivedGrid() { await AdvanceReceivedGrid.CancelEditAsync(); AdvanceReceivedRows = CreateJournalRows(LrJournalGroup.AdvanceReceived, LrJournalVchType.Receipt); }
 
     // ══ Documents ════════════════════════════════════════════════════
     private bool IsUploadPopupVisible;
@@ -1692,4 +2230,5 @@
     }
 
     private void RecalculateAllRows() { foreach (var row in ProductRows) RecalculateRow(row); StateHasChanged(); }
+
 }
