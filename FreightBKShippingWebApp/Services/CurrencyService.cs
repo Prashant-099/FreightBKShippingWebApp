@@ -12,7 +12,7 @@ namespace FreightBKShippingWebApp.Services
             _api = api;
             
         }
-
+        public string? LastError { get; private set; }
         public async Task<List<Currency>> GetAllAsync()
         {
             try
@@ -48,11 +48,13 @@ namespace FreightBKShippingWebApp.Services
         {
             try
             {
+                LastError = null;
                 var result = await _api.PostAsync<bool, Currency>("api/Currency", currency);
                 return result;
             }
             catch (Exception ex)
             {
+                LastError = ex.Message;
                 Console.WriteLine($"❌ Error creating currency: {ex.Message}");
                 return false;
             }
@@ -64,11 +66,13 @@ namespace FreightBKShippingWebApp.Services
         {
             try
             {
+                LastError = null;
                 var result = await _api.PutAsync<bool, Currency>($"api/Currency/{currency.CurrencyId}", currency);
                 return result;
             }
             catch (Exception ex)
             {
+                LastError = ex.Message;
                 Console.WriteLine($"❌ Error updating currency: {ex.Message}");
                 return false;
             }
@@ -76,17 +80,17 @@ namespace FreightBKShippingWebApp.Services
             
         }
 
-        public async Task<bool> DeleteAsync(int currencyId)
+        public async Task<(bool Success, string Error)> DeleteAsync(int currencyId)
         {
             try
             {
                 var result = await _api.DeleteAsync<bool>($"api/Currency/{currencyId}");
-                return result;
+                return (true, null);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Error deleting currency: {ex.Message}");
-                return false;
+                return (false, ex.Message);
             }
            
           

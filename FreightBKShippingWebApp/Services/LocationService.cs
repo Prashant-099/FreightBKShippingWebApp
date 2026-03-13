@@ -13,7 +13,7 @@ namespace FreightBKShippingWebApp.Services
             _api = api;
             
         }
-
+        public string? LastError { get; private set; }
         public async Task<List<Location>> GetAllAsync()
         {
             try
@@ -49,11 +49,13 @@ namespace FreightBKShippingWebApp.Services
         {
             try
             {
+                LastError = null;
                 var result = await _api.PostAsync<bool, Location>("api/Locations", location);
                 return result;
             }
             catch (Exception ex)
             {
+                LastError = ex.Message;
                 Console.WriteLine($"❌ Error creating location: {ex.Message}");
                 return false;
             }
@@ -65,11 +67,13 @@ namespace FreightBKShippingWebApp.Services
         {
             try
             {
+                LastError = null;
                 var result = await _api.PutAsync<bool, Location>($"api/Locations/{location.LocationId}", location);
                 return result;
             }
             catch (Exception ex)
             {
+                LastError = ex.Message;
                 Console.WriteLine($"❌ Error updating location: {ex.Message}");
                 return false;
             }
@@ -77,17 +81,17 @@ namespace FreightBKShippingWebApp.Services
            
         }
 
-        public async Task<bool> DeleteAsync(int locationId)
+        public async Task<(bool Success, string Error)> DeleteAsync(int locationId)
         {
             try
             {
                 var result = await _api.DeleteAsync<bool>($"api/Locations/{locationId}");
-                return result;
+                return (true, null);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Error deleting location: {ex.Message}");
-                return false;
+                return (false, ex.Message);
             }
            
             

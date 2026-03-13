@@ -12,7 +12,7 @@ namespace FreightBKShippingWebApp.Services
             _api = api;
             
         }
-
+        public string? LastError { get; private set; }
         public async Task<List<Country>> GetAllAsync()
         {
             try
@@ -48,11 +48,13 @@ namespace FreightBKShippingWebApp.Services
         {
             try
             {
+                LastError = null;
                 var result = await _api.PostAsync<bool, Country>("api/Countries", country);
                 return result;
             }
             catch (Exception ex)
             {
+                LastError = ex.Message;
                 Console.WriteLine($"❌ Error creating country: {ex.Message}");
                 return false;
             }
@@ -64,11 +66,13 @@ namespace FreightBKShippingWebApp.Services
         {
             try
             {
+                LastError = null;
                 var result = await _api.PutAsync<bool, Country>($"api/Countries/{country.CountryId}", country);
                 return result;
             }
             catch (Exception ex)
             {
+                LastError = ex.Message;
                 Console.WriteLine($"❌ Error updating country: {ex.Message}");
                 return false;
             }
@@ -76,17 +80,17 @@ namespace FreightBKShippingWebApp.Services
             
         }
 
-        public async Task<bool> DeleteAsync(int countryId)
+        public async Task<(bool Success, string Error)> DeleteAsync(int countryId)
         {
             try
             {
                 var result = await _api.DeleteAsync<bool>($"api/Countries/{countryId}");
-                return result;
+                return (true, null);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Error deleting country: {ex.Message}");
-                return false;
+                return (false, ex.Message);
             }
            
             

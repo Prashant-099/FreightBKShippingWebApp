@@ -57,11 +57,11 @@
     private List<Currency> CurrencyList = new();
     public void Show(Country country)
     {
-       
+
         if (country.CountryId > 0)
         {
             // Edit mode – bind directly to the selected object
-          //  EditModel = country;
+            //  EditModel = country;
             var json = JsonSerializer.Serialize(country);
             EditModel = JsonSerializer.Deserialize<Country>(json) ?? new Country();
             Title = "Edit Country";
@@ -92,15 +92,37 @@
         {
             if (EditModel.CountryId == 0)
             {
-                await CountryService.CreateAsync(EditModel);
-                AuditLogService.NotifyAuditChanged();
-                ToastService.Success("Country created successfully!");
+                var result = await CountryService.CreateAsync(EditModel);
+
+
+                if (result == true)
+                {
+
+                    ToastService.Success("Country created successfully!");
+                    AuditLogService.NotifyAuditChanged();
+                }
+                else
+                {
+                    ToastService.Error(CountryService.LastError ?? "Country Failed To Created !");
+                    return;
+                }
             }
             else
             {
-                await CountryService.UpdateAsync(EditModel);
-                AuditLogService.NotifyAuditChanged();
-                ToastService.Success("Country updated successfully!");
+                var result = await CountryService.UpdateAsync(EditModel);
+                
+               
+                if (result == true)
+                {
+
+                    ToastService.Success("Country updated successfully!");
+                    AuditLogService.NotifyAuditChanged();
+                }
+                else
+                {
+                    ToastService.Error(CountryService.LastError ?? "Country Failed To updated !");
+                    return;
+                }
             }
 
             Visible = false;

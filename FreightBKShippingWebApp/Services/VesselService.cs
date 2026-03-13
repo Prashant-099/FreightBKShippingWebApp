@@ -12,7 +12,7 @@ namespace FreightBKShippingWebApp.Services
             _api = api;
             
         }
-
+        public string? LastError { get; private set; }
         // 🔹 GET ALL
         public async Task<List<Vessel>> GetAllAsync()
         {
@@ -51,11 +51,13 @@ namespace FreightBKShippingWebApp.Services
         {
             try
             {
+                LastError = null;
                 var result = await _api.PostAsync<bool, Vessel>("api/Vessels", vessel);
                 return result;
             }
             catch (Exception ex)
             {
+                LastError = ex.Message;
                 Console.WriteLine($"❌ Error creating vessel: {ex.Message}");
                 return false;
             }
@@ -68,11 +70,13 @@ namespace FreightBKShippingWebApp.Services
         {
             try
             {
+                LastError = null;
                 var result = await _api.PutAsync<bool, Vessel>($"api/Vessels/{vessel.VesselId}", vessel);
                 return result;
             }
             catch (Exception ex)
             {
+                LastError = ex.Message;
                 Console.WriteLine($"❌ Error updating vessel: {ex.Message}");
                 return false;
             }
@@ -81,17 +85,17 @@ namespace FreightBKShippingWebApp.Services
         }
 
         // 🔹 DELETE
-        public async Task<bool> DeleteAsync(int vesselId)
+        public async Task<(bool Success, string Error)> DeleteAsync(int vesselId)
         {
             try
             {
                 var result = await _api.DeleteAsync<bool>($"api/Vessels/{vesselId}");
-                return result;
+                return (true, null);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Error deleting vessel: {ex.Message}");
-                return false;
+                return (false, ex.Message);
             }
            
          
