@@ -76,6 +76,28 @@
             else
             {
                 @* <!-- SA Stat Cards --> *@
+                <div class="sa-support-row">
+                    <div class="sa-sup-card" @onclick='() => Navigation.NavigateTo("/superadmin/support")'>
+                        <div class="sa-sup-icon">
+                            <i class="bi bi-headset"></i>
+                        </div>
+                        <div class="sa-sup-body">
+                            <div class="sa-sup-label">Open Tickets</div>
+                            <div class="sa-sup-num">@(superAdminData?.TotalOpenTickets ?? 0)</div>
+                            <div class="sa-sup-sub">Click to manage →</div>
+                        </div>
+                    </div>
+                    <div class="sa-sup-card sa-sup-urgent" @onclick='() => Navigation.NavigateTo("/superadmin/support?status=1")'>
+                        <div class="sa-sup-icon">
+                            <i class="bi bi-envelope-exclamation"></i>
+                        </div>
+                        <div class="sa-sup-body">
+                            <div class="sa-sup-label">Unread Messages</div>
+                            <div class="sa-sup-num">@(superAdminData?.TotalUnreadTickets ?? 0)</div>
+                            <div class="sa-sup-sub">Needs your response →</div>
+                        </div>
+                    </div>
+                </div>
                 <div class="sa-grid">
                     <div class="sa-card">
                         <div class="sa-card-label"><i class="bi bi-buildings me-1"></i>Total Companies</div>
