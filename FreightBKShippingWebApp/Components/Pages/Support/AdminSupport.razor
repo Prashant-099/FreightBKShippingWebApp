@@ -1,0 +1,613 @@
+﻿@page "/superadmin/support"
+@attribute [Authorize]
+@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Services
+@using Microsoft.AspNetCore.Authorization
+@inject DashboardService AdminService
+@inject NavigationManager Nav
+
+<div class="sa-support-page">
+
+    <!-- Header -->
+    <div class="sa-header">
+        <div class="sa-header-left">
+            <div class="sa-header-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+            </div>
+            <div>
+                <h1 class="sa-title">Support Inbox</h1>
+                <p class="sa-subtitle">All tickets across all companies</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="sa-stats-row">
+        <div class="sa-stat">
+            <span class="sa-stat-num">@tickets.Count</span>
+            <span class="sa-stat-lbl">Total</span>
+        </div>
+        <div class="sa-stat open">
+            <span class="sa-stat-num">@tickets.Count(t => t.StatusId == 1)</span>
+            <span class="sa-stat-lbl">Open</span>
+        </div>
+        <div class="sa-stat inprogress">
+            <span class="sa-stat-num">@tickets.Count(t => t.StatusId == 2)</span>
+            <span class="sa-stat-lbl">In Progress</span>
+        </div>
+        <div class="sa-stat resolved">
+            <span class="sa-stat-num">@tickets.Count(t => t.StatusId == 4)</span>
+            <span class="sa-stat-lbl">Resolved</span>
+        </div>
+        <div class="sa-stat unread">
+            <span class="sa-stat-num">@tickets.Sum(t => t.UnreadByAdmin)</span>
+            <span class="sa-stat-lbl">Unread</span>
+        </div>
+        <div class="sa-stat unassigned">
+            <span class="sa-stat-num">@tickets.Count(t => string.IsNullOrEmpty(t.AssignedToUserId))</span>
+            <span class="sa-stat-lbl">Unassigned</span>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="sa-filters">
+        <div class="sa-filter-group">
+            <label>Company</label>
+            <div class="sa-select-wrap">
+                <select @bind="filterCompany" @bind:after="ApplyFilters">
+                    <option value="">All Companies</option>
+                    @foreach (var c in companies)
+                    {
+                        <option value="@c.Key">@c.Value</option>
+                    }
+                </select>
+            </div>
+        </div>
+        <div class="sa-filter-group">
+            <label>Status</label>
+            <div class="sa-select-wrap">
+                <select @bind="filterStatus" @bind:after="ApplyFilters">
+                    <option value="">All Status</option>
+                    <option value="1">Open</option>
+                    <option value="2">In Progress</option>
+                    <option value="3">Waiting User</option>
+                    <option value="4">Resolved</option>
+                    <option value="5">Closed</option>
+                </select>
+            </div>
+        </div>
+        <div class="sa-filter-group">
+            <label>Priority</label>
+            <div class="sa-select-wrap">
+                <select @bind="filterPriority" @bind:after="ApplyFilters">
+                    <option value="">All Priority</option>
+                    <option value="1">Low</option>
+                    <option value="2">Medium</option>
+                    <option value="3">High</option>
+                    <option value="4">Critical</option>
+                </select>
+            </div>
+        </div>
+        <button class="sa-btn-clear" @onclick="ClearFilters">Clear</button>
+    </div>
+
+    <!-- Table -->
+    @if (isLoading)
+    {
+        <div class="sa-loading">
+            <div class="sa-spinner"></div>
+            <p>Loading tickets...</p>
+        </div>
+    }
+    else if (!tickets.Any())
+    {
+        <div class="sa-empty">
+            <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" fill="none" viewBox="0 0 24 24" stroke="#cbd5e1" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <p>No tickets found</p>
+        </div>
+    }
+    else
+    {
+        <div class="sa-table-wrap">
+            <table class="sa-table">
+                <thead>
+                    <tr>
+                        <th>Ticket No</th>
+                        <th>Company</th>
+                        <th>Subject</th>
+                        <th>Priority</th>
+                        <th>Status</th>
+                        <th>Assigned</th>
+                        <th>Msgs</th>
+                        <th>Unread</th>
+                        <th>Created</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var t in tickets)
+                    {
+                        <tr class="sa-row @(t.UnreadByAdmin > 0 ? "sa-row-unread" : "")">
+                            <td class="sa-ticketno">#@t.TicketNo</td>
+                            <td class="sa-company">@t.CompanyName</td>
+                            <td class="sa-subject">@t.Subject</td>
+                            <td>
+                                <span class="sa-tbadge priority-@GetPriorityClass(t.PriorityId)">
+                                    @GetPriorityLabel(t.PriorityId)
+                                </span>
+                            </td>
+                            <td>
+                                <span class="sa-tbadge status-@GetStatusClass(t.StatusId)">
+                                    @GetStatusLabel(t.StatusId)
+                                </span>
+                            </td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(t.AssignedToName))
+                                {
+                                    <span class="sa-assigned">@t.AssignedToName</span>
+                                }
+                                else
+                                {
+                                    <span class="sa-unassigned">Unassigned</span>
+                                }
+                            </td>
+                            <td class="sa-center">@t.MessageCount</td>
+                            <td class="sa-center">
+                                @if (t.UnreadByAdmin > 0)
+                                {
+                                    <span class="sa-unread-dot">@t.UnreadByAdmin</span>
+                                }
+                                else
+                                {
+                                    <span class="sa-dash">—</span>
+                                }
+                            </td>
+                            <td class="sa-date">@t.CreatedAt.ToLocalTime().ToString("dd MMM, HH:mm")</td>
+                            <td>
+                                <button class="sa-btn-open" @onclick="@(() => OpenTicket(t.TicketId))">
+                                    Open
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                                    </svg>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+<style>
+    .sa-support-page {
+        padding: 24px 28px;
+        background: #f8fafc;
+        min-height: 100vh;
+        font-family: 'Segoe UI', system-ui, sans-serif;
+    }
+
+    .sa-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 20px;
+    }
+
+    .sa-header-left {
+        display: flex;
+        align-items: center;
+        gap: 13px;
+    }
+
+    .sa-header-icon {
+        width: 42px;
+        height: 42px;
+        background: #ede9fe;
+        border-radius: 11px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #7c3aed;
+    }
+
+    .sa-title {
+        font-size: 20px;
+        font-weight: 700;
+        color: #0f172a;
+        margin: 0;
+    }
+
+    .sa-subtitle {
+        font-size: 13px;
+        color: #64748b;
+        margin: 2px 0 0;
+    }
+
+    /* Stats */
+    .sa-stats-row {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
+
+    .sa-stat {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 11px;
+        padding: 12px 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-width: 80px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+
+    .sa-stat-num {
+        font-size: 22px;
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    .sa-stat-lbl {
+        font-size: 11px;
+        color: #64748b;
+        margin-top: 2px;
+    }
+
+    .sa-stat.open .sa-stat-num {
+        color: #2563eb;
+    }
+
+    .sa-stat.inprogress .sa-stat-num {
+        color: #d97706;
+    }
+
+    .sa-stat.resolved .sa-stat-num {
+        color: #16a34a;
+    }
+
+    .sa-stat.unread .sa-stat-num {
+        color: #dc2626;
+    }
+
+    .sa-stat.unassigned .sa-stat-num {
+        color: #7c3aed;
+    }
+
+    /* Filters */
+    .sa-filters {
+        display: flex;
+        gap: 12px;
+        align-items: flex-end;
+        margin-bottom: 18px;
+        flex-wrap: wrap;
+    }
+
+    .sa-filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+        .sa-filter-group label {
+            font-size: 11px;
+            font-weight: 600;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+    .sa-select-wrap {
+        position: relative;
+    }
+
+        .sa-select-wrap select {
+            padding: 8px 32px 8px 11px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 13px;
+            color: #334155;
+            background: #fff;
+            appearance: none;
+            cursor: pointer;
+            font-family: inherit;
+            min-width: 150px;
+        }
+
+            .sa-select-wrap select:focus {
+                outline: none;
+                border-color: #7c3aed;
+            }
+
+    .sa-btn-clear {
+        padding: 8px 16px;
+        background: #fff;
+        border: 1.5px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #64748b;
+        cursor: pointer;
+        transition: all 0.15s;
+        margin-top: 19px;
+    }
+
+        .sa-btn-clear:hover {
+            background: #f1f5f9;
+        }
+
+    /* Table */
+    .sa-table-wrap {
+        background: #fff;
+        border-radius: 14px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+        overflow: hidden;
+    }
+
+    .sa-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+    }
+
+        .sa-table thead tr {
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .sa-table th {
+            padding: 11px 14px;
+            text-align: left;
+            font-size: 11px;
+            font-weight: 600;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            white-space: nowrap;
+        }
+
+    .sa-row {
+        border-bottom: 1px solid #f1f5f9;
+        transition: background 0.1s;
+    }
+
+        .sa-row:last-child {
+            border-bottom: none;
+        }
+
+        .sa-row:hover {
+            background: #f8fafc;
+        }
+
+    .sa-row-unread {
+        background: #fefce8 !important;
+    }
+
+        .sa-row-unread:hover {
+            background: #fef9c3 !important;
+        }
+
+    .sa-table td {
+        padding: 12px 14px;
+        color: #334155;
+        vertical-align: middle;
+    }
+
+    .sa-ticketno {
+        font-family: monospace;
+        font-weight: 700;
+        color: #7c3aed !important;
+        font-size: 12px;
+    }
+
+    .sa-company {
+        font-weight: 600;
+        color: #1e40af !important;
+        font-size: 12px;
+    }
+
+    .sa-subject {
+        font-weight: 500;
+        color: #0f172a !important;
+        max-width: 220px;
+    }
+
+    .sa-center {
+        text-align: center;
+    }
+
+    .sa-date {
+        font-size: 12px;
+        color: #64748b;
+        white-space: nowrap;
+    }
+
+    .sa-assigned {
+        font-size: 12px;
+        font-weight: 600;
+        color: #0284c7;
+    }
+
+    .sa-unassigned {
+        font-size: 12px;
+        color: #94a3b8;
+        font-style: italic;
+    }
+
+    .sa-dash {
+        color: #cbd5e1;
+    }
+
+    /* Badges */
+    .sa-tbadge {
+        display: inline-block !important;
+        padding: 3px 9px !important;
+        border-radius: 20px !important;
+        font-size: 11px !important;
+        font-weight: 600 !important;
+        white-space: nowrap !important;
+    }
+
+    .sa-support-page .priority-low {
+        background: #f0fdf4 !important;
+        color: #16a34a !important;
+    }
+
+    .sa-support-page .priority-medium {
+        background: #fef9c3 !important;
+        color: #b45309 !important;
+    }
+
+    .sa-support-page .priority-high {
+        background: #fff7ed !important;
+        color: #ea580c !important;
+    }
+
+    .sa-support-page .priority-critical {
+        background: #fef2f2 !important;
+        color: #dc2626 !important;
+    }
+
+    .sa-support-page .status-open {
+        background: #eff6ff !important;
+        color: #2563eb !important;
+    }
+
+    .sa-support-page .status-inprogress {
+        background: #fff7ed !important;
+        color: #d97706 !important;
+    }
+
+    .sa-support-page .status-waiting {
+        background: #f5f3ff !important;
+        color: #7c3aed !important;
+    }
+
+    .sa-support-page .status-resolved {
+        background: #f0fdf4 !important;
+        color: #16a34a !important;
+    }
+
+    .sa-support-page .status-closed {
+        background: #f1f5f9 !important;
+        color: #64748b !important;
+    }
+
+    .sa-unread-dot {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #dc2626;
+        color: #fff;
+        font-size: 10px;
+        font-weight: 700;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+    }
+
+    .sa-btn-open {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background: #f5f3ff;
+        border: 1px solid #ddd6fe;
+        border-radius: 7px;
+        padding: 5px 12px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #7c3aed;
+        cursor: pointer;
+        transition: all 0.15s;
+    }
+
+        .sa-btn-open:hover {
+            background: #7c3aed;
+            border-color: #7c3aed;
+            color: #fff;
+        }
+
+    /* States */
+    .sa-loading, .sa-empty {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 64px;
+        background: #fff;
+        border-radius: 14px;
+        border: 1px solid #e2e8f0;
+        gap: 10px;
+        color: #64748b;
+        font-size: 14px;
+    }
+
+    .sa-spinner {
+        width: 28px;
+        height: 28px;
+        border: 3px solid #e2e8f0;
+        border-top-color: #7c3aed;
+        border-radius: 50%;
+        animation: sa-spin 0.8s linear infinite;
+    }
+
+    @@keyframes sa-spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+</style>
+
+@code {
+    List<SupportTicketAdminDto> tickets = new();
+    Dictionary<int, string> companies = new();
+    bool isLoading = true;
+
+    string filterCompany = "";
+    string filterStatus = "";
+    string filterPriority = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTickets();
+    }
+
+    async Task LoadTickets()
+    {
+        isLoading = true;
+        tickets = await AdminService.GetAllTicketsAsync(
+            string.IsNullOrEmpty(filterCompany) ? null : int.Parse(filterCompany),
+            string.IsNullOrEmpty(filterStatus) ? null : int.Parse(filterStatus),
+            string.IsNullOrEmpty(filterPriority) ? null : int.Parse(filterPriority)
+        );
+        // Build company dropdown from loaded tickets
+        companies = tickets
+            .GroupBy(t => t.CompanyId)
+            .ToDictionary(g => g.Key, g => g.First().CompanyName);
+        isLoading = false;
+    }
+
+    async Task ApplyFilters() => await LoadTickets();
+
+    async Task ClearFilters()
+    {
+        filterCompany = "";
+        filterStatus = "";
+        filterPriority = "";
+        await LoadTickets();
+    }
+
+    void OpenTicket(int id) => Nav.NavigateTo($"/superadmin/support/{id}");
+
+    string GetPriorityLabel(int id) => id switch { 1 => "Low", 2 => "Medium", 3 => "High", 4 => "Critical", _ => "Unknown" };
+    string GetPriorityClass(int id) => id switch { 1 => "low", 2 => "medium", 3 => "high", 4 => "critical", _ => "low" };
+    string GetStatusLabel(int id) => id switch { 1 => "Open", 2 => "In Progress", 3 => "Waiting User", 4 => "Resolved", 5 => "Closed", _ => "Unknown" };
+    string GetStatusClass(int id) => id switch { 1 => "open", 2 => "inprogress", 3 => "waiting", 4 => "resolved", 5 => "closed", _ => "open" };
+}

@@ -82,5 +82,60 @@ namespace FreightBKShippingWebApp.Services
                 return false;
             }
         }
+
+
+
+        // ── Tickets ────────────────────────────────────────────────
+        public async Task<List<SupportTicketAdminDto>> GetAllTicketsAsync(
+            int? companyId = null, int? statusId = null, int? priorityId = null)
+        {
+            try
+            {
+                var q = new List<string>();
+                if (companyId.HasValue) q.Add($"company={companyId}");
+                if (statusId.HasValue) q.Add($"status={statusId}");
+                if (priorityId.HasValue) q.Add($"priority={priorityId}");
+                var qs = q.Any() ? "?" + string.Join("&", q) : "";
+                return await _api.GetFromJsonAsync<List<SupportTicketAdminDto>>($"api/superadmin/tickets{qs}")
+                       ?? new List<SupportTicketAdminDto>();
+            }
+            catch (Exception ex) { Console.WriteLine($"[SuperAdminClientService] GetAllTickets error: {ex.Message}"); return new(); }
+        }
+
+        public async Task<SupportTicketAdminDto?> GetTicketDetailAsync(int ticketId)
+        {
+            try { return await _api.GetFromJsonAsync<SupportTicketAdminDto>($"api/superadmin/tickets/{ticketId}"); }
+            catch (Exception ex) { Console.WriteLine($"[SuperAdminClientService] GetTicketDetail error: {ex.Message}"); return null; }
+        }
+
+        public async Task<bool> ReplyAsync(int ticketId, string message)
+        {
+            try { return await _api.PostAsync<bool, object>($"api/superadmin/tickets/{ticketId}/reply", new { Message = message }); }
+            catch (Exception ex) { Console.WriteLine($"[SuperAdminClientService] Reply error: {ex.Message}"); return false; }
+        }
+
+        public async Task<bool> AssignTicketAsync(int ticketId, string userId)
+        {
+            try { return await _api.PostAsync<bool, object>($"api/superadmin/tickets/{ticketId}/assign", new { AssignedToUserId = userId }); }
+            catch (Exception ex) { Console.WriteLine($"[SuperAdminClientService] Assign error: {ex.Message}"); return false; }
+        }
+
+        public async Task<bool> UpdateStatusAsync(int ticketId, int statusId, int priorityId)
+        {
+            try { return await _api.PutAsync<bool, object>($"api/superadmin/tickets/{ticketId}/status", new { StatusId = statusId, PriorityId = priorityId }); }
+            catch (Exception ex) { Console.WriteLine($"[SuperAdminClientService] UpdateStatus error: {ex.Message}"); return false; }
+        }
+
+        public async Task<bool> CloseTicketAsync(int ticketId)
+        {
+            try { return await _api.PostAsync<bool, object>($"api/superadmin/tickets/{ticketId}/close", new { }); }
+            catch (Exception ex) { Console.WriteLine($"[SuperAdminClientService] Close error: {ex.Message}"); return false; }
+        }
+
+        public async Task<List<AdminUserDto>> GetAdminUsersAsync()
+        {
+            try { return await _api.GetFromJsonAsync<List<AdminUserDto>>("api/superadmin/admin-users") ?? new(); }
+            catch (Exception ex) { Console.WriteLine($"[SuperAdminClientService] GetAdminUsers error: {ex.Message}"); return new(); }
+        }
     }
 }

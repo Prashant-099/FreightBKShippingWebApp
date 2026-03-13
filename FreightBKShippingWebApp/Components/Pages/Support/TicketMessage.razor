@@ -1,0 +1,119 @@
+﻿@using FreightBKShippingWebApp.Model
+
+<div class="message-wrapper @(IsUser ? "from-user" : "from-support")">
+    <div class="message-avatar @(IsUser ? "avatar-user" : "avatar-support")">
+        @if (IsUser)
+        {
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" />
+            </svg>
+        }
+        else
+        {
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" />
+            </svg>
+        }
+    </div>
+
+    <div class="message-content">
+        <div class="message-meta @(IsUser ? "meta-user" : "")">
+            <span class="sender-name">@(IsUser ? "You" : SenderName)</span>
+            <span class="message-time">@Timestamp.ToLocalTime().ToString("MMM dd, HH:mm")</span>
+        </div>
+        <div class="message-bubble @(IsUser ? "bubble-user" : "bubble-support")">
+            @MessageText
+        </div>
+    </div>
+</div>
+
+<style>
+    .message-wrapper {
+        display: flex;
+        gap: 9px;
+        align-items: flex-start;
+    }
+
+        .message-wrapper.from-user {
+            flex-direction: row-reverse;
+        }
+
+    .message-avatar {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .avatar-user {
+        background: #dbeafe;
+        color: #2563eb;
+    }
+
+    .avatar-support {
+        background: #dcfce7;
+        color: #16a34a;
+    }
+
+    .message-content {
+        max-width: 68%;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .from-user .message-content {
+        align-items: flex-end;
+    }
+
+    .message-meta {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .meta-user {
+        flex-direction: row-reverse;
+    }
+
+    .sender-name {
+        font-size: 12px;
+        font-weight: 600;
+        color: #374151;
+    }
+
+    .message-time {
+        font-size: 11px;
+        color: #94a3b8;
+    }
+
+    .message-bubble {
+        padding: 9px 13px;
+        border-radius: 14px;
+        font-size: 14px;
+        line-height: 1.5;
+        word-break: break-word;
+    }
+
+    .bubble-user {
+        background: #0284c7;
+        color: #fff;
+        border-bottom-right-radius: 4px;
+    }
+
+    .bubble-support {
+        background: #f1f5f9;
+        color: #334155;
+        border-bottom-left-radius: 4px;
+    }
+</style>
+
+@code {
+    [Parameter, EditorRequired] public string MessageText { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public DateTime Timestamp { get; set; }
+    [Parameter] public bool IsUser { get; set; } = true;
+    [Parameter] public string SenderName { get; set; } = "Support Team";
+}

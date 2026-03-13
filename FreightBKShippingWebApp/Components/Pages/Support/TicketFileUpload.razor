@@ -1,0 +1,220 @@
+﻿@using Microsoft.AspNetCore.Components.Forms
+
+<div class="file-upload-area @(isDragging ? "dragging" : "") @(selectedFile != null ? "has-file" : "")">
+    @if (selectedFile == null)
+    {
+        <label class="upload-label">
+            <InputFile OnChange="UploadFile" class="hidden-input" accept="@Accept" />
+            <div class="upload-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+            </div>
+            <p class="upload-text">Click to upload or drag &amp; drop</p>
+            <p class="upload-hint">@HintText</p>
+        </label>
+    }
+    else
+    {
+        <div class="file-preview">
+            <div class="file-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                </svg>
+            </div>
+            <div class="file-info">
+                <span class="file-name">@selectedFile.Name</span>
+                <span class="file-size">@FormatFileSize(selectedFile.Size)</span>
+            </div>
+            <button type="button" class="btn-remove" @onclick="RemoveFile">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="upload-error">
+            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            @errorMessage
+        </div>
+    }
+</div>
+
+<style>
+    .file-upload-area {
+        border: 2px dashed #e2e8f0;
+        border-radius: 12px;
+        background: #fafbfc;
+        transition: all 0.2s;
+        overflow: hidden;
+    }
+
+        .file-upload-area.dragging {
+            border-color: #0284c7;
+            background: #f0f9ff;
+        }
+
+        .file-upload-area.has-file {
+            border-style: solid;
+            border-color: #bbf7d0;
+            background: #f0fdf4;
+        }
+
+    .upload-label {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 28px 16px;
+        cursor: pointer;
+        gap: 6px;
+    }
+
+    .upload-icon {
+        width: 48px;
+        height: 48px;
+        background: #e0f2fe;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #0284c7;
+        margin-bottom: 4px;
+    }
+
+    .upload-text {
+        font-size: 14px;
+        font-weight: 600;
+        color: #374151;
+        margin: 0;
+    }
+
+    .upload-hint {
+        font-size: 12px;
+        color: #94a3b8;
+        margin: 0;
+    }
+
+    .hidden-input {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        opacity: 0;
+        overflow: hidden;
+    }
+
+    .file-preview {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 16px;
+    }
+
+    .file-icon {
+        width: 36px;
+        height: 36px;
+        background: #dcfce7;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #16a34a;
+        flex-shrink: 0;
+    }
+
+    .file-info {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .file-name {
+        font-size: 13px;
+        font-weight: 600;
+        color: #334155;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .file-size {
+        font-size: 11px;
+        color: #94a3b8;
+    }
+
+    .btn-remove {
+        width: 28px;
+        height: 28px;
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        color: #64748b;
+        flex-shrink: 0;
+        transition: all 0.15s;
+    }
+
+        .btn-remove:hover {
+            background: #fef2f2;
+            border-color: #fecaca;
+            color: #dc2626;
+        }
+
+    .upload-error {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: #dc2626;
+        padding: 0 16px 12px;
+    }
+</style>
+
+@code {
+    [Parameter] public string Accept { get; set; } = ".pdf,.jpg,.jpeg,.png,.doc,.docx";
+    [Parameter] public long MaxFileSizeBytes { get; set; } = 10 * 1024 * 1024; // 10 MB
+    [Parameter] public string HintText { get; set; } = "PDF, JPG, PNG, DOC up to 10 MB";
+    [Parameter] public EventCallback<IBrowserFile> OnFileSelected { get; set; }
+
+    IBrowserFile? selectedFile;
+    string errorMessage = string.Empty;
+    bool isDragging = false;
+
+    async Task UploadFile(InputFileChangeEventArgs e)
+    {
+        errorMessage = string.Empty;
+        var file = e.File;
+
+        if (file.Size > MaxFileSizeBytes)
+        {
+            errorMessage = $"File is too large. Max size is {FormatFileSize(MaxFileSizeBytes)}.";
+            return;
+        }
+
+        selectedFile = file;
+        await OnFileSelected.InvokeAsync(file);
+    }
+
+    void RemoveFile()
+    {
+        selectedFile = null;
+        errorMessage = string.Empty;
+    }
+
+    string FormatFileSize(long bytes)
+    {
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1024 * 1024) return $"{bytes / 1024:F1} KB";
+        return $"{bytes / (1024 * 1024.0):F1} MB";
+    }
+}
