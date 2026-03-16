@@ -1,6 +1,6 @@
 ﻿@page "/tickets/{TicketId:int}"
 @attribute [Authorize]
-
+@implements IAsyncDisposable 
 @using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Services
 @using Microsoft.AspNetCore.Authorization
@@ -834,9 +834,28 @@
 
     private async Task StartHub()
     {
+        Console.WriteLine($"[StartHub] Called for TicketId={TicketId}");
         try
         {
-            var token = await TicketService.GetAuthTokenAsync();
+
+            string? token = null;
+            for (int i = 0; i < 5; i++)
+            {
+                await Task.Delay(300);
+                try
+                {
+                    token = await TicketService.GetAuthTokenAsync();
+                    if (!string.IsNullOrEmpty(token)) break;
+                }
+                catch (TaskCanceledException)
+                {
+                    Console.WriteLine($"[StartHub] Token read attempt {i + 1} cancelled, retrying...");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[StartHub] Token read attempt {i + 1} failed: {ex.Message}");
+                }
+            }
 
             if (string.IsNullOrEmpty(token))
             {
@@ -845,7 +864,7 @@
             }
 
             var apiBase = TicketService.GetApiBaseUrl().TrimEnd('/'); // ✅ FIX 3: trailing slash remove
-
+            Console.WriteLine($"[StartHub] Connecting to: {apiBase}/signalr/ticket");
             _hub = new HubConnectionBuilder()
                 .WithUrl($"{apiBase}/signalr/ticket", options =>
                 {
@@ -886,7 +905,7 @@
             // SignalR push → sirf "Support" sender ka message add karo
             // (ya agar koi aur user same ticket dekh raha ho toh uske liye bhi)
             _hub.On<string, string, DateTime, int>("ReceiveMessage",
-                (senderType, messageText, createdAt, messageId) =>
+               async (senderType, messageText, createdAt, messageId) =>
                 {
                     // ✅ Skip if we already have this message (by messageId)
                     // Ya sirf Support messages add karo — User ne khud bheja toh woh pehle se list mein hai
@@ -902,21 +921,21 @@
                         CreatedAt = createdAt
                     });
 
-                    InvokeAsync(async () =>
+                    await InvokeAsync(async () =>
                     {
                         StateHasChanged();
                         await ScrollToBottom();
                     });
                 });
 
-            _hub.On<int>("TicketClosed", ticketId =>
-            {
-                if (ticketId == TicketId)
-                {
-                    if (ticket != null) ticket.StatusId = 5;
-                    InvokeAsync(StateHasChanged);
-                }
-            });
+            _hub.On<int>("TicketClosed", async ticketId =>  // ✅ async added
+ {
+     if (ticketId == TicketId && ticket != null)
+     {
+         ticket.StatusId = 5;
+         await InvokeAsync(StateHasChanged);  // ✅ await added
+     }
+ });
 
             await _hub.StartAsync();
 
@@ -927,7 +946,7 @@
             }
 
             StateHasChanged();
-        }
+        }   
         catch (Exception ex)
         {
             Console.WriteLine($"[TicketDetail] StartHub ERROR: {ex.Message}");
