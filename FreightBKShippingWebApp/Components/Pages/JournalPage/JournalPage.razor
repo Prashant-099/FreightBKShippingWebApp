@@ -240,7 +240,8 @@
         try
         {
             LoadingService.Show("Deleting...");
-            int successCount = 0;
+            int successCount = 0, failCount = 0;
+            List<string> errorMessages = new();
 
             foreach (var journal in selectedList)
             {
@@ -252,13 +253,14 @@
                 }
                 else
                 {
-                    ToastService.Error(result.Error);
+                    failCount++;
+                    errorMessages.Add(result.Error);
                 }
             }
 
             if (successCount > 0)
-                ToastService.Success($"{successCount} Journal entry/entries deleted successfully.");
-
+                ToastService.Success($"{successCount} Journal entry deleted successfully.");
+            if (failCount > 0) ToastService.Error($"{failCount} Journal entry Failed To Delete.\nDetails: {string.Join("\n", errorMessages.Distinct())}");
             await LoadJournals();
         }
         finally

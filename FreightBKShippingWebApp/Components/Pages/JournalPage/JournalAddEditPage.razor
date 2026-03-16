@@ -552,7 +552,7 @@
         StateHasChanged();
     }
 
-    
+
 
     private void RenumberLines()
     {
@@ -607,10 +607,10 @@
 
         foreach (var detail in EditModel.BillRefDetails.OrderBy(x => x.BillRefDetailId))
         {
-            
-    // ✅ ADD THIS CHECK — skips blank rows saved accidentally
-    if (detail.BillRefVchId == 0 || detail.BillRefVchAmount <= 0)
-        continue;
+
+            // ✅ ADD THIS CHECK — skips blank rows saved accidentally
+            if (detail.BillRefVchId == 0 || detail.BillRefVchAmount <= 0)
+                continue;
 
             _lineCounter++;
             JournalLines.Add(new JournalLine
@@ -632,10 +632,10 @@
     private async Task HandleValidSubmit()
     {
         if (LinesGrid != null)
-{
-    await LinesGrid.CancelEditAsync(); // commit last edited cell
-    await LinesGrid.SaveChangesAsync();
-}
+        {
+            await LinesGrid.CancelEditAsync(); // commit last edited cell
+            await LinesGrid.SaveChangesAsync();
+        }
         var validLines = JournalLines
     .Where(l => l.AccountId > 0 && l.Amount > 0)
     .ToList();
@@ -643,7 +643,7 @@
         // .GroupBy(x => new { x.LineNo, x.AccountId, x.DrCr })
         // .Select(g => g.First())
         // .ToList();
-       
+
         // Validation
         if (validLines.Count < 2)
         {
@@ -702,14 +702,32 @@
             if (EditModel.JournalId == 0)
             {
                 result = await JournalService.CreateAsync(EditModel);
-                ToastService.Success(result ? "Journal entry created successfully!" : "Failed to create journal entry!");
-                AuditLogService.NotifyAuditChanged();
+               
+                if (result==true)
+                {
+                    ToastService.Success("Journal entry created successfully!");
+                    AuditLogService.NotifyAuditChanged();
+                }
+                else
+                {
+                    ToastService.Success(JournalService.LastError?? "Failed to create journal entry!");
+                    return;
+                }
             }
             else
             {
                 result = await JournalService.UpdateAsync(EditModel);
-                ToastService.Success(result ? "Journal entry updated successfully!" : "Failed to update journal entry!");
-                AuditLogService.NotifyAuditChanged();
+                
+                if (result == true)
+                {
+                    ToastService.Success("Journal entry Update successfully!");
+                    AuditLogService.NotifyAuditChanged();
+                }
+                else
+                {
+                    ToastService.Success(JournalService.LastError ?? "Failed to Update journal entry!");
+                    return;
+                }
             }
 
             if (result)

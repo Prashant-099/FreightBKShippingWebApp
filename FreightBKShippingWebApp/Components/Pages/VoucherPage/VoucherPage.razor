@@ -234,20 +234,25 @@
         {
             LoadingService.Show("Deleting...");
             int successCount = 0, failCount = 0;
+            List<string> errorMessages = new();
             foreach (var voucher in selectedList)
             {
                 var result = await VoucherService.DeleteAsync(voucher.VoucherId);
-                if (result)
+                if (result.Success)
                 {
                     successCount++;
                     AuditLogService.NotifyAuditChanged();
 
                 }
-                else failCount++;
+                else
+                {
+                    failCount++;
+                    errorMessages.Add(result.Error);
+                }
             }
 
             if (successCount > 0) ToastService.Success($"{successCount} Voucher(s) Deleted Successfully.");
-            if (failCount > 0) ToastService.Error($"{failCount} Voucher(s) Failed To Delete.");
+            if (failCount > 0) ToastService.Error($"{failCount} Voucher(s) Failed To Delete.\nDetails: {string.Join("\n", errorMessages.Distinct())}");
 
             await LoadVouchersAsync();
         }

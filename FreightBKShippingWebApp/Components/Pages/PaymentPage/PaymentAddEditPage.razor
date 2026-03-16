@@ -1218,16 +1218,34 @@ var purchaseVoucherIds = allVouchers
             if (EditModel.JournalId == 0)
             {
                 result = await JournalService.CreateAsync(EditModel);
-                ToastService.Success(result ? "Receipt created successfully!" : "Failed to create receipt!");
-                                    AuditLogService.NotifyAuditChanged();
+               
 
+                if(result==true)
+                {
+                 ToastService.Success( "Payment Created Successfully!");
+                      AuditLogService.NotifyAuditChanged();
+                
+                }
+                else
+                {
+                 ToastService.Success( JournalService.LastError?? "Failed To Create Payment!");
+                return;
+                }
             }
             else
             {
                 result = await JournalService.UpdateAsync(EditModel);
-                ToastService.Success(result ? "Receipt updated successfully!" : "Failed to update receipt!");
-                                    AuditLogService.NotifyAuditChanged();
-
+               if(result==true)
+                {
+                 ToastService.Success( "Payment Updated Successfully!");
+                      AuditLogService.NotifyAuditChanged();
+                
+                }
+                else
+                {
+                 ToastService.Success( JournalService.LastError?? "Failed To Updated Payment!");
+                return;
+                }
             }
 
             if (result)

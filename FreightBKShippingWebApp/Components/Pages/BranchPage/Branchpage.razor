@@ -234,21 +234,25 @@
         {
             LoadingService.Show("Deleting...");
             int successCount = 0, failCount = 0;
-
+            List<string> errorMessages = new();
             foreach (var branch in selectedList)
             {
                 var result = await BranchService.DeleteAsync(branch.BranchId);
-                if (result)
+                if (result.Success)
                 {
                     successCount++;
                     AuditLogService.NotifyAuditChanged();
 
                 }
-                else failCount++;
+                else 
+                {
+                    failCount++; 
+                    errorMessages.Add(result.Error);
+                }
             }
 
             if (successCount > 0) ToastService.Success($"{successCount} Branch(s) Deleted Successfully.");
-            if (failCount > 0) ToastService.Error($"{failCount} Branch(s) Failed To Delete.");
+            if (failCount > 0) ToastService.Error($"{failCount} Branch(s) Failed To Delete.\nDetails: {string.Join("\n", errorMessages.Distinct())}");
 
             await LoadBranchesAsync();
         }

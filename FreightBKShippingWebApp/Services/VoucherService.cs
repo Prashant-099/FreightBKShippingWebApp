@@ -82,18 +82,18 @@ namespace FreightBKShippingWebApp.Services
             
         }
 
-        public async Task<bool> DeleteAsync(int id)
+        public async Task<(bool Success, string Error)> DeleteAsync(int id)
         {
             try
             {
                 var result = await _api.DeleteAsync<bool>($"api/Vouchers/{id}");
-                return result;
+                return (true, null);
             }
             catch (Exception ex)
             {
                 LastError = ex.Message;   // 👈 store API error
                 Console.WriteLine($"❌ Error deleting voucher: {ex.Message}");
-                return false;
+                return (false, ex.Message);
             }
            
           

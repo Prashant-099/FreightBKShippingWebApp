@@ -14,7 +14,7 @@ namespace FreightBKShippingWebApp.Services
         {
             _api = api;
         }
-
+        public string? LastError { get; private set; }
         // ✅ Get All Vehicles
         public async Task<List<Vehicle>> GetAllAsync()
         {
@@ -49,10 +49,12 @@ namespace FreightBKShippingWebApp.Services
         {
             try
             {
+                LastError = null;
                 return await _api.PostAsync<bool, Vehicle>("api/Vehicles", vehicle);
             }
             catch (Exception ex)
             {
+                LastError = ex.Message;
                 Console.WriteLine($"❌ Error creating vehicle: {ex.Message}");
                 return false;
             }
@@ -63,26 +65,29 @@ namespace FreightBKShippingWebApp.Services
         {
             try
             {
+                LastError = null;
                 return await _api.PutAsync<bool, Vehicle>($"api/Vehicles/{vehicle.VehicleId}", vehicle);
             }
             catch (Exception ex)
             {
+                LastError = ex.Message;
                 Console.WriteLine($"❌ Error updating vehicle: {ex.Message}");
                 return false;
             }
         }
 
         // ✅ Delete Vehicle (Soft delete in backend)
-        public async Task<bool> DeleteAsync(int vehicleId)
+        public async Task<(bool Success, string Error)> DeleteAsync(int vehicleId)
         {
             try
             {
-                return await _api.DeleteAsync<bool>($"api/Vehicles/{vehicleId}");
+                var result = await _api.DeleteAsync<bool>($"api/Vehicles/{vehicleId}");
+                return (true, null);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Error deleting vehicle: {ex.Message}");
-                return false;
+                return (false, ex.Message);
             }
         }
     }

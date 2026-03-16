@@ -52,8 +52,12 @@ namespace FreightBKShippingWebApp.Services
         // ✅ Create new bill
         public async Task<int> CreateAsync(Bill bill)
         {
-           
-            
+
+            try
+            {
+                LastError = null;
+
+
                 var result = await _api.PostAsync<bool, Bill>("api/Bills", bill);
             if (result)
             {
@@ -70,9 +74,14 @@ namespace FreightBKShippingWebApp.Services
                     return createdBill.BillId;
                 }
             }
-
-            return 0;
-            //var innermost = ex;
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                LastError = ex.Message;   // store API error
+                Console.WriteLine($"❌ Error creating bill: {ex.Message}");
+                return 0;
+            }// var innermost = ex;
             //while (innermost.InnerException != null)
             //    innermost = innermost.InnerException;
 

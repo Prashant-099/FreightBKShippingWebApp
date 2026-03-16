@@ -750,7 +750,7 @@ DefaultFileName="@PendingFileName"
         {
             LoadingService.Show("Deleting...");
             int successCount = 0, failCount = 0;
-
+            List<string> errorMessages = new();
             foreach (var bill in selectedBillsList)
             {
                 var result = await BillService.DeleteAsync(bill.BillId);
@@ -763,13 +763,12 @@ DefaultFileName="@PendingFileName"
                 else
                 {
                     failCount++;
-                    failCount++;
-                    ToastService.Error(result.Error);
+                    errorMessages.Add(result.Error);
                 }
             }
 
             if (successCount > 0) ToastService.Success($"{successCount} Bill(s) Deleted Successfully.");
-            // if (failCount > 0) ToastService.Error($"{failCount} Bill(s) Failed To Delete.");
+            if (failCount > 0) ToastService.Error($"{failCount} Bill(s) Failed To Delete.\nDetails: {string.Join("\n", errorMessages.Distinct())}");
 
             await LoadBillsAsync();
         }

@@ -297,7 +297,7 @@
         {
             LoadingService.Show("Deleting...");
             int successCount = 0, failCount = 0;
-
+            List<string> errorMessages = new();
             foreach (var journal in selectedList)
             {
                 var result = await JournalService.DeleteAsync(journal.JournalId);
@@ -310,13 +310,13 @@
                 else
                 {
                     failCount++;
-                    ToastService.Error(result.Error);
+                    errorMessages.Add(result.Error);
                 }
             }
 
             if (successCount > 0)
-                ToastService.Success($"{successCount} Receipt(s) Deleted Successfully.");
-
+                ToastService.Success($"{successCount} Payment(s) Deleted Successfully.");
+            if (failCount > 0) ToastService.Error($"{failCount} Payment(s) Failed To Delete.\nDetails: {string.Join("\n", errorMessages.Distinct())}");
             await LoadReceipts();
         }
         finally

@@ -427,7 +427,7 @@
         {
             LoadingService.Show("Deleting...");
             int successCount = 0, failCount = 0;
-
+            List<string> errorMessages = new();
             foreach (var quotation in selectedList)
             {
                 var result = await BillService.DeleteAsync(quotation.BillId);
@@ -439,12 +439,14 @@
                 else
                 {
                     failCount++;
-                    ToastService.Error(result.Error);
+                    errorMessages.Add(result.Error);
                 }
             }
 
             if (successCount > 0) 
                 ToastService.Success($"{successCount} Quotation(s) Deleted Successfully.");
+            if (failCount > 0)
+                ToastService.Error($"{failCount} Quotation(s)  Failed To Delete.\nDetails: {string.Join("\n", errorMessages.Distinct())}");
 
             await LoadQuotationsAsync();
         }

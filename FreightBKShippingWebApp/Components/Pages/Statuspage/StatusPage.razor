@@ -207,24 +207,28 @@
         try
         {
             LoadingService.Show("Deleting...");
-            int success = 0, fail = 0;
-
+                int success = 0, failCount = 0;
+                List<string> errorMessages = new();
             foreach (var item in SelectedStatuses.Cast<Status>())
             {
                 var result = await StatusService.DeleteAsync(item.StatusId);
-                if (result)
+                if (result.Success)
                 {
                     success++;
                     AuditLogService.NotifyAuditChanged();
                 }
-                else fail++;
+                else
+                {
+                    failCount++;
+                    errorMessages.Add(result.Error);
+                }
             }
 
             if (success > 0)
                 ToastService.Success($"{success} Status deleted.");
 
-            if (fail > 0)
-                ToastService.Error($"{fail} Status failed to delete.");
+            if (failCount > 0)
+            ToastService.Error($"{failCount} Status Failed To Delete.\nDetails: {string.Join("\n", errorMessages.Distinct())}");
 
             await LoadStatusAsync();
         }

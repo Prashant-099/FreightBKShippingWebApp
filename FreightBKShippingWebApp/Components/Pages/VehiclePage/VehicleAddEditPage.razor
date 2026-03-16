@@ -5,7 +5,7 @@
 @inject ToasteService ToastService
 @inject LoadingService LoadingService
 @inject AccountService AccountService
-
+@inject AuditLogService AuditLogService
 <DxPopup @bind-Visible="Visible"
          ShowCloseButton="true"
          HeaderText="@Title"
@@ -203,12 +203,13 @@
             if (result)
             {
                 ToastService.Success("Vehicle saved successfully.");
+                AuditLogService.NotifyAuditChanged();
                 Visible = false;
                 await OnSaved.InvokeAsync();
             }
             else
             {
-                ToastService.Error("Failed to save vehicle.");
+                ToastService.Error(VehicleService.LastError ?? "Failed to save vehicle.");
             }
         }
         finally

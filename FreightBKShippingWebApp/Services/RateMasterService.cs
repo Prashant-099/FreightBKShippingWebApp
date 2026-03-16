@@ -10,7 +10,7 @@ namespace FreightBKShippingWebApp.Services
         {
             _api = api;
         }
-
+        public string? LastError { get; private set; }
         public async Task<List<RateMaster>> GetAllAsync(int page = 1, int pageSize = 1000)
         {
             try
@@ -47,11 +47,13 @@ namespace FreightBKShippingWebApp.Services
           
             try
             {
+                LastError = null;
                 var result = await _api.PostAsync<RateMaster, RateMaster>("api/RateMaster", dto);
                 return result != null;
             }
             catch (Exception ex)
             {
+                LastError = ex.Message;
                 Console.WriteLine($"❌ Error creating rate master: {ex.Message}");
                 return false;
             }
@@ -63,30 +65,32 @@ namespace FreightBKShippingWebApp.Services
           
             try
             {
+                LastError = null;
                 var result = await _api.PutAsync<RateMaster, RateMaster>(
                     $"api/RateMaster/{rateMaster.RateMasterId}", rateMaster);
                 return result != null;
             }
             catch (Exception ex)
             {
+                LastError = ex.Message;
                 Console.WriteLine($"❌ Error updating rate master: {ex.Message}");
                 return false;
             }
            
         }
 
-        public async Task<bool> DeleteAsync(int rateMasterId)
+        public async Task<(bool Success, string Error)> DeleteAsync(int rateMasterId)
         {
           
             try
             {
                 var result = await _api.DeleteAsync<bool>($"api/RateMaster/{rateMasterId}");
-                return result;
+                return (true, null);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Error deleting rate master: {ex.Message}");
-                return false;
+                return (false, ex.Message);
             }
             
         }

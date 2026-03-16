@@ -1724,7 +1724,7 @@
             }
             else
             {
-                ToastService.Error("Failed to create Quotation!");
+                ToastService.Error(BillService.LastError??"Failed to create Quotation!");
                 return;
             }
 
@@ -1819,7 +1819,7 @@
                 }
                 else
                 {
-                    ToastService.Error("Failed to create Quotation!");
+                    ToastService.Error(BillService.LastError??"Failed to Create Quotation!");
                     return;
                 }
             }
@@ -1833,11 +1833,7 @@
                 }
                 else
                 {
-                    ToastService.Error(
-                        string.IsNullOrWhiteSpace(BillService.LastError)
-                            ? "Failed to update Quotation!"
-                            : BillService.LastError
-                    );
+                    ToastService.Error(BillService.LastError ?? "Failed to Update Quotation!");
                     return;
                 }
             }

@@ -10,7 +10,7 @@ namespace FreightBKShippingWebApp.Services
         {
             _api = api;
         }
-
+        public string? LastError { get; private set; }
         public async Task<List<Status>> GetAllAsync()
         {
             try
@@ -42,11 +42,13 @@ namespace FreightBKShippingWebApp.Services
         {
             try
             {
+                LastError = null;
                 var result = await _api.PostAsync<bool, Status>("api/Status", status);
                 return result;
             }
             catch (Exception ex)
             {
+                LastError = ex.Message;
                 Console.WriteLine($"❌ Error creating status: {ex.Message}");
                 return false;
             }
@@ -56,27 +58,29 @@ namespace FreightBKShippingWebApp.Services
         {
             try
             {
+                LastError = null;
                 var result = await _api.PutAsync<bool, Status>($"api/Status/{status.StatusId}", status);
                 return result;
             }
             catch (Exception ex)
             {
+                LastError = ex.Message;
                 Console.WriteLine($"❌ Error updating status: {ex.Message}");
                 return false;
             }
         }
 
-        public async Task<bool> DeleteAsync(int statusId)
+        public async Task<(bool Success, string Error)> DeleteAsync(int statusId)
         {
             try
             {
                 var result = await _api.DeleteAsync<bool>($"api/Status/{statusId}");
-                return result;
+                return (true, null);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Error deleting status: {ex.Message}");
-                return false;
+                return (false, ex.Message);
             }
         }
     }
