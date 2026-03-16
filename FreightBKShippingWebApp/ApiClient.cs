@@ -20,6 +20,7 @@ namespace FreightBKShippingWebApp
         private bool _isRefreshing = false; // Prevent concurrent refresh attempts
         private readonly SemaphoreSlim _refreshSemaphore = new(1, 1);
         private readonly IBranchContext branchContext;
+        private bool _isDisposed = false; // ✅ Circuit dispose guard
         private readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true,
@@ -27,8 +28,54 @@ namespace FreightBKShippingWebApp
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         };
 
+        // ✅ Circuit-safe navigation — never throws JSDisconnectedException
+        // ✅ REPLACE SafeNavigate with this:
+        private void SafeNavigate(string url, bool forceLoad = false)
+        {
+            if (_isDisposed) return;
+
+            try
+            {
+                navigationManager.NavigateTo(url, forceLoad);
+            }
+            catch (Exception ex) when (
+                ex is ObjectDisposedException ||
+                ex is OperationCanceledException ||
+                ex.GetType().Name.Contains("JSDisconnected") ||
+                ex.Message.Contains("circuit") ||
+                ex.Message.Contains("disconnected") ||
+                ex.Message.Contains("JavaScript interop") ||
+                ex.Message.Contains("interop calls cannot"))
+            {
+                Console.WriteLine($"⚠️ Navigation skipped - circuit disposed");
+            }
+            catch { /* swallow anything else during dispose */ }
+        }
+
+        // ✅ Circuit-safe logout + navigate
+        private async Task SafeLogoutAndNavigate(string url = "/login", bool forceLoad = true)
+        {
+            try
+            {
+                if (!_isDisposed)
+                    await ((CustomAuthStateProvider)authStateProvider).MarkUserAsLoggedOut();
+            }
+            catch (Exception ex) when (
+                ex.Message.Contains("circuit") ||
+                ex.Message.Contains("disconnected") ||
+                ex.Message.Contains("JavaScript interop"))
+            {
+                Console.WriteLine($"⚠️ Logout skipped - circuit disposed: {ex.Message}");
+            }
+
+            SafeNavigate(url, forceLoad);
+        }
+
+        public void Dispose() => _isDisposed = true;
+
         public async Task SetAuthorizeHeader()
-        { // Enable compression
+        {
+            // Enable compression
             if (!httpClient.DefaultRequestHeaders.AcceptEncoding.Any())
             {
                 httpClient.DefaultRequestHeaders.AcceptEncoding.Add(
@@ -39,13 +86,12 @@ namespace FreightBKShippingWebApp
             try
             {
                 var result = await localStorage.GetAsync<LoginResponseModel>("sessionState");
-                
+
                 var sessionState = result.Success ? result.Value : null;
 
                 if (sessionState == null || string.IsNullOrEmpty(sessionState.Token))
                 {
-                    //await ((CustomAuthStateProvider)authStateProvider).MarkUserAsLoggedOut();
-                    //navigationManager.NavigateTo("/login");
+                    await SafeLogoutAndNavigate("/login", false);
                     return;
                 }
 
@@ -55,10 +101,10 @@ namespace FreightBKShippingWebApp
                 if (refreshExpUnix <= now)
                 {
                     Console.WriteLine("🔴 Refresh token expired, logging out");
-                    await ((CustomAuthStateProvider)authStateProvider).MarkUserAsLoggedOut();
-                    navigationManager.NavigateTo("/login", true);
+                    await SafeLogoutAndNavigate("/login", true);
                     return;
                 }
+
                 // 2. Check if access token is expired
                 if (sessionState.tokenExp <= now)
                 {
@@ -79,8 +125,7 @@ namespace FreightBKShippingWebApp
                 httpClient.DefaultRequestHeaders.Authorization =
                     new AuthenticationHeaderValue("Bearer", sessionState.Token);
 
-
-                // 🔹 7️⃣ **HERE ADD THE BRANCH AUTO-SELECT CODE**
+                // 🔹 Branch auto-select
                 if (sessionState.Branches != null && sessionState.Branches.Count == 1 && !sessionState.ActiveBranchId.HasValue)
                 {
                     sessionState.ActiveBranchId = sessionState.Branches.First().BranchId;
@@ -90,10 +135,17 @@ namespace FreightBKShippingWebApp
                 // Add culture info
                 AddCultureHeader();
             }
+            catch (Exception ex) when (
+                ex.Message.Contains("circuit") ||
+                ex.Message.Contains("disconnected") ||
+                ex.Message.Contains("JavaScript interop"))
+            {
+                Console.WriteLine($"⚠️ SetAuthorizeHeader skipped - circuit disposed: {ex.Message}");
+            }
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Error in SetAuthorizeHeader: {ex.Message}");
-                navigationManager.NavigateTo("/login");
+                SafeNavigate("/login");
             }
         }
 
@@ -150,13 +202,8 @@ namespace FreightBKShippingWebApp
 
                     if (newSession != null && !string.IsNullOrEmpty(newSession.Token))
                     {
-                        // Update session state in storage
-                        //await ((CustomAuthStateProvider)authStateProvider).UpdateSession(newSession);
-
-                        // Update auth state provider
                         await ((CustomAuthStateProvider)authStateProvider).MarkUserAsAuthenticated(newSession);
 
-                        // Set new authorization header
                         httpClient.DefaultRequestHeaders.Authorization =
                             new AuthenticationHeaderValue("Bearer", newSession.Token);
 
@@ -168,16 +215,20 @@ namespace FreightBKShippingWebApp
                 {
                     var errorContent = await response.Content.ReadAsStringAsync();
                     Console.WriteLine($"❌ Refresh failed: {response.StatusCode} - {errorContent}");
-
-                    await ((CustomAuthStateProvider)authStateProvider).MarkUserAsLoggedOut();
-                    navigationManager.NavigateTo("/login", true);
+                    await SafeLogoutAndNavigate("/login", true);
                 }
+            }
+            catch (Exception ex) when (
+                ex.Message.Contains("circuit") ||
+                ex.Message.Contains("disconnected") ||
+                ex.Message.Contains("JavaScript interop"))
+            {
+                Console.WriteLine($"⚠️ RefreshAccessToken skipped - circuit disposed: {ex.Message}");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Refresh token error: {ex.Message}");
-                await ((CustomAuthStateProvider)authStateProvider).MarkUserAsLoggedOut();
-                navigationManager.NavigateTo("/login", true);
+                await SafeLogoutAndNavigate("/login", true);
             }
             finally
             {
@@ -197,6 +248,7 @@ namespace FreightBKShippingWebApp
                 $"{CookieRequestCultureProvider.DefaultCookieName}={cultureCookieValue}"
             );
         }
+
         public async Task<T?> GetFromJsonAsync<T>(string path, bool useCache = false)
         {
             await SetAuthorizeHeader();
@@ -204,9 +256,10 @@ namespace FreightBKShippingWebApp
             Console.WriteLine("=== HTTP Request ===");
             Console.WriteLine("Path: " + path);
             Console.WriteLine("Auth Header: " + httpClient.DefaultRequestHeaders.Authorization);
+
             // ✅ Check cache first
             if (useCache && _cache.TryGetValue(path, out var cached))
-            { 
+            {
                 if (DateTime.UtcNow - cached.CachedAt < _cacheExpiry)
                 {
                     Console.WriteLine($"✅ Cache hit: {path}");
@@ -220,18 +273,14 @@ namespace FreightBKShippingWebApp
             {
                 var res = await httpClient.GetAsync(path);
 
-               // Console.WriteLine("=== HTTP Response ===");
-               // Console.WriteLine("Status Code: " + res.StatusCode);
-
                 var content = await res.Content.ReadAsStringAsync();
-                //  Console.WriteLine("Raw JSON Response:");
-                //  Console.WriteLine(content);
+
                 if (res.StatusCode == System.Net.HttpStatusCode.NotFound)
                 {
                     Console.WriteLine($"ℹ️ 404 Not Found for {path} → returning null/default");
                     return default;
                 }
-                res.EnsureSuccessStatusCode(); // Throws HttpRequestException for non-success codes
+                res.EnsureSuccessStatusCode();
 
                 if (string.IsNullOrWhiteSpace(content))
                 {
@@ -255,11 +304,8 @@ namespace FreightBKShippingWebApp
                         {
                             var result = System.Text.Json.JsonSerializer.Deserialize<T>(content, _jsonOptions);
 
-                            // ✅ Cache result
                             if (useCache && result != null)
-                            {
                                 _cache[path] = (result, DateTime.UtcNow);
-                            }
 
                             return result;
                         }
@@ -267,11 +313,8 @@ namespace FreightBKShippingWebApp
                         // Otherwise, deserialize only the "data" array
                         var dataResult = System.Text.Json.JsonSerializer.Deserialize<T>(rawData, _jsonOptions);
 
-                        // ✅ Cache result
                         if (useCache && dataResult != null)
-                        {
                             _cache[path] = (dataResult, DateTime.UtcNow);
-                        }
 
                         return dataResult;
                     }
@@ -279,11 +322,8 @@ namespace FreightBKShippingWebApp
                     // Fallback: deserialize full content (plain array or object)
                     var finalResult = System.Text.Json.JsonSerializer.Deserialize<T>(content, _jsonOptions);
 
-                    // ✅ Cache result
                     if (useCache && finalResult != null)
-                    {
                         _cache[path] = (finalResult, DateTime.UtcNow);
-                    }
 
                     return finalResult;
                 }
@@ -314,7 +354,7 @@ namespace FreightBKShippingWebApp
         // ✅ Clear cache (call on logout or data changes)
         public void ClearCache()
         {
-            _cache.Clear(); 
+            _cache.Clear();
         }
 
         public void ClearCache(string path)
@@ -348,7 +388,6 @@ namespace FreightBKShippingWebApp
                 return default;
             }
 
-            // ✅ Handle different return types
             if (typeof(T1) == typeof(bool))
             {
                 Console.WriteLine("🔄 Converting to bool");
@@ -356,13 +395,12 @@ namespace FreightBKShippingWebApp
             }
 
             if (typeof(T1) == typeof(string))
-            {      
+            {
                 return (T1)(object)content;
             }
 
             try
             {
-                // ✅ Use System.Text.Json instead of Newtonsoft
                 var result = System.Text.Json.JsonSerializer.Deserialize<T1>(content, _jsonOptions);
                 Console.WriteLine($"✅ Deserialization successful: {result != null}");
                 return result;
@@ -372,7 +410,6 @@ namespace FreightBKShippingWebApp
                 Console.WriteLine($"❌ Deserialization failed: {ex.Message}");
                 Console.WriteLine($"❌ Content was: '{content}'");
 
-                // If content is "true" but we expected an object
                 if (content.Trim().Equals("true", StringComparison.OrdinalIgnoreCase))
                 {
                     Console.WriteLine("⚠️ Got 'true' string response");
@@ -384,14 +421,13 @@ namespace FreightBKShippingWebApp
             }
         }
 
-
-        // FOR MULTIFDATA FORM  NOT AS PostAsJsonAsync 
+        // FOR MULTIPART FORM — NOT PostAsJsonAsync
         public async Task<T1?> PostAsync<T1>(string path, HttpContent content)
         {
             try
             {
                 await SetAuthorizeHeader();
-               
+
                 var response = await httpClient.PostAsync(path, content);
                 var responseContent = await response.Content.ReadAsStringAsync();
 
@@ -424,14 +460,13 @@ namespace FreightBKShippingWebApp
             }
         }
 
-
         public async Task<T1> PutAsync<T1>(string path, HttpContent content)
         {
             await SetAuthorizeHeader();
             var res = await httpClient.PutAsync(path, content);
             var responseContent = await res.Content.ReadAsStringAsync();
 
-            Console.WriteLine($"📤 POST {path} => {res.StatusCode}");
+            Console.WriteLine($"📤 PUT {path} => {res.StatusCode}");
             Console.WriteLine($"📥 Content: {responseContent}");
 
             if (!res.IsSuccessStatusCode)
@@ -455,9 +490,8 @@ namespace FreightBKShippingWebApp
             }
         }
 
-
         public async Task<T1?> PutAsync<T1, T2>(string path, T2 postModel)
-             {
+        {
             try
             {
                 await SetAuthorizeHeader();
@@ -465,13 +499,11 @@ namespace FreightBKShippingWebApp
                 var response = await httpClient.PutAsJsonAsync(path, postModel, _jsonOptions);
                 var content = await response.Content.ReadAsStringAsync();
 
-                            Console.WriteLine($"📤 PUT {path} => {response.StatusCode}");
+                Console.WriteLine($"📤 PUT {path} => {response.StatusCode}");
                 Console.WriteLine($"📥 Content: '{content}'");
 
                 if (!response.IsSuccessStatusCode)
                 {
-                    //Console.WriteLine($"❌ API Error: {res.StatusCode}");
-                    //throw new Exception(content);
                     using var doc = JsonDocument.Parse(content);
 
                     if (doc.RootElement.ValueKind == JsonValueKind.Object)
@@ -486,38 +518,26 @@ namespace FreightBKShippingWebApp
                     }
 
                     throw new Exception(content);
-
                 }
-                if (response.IsSuccessStatusCode)
-                {
-                    if (string.IsNullOrWhiteSpace(content))
-                    {
-                        if (typeof(T1) == typeof(bool))
-                            return (T1)(object)true;
-                        return default;
-                    }
 
+                if (string.IsNullOrWhiteSpace(content))
+                {
                     if (typeof(T1) == typeof(bool))
-                    {
                         return (T1)(object)true;
-                    }
+                    return default;
+                }
 
-                    return System.Text.Json.JsonSerializer.Deserialize<T1>(content, _jsonOptions);
-                }
-                else
-                {
-                    Console.WriteLine($"⚠️ PUT failed: {response.StatusCode} - {content}");
-                }
+                if (typeof(T1) == typeof(bool))
+                    return (T1)(object)true;
+
+                return System.Text.Json.JsonSerializer.Deserialize<T1>(content, _jsonOptions);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Error in PUT: {ex.Message}");
-                throw ;
-            }       
-
-            return default;
+                throw;
+            }
         }
-
 
         public async Task<T> DeleteAsync<T>(string path)
         {
@@ -525,7 +545,7 @@ namespace FreightBKShippingWebApp
             try
             {
                 var response = await httpClient.DeleteAsync(path);
-                var content = await response.Content.ReadAsStringAsync(); // ✅ added line for debugging/logging
+                var content = await response.Content.ReadAsStringAsync();
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -543,9 +563,6 @@ namespace FreightBKShippingWebApp
                 throw;
             }
         }
-
-
-        
 
         public async Task<T?> SafeGetFromJsonAsync<T>(string path)
         {
@@ -581,8 +598,6 @@ namespace FreightBKShippingWebApp
             }
         }
 
-
-
         public async Task<byte[]?> SafeGetBytesAsync(string path)
         {
             await SetAuthorizeHeader();
@@ -604,10 +619,10 @@ namespace FreightBKShippingWebApp
                 return null;
             }
         }
+
         public async Task<string?> GetRawStringAsync(string path)
         {
-            await SetAuthorizeHeader(); // token apply hoga
-
+            await SetAuthorizeHeader();
             try
             {
                 return await httpClient.GetStringAsync(path);
@@ -619,23 +634,12 @@ namespace FreightBKShippingWebApp
             }
         }
 
+        public string GetBaseUrl() => httpClient.BaseAddress?.ToString() ?? "";
 
-
-        //private static string ExtractCleanError(string raw)
-        //{
-        //    if (string.IsNullOrWhiteSpace(raw))
-        //        return "Operation failed.";
-
-        //    // Trim stack trace
-        //    var atIndex = raw.IndexOf(" line ");
-        //    if (atIndex > 0)
-        //        raw = raw.Substring(0, atIndex);
-
-        //    // First line only
-        //    raw = raw.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)[0];
-
-        //    return raw.Length > 200 ? raw.Substring(0, 200) + "..." : raw;
-        //}
-
+        public async Task<string?> GetAuthTokenAsync()
+        {
+            var result = await localStorage.GetAsync<LoginResponseModel>("sessionState");
+            return result.Success ? result.Value?.Token : null;
+        }
     }
 }

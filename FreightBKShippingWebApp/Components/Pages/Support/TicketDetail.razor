@@ -4,9 +4,11 @@
 @using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Services
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.SignalR.Client
 
 @inject TicketService TicketService
 @inject NavigationManager Nav
+@inject IJSRuntime JS
 
 <div class="support-page">
 
@@ -18,16 +20,19 @@
             </svg>
             All Tickets
         </button>
-        <div class="header-info">
-            <h1 class="page-title">
-                <span class="ticket-no-label">#@ticket.TicketNo</span>
-                @ticket.Subject
-            </h1>
-            <div class="header-badges">
-                <span class="ticket-badge priority-@GetPriorityClass(ticket.PriorityId)">@GetPriorityLabel(ticket.PriorityId)</span>
-                <span class="ticket-badge status-@GetStatusClass(ticket.StatusId)">@GetStatusLabel(ticket.StatusId)</span>
+        @if (ticket != null)
+        {
+            <div class="header-info">
+                <h1 class="page-title">
+                    <span class="ticket-no-label">#@ticket.TicketNo</span>
+                    @ticket.Subject
+                </h1>
+                <div class="header-badges">
+                    <span class="ticket-badge priority-@GetPriorityClass(ticket.PriorityId)">@GetPriorityLabel(ticket.PriorityId)</span>
+                    <span class="ticket-badge status-@GetStatusClass(ticket.StatusId)">@GetStatusLabel(ticket.StatusId)</span>
+                </div>
             </div>
-        </div>
+        }
     </div>
 
     @if (isLoading)
@@ -782,10 +787,11 @@
     }
 </style>
 
+
 @code {
     [Parameter] public int TicketId { get; set; }
 
-    Ticket ticket = new();
+    Ticket? ticket;
     List<TicketReply> messages = new();
     string replyMessage = string.Empty;
     string replyError = string.Empty;
@@ -795,13 +801,145 @@
     bool isUpdating = false;
     bool isClosing = false;
     bool updateSuccess = false;
+    bool isConnected = false;
+
+    // ── SignalR ──────────────────────────────────────────────────────
+    private HubConnection? _hub;
 
     protected override async Task OnInitializedAsync()
     {
-        isLoading = true;
-        ticket = await TicketService.GetByIdAsync(TicketId) ?? new Ticket();
-        messages = await TicketService.GetRepliesAsync(TicketId);
-        isLoading = false;
+        try
+        {
+            isLoading = true;
+            ticket = await TicketService.GetByIdAsync(TicketId) ?? new Ticket();
+            messages = await TicketService.GetRepliesAsync(TicketId) ?? new List<TicketReply>();
+            isLoading = false;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[TicketDetail] OnInitializedAsync ERROR: {ex.Message}");
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await ScrollToBottom();
+            await StartHub();
+        }
+    }
+
+    private async Task StartHub()
+    {
+        try
+        {
+            var token = await TicketService.GetAuthTokenAsync();
+
+            if (string.IsNullOrEmpty(token))
+            {
+                Console.WriteLine("[TicketDetail] No token, skipping SignalR.");
+                return;
+            }
+
+            var apiBase = TicketService.GetApiBaseUrl().TrimEnd('/'); // ✅ FIX 3: trailing slash remove
+
+            _hub = new HubConnectionBuilder()
+                .WithUrl($"{apiBase}/signalr/ticket", options =>
+                {
+                    options.AccessTokenProvider = () => Task.FromResult<string?>(token);
+                })
+                .WithAutomaticReconnect()
+                .ConfigureLogging(logging =>
+                {
+                    logging.SetMinimumLevel(LogLevel.Debug);
+                    logging.AddConsole();
+                })
+                .Build();
+
+            _hub.Closed += async (error) =>
+            {
+                Console.WriteLine("SignalR closed: " + error?.Message);
+                isConnected = false;
+                await InvokeAsync(StateHasChanged);
+            };
+
+            _hub.Reconnecting += _ =>
+            {
+                isConnected = false;
+                InvokeAsync(StateHasChanged);
+                return Task.CompletedTask;
+            };
+
+            _hub.Reconnected += async _ =>
+            {
+                isConnected = true;
+                // Re-join the group after reconnect
+                await _hub.InvokeAsync("JoinTicket", TicketId);
+                await InvokeAsync(StateHasChanged);
+            };
+
+            // ✅ FIX 4: Duplicate message bug fix
+            // User ne khud bheja → SendReply() mein locally add karein
+            // SignalR push → sirf "Support" sender ka message add karo
+            // (ya agar koi aur user same ticket dekh raha ho toh uske liye bhi)
+            _hub.On<string, string, DateTime, int>("ReceiveMessage",
+                (senderType, messageText, createdAt, messageId) =>
+                {
+                    // ✅ Skip if we already have this message (by messageId)
+                    // Ya sirf Support messages add karo — User ne khud bheja toh woh pehle se list mein hai
+                    if (messages.Any(m => m.MessageId == messageId))
+                        return; // already added locally — skip duplicate
+
+                    messages.Add(new TicketReply
+                    {
+                        MessageId = messageId,
+                        TicketId = TicketId,
+                        MessageText = messageText,
+                        SenderType = senderType,
+                        CreatedAt = createdAt
+                    });
+
+                    InvokeAsync(async () =>
+                    {
+                        StateHasChanged();
+                        await ScrollToBottom();
+                    });
+                });
+
+            _hub.On<int>("TicketClosed", ticketId =>
+            {
+                if (ticketId == TicketId)
+                {
+                    if (ticket != null) ticket.StatusId = 5;
+                    InvokeAsync(StateHasChanged);
+                }
+            });
+
+            await _hub.StartAsync();
+
+            if (_hub.State == HubConnectionState.Connected)
+            {
+                await _hub.InvokeAsync("JoinTicket", TicketId);
+                isConnected = true;
+            }
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[TicketDetail] StartHub ERROR: {ex.Message}");
+            isConnected = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ScrollToBottom()
+    {
+        try { await JS.InvokeVoidAsync("scrollToBottom", "chat-messages"); }
+        catch { /* JS not ready yet */ }
     }
 
     async Task HandleKeyDown(KeyboardEventArgs e)
@@ -817,21 +955,31 @@
         isSending = true;
         replyError = string.Empty;
 
+        // ✅ FIX 4 (part 2): Capture message text before clearing
+        var msgText = replyMessage;
+
         try
         {
             var reply = new TicketReply
             {
                 TicketId = TicketId,
-                MessageText = replyMessage,
+                MessageText = msgText,
                 SenderType = "User",
                 CreatedAt = DateTime.UtcNow
             };
 
-            var success = await TicketService.ReplyAsync(reply);
-            if (success)
+            var result = await TicketService.ReplyAsync(reply);
+
+            if (result != null)
             {
-                messages = await TicketService.GetRepliesAsync(TicketId);
+                // ✅ Locally add with real MessageId from server response
+                // So SignalR push pe duplicate check (messageId match) kaam karega
+                reply.MessageId = result.MessageId; // TicketService.ReplyAsync should return saved message
+                messages.Add(reply);
+
                 replyMessage = string.Empty;
+                StateHasChanged();
+                await ScrollToBottom();
             }
             else
             {
@@ -858,12 +1006,8 @@
             var success = await TicketService.UpdateAsync(ticket);
             if (success) updateSuccess = true;
         }
-        finally
-        {
-            isUpdating = false;
-        }
+        finally { isUpdating = false; }
 
-        // Auto-hide success message
         await Task.Delay(3000);
         updateSuccess = false;
         StateHasChanged();
@@ -877,53 +1021,33 @@
             var success = await TicketService.CloseAsync(TicketId);
             if (success)
             {
-                ticket.StatusId = 5;
+                ticket!.StatusId = 5;
                 StateHasChanged();
             }
         }
-        finally
-        {
-            isClosing = false;
-        }
+        finally { isClosing = false; }
     }
 
     void GoBack() => Nav.NavigateTo("/tickets");
 
-    string GetPriorityLabel(int id) => id switch
+    public async ValueTask DisposeAsync()
     {
-        1 => "Low",
-        2 => "Medium",
-        3 => "High",
-        4 => "Critical",
-        _ => "Unknown"
-    };
+        if (_hub != null)
+        {
+            try
+            {
+                if (_hub.State == HubConnectionState.Connected)
+                    await _hub.InvokeAsync("LeaveTicket", TicketId);
 
-    string GetPriorityClass(int id) => id switch
-    {
-        1 => "low",
-        2 => "medium",
-        3 => "high",
-        4 => "critical",
-        _ => "low"
-    };
+                await _hub.StopAsync();
+                await _hub.DisposeAsync();
+            }
+            catch { }
+        }
+    }
 
-    string GetStatusLabel(int id) => id switch
-    {
-        1 => "Open",
-        2 => "In Progress",
-        3 => "Waiting User",
-        4 => "Resolved",
-        5 => "Closed",
-        _ => "Unknown"
-    };
-
-    string GetStatusClass(int id) => id switch
-    {
-        1 => "open",
-        2 => "inprogress",
-        3 => "waiting",
-        4 => "resolved",
-        5 => "closed",
-        _ => "open"
-    };
+    string GetPriorityLabel(int id) => id switch { 1 => "Low", 2 => "Medium", 3 => "High", 4 => "Critical", _ => "Unknown" };
+    string GetPriorityClass(int id) => id switch { 1 => "low", 2 => "medium", 3 => "high", 4 => "critical", _ => "low" };
+    string GetStatusLabel(int id) => id switch { 1 => "Open", 2 => "In Progress", 3 => "Waiting User", 4 => "Resolved", 5 => "Closed", _ => "Unknown" };
+    string GetStatusClass(int id) => id switch { 1 => "open", 2 => "inprogress", 3 => "waiting", 4 => "resolved", 5 => "closed", _ => "open" };
 }
