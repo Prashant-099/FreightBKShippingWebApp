@@ -4,6 +4,7 @@
 @using FreightBKShippingWebApp.Services
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.SignalR.Client
+@using Microsoft.AspNetCore.Http.Connections;
 @implements IAsyncDisposable
 @inject DashboardService AdminService
 @inject NavigationManager Nav
@@ -57,7 +58,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
                     </svg>
                     Conversation
-                    <span class="sad-msg-count">@ticket.Messages.Count messages</span>
+                    <span class="sad-msg-count">@ticket?.Messages?.Count ?? 0 messages</span>
                     @if (isConnected)
                     {
                         <span class="sad-live-dot" title="Live"></span>
@@ -940,27 +941,41 @@
     protected override async Task OnInitializedAsync()
     {
         isLoading = true;
+        // ticket = await AdminService.GetTicketDetailAsync(TicketId);
+        // if (ticket != null)
+        // {
+        //     editStatus = ticket.StatusId;
+        //     editPriority = ticket.PriorityId;
+        // }
+        adminUsers = await AdminService.GetAdminUsersAsync();
+        isLoading = false;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
         ticket = await AdminService.GetTicketDetailAsync(TicketId);
+
         if (ticket != null)
         {
             editStatus = ticket.StatusId;
             editPriority = ticket.PriorityId;
         }
-        adminUsers = await AdminService.GetAdminUsersAsync();
-        isLoading = false;
+        await InvokeAsync(ScrollToBottom);
     }
-
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            await ScrollToBottom();
             await StartHub();
+            await ScrollToBottom();
+           
         }
     }
 
     private async Task StartHub()
     {
+        if (_hub != null)
+            return;
         try
         {
         //     var token = await AdminService.GetAuthTokenAsync();
@@ -992,10 +1007,11 @@
             var apiBase = AdminService.GetApiBaseUrl().TrimEnd('/');
 
             _hub = new HubConnectionBuilder()
-                .WithUrl($"{apiBase}/signalr/ticket", options =>
-                {
-                    options.AccessTokenProvider = () => Task.FromResult<string?>(token);
-                })
+                 .WithUrl($"{apiBase}/signalr/ticket", options =>
+                 {
+                     options.AccessTokenProvider = () => Task.FromResult<string?>(token);
+                     options.Transports = HttpTransportType.WebSockets;
+                 })
                 .WithAutomaticReconnect()
                 .Build();
 
@@ -1021,27 +1037,26 @@
 
             // ✅ Live message from user side — add to admin view instantly
             _hub.On<string, string, DateTime, int>("ReceiveMessage",
-               async (senderType, messageText, createdAt, messageId) =>
-                {
-                    // Duplicate check — admin already added support msg locally in SendReply
-                    if (ticket?.Messages.Any(m => m.MessageId == messageId) == true)
-                        return;
+async (senderType, messageText, createdAt, messageId) =>
+{
+    await InvokeAsync(async () =>
+    {
+        if (ticket?.Messages.Any(m => m.MessageId == messageId) == true)
+            return;
 
-                    ticket?.Messages.Add(new TicketMessageAdminDto
-                    {
-                        MessageId = messageId,
-                        TicketId = TicketId,
-                        MessageText = messageText,
-                        SenderType = senderType,
-                        CreatedAt = createdAt
-                    });
+        ticket?.Messages.Add(new TicketMessageAdminDto
+        {
+            MessageId = messageId,
+            TicketId = TicketId,
+            MessageText = messageText,
+            SenderType = senderType,
+            CreatedAt = createdAt
+        });
 
-                  await  InvokeAsync(async () =>
-                    {
-                        StateHasChanged();
-                        await ScrollToBottom();
-                    });
-                });
+        StateHasChanged();
+        await ScrollToBottom();
+    });
+});
 
             _hub.On<int>("TicketClosed", async ticketId =>  // ✅ async added
             {
@@ -1051,9 +1066,12 @@
                     await InvokeAsync(StateHasChanged);  // ✅ await added
                 }
             });
-
+            _hub.On<string>("DebugMessage", msg =>
+{
+    Console.WriteLine("Hub debug: " + msg);
+});
             await _hub.StartAsync();
-
+            Console.WriteLine($"SignalR State: {_hub.State}");
             if (_hub.State == HubConnectionState.Connected)
             {
                 await _hub.InvokeAsync("JoinTicket", TicketId);
@@ -1100,7 +1118,7 @@
                     TicketId = TicketId,
                     MessageText = msgText,
                     SenderType = "Support",
-                    CreatedAt = DateTime.UtcNow
+                    CreatedAt = savedMsg.CreatedAt
                 });
 
                 replyMessage = string.Empty;
@@ -1176,19 +1194,21 @@
 
     public async ValueTask DisposeAsync()
     {
-        if (_hub != null)
-        {
-            try
-            {
-                if (_hub.State == HubConnectionState.Connected)
-                    await _hub.InvokeAsync("LeaveTicket", TicketId);
-                await _hub.StopAsync();
-                await _hub.DisposeAsync();
-            }
-            catch { }
-        }
-    }
+        if (_hub == null)
+            return;
 
+        try
+        {
+            if (_hub.State == HubConnectionState.Connected)
+            {
+                await _hub.InvokeAsync("LeaveTicket", TicketId);
+                await _hub.StopAsync();
+            }
+
+            await _hub.DisposeAsync();
+        }
+        catch { }
+    }
     string GetPriorityLabel(int id) => id switch { 1 => "Low", 2 => "Medium", 3 => "High", 4 => "Critical", _ => "Unknown" };
     string GetPriorityClass(int id) => id switch { 1 => "low", 2 => "medium", 3 => "high", 4 => "critical", _ => "low" };
     string GetStatusLabel(int id) => id switch { 1 => "Open", 2 => "In Progress", 3 => "Waiting User", 4 => "Resolved", 5 => "Closed", _ => "Unknown" };

@@ -5,7 +5,7 @@
 @using FreightBKShippingWebApp.Services
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.SignalR.Client
-
+@using Microsoft.AspNetCore.Http.Connections;
 @inject TicketService TicketService
 @inject NavigationManager Nav
 @inject IJSRuntime JS
@@ -827,8 +827,8 @@
     {
         if (firstRender)
         {
-            await ScrollToBottom();
             await StartHub();
+            await ScrollToBottom();
         }
     }
 
@@ -865,11 +865,14 @@
 
             var apiBase = TicketService.GetApiBaseUrl().TrimEnd('/'); // ✅ FIX 3: trailing slash remove
             Console.WriteLine($"[StartHub] Connecting to: {apiBase}/signalr/ticket");
+
+
             _hub = new HubConnectionBuilder()
-                .WithUrl($"{apiBase}/signalr/ticket", options =>
-                {
-                    options.AccessTokenProvider = () => Task.FromResult<string?>(token);
-                })
+                 .WithUrl($"{apiBase}/signalr/ticket", options =>
+                 {
+                     options.AccessTokenProvider = () => Task.FromResult<string?>(token);
+                     options.Transports = HttpTransportType.WebSockets;
+                 })
                 .WithAutomaticReconnect()
                 .ConfigureLogging(logging =>
                 {
@@ -905,28 +908,26 @@
             // SignalR push → sirf "Support" sender ka message add karo
             // (ya agar koi aur user same ticket dekh raha ho toh uske liye bhi)
             _hub.On<string, string, DateTime, int>("ReceiveMessage",
-               async (senderType, messageText, createdAt, messageId) =>
-                {
-                    // ✅ Skip if we already have this message (by messageId)
-                    // Ya sirf Support messages add karo — User ne khud bheja toh woh pehle se list mein hai
-                    if (messages.Any(m => m.MessageId == messageId))
-                        return; // already added locally — skip duplicate
+async (senderType, messageText, createdAt, messageId) =>
+{
+    await InvokeAsync(async () =>
+    {
+        if (messages.Any(m => m.MessageId == messageId))
+            return;
 
-                    messages.Add(new TicketReply
-                    {
-                        MessageId = messageId,
-                        TicketId = TicketId,
-                        MessageText = messageText,
-                        SenderType = senderType,
-                        CreatedAt = createdAt
-                    });
+        messages.Add(new TicketReply
+        {
+            MessageId = messageId,
+            TicketId = TicketId,
+            MessageText = messageText,
+            SenderType = senderType,
+            CreatedAt = createdAt
+        });
 
-                    await InvokeAsync(async () =>
-                    {
-                        StateHasChanged();
-                        await ScrollToBottom();
-                    });
-                });
+        StateHasChanged();
+        await ScrollToBottom();
+    });
+});
 
             _hub.On<int>("TicketClosed", async ticketId =>  // ✅ async added
  {
