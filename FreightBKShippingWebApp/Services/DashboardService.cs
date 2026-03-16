@@ -10,7 +10,9 @@ namespace FreightBKShippingWebApp.Services
         {
             _api = api;
         }
+        public string GetApiBaseUrl() => _api.GetBaseUrl();
 
+        public async Task<string?> GetAuthTokenAsync() => await _api.GetAuthTokenAsync();
         // 🔵 Normal User Dashboard (DO NOT CHANGE)
         public async Task<DashboardResponseDto?> GetDashboardAsync(
             int yearId,
@@ -108,10 +110,21 @@ namespace FreightBKShippingWebApp.Services
             catch (Exception ex) { Console.WriteLine($"[SuperAdminClientService] GetTicketDetail error: {ex.Message}"); return null; }
         }
 
-        public async Task<bool> ReplyAsync(int ticketId, string message)
+        // DashboardService.cs — REPLACE the old ReplyAsync:
+        public async Task<TicketMessageAdminDto?> ReplyAsync(int ticketId, string message)
         {
-            try { return await _api.PostAsync<bool, object>($"api/superadmin/tickets/{ticketId}/reply", new { Message = message }); }
-            catch (Exception ex) { Console.WriteLine($"[SuperAdminClientService] Reply error: {ex.Message}"); return false; }
+            try
+            {
+                return await _api.PostAsync<TicketMessageAdminDto, object>(
+                    $"api/superadmin/tickets/{ticketId}/reply",
+                    new { Message = message }
+                );
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[SuperAdminClientService] Reply error: {ex.Message}");
+                return null;
+            }
         }
 
         public async Task<bool> AssignTicketAsync(int ticketId, string userId)

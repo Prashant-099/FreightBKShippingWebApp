@@ -5,7 +5,7 @@
 @using Microsoft.AspNetCore.Authorization
 @inject DashboardService AdminService
 @inject NavigationManager Nav
-
+@inject IJSRuntime JS
 <div class="sad-page">
 
     <!-- Header -->
@@ -410,9 +410,13 @@
     bool isClosing = false;
     bool updateSuccess = false;
     bool assignSuccess = false;
+    bool isConnected = false; // ✅ Added for live indicator
 
     int editStatus;
     int editPriority;
+
+    // ✅ FIX 5: SignalR hub
+    private HubConnection? _hub;
 
     protected override async Task OnInitializedAsync()
     {
@@ -427,6 +431,114 @@
         isLoading = false;
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await ScrollToBottom();
+            await StartHub(); // ✅ Connect to SignalR
+        }
+    }
+
+    private async Task StartHub()
+    {
+        try
+        {
+            var token = await AdminService.GetAuthTokenAsync(); // ✅ Token lao DashboardService se
+
+            if (string.IsNullOrEmpty(token))
+            {
+                Console.WriteLine("[AdminSupportDetail] No token, skipping SignalR.");
+                return;
+            }
+
+            var apiBase = AdminService.GetApiBaseUrl().TrimEnd('/'); // ✅ Trailing slash fix
+
+            _hub = new HubConnectionBuilder()
+                .WithUrl($"{apiBase}/signalr/ticket", options =>
+                {
+                    options.AccessTokenProvider = () => Task.FromResult<string?>(token);
+                })
+                .WithAutomaticReconnect()
+                .Build();
+
+            _hub.Closed += async (_) =>
+            {
+                isConnected = false;
+                await InvokeAsync(StateHasChanged);
+            };
+
+            _hub.Reconnecting += _ =>
+            {
+                isConnected = false;
+                InvokeAsync(StateHasChanged);
+                return Task.CompletedTask;
+            };
+
+            _hub.Reconnected += async _ =>
+            {
+                isConnected = true;
+                await _hub.InvokeAsync("JoinTicket", TicketId);
+                await InvokeAsync(StateHasChanged);
+            };
+
+            // ✅ Real-time message receive — user ya koi bhi bheje
+            _hub.On<string, string, DateTime, int>("ReceiveMessage",
+                (senderType, messageText, createdAt, messageId) =>
+                {
+                    // Duplicate check
+                    if (ticket?.Messages.Any(m => m.MessageId == messageId) == true)
+                        return;
+
+                    ticket?.Messages.Add(new TicketMessageAdminDto
+                    {
+                        MessageId = messageId,
+                        TicketId = TicketId,
+                        MessageText = messageText,
+                        SenderType = senderType,
+                        CreatedAt = createdAt
+                    });
+
+                    InvokeAsync(async () =>
+                    {
+                        StateHasChanged();
+                        await ScrollToBottom();
+                    });
+                });
+
+            // ✅ Ticket closed event
+            _hub.On<int>("TicketClosed", ticketId =>
+            {
+                if (ticketId == TicketId && ticket != null)
+                {
+                    ticket.StatusId = 5;
+                    InvokeAsync(StateHasChanged);
+                }
+            });
+
+            await _hub.StartAsync();
+
+            if (_hub.State == HubConnectionState.Connected)
+            {
+                await _hub.InvokeAsync("JoinTicket", TicketId);
+                isConnected = true;
+            }
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[AdminSupportDetail] StartHub ERROR: {ex.Message}");
+            isConnected = false;
+        }
+    }
+
+    private async Task ScrollToBottom()
+    {
+        try { await JS.InvokeVoidAsync("scrollToBottom", "sad-messages"); }
+        catch { }
+    }
+
     async Task HandleKeyDown(KeyboardEventArgs e)
     {
         if (e.CtrlKey && e.Key == "Enter") await SendReply();
@@ -437,15 +549,38 @@
         if (string.IsNullOrWhiteSpace(replyMessage)) return;
         isSending = true;
         replyError = string.Empty;
+
+        var msgText = replyMessage;
+
         try
         {
-            var ok = await AdminService.ReplyAsync(TicketId, replyMessage);
-            if (ok)
+            // ✅ FIX: ReplyAsync se saved message wapas lo (MessageId chahiye duplicate check ke liye)
+            var savedMsg = await AdminService.ReplyAsync(TicketId, msgText);
+
+            if (savedMsg != null)
             {
+                // ✅ Locally add — taaki SignalR push pe duplicate na ho
+                ticket?.Messages.Add(new TicketMessageAdminDto
+                {
+                    MessageId = savedMsg.MessageId,
+                    TicketId = TicketId,
+                    MessageText = msgText,
+                    SenderType = "Support",
+                    CreatedAt = DateTime.UtcNow
+                });
+
                 replyMessage = string.Empty;
-                ticket = await AdminService.GetTicketDetailAsync(TicketId);
+                StateHasChanged();
+                await ScrollToBottom();
             }
-            else replyError = "Failed to send reply.";
+            else
+            {
+                replyError = "Failed to send reply.";
+            }
+        }
+        catch (Exception ex)
+        {
+            replyError = $"Error: {ex.Message}";
         }
         finally { isSending = false; }
     }
@@ -504,6 +639,23 @@
     }
 
     void GoBack() => Nav.NavigateTo("/superadmin/support");
+
+    // ✅ FIX 5: Dispose hub on page leave
+    public async ValueTask DisposeAsync()
+    {
+        if (_hub != null)
+        {
+            try
+            {
+                if (_hub.State == HubConnectionState.Connected)
+                    await _hub.InvokeAsync("LeaveTicket", TicketId);
+
+                await _hub.StopAsync();
+                await _hub.DisposeAsync();
+            }
+            catch { }
+        }
+    }
 
     string GetPriorityLabel(int id) => id switch { 1 => "Low", 2 => "Medium", 3 => "High", 4 => "Critical", _ => "Unknown" };
     string GetPriorityClass(int id) => id switch { 1 => "low", 2 => "medium", 3 => "high", 4 => "critical", _ => "low" };

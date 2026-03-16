@@ -2,21 +2,45 @@
 
 namespace FreightBKShippingWebApp.Services
 {
-    /// <summary>
-    /// Client-side service for the Blazor WebApp.
-    /// Calls the API via ApiClient. Does NOT implement ITicketService
-    /// (which is server-side only).
-    /// </summary>
     public class TicketService : BaseService
     {
         private readonly ApiClient _api;
+        private readonly AuthService _authService;
 
         public TicketService(
             HttpClient http,
             ApiClient api,
-            ITokenProvider tokenProvider) : base(http, tokenProvider)
+            ITokenProvider tokenProvider,
+            AuthService authService) : base(http, tokenProvider)
         {
             _api = api;
+            _authService = authService;
+        }
+
+        public async Task<string?> GetAuthTokenAsync()
+        {
+            try
+            {
+                return await _authService.GetTokenAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[TicketService] GetAuthTokenAsync ERROR: {ex.Message}");
+                return null;
+            }
+        }
+
+        public string GetApiBaseUrl()
+        {
+            try
+            {
+                return _api.GetBaseUrl();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[TicketService] GetApiBaseUrl ERROR: {ex.Message}");
+                return "https://localhost:5003";
+            }
         }
 
         // ─── Get All Tickets ───────────────────────────────────────────────
@@ -53,6 +77,7 @@ namespace FreightBKShippingWebApp.Services
         {
             try
             {
+                // ✅ FIX: explicit type arguments — T1=bool, T2=Ticket
                 return await _api.PostAsync<bool, Ticket>("api/Tickets", ticket);
             }
             catch (Exception ex)
@@ -62,17 +87,49 @@ namespace FreightBKShippingWebApp.Services
             }
         }
 
-        // ─── Send Reply ────────────────────────────────────────────────────
-        public async Task<bool> ReplyAsync(TicketReply reply)
+        // ─── Send Reply (User) ─────────────────────────────────────────────
+        // ✅ FIX: Use PostAsync<T1,T2> with anonymous DTO — returns TicketReply with MessageId
+        public async Task<TicketReply?> ReplyAsync(TicketReply reply)
         {
             try
             {
-                return await _api.PostAsync<bool, TicketReply>("api/Tickets/reply", reply);
+                var dto = new TicketReplyDto
+                {
+                    TicketId = reply.TicketId,
+                    MessageText = reply.MessageText,
+                    SenderType = reply.SenderType
+                };
+
+                // ✅ T1=TicketReply (server returns saved message), T2=TicketReplyDto
+                return await _api.PostAsync<TicketReply, TicketReplyDto>("api/Tickets/reply", dto);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"[TicketService] ReplyAsync error: {ex.Message}");
-                return false;
+                return null;
+            }
+        }
+
+        // ─── Send Reply (Admin/Support) ────────────────────────────────────
+        // ✅ FIX: TicketMessageDto → TicketReply use karo (same model, no missing type)
+        public async Task<TicketReply?> ReplyAdminAsync(int ticketId, string message)
+        {
+            try
+            {
+                var dto = new TicketReplyDto
+                {
+                    TicketId = ticketId,
+                    MessageText = message,
+                    SenderType = "Support"
+                };
+
+                // ✅ T1=TicketReply, T2=TicketReplyDto — no ambiguity
+                return await _api.PostAsync<TicketReply, TicketReplyDto>("api/Tickets/reply", dto);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[TicketService] ReplyAdminAsync error: {ex.Message}");
+                return null;
             }
         }
 
@@ -96,8 +153,14 @@ namespace FreightBKShippingWebApp.Services
         {
             try
             {
-                var dto = new { ticket.StatusId, ticket.PriorityId };
-                return await _api.PutAsync<bool, object>($"api/Tickets/{ticket.TicketId}", dto);
+                var dto = new TicketUpdateDto
+                {
+                    StatusId = ticket.StatusId,
+                    PriorityId = ticket.PriorityId
+                };
+
+                // ✅ FIX: explicit type arguments — T1=bool, T2=TicketUpdateDto
+                return await _api.PutAsync<bool, TicketUpdateDto>($"api/Tickets/{ticket.TicketId}", dto);
             }
             catch (Exception ex)
             {
@@ -111,13 +174,73 @@ namespace FreightBKShippingWebApp.Services
         {
             try
             {
-                return await _api.PostAsync<bool, object>($"api/Tickets/close/{ticketId}", new { });
+                var dto = new EmptyDto();
+                // ✅ FIX: explicit type arguments — T1=bool, T2=EmptyDto
+                return await _api.PostAsync<bool, EmptyDto>($"api/Tickets/close/{ticketId}", dto);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"[TicketService] CloseAsync({ticketId}) error: {ex.Message}");
                 return false;
             }
+        }
+
+
+        // =====================================================================
+        // Yeh methods TicketService.cs mein ADD karo (existing methods ke baad)
+        // AdminSupportDetail.razor inhe use karta hai
+        // =====================================================================
+
+        // ─── Get Admin Ticket Detail (with Messages list) ──────────────────
+        public async Task<SupportTicketAdminDto?> GetAdminTicketDetailAsync(int ticketId)
+        {
+            try
+            {
+                // ✅ API endpoint: GET api/Tickets/{id}/admin-detail  (ya jo bhi tumhara endpoint ho)
+                // Yeh SupportTicketAdminDto return karta hai jisme Messages list bhi hoti hai
+                return await _api.GetFromJsonAsync<SupportTicketAdminDto>($"api/Tickets/{ticketId}/detail");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[TicketService] GetAdminTicketDetailAsync({ticketId}) error: {ex.Message}");
+                return null;
+            }
+        }
+
+        // ─── Get Admin Users list (for assign dropdown) ────────────────────
+        public async Task<List<AdminUserDto>> GetAdminUsersAsync()
+        {
+            try
+            {
+                return await _api.GetFromJsonAsync<List<AdminUserDto>>("api/Tickets/admin-users")
+                       ?? new List<AdminUserDto>();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[TicketService] GetAdminUsersAsync error: {ex.Message}");
+                return new List<AdminUserDto>();
+            }
+        }
+
+        // ─── Assign Ticket to admin user ──────────────────────────────────
+        public async Task<bool> AssignTicketAsync(int ticketId, string assigneeUserId)
+        {
+            try
+            {
+                var dto = new AssignTicketDto { AssignedToUserId = assigneeUserId };
+                return await _api.PostAsync<bool, AssignTicketDto>($"api/Tickets/{ticketId}/assign", dto);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[TicketService] AssignTicketAsync error: {ex.Message}");
+                return false;
+            }
+        }
+
+        // ─── AssignTicketDto (TicketDtos.cs mein add karo) ────────────────
+        public class AssignTicketDto
+        {
+            public string AssignedToUserId { get; set; } = string.Empty;
         }
     }
 }
