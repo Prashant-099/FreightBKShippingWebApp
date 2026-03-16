@@ -51,11 +51,13 @@ namespace FreightBKShippingWebApp.Services
         {
             try
             {
+                LastError = null;
                 var result = await _api.PostAsync<bool, Journal>("api/Journals", journal);
                 return result;
             }
             catch (Exception ex)
             {
+                LastError = ex.Message;
                 Console.WriteLine($"❌ Error creating journal: {ex.Message}");
                 return false;
             }
@@ -66,11 +68,13 @@ namespace FreightBKShippingWebApp.Services
         {
             try
             {
+                LastError = null;
                 var result = await _api.PutAsync<bool, Journal>($"api/Journals/{journal.JournalId}", journal);
                 return result;
             }
             catch (Exception ex)
             {
+                LastError = ex.Message;
                 Console.WriteLine($"❌ Error updating journal {journal.JournalId}: {ex.Message}");
                 return false;
             }

@@ -96,17 +96,17 @@ namespace FreightBKShippingWebApp.Services
 
 
         // ✅ DELETE USER
-        public async Task<bool> DeleteAsync(string userId)
+        public async Task<(bool Success, string Error)> DeleteAsync(string userId)
         {
             try
             {
                 var result = await _api.DeleteAsync<bool>($"api/Users/{userId}");
-                return result;
+                return (true, null);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Error deleting user: {ex.Message}");
-                return false;
+                return (false, ex.Message);
             }
            
            

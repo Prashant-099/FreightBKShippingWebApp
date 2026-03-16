@@ -419,8 +419,16 @@
             if (EditModel.JournalId == 0)
             {
                 result = await JournalService.CreateAsync(EditModel);
-                ToastService.Success(result ? "Contra entry created successfully!" : "Failed to create contra entry!");
-                AuditLogService.NotifyAuditChanged();
+                if (result==true)
+                {
+                    ToastService.Success("Contra entry created successfully!");
+                    AuditLogService.NotifyAuditChanged();
+                } 
+                else
+                {
+                    ToastService.Success(JournalService.LastError??"Failed to create contra entry!");
+                    return;
+                }
             }
             else
             {

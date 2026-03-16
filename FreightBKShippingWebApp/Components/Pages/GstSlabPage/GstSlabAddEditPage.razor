@@ -250,14 +250,24 @@
             //     GstSlabPigstAccountId = slab.GstSlabPigstAccountId
             // };
 
-           // EditModel = slab;
+            // EditModel = slab;
             var json = JsonSerializer.Serialize(slab);
             EditModel = JsonSerializer.Deserialize<GstSlab>(json) ?? new GstSlab();
             Title = "Edit GST Slab";
         }
         else
         {
-            EditModel = new GstSlab{ GstSlabStatus = true };
+            EditModel = new GstSlab{ GstSlabStatus = true, 
+                GstSlabPurchaseAccountId = PurchaseAcList.FirstOrDefault()?.AccountId ?? 0,
+                    GstSlabSalesAccountId = SalesAcList.FirstOrDefault()?.AccountId ?? 0,
+                    GstSlabSgstAccountId = GstAcList.FirstOrDefault()?.AccountId ?? 0,
+                    GstSlabCgstAccountId = GstAcList.FirstOrDefault()?.AccountId ?? 0,
+                    GstSlabIgstAccountId = GstAcList.FirstOrDefault()?.AccountId ?? 0,
+                    GstSlabPsgstAccountId = GstAcList.FirstOrDefault()?.AccountId ?? 0,
+                GstSlabPcgstAccountId = GstAcList.FirstOrDefault()?.AccountId??0,
+                GstSlabPigstAccountId = GstAcList.FirstOrDefault()?.AccountId?? 0
+            };
+            OnIgstChanged(0);
             Title = "Add GST Slab";
         }
         // Create EditContext when showing the form

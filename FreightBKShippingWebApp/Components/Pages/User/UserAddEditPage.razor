@@ -209,6 +209,12 @@
                 ToastService.Error("Password is required for new user!");
                 return;
             }
+            if (!string.IsNullOrWhiteSpace(EditModel.UserMobile) &&
+    (EditModel.UserMobile.Length != 10 || !EditModel.UserMobile.All(char.IsDigit)))
+            {
+                ToastService.Error("Mobile number must be exactly 10 digits!");
+                return;
+            }
             bool success = isNew
                 ? await UserService.CreateAsync(EditModel)
                 : await UserService.UpdateAsync(EditModel);

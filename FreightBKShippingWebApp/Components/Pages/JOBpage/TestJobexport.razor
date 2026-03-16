@@ -607,7 +607,7 @@
         {
             LoadingService.Show("Deleting...");
             int successCount = 0, failCount = 0;
-
+            List<string> errorMessages = new();
                 foreach (var job in selectedList)
                 {
                 var result = await JobService.DeleteAsync(job.JobId);
@@ -620,11 +620,11 @@
                     else
                     {
                         failCount++;
-                        ToastService.Error(result.Error);   // 🎉 show real API message
+                    errorMessages.Add(result.Error);  // 🎉 show real API message
                     }
                 }
             if (successCount > 0) ToastService.Success($"{successCount} job(s) Deleted Successfully.");
-            // if (failCount > 0) ToastService.Error($"{failCount} job(s) Failed To Delete.");
+            if (failCount > 0) ToastService.Error($"{failCount} job(s) Failed To Delete.\nDetails: {string.Join("\n", errorMessages.Distinct())}");
                 await LoadJobsAsync();
             }
             finally

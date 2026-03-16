@@ -14,7 +14,7 @@ namespace FreightBKShippingWebApp.Services
             _api = api;
             
         }
-
+        public string? LastError { get; private set; }
         // GET: All Units
         public async Task<List<Unit>> GetAllAsync()
         {
@@ -53,11 +53,13 @@ namespace FreightBKShippingWebApp.Services
         {
             try
             {
+                LastError = null;
                 var result = await _api.PostAsync<bool, Unit>("api/Units", unit);
                 return result;
             }
             catch (Exception ex)
             {
+                LastError = ex.Message;
                 Console.WriteLine($"❌ Error creating unit: {ex.Message}");
                 return false;
             }
@@ -69,11 +71,13 @@ namespace FreightBKShippingWebApp.Services
         {
             try
             {
+                LastError = null;
                 var result = await _api.PutAsync<bool, Unit>($"api/Units/{unit.UnitId}", unit);
                 return result;
             }
             catch (Exception ex)
             {
+                LastError = ex.Message;
                 Console.WriteLine($"❌ Error updating unit: {ex.Message}");
                 return false;
             }
@@ -82,17 +86,17 @@ namespace FreightBKShippingWebApp.Services
         }
 
         // DELETE: Delete Unit
-        public async Task<bool> DeleteAsync(int unitId)
+        public async Task<(bool Success, string Error)> DeleteAsync(int unitId)
         {
             try
             {
                 var result = await _api.DeleteAsync<bool>($"api/Units/{unitId}");
-                return result;
+                return (true, null); 
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Error deleting unit: {ex.Message}");
-                return false;
+                return (false, ex.Message);
             }
            
            

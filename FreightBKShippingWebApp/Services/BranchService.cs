@@ -97,16 +97,17 @@ namespace FreightBKShippingWebApp.Services
         }
 
         // Delete branch
-        public async Task<bool> DeleteAsync(int branchId)
+        public async Task<(bool Success, string Error)> DeleteAsync(int branchId)
         {
             try
             {
-                return await _api.DeleteAsync<bool>($"api/Branches/{branchId}");
+                var result =await _api.DeleteAsync<bool>($"api/Branches/{branchId}");
+                return (true, null);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Error deleting branch: {ex.Message}");
-                return false;
+                return (false, ex.Message); 
             }
         }
     }

@@ -218,7 +218,7 @@
             if (freshData != null)
                 popup.Show(freshData);
         }
-        
+
         else
             ToastService.Warning("Please select a record to edit.");
         await ClearSelection();
@@ -247,15 +247,20 @@
             int successCount = 0, failCount = 0;
             List<string> errorMessages = new();
             foreach (var item in selectedList)
-        {
-            var result = await HsnSacService.DeleteAsync(item.HsnId);
-            if (result.Success)
-{
-                successCount++;
+            {
+                var result = await HsnSacService.DeleteAsync(item.HsnId);
+                if (result.Success)
+                {
+                    successCount++;
                     AuditLogService.NotifyAuditChanged();
-} else
-                failCount++;
-                errorMessages.Add(result.Error);
+                } 
+
+                else
+                {
+                    failCount++;
+                    errorMessages.Add(result.Error);
+                }
+
         }
 
         if (successCount > 0)
