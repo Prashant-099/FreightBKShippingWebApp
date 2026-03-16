@@ -243,23 +243,26 @@
         {
             LoadingService.Show("Deleting...");
             int successCount = 0, failCount = 0;
-
+            List<string> errorMessages = new();
             foreach (var country in selectedList)
             {
                 var result = await CountryService.DeleteAsync(country.CountryId);
-                if (result)
-                { 
-                    successCount++; 
+                if (result.Success)
+                {
+                    successCount++;
                     AuditLogService.NotifyAuditChanged();
 
                 }
 
-                else failCount++;
+                else {
+                    failCount++; 
+                    errorMessages.Add(result.Error);
+                }
 
             }
             if (successCount > 0) ToastService.Success($"{successCount} country(ies) Deleted Successfully.");
-            if (failCount > 0) ToastService.Error($"{failCount} country(ies) Failed To Delete.");
-
+            if (failCount > 0)
+            ToastService.Error($"{failCount} country(ies) Failed To Delete.\nDetails: {string.Join("\n", errorMessages.Distinct())}");
             await LoadCountriesAsync();
         }
         finally

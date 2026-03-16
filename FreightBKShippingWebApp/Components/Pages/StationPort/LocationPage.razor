@@ -263,25 +263,27 @@
         {
             LoadingService.Show("Deleting...");
             int successCount = 0, failCount = 0;
-
+            List<string> errorMessages = new();
             foreach (var location in selectedList)
             {
                 var result = await LocationService.DeleteAsync(location.LocationId);
-                if (result)
+                if (result.Success)
                 {
                     successCount++;
                     AuditLogService.NotifyAuditChanged();
 
                 }
 
-                else failCount++;
+                else {
+                    failCount++;
+                 errorMessages.Add(result.Error);
+                }
             }
 
         if (successCount > 0)
             ToastService.Success($"{successCount} Location(s) Deleted Successfully.");
         if (failCount > 0)
-            ToastService.Error($"{failCount} Location(s) Failed To Delete.");
-
+                ToastService.Error($"{failCount}  Location(s) Failed To Delete.\nDetails: {string.Join("\n", errorMessages.Distinct())}");
         await LoadLocationsAsync();
         }
         finally
