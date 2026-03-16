@@ -864,11 +864,11 @@
             }
 
             var apiBase = TicketService.GetApiBaseUrl().TrimEnd('/'); // ✅ FIX 3: trailing slash remove
-            Console.WriteLine($"[StartHub] Connecting to: {apiBase}/signalr/ticket");
+            
 
 
             _hub = new HubConnectionBuilder()
-                 .WithUrl($"{apiBase}/signalr/ticket", options =>
+                 .WithUrl($"{apiBase}/tickethub", options =>
                  {
                      options.AccessTokenProvider = () => Task.FromResult<string?>(token);
                      options.Transports = HttpTransportType.WebSockets;
