@@ -914,7 +914,6 @@
         }
     }
 </style>
-
 @code {
     [Parameter] public int TicketId { get; set; }
 
@@ -938,152 +937,167 @@
 
     private HubConnection? _hub;
 
+    // ✅ Only static data here
     protected override async Task OnInitializedAsync()
     {
         isLoading = true;
-        // ticket = await AdminService.GetTicketDetailAsync(TicketId);
-        // if (ticket != null)
-        // {
-        //     editStatus = ticket.StatusId;
-        //     editPriority = ticket.PriorityId;
-        // }
         adminUsers = await AdminService.GetAdminUsersAsync();
         isLoading = false;
     }
 
+    // ✅ MAIN lifecycle (data + hub)
     protected override async Task OnParametersSetAsync()
     {
-        ticket = await AdminService.GetTicketDetailAsync(TicketId);
+        try
+        {
+            isLoading = true;
 
-        if (ticket != null)
-        {
-            editStatus = ticket.StatusId;
-            editPriority = ticket.PriorityId;
-        }
-        await InvokeAsync(ScrollToBottom);
-    }
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
+            ticket = await AdminService.GetTicketDetailAsync(TicketId);
+
+            if (ticket != null)
+            {
+                editStatus = ticket.StatusId;
+                editPriority = ticket.PriorityId;
+
+                ticket.Messages ??= new List<TicketMessageAdminDto>();
+            }
+
+            // 🔥 IMPORTANT: restart hub per TicketId
             await StartHub();
-            await ScrollToBottom();
-           
+
+            isLoading = false;
+            await InvokeAsync(ScrollToBottom);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[AdminPage] ERROR: {ex.Message}");
+            isLoading = false;
+            await InvokeAsync(StateHasChanged);
         }
     }
 
     private async Task StartHub()
     {
-        if (_hub != null)
-            return;
-        try
-        {
-        //     var token = await AdminService.GetAuthTokenAsync();
-        //     if (string.IsNullOrEmpty(token))
-        //     {
-        //         Console.WriteLine("[AdminSupportDetail] No token, skipping SignalR.");
-        //         return;
-        //     }
+        Console.WriteLine($"[AdminHub] Init TicketId={TicketId}");
 
-          string? token = null;
-        for (int i = 0; i < 5; i++)
+        // 🔥 CLEAN OLD CONNECTION
+        if (_hub != null)
         {
-            await Task.Delay(300);
             try
             {
-                token = await AdminService.GetAuthTokenAsync();
-                if (!string.IsNullOrEmpty(token)) break;
+                if (_hub.State == HubConnectionState.Connected)
+                {
+                    await _hub.InvokeAsync("LeaveTicket", TicketId);
+                    await _hub.StopAsync();
+                }
+
+                await _hub.DisposeAsync();
             }
-            catch (TaskCanceledException)
-            {
-                Console.WriteLine($"[StartHub] Token read attempt {i + 1} cancelled, retrying...");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[StartHub] Token read attempt {i + 1} failed: {ex.Message}");
-            }
+            catch { }
         }
 
+        try
+        {
             var apiBase = AdminService.GetApiBaseUrl().TrimEnd('/');
 
             _hub = new HubConnectionBuilder()
                 .WithUrl($"{apiBase}/tickethub", options =>
-                 {
-                     options.AccessTokenProvider = () => Task.FromResult<string?>(token);
-                     options.Transports = HttpTransportType.WebSockets;
-                 })
+                {
+                    options.AccessTokenProvider = async () =>
+                        await AdminService.GetAuthTokenAsync();
+
+                    options.Transports = HttpTransportType.WebSockets;
+                })
                 .WithAutomaticReconnect()
                 .Build();
 
-            _hub.Closed += async (_) =>
+            // 🔁 Lifecycle events
+            _hub.Closed += async (ex) =>
             {
+                Console.WriteLine($"[AdminHub] Closed: {ex?.Message}");
                 isConnected = false;
                 await InvokeAsync(StateHasChanged);
             };
 
-            _hub.Reconnecting += _ =>
+            _hub.Reconnecting += (ex) =>
             {
+                Console.WriteLine("[AdminHub] Reconnecting...");
                 isConnected = false;
                 InvokeAsync(StateHasChanged);
                 return Task.CompletedTask;
             };
 
-            _hub.Reconnected += async _ =>
+            _hub.Reconnected += async (_) =>
             {
+                Console.WriteLine("[AdminHub] Reconnected");
+
+                try
+                {
+                    await _hub.InvokeAsync("JoinTicket", TicketId);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[AdminHub] Rejoin failed: {ex.Message}");
+                }
+
                 isConnected = true;
-                await _hub.InvokeAsync("JoinTicket", TicketId);
                 await InvokeAsync(StateHasChanged);
             };
 
-            // ✅ Live message from user side — add to admin view instantly
-            _hub.On<string, string, DateTime, int>("ReceiveMessage",
-async (senderType, messageText, createdAt, messageId) =>
-{
-    await InvokeAsync(async () =>
-    {
-        if (ticket?.Messages.Any(m => m.MessageId == messageId) == true)
-            return;
+            // 📥 Receive message
+            _hub.On<string, string, DateTime, int>(
+                "ReceiveMessage",
+                async (senderType, messageText, createdAt, messageId) =>
+                {
+                    await InvokeAsync(async () =>
+                    {
+                        if (ticket == null) return;
 
-        ticket?.Messages.Add(new TicketMessageAdminDto
-        {
-            MessageId = messageId,
-            TicketId = TicketId,
-            MessageText = messageText,
-            SenderType = senderType,
-            CreatedAt = createdAt
-        });
+                        ticket.Messages ??= new List<TicketMessageAdminDto>();
 
-        StateHasChanged();
-        await ScrollToBottom();
-    });
-});
+                        if (ticket.Messages.Any(m => m.MessageId == messageId))
+                            return;
 
-            _hub.On<int>("TicketClosed", async ticketId =>  // ✅ async added
+                        ticket.Messages.Add(new TicketMessageAdminDto
+                        {
+                            MessageId = messageId,
+                            TicketId = TicketId,
+                            MessageText = messageText,
+                            SenderType = senderType,
+                            CreatedAt = createdAt
+                        });
+
+                        await InvokeAsync(StateHasChanged);
+                        await ScrollToBottom();
+                    });
+                });
+
+            // 🔒 Ticket closed
+            _hub.On<int>("TicketClosed", async (ticketId) =>
             {
                 if (ticketId == TicketId && ticket != null)
                 {
                     ticket.StatusId = 5;
-                    await InvokeAsync(StateHasChanged);  // ✅ await added
+                    await InvokeAsync(StateHasChanged);
                 }
             });
-            _hub.On<string>("DebugMessage", msg =>
-{
-    Console.WriteLine("Hub debug: " + msg);
-});
-            await _hub.StartAsync();
-            Console.WriteLine($"SignalR State: {_hub.State}");
-            if (_hub.State == HubConnectionState.Connected)
-            {
-                await _hub.InvokeAsync("JoinTicket", TicketId);
-                isConnected = true;
-            }
 
+            // 🚀 Start connection
+            await _hub.StartAsync();
+            Console.WriteLine("[AdminHub] Connected");
+
+            // 👥 Join group
+            await _hub.InvokeAsync("JoinTicket", TicketId);
+            Console.WriteLine($"[AdminHub] Joined ticket-{TicketId}");
+
+            isConnected = true;
             await InvokeAsync(StateHasChanged);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[AdminSupportDetail] StartHub ERROR: {ex.Message}");
+            Console.WriteLine($"[AdminHub] ERROR: {ex.Message}");
             isConnected = false;
+            await InvokeAsync(StateHasChanged);
         }
     }
 
@@ -1095,12 +1109,14 @@ async (senderType, messageText, createdAt, messageId) =>
 
     async Task HandleKeyDown(KeyboardEventArgs e)
     {
-        if (e.CtrlKey && e.Key == "Enter") await SendReply();
+        if (e.CtrlKey && e.Key == "Enter")
+            await SendReply();
     }
 
     async Task SendReply()
     {
         if (string.IsNullOrWhiteSpace(replyMessage)) return;
+
         isSending = true;
         replyError = string.Empty;
         var msgText = replyMessage;
@@ -1109,10 +1125,11 @@ async (senderType, messageText, createdAt, messageId) =>
         {
             var savedMsg = await AdminService.ReplyAsync(TicketId, msgText);
 
-            if (savedMsg != null)
+            if (savedMsg != null && ticket != null)
             {
-                // ✅ Add locally with real MessageId — SignalR push will be skipped (duplicate check)
-                ticket?.Messages.Add(new TicketMessageAdminDto
+                ticket.Messages ??= new List<TicketMessageAdminDto>();
+
+                ticket.Messages.Add(new TicketMessageAdminDto
                 {
                     MessageId = savedMsg.MessageId,
                     TicketId = TicketId,
@@ -1122,7 +1139,8 @@ async (senderType, messageText, createdAt, messageId) =>
                 });
 
                 replyMessage = string.Empty;
-                StateHasChanged();
+
+                await InvokeAsync(StateHasChanged);
                 await ScrollToBottom();
             }
             else
@@ -1132,85 +1150,151 @@ async (senderType, messageText, createdAt, messageId) =>
         }
         catch (Exception ex)
         {
-            replyError = $"Error: {ex.Message}";
+            replyError = ex.Message;
         }
-        finally { isSending = false; }
+        finally
+        {
+            isSending = false;
+        }
     }
 
+    public async ValueTask DisposeAsync()
+    {
+        if (_hub != null)
+        {
+            try
+            {
+                if (_hub.State == HubConnectionState.Connected)
+                {
+                    await _hub.InvokeAsync("LeaveTicket", TicketId);
+                    await _hub.StopAsync();
+                }
+
+                await _hub.DisposeAsync();
+            }
+            catch { }
+        }
+    }
+
+    // 🔹 Navigation
+    void GoBack() => Nav.NavigateTo("/superadmin/support");
+
+    // 🔹 Priority helpers
+    string GetPriorityLabel(int id) => id switch
+    {
+        1 => "Low",
+        2 => "Medium",
+        3 => "High",
+        4 => "Critical",
+        _ => "Unknown"
+    };
+
+    string GetPriorityClass(int id) => id switch
+    {
+        1 => "low",
+        2 => "medium",
+        3 => "high",
+        4 => "critical",
+        _ => "low"
+    };
+
+    // 🔹 Status helpers
+    string GetStatusLabel(int id) => id switch
+    {
+        1 => "Open",
+        2 => "In Progress",
+        3 => "Waiting User",
+        4 => "Resolved",
+        5 => "Closed",
+        _ => "Unknown"
+    };
+
+    string GetStatusClass(int id) => id switch
+    {
+        1 => "open",
+        2 => "inprogress",
+        3 => "waiting",
+        4 => "resolved",
+        5 => "closed",
+        _ => "open"
+    };
+
+    // 🔹 Update status
     async Task UpdateStatus()
     {
         isUpdating = true;
         updateSuccess = false;
+
         try
         {
             var ok = await AdminService.UpdateStatusAsync(TicketId, editStatus, editPriority);
-            if (ok)
+            if (ok && ticket != null)
             {
-                ticket!.StatusId = editStatus;
-                ticket!.PriorityId = editPriority;
+                ticket.StatusId = editStatus;
+                ticket.PriorityId = editPriority;
                 updateSuccess = true;
             }
         }
-        finally { isUpdating = false; }
-        await Task.Delay(2500);
+        finally
+        {
+            isUpdating = false;
+        }
+
+        await Task.Delay(2000);
         updateSuccess = false;
-        StateHasChanged();
+        await InvokeAsync(StateHasChanged);
     }
 
+    // 🔹 Assign ticket
     async Task AssignTicket()
     {
         if (string.IsNullOrEmpty(selectedAssignee)) return;
+
         isAssigning = true;
         assignSuccess = false;
+
         try
         {
             var ok = await AdminService.AssignTicketAsync(TicketId, selectedAssignee);
-            if (ok)
+
+            if (ok && ticket != null)
             {
                 var dev = adminUsers.FirstOrDefault(u => u.UserId == selectedAssignee);
-                ticket!.AssignedToUserId = selectedAssignee;
-                ticket!.AssignedToName = dev?.UserName ?? selectedAssignee;
+
+                ticket.AssignedToUserId = selectedAssignee;
+                ticket.AssignedToName = dev?.UserName ?? selectedAssignee;
+
                 assignSuccess = true;
             }
         }
-        finally { isAssigning = false; }
-        await Task.Delay(2500);
+        finally
+        {
+            isAssigning = false;
+        }
+
+        await Task.Delay(2000);
         assignSuccess = false;
-        StateHasChanged();
+        await InvokeAsync(StateHasChanged);
     }
 
+    // 🔹 Close ticket
     async Task CloseTicket()
     {
         isClosing = true;
+
         try
         {
             var ok = await AdminService.CloseTicketAsync(TicketId);
-            if (ok) ticket!.StatusId = 5;
-        }
-        finally { isClosing = false; }
-    }
 
-    void GoBack() => Nav.NavigateTo("/superadmin/support");
-
-    public async ValueTask DisposeAsync()
-    {
-        if (_hub == null)
-            return;
-
-        try
-        {
-            if (_hub.State == HubConnectionState.Connected)
+            if (ok && ticket != null)
             {
-                await _hub.InvokeAsync("LeaveTicket", TicketId);
-                await _hub.StopAsync();
+                ticket.StatusId = 5;
+                await InvokeAsync(StateHasChanged);
             }
-
-            await _hub.DisposeAsync();
         }
-        catch { }
+        finally
+        {
+            isClosing = false;
+        }
     }
-    string GetPriorityLabel(int id) => id switch { 1 => "Low", 2 => "Medium", 3 => "High", 4 => "Critical", _ => "Unknown" };
-    string GetPriorityClass(int id) => id switch { 1 => "low", 2 => "medium", 3 => "high", 4 => "critical", _ => "low" };
-    string GetStatusLabel(int id) => id switch { 1 => "Open", 2 => "In Progress", 3 => "Waiting User", 4 => "Resolved", 5 => "Closed", _ => "Unknown" };
-    string GetStatusClass(int id) => id switch { 1 => "open", 2 => "inprogress", 3 => "waiting", 4 => "resolved", 5 => "closed", _ => "open" };
 }

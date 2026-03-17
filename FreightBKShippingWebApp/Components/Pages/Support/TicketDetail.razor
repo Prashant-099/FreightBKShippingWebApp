@@ -787,7 +787,6 @@
     }
 </style>
 
-
 @code {
     [Parameter] public int TicketId { get; set; }
 
@@ -803,163 +802,157 @@
     bool updateSuccess = false;
     bool isConnected = false;
 
-    // ── SignalR ──────────────────────────────────────────────────────
     private HubConnection? _hub;
 
-    protected override async Task OnInitializedAsync()
+    // ✅ CORRECT LIFECYCLE
+    protected override async Task OnParametersSetAsync()
     {
         try
         {
             isLoading = true;
+
             ticket = await TicketService.GetByIdAsync(TicketId) ?? new Ticket();
             messages = await TicketService.GetRepliesAsync(TicketId) ?? new List<TicketReply>();
+
+            // 🔥 Start hub AFTER data load
+            await StartHub();
+
             isLoading = false;
+            await InvokeAsync(ScrollToBottom);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[TicketDetail] OnInitializedAsync ERROR: {ex.Message}");
+            Console.WriteLine($"[TicketDetail] ERROR: {ex.Message}");
             isLoading = false;
-            StateHasChanged();
-        }
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            await StartHub();
-            await ScrollToBottom();
+            await InvokeAsync(StateHasChanged);
         }
     }
 
     private async Task StartHub()
     {
-        Console.WriteLine($"[StartHub] Called for TicketId={TicketId}");
+        Console.WriteLine($"[SignalR] Init TicketId={TicketId}");
+
+        // 🔥 CLEAN OLD CONNECTION
+        if (_hub != null)
+        {
+            try
+            {
+                if (_hub.State == HubConnectionState.Connected)
+                {
+                    await _hub.InvokeAsync("LeaveTicket", TicketId);
+                    await _hub.StopAsync();
+                }
+
+                await _hub.DisposeAsync();
+            }
+            catch { }
+        }
+
         try
         {
-
-            string? token = null;
-            for (int i = 0; i < 5; i++)
-            {
-                await Task.Delay(300);
-                try
-                {
-                    token = await TicketService.GetAuthTokenAsync();
-                    if (!string.IsNullOrEmpty(token)) break;
-                }
-                catch (TaskCanceledException)
-                {
-                    Console.WriteLine($"[StartHub] Token read attempt {i + 1} cancelled, retrying...");
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"[StartHub] Token read attempt {i + 1} failed: {ex.Message}");
-                }
-            }
-
-            if (string.IsNullOrEmpty(token))
-            {
-                Console.WriteLine("[TicketDetail] No token, skipping SignalR.");
-                return;
-            }
-
-            var apiBase = TicketService.GetApiBaseUrl().TrimEnd('/'); // ✅ FIX 3: trailing slash remove
-            
-
+            var apiBase = TicketService.GetApiBaseUrl().TrimEnd('/');
 
             _hub = new HubConnectionBuilder()
-                 .WithUrl($"{apiBase}/tickethub", options =>
-                 {
-                     options.AccessTokenProvider = () => Task.FromResult<string?>(token);
-                     options.Transports = HttpTransportType.WebSockets;
-                 })
-                .WithAutomaticReconnect()
-                .ConfigureLogging(logging =>
+                .WithUrl($"{apiBase}/tickethub", options =>
                 {
-                    logging.SetMinimumLevel(LogLevel.Debug);
-                    logging.AddConsole();
+                    options.AccessTokenProvider = async () =>
+                        await TicketService.GetAuthTokenAsync();
+
+                    options.Transports = HttpTransportType.WebSockets;
                 })
+                .WithAutomaticReconnect()
                 .Build();
 
-            _hub.Closed += async (error) =>
+            // 🔁 Lifecycle
+            _hub.Closed += async (ex) =>
             {
-                Console.WriteLine("SignalR closed: " + error?.Message);
+                Console.WriteLine($"[SignalR] Closed: {ex?.Message}");
                 isConnected = false;
                 await InvokeAsync(StateHasChanged);
             };
 
-            _hub.Reconnecting += _ =>
+            _hub.Reconnecting += (ex) =>
             {
+                Console.WriteLine("[SignalR] Reconnecting...");
                 isConnected = false;
                 InvokeAsync(StateHasChanged);
                 return Task.CompletedTask;
             };
 
-            _hub.Reconnected += async _ =>
+            _hub.Reconnected += async (_) =>
             {
+                Console.WriteLine("[SignalR] Reconnected");
+
+                try
+                {
+                    await _hub.InvokeAsync("JoinTicket", TicketId);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[SignalR] Rejoin failed: {ex.Message}");
+                }
+
                 isConnected = true;
-                // Re-join the group after reconnect
-                await _hub.InvokeAsync("JoinTicket", TicketId);
                 await InvokeAsync(StateHasChanged);
             };
 
-            // ✅ FIX 4: Duplicate message bug fix
-            // User ne khud bheja → SendReply() mein locally add karein
-            // SignalR push → sirf "Support" sender ka message add karo
-            // (ya agar koi aur user same ticket dekh raha ho toh uske liye bhi)
-            _hub.On<string, string, DateTime, int>("ReceiveMessage",
-async (senderType, messageText, createdAt, messageId) =>
-{
-    await InvokeAsync(async () =>
-    {
-        if (messages.Any(m => m.MessageId == messageId))
-            return;
+            // 📥 Receive
+            _hub.On<string, string, DateTime, int>(
+                "ReceiveMessage",
+                async (senderType, messageText, createdAt, messageId) =>
+                {
+                    await InvokeAsync(async () =>
+                    {
+                        if (messages.Any(m => m.MessageId == messageId))
+                            return;
 
-        messages.Add(new TicketReply
-        {
-            MessageId = messageId,
-            TicketId = TicketId,
-            MessageText = messageText,
-            SenderType = senderType,
-            CreatedAt = createdAt
-        });
+                        messages.Add(new TicketReply
+                        {
+                            MessageId = messageId,
+                            TicketId = TicketId,
+                            MessageText = messageText,
+                            SenderType = senderType,
+                            CreatedAt = createdAt
+                        });
 
-        StateHasChanged();
-        await ScrollToBottom();
-    });
-});
+                        await InvokeAsync(StateHasChanged);
+                        await ScrollToBottom();
+                    });
+                });
 
-            _hub.On<int>("TicketClosed", async ticketId =>  // ✅ async added
- {
-     if (ticketId == TicketId && ticket != null)
-     {
-         ticket.StatusId = 5;
-         await InvokeAsync(StateHasChanged);  // ✅ await added
-     }
- });
+            // 🔒 Closed event
+            _hub.On<int>("TicketClosed", async (ticketId) =>
+            {
+                if (ticketId == TicketId && ticket != null)
+                {
+                    ticket.StatusId = 5;
+                    await InvokeAsync(StateHasChanged);
+                }
+            });
 
+            // 🚀 Start
             await _hub.StartAsync();
 
-            if (_hub.State == HubConnectionState.Connected)
-            {
-                await _hub.InvokeAsync("JoinTicket", TicketId);
-                isConnected = true;
-            }
+            // 👥 Join group
+            await _hub.InvokeAsync("JoinTicket", TicketId);
 
-            StateHasChanged();
-        }   
+            Console.WriteLine($"[SignalR] Connected & joined ticket-{TicketId}");
+
+            isConnected = true;
+            await InvokeAsync(StateHasChanged);
+        }
         catch (Exception ex)
         {
-            Console.WriteLine($"[TicketDetail] StartHub ERROR: {ex.Message}");
+            Console.WriteLine($"[SignalR] ERROR: {ex.Message}");
             isConnected = false;
-            StateHasChanged();
+            await InvokeAsync(StateHasChanged);
         }
     }
 
     private async Task ScrollToBottom()
     {
         try { await JS.InvokeVoidAsync("scrollToBottom", "chat-messages"); }
-        catch { /* JS not ready yet */ }
+        catch { }
     }
 
     async Task HandleKeyDown(KeyboardEventArgs e)
@@ -975,7 +968,6 @@ async (senderType, messageText, createdAt, messageId) =>
         isSending = true;
         replyError = string.Empty;
 
-        // ✅ FIX 4 (part 2): Capture message text before clearing
         var msgText = replyMessage;
 
         try
@@ -992,23 +984,23 @@ async (senderType, messageText, createdAt, messageId) =>
 
             if (result != null)
             {
-                // ✅ Locally add with real MessageId from server response
-                // So SignalR push pe duplicate check (messageId match) kaam karega
-                reply.MessageId = result.MessageId; // TicketService.ReplyAsync should return saved message
+                reply.MessageId = result.MessageId;
+
                 messages.Add(reply);
 
                 replyMessage = string.Empty;
-                StateHasChanged();
+
+                await InvokeAsync(StateHasChanged);
                 await ScrollToBottom();
             }
             else
             {
-                replyError = "Failed to send message. Please try again.";
+                replyError = "Failed to send message.";
             }
         }
         catch (Exception ex)
         {
-            replyError = $"Error: {ex.Message}";
+            replyError = ex.Message;
         }
         finally
         {
@@ -1026,26 +1018,34 @@ async (senderType, messageText, createdAt, messageId) =>
             var success = await TicketService.UpdateAsync(ticket);
             if (success) updateSuccess = true;
         }
-        finally { isUpdating = false; }
+        finally
+        {
+            isUpdating = false;
+        }
 
-        await Task.Delay(3000);
+        await Task.Delay(2000);
         updateSuccess = false;
-        StateHasChanged();
+        await InvokeAsync(StateHasChanged);
     }
 
     async Task CloseTicket()
     {
         isClosing = true;
+
         try
         {
             var success = await TicketService.CloseAsync(TicketId);
-            if (success)
+
+            if (success && ticket != null)
             {
-                ticket!.StatusId = 5;
-                StateHasChanged();
+                ticket.StatusId = 5;
+                await InvokeAsync(StateHasChanged);
             }
         }
-        finally { isClosing = false; }
+        finally
+        {
+            isClosing = false;
+        }
     }
 
     void GoBack() => Nav.NavigateTo("/tickets");
@@ -1057,15 +1057,18 @@ async (senderType, messageText, createdAt, messageId) =>
             try
             {
                 if (_hub.State == HubConnectionState.Connected)
+                {
                     await _hub.InvokeAsync("LeaveTicket", TicketId);
+                    await _hub.StopAsync();
+                }
 
-                await _hub.StopAsync();
                 await _hub.DisposeAsync();
             }
             catch { }
         }
     }
 
+    // ✅ HELPERS (IMPORTANT — UI uses these)
     string GetPriorityLabel(int id) => id switch { 1 => "Low", 2 => "Medium", 3 => "High", 4 => "Critical", _ => "Unknown" };
     string GetPriorityClass(int id) => id switch { 1 => "low", 2 => "medium", 3 => "high", 4 => "critical", _ => "low" };
     string GetStatusLabel(int id) => id switch { 1 => "Open", 2 => "In Progress", 3 => "Waiting User", 4 => "Resolved", 5 => "Closed", _ => "Unknown" };
