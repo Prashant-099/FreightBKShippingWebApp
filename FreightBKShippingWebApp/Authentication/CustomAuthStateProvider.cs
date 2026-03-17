@@ -8,9 +8,10 @@ namespace FreightBKShippingWebApp.Authentication
 {
     public class CustomAuthStateProvider(ProtectedLocalStorage localStorage) : AuthenticationStateProvider
     {
+
         private readonly JwtSecurityTokenHandler _tokenHandler = new();
 
-        public async override Task<AuthenticationState> GetAuthenticationStateAsync()
+        public override async Task<AuthenticationState> GetAuthenticationStateAsync()
         {
             try
             {
@@ -23,47 +24,50 @@ namespace FreightBKShippingWebApp.Authentication
                     return CreateAnonymousState();
                 }
 
-                // Validate token expiration
                 if (!IsTokenValid(sessionModel.Token, out var jwtToken))
                 {
-                    Console.WriteLine("❌ Token is invalid or expired, clearing session");
-                    await MarkUserAsLoggedOut();
-                    return CreateAnonymousState();
+                    Console.WriteLine("❌ Token invalid");
+                    return CreateAnonymousState(); // ❌ logout mat karo yaha
                 }
 
-                // Additional check: verify tokenExp from session matches JWT exp
                 var tokenExpFromSession = sessionModel.tokenExp;
                 var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
                 if (tokenExpFromSession <= now)
                 {
-                    Console.WriteLine($"❌ Token expired (session exp: {tokenExpFromSession}, now: {now})");
-                    await MarkUserAsLoggedOut();
+                    Console.WriteLine("❌ Token expired");
                     return CreateAnonymousState();
                 }
 
-                // Check refresh token expiration
                 var refreshExpUnix = new DateTimeOffset(sessionModel.RefreshtokenExp).ToUnixTimeSeconds();
                 if (refreshExpUnix <= now)
                 {
-                    Console.WriteLine("❌ Refresh token expired, clearing session");
-                    await MarkUserAsLoggedOut();
+                    Console.WriteLine("❌ Refresh expired");
                     return CreateAnonymousState();
                 }
 
-                Console.WriteLine($"✅ Token valid, expires in {(tokenExpFromSession - now) / 60} minutes");
-
                 var identity = GetClaimsIdentity(jwtToken);
                 var user = new ClaimsPrincipal(identity);
+
                 return new AuthenticationState(user);
+            }
+            catch (TaskCanceledException)
+            {
+                // ✅ THIS IS THE REAL FIX
+                Console.WriteLine("⚠️ JSInterop not ready (TaskCanceled)");
+
+                // 🚫 logout mat karo
+                return CreateAnonymousState();
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Error in GetAuthenticationStateAsync: {ex.Message}");
-                await MarkUserAsLoggedOut();
+                Console.WriteLine($"❌ Auth error: {ex.Message}");
+
+                // 🚫 logout mat karo yaha bhi
                 return CreateAnonymousState();
             }
         }
+
 
         public async Task MarkUserAsAuthenticated(LoginResponseModel model)
         {

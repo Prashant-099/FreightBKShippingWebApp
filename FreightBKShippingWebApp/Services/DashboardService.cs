@@ -11,9 +11,28 @@ namespace FreightBKShippingWebApp.Services
             _api = api;
         }
         public string GetApiBaseUrl() => _api.GetBaseUrl();
+        private string? _cachedToken;
+        public async Task<string?> GetAuthTokenAsync()
+        {
+            if (!string.IsNullOrWhiteSpace(_cachedToken))
+                return _cachedToken;
 
-        public async Task<string?> GetAuthTokenAsync() => await _api.GetAuthTokenAsync();
-        // 🔵 Normal User Dashboard (DO NOT CHANGE)
+            try
+            {
+                _cachedToken = await _api.GetAuthTokenAsync();
+                return _cachedToken;
+            }
+            catch (TaskCanceledException)
+            {
+                Console.WriteLine("⚠️ Token fetch cancelled (JS not ready)");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Token fetch error: {ex.Message}");
+                return null;
+            }
+        }        // 🔵 Normal User Dashboard (DO NOT CHANGE)
         public async Task<DashboardResponseDto?> GetDashboardAsync(
             int yearId,
             DateTime? fromDate,

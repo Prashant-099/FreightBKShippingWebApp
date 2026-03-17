@@ -638,8 +638,16 @@ namespace FreightBKShippingWebApp
 
         public async Task<string?> GetAuthTokenAsync()
         {
-            var result = await localStorage.GetAsync<LoginResponseModel>("sessionState");
-            return result.Success ? result.Value?.Token : null;
+            try
+            {
+                var result = await localStorage.GetAsync<LoginResponseModel>("sessionState");
+                return result.Success ? result.Value?.Token : null;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"⚠️ GetAuthTokenAsync failed: {ex.Message}");
+                return null; // ✅ return null instead of throwing — caller will retry
+            }
         }
     }
 }

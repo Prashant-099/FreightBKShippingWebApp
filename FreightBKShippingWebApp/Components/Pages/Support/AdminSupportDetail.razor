@@ -3,9 +3,13 @@
 @using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Services
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.SignalR.Client
+@using Microsoft.AspNetCore.Http.Connections;
+@implements IAsyncDisposable
 @inject DashboardService AdminService
 @inject NavigationManager Nav
 @inject IJSRuntime JS
+
 <div class="sad-page">
 
     <!-- Header -->
@@ -54,11 +58,15 @@
                         <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
                     </svg>
                     Conversation
-                    <span class="sad-msg-count">@ticket.Messages.Count messages</span>
+                    <span class="sad-msg-count">@ticket?.Messages?.Count ?? 0 messages</span>
+                    @if (isConnected)
+                    {
+                        <span class="sad-live-dot" title="Live"></span>
+                    }
                 </div>
 
                 <!-- Messages -->
-                <div class="sad-messages">
+                <div class="sad-messages" id="sad-messages">
                     @if (!ticket.Messages.Any())
                     {
                         <div class="sad-no-msgs">
@@ -67,20 +75,20 @@
                     }
                     else
                     {
-                        @foreach (var m in ticket.Messages)
+                        @foreach (var m in ticket.Messages.OrderBy(x => x.CreatedAt))
                         {
                             <div class="sad-msg-wrap @(m.SenderType == "Support" ? "msg-support" : "msg-user")">
                                 <div class="sad-avatar @(m.SenderType == "Support" ? "av-support" : "av-user")">
                                     @if (m.SenderType == "Support")
                                     {
                                         <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" viewBox="0 0 24 24">
-                                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/>
+                                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z" />
                                         </svg>
                                     }
                                     else
                                     {
                                         <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" viewBox="0 0 24 24">
-                                            <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
+                                            <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" />
                                         </svg>
                                     }
                                 </div>
@@ -202,7 +210,9 @@
                     <button class="sad-btn-update" @onclick="UpdateStatus" disabled="@isUpdating">
                         @if (isUpdating)
                         {
-                            <span class="sad-btn-spin dark"></span><span>Updating...</span>
+                            <span class="sad-btn-spin dark"></span>
+                    
+                            <span>Updating...</span>
                         }
                         else
                         {
@@ -251,7 +261,9 @@
                             disabled="@(isAssigning || string.IsNullOrEmpty(selectedAssignee))">
                         @if (isAssigning)
                         {
-                            <span class="sad-btn-spin"></span><span>Assigning...</span>
+                            <span class="sad-btn-spin"></span>
+                    
+                            <span>Assigning...</span>
                         }
                         else
                         {
@@ -276,7 +288,9 @@
                         <button class="sad-btn-close" @onclick="CloseTicket" disabled="@isClosing">
                             @if (isClosing)
                             {
-                                <span class="sad-btn-spin"></span><span>Closing...</span>
+                                <span class="sad-btn-spin"></span>
+                    
+                                <span>Closing...</span>
                             }
                             else
                             {
@@ -294,106 +308,612 @@
 </div>
 
 <style>
-    .sad-page { padding: 22px 28px; background: #f8fafc; min-height: 100vh; font-family: 'Segoe UI', system-ui, sans-serif; }
+    .sad-page {
+        padding: 22px 28px;
+        background: #f8fafc;
+        min-height: 100vh;
+        font-family: 'Segoe UI', system-ui, sans-serif;
+    }
 
-    /* Header */
-    .sad-header { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 20px; flex-wrap: wrap; }
-    .sad-header-info { flex: 1; }
-    .sad-title { font-size: 17px; font-weight: 700; color: #0f172a; margin: 0 0 6px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-    .sad-ticketno { font-family: monospace; font-size: 13px; color: #7c3aed; background: #ede9fe; padding: 2px 8px; border-radius: 6px; }
-    .sad-header-meta { display: flex; gap: 7px; flex-wrap: wrap; }
-    .sad-company-pill { background: #dbeafe; color: #1e40af; font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 20px; }
-    .sad-back { display: inline-flex; align-items: center; gap: 6px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 13px; font-size: 12px; font-weight: 600; color: #64748b; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
-    .sad-back:hover { background: #f1f5f9; }
+    .sad-header {
+        display: flex;
+        align-items: flex-start;
+        gap: 14px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
 
-    /* Badges */
-    .sad-tbadge { display: inline-block !important; padding: 3px 9px !important; border-radius: 20px !important; font-size: 11px !important; font-weight: 600 !important; }
-    .sad-page .priority-low { background: #f0fdf4 !important; color: #16a34a !important; }
-    .sad-page .priority-medium { background: #fef9c3 !important; color: #b45309 !important; }
-    .sad-page .priority-high { background: #fff7ed !important; color: #ea580c !important; }
-    .sad-page .priority-critical { background: #fef2f2 !important; color: #dc2626 !important; }
-    .sad-page .status-open { background: #eff6ff !important; color: #2563eb !important; }
-    .sad-page .status-inprogress { background: #fff7ed !important; color: #d97706 !important; }
-    .sad-page .status-waiting { background: #f5f3ff !important; color: #7c3aed !important; }
-    .sad-page .status-resolved { background: #f0fdf4 !important; color: #16a34a !important; }
-    .sad-page .status-closed { background: #f1f5f9 !important; color: #64748b !important; }
+    .sad-header-info {
+        flex: 1;
+    }
 
-    /* Layout */
-    .sad-layout { display: flex; gap: 18px; align-items: flex-start; }
-    .sad-chat-panel { flex: 1; background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.05); overflow: hidden; display: flex; flex-direction: column; min-height: 500px; }
-    .sad-chat-header { display: flex; align-items: center; gap: 7px; padding: 13px 16px; border-bottom: 1px solid #f1f5f9; font-size: 13px; font-weight: 600; color: #374151; background: #fafbfc; }
-    .sad-msg-count { margin-left: auto; font-size: 11px; font-weight: 400; color: #94a3b8; }
+    .sad-title {
+        font-size: 17px;
+        font-weight: 700;
+        color: #0f172a;
+        margin: 0 0 6px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
 
-    /* Messages */
-    .sad-messages { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; max-height: 420px; }
-    .sad-no-msgs { display: flex; align-items: center; justify-content: center; padding: 40px; color: #94a3b8; font-size: 13px; }
-    .sad-msg-wrap { display: flex; gap: 8px; align-items: flex-start; }
-    .msg-support { flex-direction: row-reverse; }
-    .sad-avatar { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-    .av-support { background: #ede9fe; color: #7c3aed; }
-    .av-user { background: #dbeafe; color: #2563eb; }
-    .sad-msg-body { max-width: 70%; display: flex; flex-direction: column; gap: 4px; }
-    .msg-support .sad-msg-body { align-items: flex-end; }
-    .sad-msg-meta { display: flex; align-items: center; gap: 7px; }
-    .meta-right { flex-direction: row-reverse; }
-    .sad-sender { font-size: 11px; font-weight: 600; color: #374151; }
-    .sad-time { font-size: 10px; color: #94a3b8; }
-    .sad-bubble { padding: 9px 13px; border-radius: 13px; font-size: 13px; line-height: 1.5; word-break: break-word; }
-    .bubble-support { background: #7c3aed; color: #fff; border-bottom-right-radius: 3px; }
-    .bubble-user { background: #f1f5f9; color: #334155; border-bottom-left-radius: 3px; }
+    .sad-ticketno {
+        font-family: monospace;
+        font-size: 13px;
+        color: #7c3aed;
+        background: #ede9fe;
+        padding: 2px 8px;
+        border-radius: 6px;
+    }
 
-    /* Reply */
-    .sad-reply-box { border-top: 1px solid #f1f5f9; padding: 14px 16px; background: #fafbfc; }
-    .sad-reply-error { font-size: 12px; color: #dc2626; margin-bottom: 6px; }
-    .sad-textarea { width: 100%; padding: 9px 12px; border: 1.5px solid #e2e8f0; border-radius: 9px; font-size: 13px; font-family: inherit; color: #0f172a; resize: none; box-sizing: border-box; transition: border-color 0.15s; }
-    .sad-textarea:focus { outline: none; border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124,58,237,0.1); }
-    .sad-reply-actions { display: flex; align-items: center; justify-content: space-between; margin-top: 9px; }
-    .sad-hint { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #94a3b8; }
-    .sad-btn-send { display: inline-flex; align-items: center; gap: 6px; background: #7c3aed; border: none; border-radius: 8px; padding: 8px 16px; font-size: 13px; font-weight: 600; color: #fff; cursor: pointer; transition: background 0.15s; }
-    .sad-btn-send:hover:not(:disabled) { background: #6d28d9; }
-    .sad-btn-send:disabled { opacity: 0.5; cursor: not-allowed; }
-    .sad-closed-notice { display: flex; align-items: center; gap: 7px; padding: 12px 16px; border-top: 1px solid #f1f5f9; background: #f8fafc; color: #64748b; font-size: 13px; }
+    .sad-header-meta {
+        display: flex;
+        gap: 7px;
+        flex-wrap: wrap;
+    }
 
-    /* Info Panel */
-    .sad-info-panel { width: 270px; flex-shrink: 0; display: flex; flex-direction: column; gap: 14px; }
-    .sad-info-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 13px; padding: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
-    .sad-card-title { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.06em; margin: 0 0 13px; }
-    .sad-info-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 9px; font-size: 12px; }
-    .sad-info-lbl { color: #94a3b8; font-weight: 500; flex-shrink: 0; }
-    .sad-info-val { color: #334155; font-weight: 500; text-align: right; }
-    .company-val { color: #1e40af !important; font-weight: 600 !important; }
-    .sad-field { margin-bottom: 10px; display: flex; flex-direction: column; gap: 4px; }
-    .sad-field label { font-size: 11px; font-weight: 600; color: #64748b; }
-    .sad-sel-wrap { position: relative; }
-    .sad-sel-wrap select { width: 100%; padding: 8px 30px 8px 10px; border: 1.5px solid #e2e8f0; border-radius: 7px; font-size: 13px; color: #334155; background: #fff; appearance: none; font-family: inherit; cursor: pointer; }
-    .sad-sel-wrap select:focus { outline: none; border-color: #7c3aed; }
+    .sad-company-pill {
+        background: #dbeafe;
+        color: #1e40af;
+        font-size: 12px;
+        font-weight: 600;
+        padding: 3px 10px;
+        border-radius: 20px;
+    }
 
-    .sad-btn-update { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; padding: 9px; background: #0f172a; border: none; border-radius: 8px; font-size: 12px; font-weight: 600; color: #fff; cursor: pointer; margin-top: 4px; transition: background 0.15s; }
-    .sad-btn-update:hover:not(:disabled) { background: #1e293b; }
-    .sad-btn-update:disabled { opacity: 0.6; cursor: not-allowed; }
+    .sad-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 8px 13px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #64748b;
+        cursor: pointer;
+        transition: all 0.15s;
+        white-space: nowrap;
+    }
 
-    .sad-btn-assign { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; padding: 9px; background: #0284c7; border: none; border-radius: 8px; font-size: 12px; font-weight: 600; color: #fff; cursor: pointer; transition: background 0.15s; }
-    .sad-btn-assign:hover:not(:disabled) { background: #0369a1; }
-    .sad-btn-assign:disabled { opacity: 0.5; cursor: not-allowed; }
+        .sad-back:hover {
+            background: #f1f5f9;
+        }
 
-    .sad-assigned-now { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #0284c7; background: #e0f2fe; border-radius: 7px; padding: 7px 10px; margin-bottom: 10px; }
+    .sad-live-dot {
+        width: 8px;
+        height: 8px;
+        background: #16a34a;
+        border-radius: 50%;
+        margin-left: auto;
+        animation: sad-pulse 2s ease-in-out infinite;
+    }
 
-    .sad-success-msg { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #16a34a; margin-top: 7px; justify-content: center; }
+    @@keyframes sad-pulse {
+        0%, 100% {
+            opacity: 1;
+        }
 
-    .sad-danger-card { border-color: #fecaca !important; }
-    .sad-danger-text { font-size: 12px; color: #64748b; margin: 0 0 12px; line-height: 1.5; }
-    .sad-btn-close { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; padding: 9px; background: #fff; border: 1.5px solid #dc2626; border-radius: 8px; font-size: 12px; font-weight: 600; color: #dc2626; cursor: pointer; transition: all 0.15s; }
-    .sad-btn-close:hover:not(:disabled) { background: #dc2626; color: #fff; }
-    .sad-btn-close:disabled { opacity: 0.6; cursor: not-allowed; }
+        50% {
+            opacity: 0.4;
+        }
+    }
 
-    /* States */
-    .sad-loading, .sad-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px; background: #fff; border-radius: 14px; border: 1px solid #e2e8f0; gap: 10px; color: #64748b; }
-    .sad-spinner { width: 28px; height: 28px; border: 3px solid #e2e8f0; border-top-color: #7c3aed; border-radius: 50%; animation: sad-spin 0.8s linear infinite; }
-    .sad-btn-spin { width: 13px; height: 13px; border: 2px solid rgba(255,255,255,0.4); border-top-color: #fff; border-radius: 50%; animation: sad-spin 0.7s linear infinite; display: inline-block; }
-    .sad-btn-spin.dark { border-color: rgba(255,255,255,0.3); border-top-color: #fff; }
-    @@keyframes sad-spin { to { transform: rotate(360deg); } }
+    .sad-tbadge {
+        display: inline-block !important;
+        padding: 3px 9px !important;
+        border-radius: 20px !important;
+        font-size: 11px !important;
+        font-weight: 600 !important;
+    }
+
+    .sad-page .priority-low {
+        background: #f0fdf4 !important;
+        color: #16a34a !important;
+    }
+
+    .sad-page .priority-medium {
+        background: #fef9c3 !important;
+        color: #b45309 !important;
+    }
+
+    .sad-page .priority-high {
+        background: #fff7ed !important;
+        color: #ea580c !important;
+    }
+
+    .sad-page .priority-critical {
+        background: #fef2f2 !important;
+        color: #dc2626 !important;
+    }
+
+    .sad-page .status-open {
+        background: #eff6ff !important;
+        color: #2563eb !important;
+    }
+
+    .sad-page .status-inprogress {
+        background: #fff7ed !important;
+        color: #d97706 !important;
+    }
+
+    .sad-page .status-waiting {
+        background: #f5f3ff !important;
+        color: #7c3aed !important;
+    }
+
+    .sad-page .status-resolved {
+        background: #f0fdf4 !important;
+        color: #16a34a !important;
+    }
+
+    .sad-page .status-closed {
+        background: #f1f5f9 !important;
+        color: #64748b !important;
+    }
+
+    .sad-layout {
+        display: flex;
+        gap: 18px;
+        align-items: flex-start;
+    }
+
+    .sad-chat-panel {
+        flex: 1;
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        min-height: 500px;
+    }
+
+    .sad-chat-header {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 13px 16px;
+        border-bottom: 1px solid #f1f5f9;
+        font-size: 13px;
+        font-weight: 600;
+        color: #374151;
+        background: #fafbfc;
+    }
+
+    .sad-msg-count {
+        font-size: 11px;
+        font-weight: 400;
+        color: #94a3b8;
+    }
+
+    .sad-messages {
+        flex: 1;
+        padding: 16px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        max-height: 420px;
+    }
+
+    .sad-no-msgs {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 40px;
+        color: #94a3b8;
+        font-size: 13px;
+    }
+
+    .sad-msg-wrap {
+        display: flex;
+        gap: 8px;
+        align-items: flex-start;
+    }
+
+    .msg-support {
+        flex-direction: row-reverse;
+    }
+
+    .sad-avatar {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .av-support {
+        background: #ede9fe;
+        color: #7c3aed;
+    }
+
+    .av-user {
+        background: #dbeafe;
+        color: #2563eb;
+    }
+
+    .sad-msg-body {
+        max-width: 70%;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .msg-support .sad-msg-body {
+        align-items: flex-end;
+    }
+
+    .sad-msg-meta {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+    }
+
+    .meta-right {
+        flex-direction: row-reverse;
+    }
+
+    .sad-sender {
+        font-size: 11px;
+        font-weight: 600;
+        color: #374151;
+    }
+
+    .sad-time {
+        font-size: 10px;
+        color: #94a3b8;
+    }
+
+    .sad-bubble {
+        padding: 9px 13px;
+        border-radius: 13px;
+        font-size: 13px;
+        line-height: 1.5;
+        word-break: break-word;
+    }
+
+    .bubble-support {
+        background: #7c3aed;
+        color: #fff;
+        border-bottom-right-radius: 3px;
+    }
+
+    .bubble-user {
+        background: #f1f5f9;
+        color: #334155;
+        border-bottom-left-radius: 3px;
+    }
+
+    .sad-reply-box {
+        border-top: 1px solid #f1f5f9;
+        padding: 14px 16px;
+        background: #fafbfc;
+    }
+
+    .sad-reply-error {
+        font-size: 12px;
+        color: #dc2626;
+        margin-bottom: 6px;
+    }
+
+    .sad-textarea {
+        width: 100%;
+        padding: 9px 12px;
+        border: 1.5px solid #e2e8f0;
+        border-radius: 9px;
+        font-size: 13px;
+        font-family: inherit;
+        color: #0f172a;
+        resize: none;
+        box-sizing: border-box;
+        transition: border-color 0.15s;
+    }
+
+        .sad-textarea:focus {
+            outline: none;
+            border-color: #7c3aed;
+            box-shadow: 0 0 0 3px rgba(124,58,237,0.1);
+        }
+
+    .sad-reply-actions {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: 9px;
+    }
+
+    .sad-hint {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 11px;
+        color: #94a3b8;
+    }
+
+    .sad-btn-send {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: #7c3aed;
+        border: none;
+        border-radius: 8px;
+        padding: 8px 16px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #fff;
+        cursor: pointer;
+        transition: background 0.15s;
+    }
+
+        .sad-btn-send:hover:not(:disabled) {
+            background: #6d28d9;
+        }
+
+        .sad-btn-send:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+    .sad-closed-notice {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 12px 16px;
+        border-top: 1px solid #f1f5f9;
+        background: #f8fafc;
+        color: #64748b;
+        font-size: 13px;
+    }
+
+    .sad-info-panel {
+        width: 270px;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    .sad-info-card {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 13px;
+        padding: 18px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+
+    .sad-card-title {
+        font-size: 11px;
+        font-weight: 700;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin: 0 0 13px;
+    }
+
+    .sad-info-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 8px;
+        margin-bottom: 9px;
+        font-size: 12px;
+    }
+
+    .sad-info-lbl {
+        color: #94a3b8;
+        font-weight: 500;
+        flex-shrink: 0;
+    }
+
+    .sad-info-val {
+        color: #334155;
+        font-weight: 500;
+        text-align: right;
+    }
+
+    .company-val {
+        color: #1e40af !important;
+        font-weight: 600 !important;
+    }
+
+    .sad-field {
+        margin-bottom: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+        .sad-field label {
+            font-size: 11px;
+            font-weight: 600;
+            color: #64748b;
+        }
+
+    .sad-sel-wrap {
+        position: relative;
+    }
+
+        .sad-sel-wrap select {
+            width: 100%;
+            padding: 8px 30px 8px 10px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 7px;
+            font-size: 13px;
+            color: #334155;
+            background: #fff;
+            appearance: none;
+            font-family: inherit;
+            cursor: pointer;
+        }
+
+            .sad-sel-wrap select:focus {
+                outline: none;
+                border-color: #7c3aed;
+            }
+
+    .sad-btn-update {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        width: 100%;
+        padding: 9px;
+        background: #0f172a;
+        border: none;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #fff;
+        cursor: pointer;
+        margin-top: 4px;
+        transition: background 0.15s;
+    }
+
+        .sad-btn-update:hover:not(:disabled) {
+            background: #1e293b;
+        }
+
+        .sad-btn-update:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+    .sad-btn-assign {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        width: 100%;
+        padding: 9px;
+        background: #0284c7;
+        border: none;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #fff;
+        cursor: pointer;
+        transition: background 0.15s;
+    }
+
+        .sad-btn-assign:hover:not(:disabled) {
+            background: #0369a1;
+        }
+
+        .sad-btn-assign:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+    .sad-assigned-now {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: #0284c7;
+        background: #e0f2fe;
+        border-radius: 7px;
+        padding: 7px 10px;
+        margin-bottom: 10px;
+    }
+
+    .sad-success-msg {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 11px;
+        color: #16a34a;
+        margin-top: 7px;
+        justify-content: center;
+    }
+
+    .sad-danger-card {
+        border-color: #fecaca !important;
+    }
+
+    .sad-danger-text {
+        font-size: 12px;
+        color: #64748b;
+        margin: 0 0 12px;
+        line-height: 1.5;
+    }
+
+    .sad-btn-close {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        width: 100%;
+        padding: 9px;
+        background: #fff;
+        border: 1.5px solid #dc2626;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #dc2626;
+        cursor: pointer;
+        transition: all 0.15s;
+    }
+
+        .sad-btn-close:hover:not(:disabled) {
+            background: #dc2626;
+            color: #fff;
+        }
+
+        .sad-btn-close:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+    .sad-loading, .sad-empty {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 60px;
+        background: #fff;
+        border-radius: 14px;
+        border: 1px solid #e2e8f0;
+        gap: 10px;
+        color: #64748b;
+    }
+
+    .sad-spinner {
+        width: 28px;
+        height: 28px;
+        border: 3px solid #e2e8f0;
+        border-top-color: #7c3aed;
+        border-radius: 50%;
+        animation: sad-spin 0.8s linear infinite;
+    }
+
+    .sad-btn-spin {
+        width: 13px;
+        height: 13px;
+        border: 2px solid rgba(255,255,255,0.4);
+        border-top-color: #fff;
+        border-radius: 50%;
+        animation: sad-spin 0.7s linear infinite;
+        display: inline-block;
+    }
+
+        .sad-btn-spin.dark {
+            border-color: rgba(255,255,255,0.3);
+            border-top-color: #fff;
+        }
+
+    @@keyframes sad-spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
 </style>
-
 @code {
     [Parameter] public int TicketId { get; set; }
 
@@ -410,126 +930,174 @@
     bool isClosing = false;
     bool updateSuccess = false;
     bool assignSuccess = false;
-    bool isConnected = false; // ✅ Added for live indicator
+    bool isConnected = false;
 
     int editStatus;
     int editPriority;
 
-    // ✅ FIX 5: SignalR hub
     private HubConnection? _hub;
 
+    // ✅ Only static data here
     protected override async Task OnInitializedAsync()
     {
         isLoading = true;
-        ticket = await AdminService.GetTicketDetailAsync(TicketId);
-        if (ticket != null)
-        {
-            editStatus = ticket.StatusId;
-            editPriority = ticket.PriorityId;
-        }
         adminUsers = await AdminService.GetAdminUsersAsync();
         isLoading = false;
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    // ✅ MAIN lifecycle (data + hub)
+    protected override async Task OnParametersSetAsync()
     {
-        if (firstRender)
+        try
         {
-            await ScrollToBottom();
-            await StartHub(); // ✅ Connect to SignalR
+            isLoading = true;
+
+            ticket = await AdminService.GetTicketDetailAsync(TicketId);
+
+            if (ticket != null)
+            {
+                editStatus = ticket.StatusId;
+                editPriority = ticket.PriorityId;
+
+                ticket.Messages ??= new List<TicketMessageAdminDto>();
+            }
+
+            // 🔥 IMPORTANT: restart hub per TicketId
+            await StartHub();
+
+            isLoading = false;
+            await InvokeAsync(ScrollToBottom);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[AdminPage] ERROR: {ex.Message}");
+            isLoading = false;
+            await InvokeAsync(StateHasChanged);
         }
     }
 
     private async Task StartHub()
     {
+        Console.WriteLine($"[AdminHub] Init TicketId={TicketId}");
+
+        // 🔥 CLEAN OLD CONNECTION
+        if (_hub != null)
+        {
+            try
+            {
+                if (_hub.State == HubConnectionState.Connected)
+                {
+                    await _hub.InvokeAsync("LeaveTicket", TicketId);
+                    await _hub.StopAsync();
+                }
+
+                await _hub.DisposeAsync();
+            }
+            catch { }
+        }
+
         try
         {
-            var token = await AdminService.GetAuthTokenAsync(); // ✅ Token lao DashboardService se
-
-            if (string.IsNullOrEmpty(token))
-            {
-                Console.WriteLine("[AdminSupportDetail] No token, skipping SignalR.");
-                return;
-            }
-
-            var apiBase = AdminService.GetApiBaseUrl().TrimEnd('/'); // ✅ Trailing slash fix
+            var apiBase = AdminService.GetApiBaseUrl().TrimEnd('/');
 
             _hub = new HubConnectionBuilder()
-                .WithUrl($"{apiBase}/signalr/ticket", options =>
+                .WithUrl($"{apiBase}/tickethub", options =>
                 {
-                    options.AccessTokenProvider = () => Task.FromResult<string?>(token);
+                    options.AccessTokenProvider = async () =>
+                        await AdminService.GetAuthTokenAsync();
+
+                    options.Transports = HttpTransportType.WebSockets;
                 })
                 .WithAutomaticReconnect()
                 .Build();
 
-            _hub.Closed += async (_) =>
+            // 🔁 Lifecycle events
+            _hub.Closed += async (ex) =>
             {
+                Console.WriteLine($"[AdminHub] Closed: {ex?.Message}");
                 isConnected = false;
                 await InvokeAsync(StateHasChanged);
             };
 
-            _hub.Reconnecting += _ =>
+            _hub.Reconnecting += (ex) =>
             {
+                Console.WriteLine("[AdminHub] Reconnecting...");
                 isConnected = false;
                 InvokeAsync(StateHasChanged);
                 return Task.CompletedTask;
             };
 
-            _hub.Reconnected += async _ =>
+            _hub.Reconnected += async (_) =>
             {
+                Console.WriteLine("[AdminHub] Reconnected");
+
+                try
+                {
+                    await _hub.InvokeAsync("JoinTicket", TicketId);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[AdminHub] Rejoin failed: {ex.Message}");
+                }
+
                 isConnected = true;
-                await _hub.InvokeAsync("JoinTicket", TicketId);
                 await InvokeAsync(StateHasChanged);
             };
 
-            // ✅ Real-time message receive — user ya koi bhi bheje
-            _hub.On<string, string, DateTime, int>("ReceiveMessage",
-                (senderType, messageText, createdAt, messageId) =>
+            // 📥 Receive message
+            _hub.On<string, string, DateTime, int>(
+                "ReceiveMessage",
+                async (senderType, messageText, createdAt, messageId) =>
                 {
-                    // Duplicate check
-                    if (ticket?.Messages.Any(m => m.MessageId == messageId) == true)
-                        return;
-
-                    ticket?.Messages.Add(new TicketMessageAdminDto
+                    await InvokeAsync(async () =>
                     {
-                        MessageId = messageId,
-                        TicketId = TicketId,
-                        MessageText = messageText,
-                        SenderType = senderType,
-                        CreatedAt = createdAt
-                    });
+                        if (ticket == null) return;
 
-                    InvokeAsync(async () =>
-                    {
-                        StateHasChanged();
+                        ticket.Messages ??= new List<TicketMessageAdminDto>();
+
+                        if (ticket.Messages.Any(m => m.MessageId == messageId))
+                            return;
+
+                        ticket.Messages.Add(new TicketMessageAdminDto
+                        {
+                            MessageId = messageId,
+                            TicketId = TicketId,
+                            MessageText = messageText,
+                            SenderType = senderType,
+                            CreatedAt = createdAt
+                        });
+
+                        await InvokeAsync(StateHasChanged);
                         await ScrollToBottom();
                     });
                 });
 
-            // ✅ Ticket closed event
-            _hub.On<int>("TicketClosed", ticketId =>
+            // 🔒 Ticket closed
+            _hub.On<int>("TicketClosed", async (ticketId) =>
             {
                 if (ticketId == TicketId && ticket != null)
                 {
                     ticket.StatusId = 5;
-                    InvokeAsync(StateHasChanged);
+                    await InvokeAsync(StateHasChanged);
                 }
             });
 
+            // 🚀 Start connection
             await _hub.StartAsync();
+            Console.WriteLine("[AdminHub] Connected");
 
-            if (_hub.State == HubConnectionState.Connected)
-            {
-                await _hub.InvokeAsync("JoinTicket", TicketId);
-                isConnected = true;
-            }
+            // 👥 Join group
+            await _hub.InvokeAsync("JoinTicket", TicketId);
+            Console.WriteLine($"[AdminHub] Joined ticket-{TicketId}");
 
-            StateHasChanged();
+            isConnected = true;
+            await InvokeAsync(StateHasChanged);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[AdminSupportDetail] StartHub ERROR: {ex.Message}");
+            Console.WriteLine($"[AdminHub] ERROR: {ex.Message}");
             isConnected = false;
+            await InvokeAsync(StateHasChanged);
         }
     }
 
@@ -541,36 +1109,38 @@
 
     async Task HandleKeyDown(KeyboardEventArgs e)
     {
-        if (e.CtrlKey && e.Key == "Enter") await SendReply();
+        if (e.CtrlKey && e.Key == "Enter")
+            await SendReply();
     }
 
     async Task SendReply()
     {
         if (string.IsNullOrWhiteSpace(replyMessage)) return;
+
         isSending = true;
         replyError = string.Empty;
-
         var msgText = replyMessage;
 
         try
         {
-            // ✅ FIX: ReplyAsync se saved message wapas lo (MessageId chahiye duplicate check ke liye)
             var savedMsg = await AdminService.ReplyAsync(TicketId, msgText);
 
-            if (savedMsg != null)
+            if (savedMsg != null && ticket != null)
             {
-                // ✅ Locally add — taaki SignalR push pe duplicate na ho
-                ticket?.Messages.Add(new TicketMessageAdminDto
+                ticket.Messages ??= new List<TicketMessageAdminDto>();
+
+                ticket.Messages.Add(new TicketMessageAdminDto
                 {
                     MessageId = savedMsg.MessageId,
                     TicketId = TicketId,
                     MessageText = msgText,
                     SenderType = "Support",
-                    CreatedAt = DateTime.UtcNow
+                    CreatedAt = savedMsg.CreatedAt
                 });
 
                 replyMessage = string.Empty;
-                StateHasChanged();
+
+                await InvokeAsync(StateHasChanged);
                 await ScrollToBottom();
             }
             else
@@ -580,67 +1150,14 @@
         }
         catch (Exception ex)
         {
-            replyError = $"Error: {ex.Message}";
+            replyError = ex.Message;
         }
-        finally { isSending = false; }
-    }
-
-    async Task UpdateStatus()
-    {
-        isUpdating = true;
-        updateSuccess = false;
-        try
+        finally
         {
-            var ok = await AdminService.UpdateStatusAsync(TicketId, editStatus, editPriority);
-            if (ok)
-            {
-                ticket!.StatusId = editStatus;
-                ticket!.PriorityId = editPriority;
-                updateSuccess = true;
-            }
+            isSending = false;
         }
-        finally { isUpdating = false; }
-        await Task.Delay(2500);
-        updateSuccess = false;
-        StateHasChanged();
     }
 
-    async Task AssignTicket()
-    {
-        if (string.IsNullOrEmpty(selectedAssignee)) return;
-        isAssigning = true;
-        assignSuccess = false;
-        try
-        {
-            var ok = await AdminService.AssignTicketAsync(TicketId, selectedAssignee);
-            if (ok)
-            {
-                var dev = adminUsers.FirstOrDefault(u => u.UserId == selectedAssignee);
-                ticket!.AssignedToUserId = selectedAssignee;
-                ticket!.AssignedToName = dev?.UserName ?? selectedAssignee;
-                assignSuccess = true;
-            }
-        }
-        finally { isAssigning = false; }
-        await Task.Delay(2500);
-        assignSuccess = false;
-        StateHasChanged();
-    }
-
-    async Task CloseTicket()
-    {
-        isClosing = true;
-        try
-        {
-            var ok = await AdminService.CloseTicketAsync(TicketId);
-            if (ok) ticket!.StatusId = 5;
-        }
-        finally { isClosing = false; }
-    }
-
-    void GoBack() => Nav.NavigateTo("/superadmin/support");
-
-    // ✅ FIX 5: Dispose hub on page leave
     public async ValueTask DisposeAsync()
     {
         if (_hub != null)
@@ -648,17 +1165,136 @@
             try
             {
                 if (_hub.State == HubConnectionState.Connected)
+                {
                     await _hub.InvokeAsync("LeaveTicket", TicketId);
+                    await _hub.StopAsync();
+                }
 
-                await _hub.StopAsync();
                 await _hub.DisposeAsync();
             }
             catch { }
         }
     }
 
-    string GetPriorityLabel(int id) => id switch { 1 => "Low", 2 => "Medium", 3 => "High", 4 => "Critical", _ => "Unknown" };
-    string GetPriorityClass(int id) => id switch { 1 => "low", 2 => "medium", 3 => "high", 4 => "critical", _ => "low" };
-    string GetStatusLabel(int id) => id switch { 1 => "Open", 2 => "In Progress", 3 => "Waiting User", 4 => "Resolved", 5 => "Closed", _ => "Unknown" };
-    string GetStatusClass(int id) => id switch { 1 => "open", 2 => "inprogress", 3 => "waiting", 4 => "resolved", 5 => "closed", _ => "open" };
+    // 🔹 Navigation
+    void GoBack() => Nav.NavigateTo("/superadmin/support");
+
+    // 🔹 Priority helpers
+    string GetPriorityLabel(int id) => id switch
+    {
+        1 => "Low",
+        2 => "Medium",
+        3 => "High",
+        4 => "Critical",
+        _ => "Unknown"
+    };
+
+    string GetPriorityClass(int id) => id switch
+    {
+        1 => "low",
+        2 => "medium",
+        3 => "high",
+        4 => "critical",
+        _ => "low"
+    };
+
+    // 🔹 Status helpers
+    string GetStatusLabel(int id) => id switch
+    {
+        1 => "Open",
+        2 => "In Progress",
+        3 => "Waiting User",
+        4 => "Resolved",
+        5 => "Closed",
+        _ => "Unknown"
+    };
+
+    string GetStatusClass(int id) => id switch
+    {
+        1 => "open",
+        2 => "inprogress",
+        3 => "waiting",
+        4 => "resolved",
+        5 => "closed",
+        _ => "open"
+    };
+
+    // 🔹 Update status
+    async Task UpdateStatus()
+    {
+        isUpdating = true;
+        updateSuccess = false;
+
+        try
+        {
+            var ok = await AdminService.UpdateStatusAsync(TicketId, editStatus, editPriority);
+            if (ok && ticket != null)
+            {
+                ticket.StatusId = editStatus;
+                ticket.PriorityId = editPriority;
+                updateSuccess = true;
+            }
+        }
+        finally
+        {
+            isUpdating = false;
+        }
+
+        await Task.Delay(2000);
+        updateSuccess = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    // 🔹 Assign ticket
+    async Task AssignTicket()
+    {
+        if (string.IsNullOrEmpty(selectedAssignee)) return;
+
+        isAssigning = true;
+        assignSuccess = false;
+
+        try
+        {
+            var ok = await AdminService.AssignTicketAsync(TicketId, selectedAssignee);
+
+            if (ok && ticket != null)
+            {
+                var dev = adminUsers.FirstOrDefault(u => u.UserId == selectedAssignee);
+
+                ticket.AssignedToUserId = selectedAssignee;
+                ticket.AssignedToName = dev?.UserName ?? selectedAssignee;
+
+                assignSuccess = true;
+            }
+        }
+        finally
+        {
+            isAssigning = false;
+        }
+
+        await Task.Delay(2000);
+        assignSuccess = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    // 🔹 Close ticket
+    async Task CloseTicket()
+    {
+        isClosing = true;
+
+        try
+        {
+            var ok = await AdminService.CloseTicketAsync(TicketId);
+
+            if (ok && ticket != null)
+            {
+                ticket.StatusId = 5;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        finally
+        {
+            isClosing = false;
+        }
+    }
 }
