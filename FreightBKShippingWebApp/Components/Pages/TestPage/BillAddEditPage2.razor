@@ -1697,7 +1697,7 @@
     protected override async Task OnInitializedAsync()
     {
         InitializeGridColumns();
-
+        AuditLogService.OnJobChanged += ReloadJobs;
 
         // ✅ Load only what's needed to show the form
         await LoadCriticalDataAsync();
@@ -1706,6 +1706,16 @@
         _ = LoadBackgroundDataAsync();
     }
 
+    public void Dispose()
+{
+        AuditLogService.OnJobChanged -= ReloadJobs;
+}
+private async void ReloadJobs()
+{
+    JobList = await JobService.GetAllAsync();
+    FilteredJobList = JobList;
+    await InvokeAsync(StateHasChanged);
+}
     /// <summary>
     /// STAGE 1: Load ONLY data needed to display the form immediately
     /// This runs FIRST and FAST (2-4 API calls max)
@@ -2171,8 +2181,12 @@
             await OnBillAgainstChanged(EditModel.BillQuatationId);
             
            // nextSNo = 1;
-            IsCreditnote = false;
-            Quotationvisible = true;
+            if (EditModel.BillVoucherId == 0)
+            {
+                IsCreditnote = false;
+                Quotationvisible = true;
+
+            }
             Title = "Add Bill";
             //InitializeInvoiceDetails();
             IsPartyLocked = false;
@@ -2226,7 +2240,7 @@
                 return;
             }
 
-            Jobpopup.Show(new Job());
+            Jobpopup.Show(new Job { JobType = EditModel.BillJobType });
         }
 
         if (type == "JobNo")
@@ -2373,35 +2387,35 @@
         else
         {
             // ✅ Normal Job binding when BillAgainst NOT selected
-            EditModel.BillPartyId = selectedjobdetails.JobPartyId ?? 0;
-            EditModel.BillPolId = selectedjobdetails.JobPolId ?? 0;
-            EditModel.BillPodId = selectedjobdetails.JobPodId ?? 0;
-            EditModel.BillLineId = selectedjobdetails.JobLineId ?? 0;
+            EditModel.BillPartyId = selectedjobdetails?.JobPartyId ?? 0;
+            EditModel.BillPolId = selectedjobdetails?.JobPolId ?? 0;
+            EditModel.BillPodId = selectedjobdetails?.JobPodId ?? 0;
+            EditModel.BillLineId = selectedjobdetails?.JobLineId ?? 0;
         }
-        if (selectedjobno != null)
+        if (selectedjobdetails != null)
         {
 
-            EditModel.BillJobId = selectedjobdetails.JobId;
+            EditModel.BillJobId = selectedjobdetails?.JobId??0;
             // EditModel.BillPartyId = selectedjobdetails.JobPartyId ?? 0;
             EditModel.BillSupplyType = "B2B";
-            EditModel.BillCargoId = selectedjobdetails.JobCargoId ?? 0;
+            EditModel.BillCargoId = selectedjobdetails?.JobCargoId ?? 0;
             EditModel.BillShipPartyId = EditModel.BillPartyId;
             EditModel.BillRemarksDefault = selectedjobdetails.JobGoodsDesc;
-            EditModel.BillVesselId = selectedjobdetails.JobVesselId ?? 0;
+            EditModel.BillVesselId = selectedjobdetails?.JobVesselId ?? 0;
             //EditModel.BillLineId = selectedjobdetails.JobLineId ?? 0;
-            EditModel.BillDefaultCurrencyId = selectedjobdetails.JobDefCurrId ?? 0;
+            EditModel.BillDefaultCurrencyId = selectedjobdetails?.JobDefCurrId ?? 0;
             EditModel.BillHblNo = selectedjobdetails.JobHblNo;
             EditModel.BillShipperInvNo = selectedjobdetails.JobShipperInvNo;
             EditModel.BillShipperInvDate = selectedjobdetails.JobShipperInvDate;
-            EditModel.BillGrossWt = selectedjobdetails.JobGrossWt ?? 0;
-            EditModel.BillNetWt = selectedjobdetails.JobNetWt ?? 0;
-            EditModel.BillQty = selectedjobdetails.JobQty ?? 0;
+            EditModel.BillGrossWt = selectedjobdetails?.JobGrossWt ?? 0;
+            EditModel.BillNetWt = selectedjobdetails?.JobNetWt ?? 0;
+            EditModel.BillQty = selectedjobdetails?.JobQty ?? 0;
             //EditModel.BillPolId = selectedjobdetails.JobPolId  ?? 0;
             //EditModel.BillPodId = selectedjobdetails.JobPodId ?? 0;
-            EditModel.BillConsigneeId = selectedjobdetails.JobConsigneeId ?? 0;
-            EditModel.BillShipperId = selectedjobdetails.JobShipperId ?? 0;
-            EditModel.BillExchRate = selectedjobdetails.JobExchRate ?? 0;
-            EditModel.BillCbmQty = selectedjobdetails.JobCbm ?? 0;
+            EditModel.BillConsigneeId = selectedjobdetails?.JobConsigneeId ?? 0;
+            EditModel.BillShipperId = selectedjobdetails?.JobShipperId ?? 0;
+            EditModel.BillExchRate = selectedjobdetails?.JobExchRate ?? 0;
+            EditModel.BillCbmQty = selectedjobdetails?.JobCbm ?? 0;
             EditModel.Bill20Ft = selectedjobdetails.Job20Ft;
             EditModel.Bill40Ft = selectedjobdetails.Job40Ft;
             EditModel.BillContainerNo = selectedjobdetails.JobContainer20Ft + " , " + selectedjobdetails.JobContainer40Ft;

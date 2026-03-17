@@ -7,6 +7,12 @@ namespace FreightBKShippingWebApp.Services
         private readonly ApiClient _api;
 
         public event Action? OnAuditChanged;
+        public event Action OnJobChanged;
+
+        public void NotifyJobChanged()
+        {
+            OnJobChanged?.Invoke();
+        }
         public AuditLogService(ApiClient api)
         {
             _api = api;

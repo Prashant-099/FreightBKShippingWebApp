@@ -2096,14 +2096,16 @@ MinWidth="200"
     {
         IsEdit = model.JobId > 0;
         EditModel = model;
-        if (model == null || model.JobId == 0) // New job
+        if (model.JobId == 0) // New job
         {
             EditModel = new Job
                     {
                         JobBranchId = BranchContext.BranchId, 
-                        JobDate = DateTime.Now
+                        JobDate = DateTime.Now,
+                JobType = model.JobType
                     };
             UploadedDocs.Clear();
+            await LoadVoucherAndGenerateJobNo(BranchContext.BranchId);
         }
         else
         {
@@ -2121,9 +2123,9 @@ MinWidth="200"
             EditModel.JobStatus = defaultBranch?.StatusId ?? 0;
 
         }
-        await LoadVoucherAndGenerateJobNo(BranchContext.BranchId);
+       
         StateHasChanged();
-            }
+    }
 
     private async Task OnBranchChanged(int? branchId)
     {
@@ -2135,75 +2137,75 @@ MinWidth="200"
     }
 
 
-      private async Task LoadVoucherAndGenerateJobNo(int branchId)
-      {
+    private async Task LoadVoucherAndGenerateJobNo(int branchId)
+    {
 
-                                    VoucherList = (await VoucherService.GetAllAsync())
+        VoucherList = (await VoucherService.GetAllAsync())
                             .Where(v => v.VoucherName != null &&
-                                        v.VoucherName.Equals(JobType, StringComparison.OrdinalIgnoreCase)
+            v.VoucherName.Equals(EditModel?.JobType ?? JobType, StringComparison.OrdinalIgnoreCase)
                             && v.VoucherBranchId == branchId)
                             .ToList();
 
-                            var voucher = VoucherList.FirstOrDefault();
+        var voucher = VoucherList.FirstOrDefault();
 
-                            if (voucher != null)
-                            {
-                                // Example property name: change "VoucherMethod" to your real field
-                                         EditModel.JobReportId = voucher.VoucherReportId ?? 0; // Assuming you want to set report ID from voucher
-                                        if (string.Equals(voucher.VoucherMethod, "Manual", StringComparison.OrdinalIgnoreCase))
-                                {
-                                    JobnoVisible = false;
-                                }
-                                else
-                                {
-                                    JobnoVisible = true;
-                                }
-                            }
-                            // Check if VoucherList is empty
-                            if (VoucherList == null || !VoucherList.Any())
-                            {
-                                ToastService.Warning($"Voucher not found for {JobType}. Please configure voucher in master settings.");
-                                return;
-                            }
+        if (voucher != null)
+        {
+            // Example property name: change "VoucherMethod" to your real field
+            EditModel.JobReportId = voucher.VoucherReportId ?? 0; // Assuming you want to set report ID from voucher
+            if (string.Equals(voucher.VoucherMethod, "Manual", StringComparison.OrdinalIgnoreCase))
+            {
+                JobnoVisible = false;
+            }
+            else
+            {
+                JobnoVisible = true;
+            }
+        }
+        // Check if VoucherList is empty
+        if (VoucherList == null || !VoucherList.Any())
+        {
+            ToastService.Warning($"Voucher not found for {JobType}. Please configure voucher in master settings.");
+            return;
+        }
 
-                            var VoucherId = VoucherList.FirstOrDefault()?.VoucherId;
-                            if (VoucherId == null || VoucherId == 0)
-                            {
-                                ToastService.Warning($"Voucher not configured for {JobType}. Please add voucher in master settings.");
-                                return;
-                            }
+        var VoucherId = VoucherList.FirstOrDefault()?.VoucherId;
+        if (VoucherId == null || VoucherId == 0)
+        {
+            ToastService.Warning($"Voucher not configured for {JobType}. Please add voucher in master settings.");
+            return;
+        }
 
-                            var finYearId = YearStatechangeService.SelectedYearId;
-                            if (finYearId == 0)
-                            {
-                                ToastService.Error(" Financial year not selected. Please select a year.");
-                                return;
-                            }
-                            try
-                            {
-                                var result = await YearStatechangeService.GeneratebillNoAsync(VoucherId, finYearId, EditModel.JobBranchId);
-                                var fulljobno = result.prefix + result.number + result.suffix;
-                                if (!string.IsNullOrEmpty(result.number))
-                                {
-                                    var existingJob = jobList?.FirstOrDefault(j => j.JobNo == fulljobno && j.JobBranchId == branchId);
+        var finYearId = YearStatechangeService.SelectedYearId;
+        if (finYearId == 0)
+        {
+            ToastService.Error(" Financial year not selected. Please select a year.");
+            return;
+        }
+        try
+        {
+            var result = await YearStatechangeService.GeneratebillNoAsync(VoucherId, finYearId, EditModel.JobBranchId);
+            var fulljobno = result.prefix + result.number + result.suffix;
+            if (!string.IsNullOrEmpty(result.number))
+            {
+                var existingJob = jobList?.FirstOrDefault(j => j.JobNo == fulljobno && j.JobBranchId == branchId);
 
-                                    if (existingJob != null)
-                                    {
-                                        ToastService.Warning($" Job number '{result.prefix}{result.number}{result.suffix}' already exists!");
-                                    }
-                                }
-                                EditModel.JobPrefix = result.prefix;
-                                EditModel.JobNo = result.prefix + result.number + result.suffix;
-                                EditModel.JobSufix = result.suffix;
-                                EditModel.JobVchNo = int.Parse(result.number);
-                                StateHasChanged();
-                            }
-                            catch (Exception ex)
-                            {
-                                ToastService.Error("Error: " + ex.Message);
-                            }
+                if (existingJob != null)
+                {
+                    ToastService.Warning($" Job number '{result.prefix}{result.number}{result.suffix}' already exists!");
+                }
+            }
+            EditModel.JobPrefix = result.prefix;
+            EditModel.JobNo = result.prefix + result.number + result.suffix;
+            EditModel.JobSufix = result.suffix;
+            EditModel.JobVchNo = int.Parse(result.number);
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error("Error: " + ex.Message);
+        }
 
-      }
+    }
 
     private async Task OnvoucherChanged()
     {
@@ -2234,7 +2236,7 @@ MinWidth="200"
             await LoadVoucherAndGenerateJobNo(BranchContext.BranchId);
         }
 
-  
+
     }
 
     public void Dispose()
@@ -2266,7 +2268,7 @@ MinWidth="200"
             vessels = await VesselService.GetAllAsync();
             countryList = await CountryService.GetAllAsync();
             Currencies = await CurrencyService.GetAllAsync();
-           ReportDataList= await ReportDataService.GetAllAsync();
+            ReportDataList= await ReportDataService.GetAllAsync();
 
             if (Currencies.Any())
                 EditModel.JobDefCurrId = Currencies.First().CurrencyId;
@@ -2325,8 +2327,9 @@ MinWidth="200"
                 if (result.Success)
                 {
                     AuditLogService.NotifyAuditChanged();
-
+                    AuditLogService.NotifyJobChanged();
                     ToastService.Success("Import Job created successfully.");
+                    
                 }
 
                 else {  ToastService.Error(result.Error??"Failed To Create Import Job." );
@@ -2338,7 +2341,7 @@ MinWidth="200"
                 if (result.Success)
                 {
                     AuditLogService.NotifyAuditChanged();
-
+                    AuditLogService.NotifyJobChanged();
                 ToastService.Success("Import Job updated successfully.");
                 }
 
