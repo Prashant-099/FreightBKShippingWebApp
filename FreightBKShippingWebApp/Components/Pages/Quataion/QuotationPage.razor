@@ -209,8 +209,8 @@
             return;
 
         // 👇 YAHI MAIN LOGIC HAI
-        if (selectedVoucher.VoucherName
-                .Equals("Purchase", StringComparison.OrdinalIgnoreCase))
+        if (selectedVoucher.VoucherGroup
+                .Equals("PURCHASE", StringComparison.OrdinalIgnoreCase))
         {
             // 👉 Purchase hai → Purchase popup
             Openpurchaseadddedit(selectedbilltype, selectedVoucher);
@@ -345,28 +345,66 @@
         {
             LoadingService.Show();
             
-            // Get quotation voucher types
-            var quotationVoucherIds = (await VoucherService.GetAllAsync())
+
+            // 🚀 Parallel API calls
+        var voucherTask = VoucherService.GetAllAsync();
+        var billTask = BillService.GetAllAsync();
+        var reportTask = ReportDataService.GetAllAsync();
+
+        await Task.WhenAll(voucherTask, billTask, reportTask);
+
+        var allVouchers = voucherTask.Result;
+        var allBills = billTask.Result;
+        var allReports = reportTask.Result;
+
+            // ✅ Filter quotation vouchers
+            var quotationVoucherIds = allVouchers
                 .Where(v => v.VoucherGroup == "QUOTATION")
                 .Select(v => v.VoucherId)
-                .ToList();
+                .ToHashSet(); // 🔥 faster lookup
 
-            quotationList = (await BillService.GetAllAsync())
-                .Where(q => q.BillYearId == YearStatechangeService.SelectedYearId 
+            // ✅ Filter quotations
+            quotationList = allBills
+                .Where(q => q.BillYearId == YearStatechangeService.SelectedYearId
                          && quotationVoucherIds.Contains(q.BillVoucherId))
                 .ToList();
 
-            ReportDataList = await ReportDataService.GetAllAsync();
-            
-            var voucherTask = await VoucherService.GetAllAsync(); 
-
-            VoucherList = voucherTask.Where(v =>
-                !string.IsNullOrWhiteSpace(v.VoucherGroup) &&
-                (
-                    v.VoucherGroup.Trim().Equals("SALES", StringComparison.OrdinalIgnoreCase) ||
-                    v.VoucherGroup.Trim().Equals("PURCHASE", StringComparison.OrdinalIgnoreCase)
-                ))
+            // ✅ Filter reports
+            ReportDataList = allReports
+                .Where(r => r.DocType.Equals("Quotation", StringComparison.OrdinalIgnoreCase))
                 .ToList();
+
+            // ✅ Filter dropdown vouchers (Sales + Purchase)
+            VoucherList = allVouchers
+                .Where(v =>
+                    !string.IsNullOrWhiteSpace(v.VoucherGroup) &&
+                    (
+                        v.VoucherGroup.Equals("SALES", StringComparison.OrdinalIgnoreCase) ||
+                        v.VoucherGroup.Equals("PURCHASE", StringComparison.OrdinalIgnoreCase)
+                    ))
+                .ToList();
+            // // Get quotation voucher types
+            // var quotationVoucherIds = (await VoucherService.GetAllAsync())
+            //     .Where(v => v.VoucherGroup == "QUOTATION")
+            //     .Select(v => v.VoucherId)
+            //     .ToList();
+
+            // quotationList = (await BillService.GetAllAsync())
+            //     .Where(q => q.BillYearId == YearStatechangeService.SelectedYearId 
+            //              && quotationVoucherIds.Contains(q.BillVoucherId))
+            //     .ToList();
+
+            // ReportDataList = (await ReportDataService.GetAllAsync()).Where(r=>r.DocType="Quotation");
+            
+            // var voucherTask = await VoucherService.GetAllAsync(); 
+
+            // VoucherList = voucherTask.Where(v =>
+            //     !string.IsNullOrWhiteSpace(v.VoucherGroup) &&
+            //     (
+            //         v.VoucherGroup.Trim().Equals("SALES", StringComparison.OrdinalIgnoreCase) ||
+            //         v.VoucherGroup.Trim().Equals("PURCHASE", StringComparison.OrdinalIgnoreCase)
+            //     ))
+            //     .ToList();
             LoadingService.Hide();
             await InvokeAsync(StateHasChanged);
         }

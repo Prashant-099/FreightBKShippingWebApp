@@ -1,5 +1,6 @@
 ﻿@page "/jobexport"
 @attribute [Authorize]
+@using FreightBKShippingWebApp.Components.Pages.PurchasePage
 @using Microsoft.AspNetCore.Authorization
 @using FreightBKShippingWebApp.Components.Pages.BillPage
 @using FreightBKShippingWebApp.Components.Pages.TestPage
@@ -263,6 +264,8 @@
 
 <AddContainerJob @ref="addContainerJob"></AddContainerJob>
 
+<FreightBKShippingWebApp.Components.Pages.PurchasePage.PurchaseAddEditPage @ref="purchasaddedit"></FreightBKShippingWebApp.Components.Pages.PurchasePage.PurchaseAddEditPage>
+
 
 <FreightBKShippingWebApp.Components.Pages.TestPage.BillAddEditPage2 @ref="billAddEditPage"/>
 
@@ -354,11 +357,41 @@
         var id = int.Parse(args.ItemInfo.Name);
         var selectedVoucher = VoucherList.FirstOrDefault(v => v.VoucherId == id);
 
-        if (selectedVoucher != null)
+        // if (selectedVoucher != null)
+        // {
+        //     OpenBilleditPopup(selectedJob, selectedVoucher);
+        // }
+        // 👇 YAHI MAIN LOGIC HAI
+        if (selectedVoucher.VoucherGroup
+                .Equals("PURCHASE", StringComparison.OrdinalIgnoreCase) ||
+    selectedVoucher.VoucherGroup.Equals("DEBIT NOTE", StringComparison.OrdinalIgnoreCase))
         {
+            // 👉 Purchase hai → Purchase popup
+            Openpurchaseadddedit(selectedJob, selectedVoucher);
+        }
+        else
+        {
+            // 👉 baki sab → normal bill popup
             OpenBilleditPopup(selectedJob, selectedVoucher);
         }
     }
+
+     PurchaseAddEditPage purchasaddedit;
+    async Task Openpurchaseadddedit(Job job, Voucher voucher)
+    {
+        var bill = new Bill
+        {
+            BillJobId = job.JobId,
+            BillJobNo = job.JobNo,
+            BillJobType = job.JobType,
+            BillPartyId = job.JobPartyId ?? 0,
+            BillBranchId = job.JobBranchId ?? 0,
+            BillVoucherId = voucher.VoucherId
+        };
+
+        purchasaddedit.Show(bill);
+    }
+
     BillAddEditPage2 billAddEditPage;
 
     async Task OpenBilleditPopup(Job job, Voucher voucher)
