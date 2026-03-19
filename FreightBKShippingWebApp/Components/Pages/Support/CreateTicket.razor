@@ -1,6 +1,7 @@
 ﻿@page "/tickets/create"
 @attribute [Authorize]
 
+@using FreightBKShipping.DTOs
 @using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Services
 @using Microsoft.AspNetCore.Authorization
@@ -392,10 +393,8 @@
 
     async Task SubmitTicket()
     {
-        // Validation
         subjectError = string.IsNullOrWhiteSpace(ticket.Subject);
         messageError = string.IsNullOrWhiteSpace(message);
-
         if (subjectError || messageError) return;
 
         isSubmitting = true;
@@ -403,25 +402,13 @@
 
         try
         {
+            ticket.MessageText = message; // ✅ message set karo
+
             var created = await TicketService.CreateAsync(ticket);
-            if (created)
-            {
-                if (!string.IsNullOrWhiteSpace(message))
-                {
-                    await TicketService.ReplyAsync(new TicketReply
-                    {
-                        TicketId = ticket.TicketId,
-                        MessageText = message,
-                        SenderType = "User",
-                        CreatedAt = DateTime.UtcNow
-                    });
-                }
+            if (created != null)
                 Nav.NavigateTo("/tickets");
-            }
             else
-            {
                 errorMessage = "Failed to create ticket. Please try again.";
-            }
         }
         catch (Exception ex)
         {
