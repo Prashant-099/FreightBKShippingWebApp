@@ -675,7 +675,8 @@ DefaultFileName="@PendingFileName"
             LoadingService.Hide();
             await InvokeAsync(StateHasChanged);
 
-            ReportDataList = await ReportDataService.GetAllAsync();
+            ReportDataList = (await ReportDataService.GetAllAsync()).Where(r => r.DocType.Equals("Bill", StringComparison.OrdinalIgnoreCase)).ToList();
+            
             await InvokeAsync(StateHasChanged);
         }
         catch (Exception ex)

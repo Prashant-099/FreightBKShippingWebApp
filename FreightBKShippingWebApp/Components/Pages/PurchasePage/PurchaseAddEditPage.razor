@@ -1695,10 +1695,10 @@ width:fit-content;
         InitializeGridColumns();
         AuditLogService.OnJobChanged += ReloadJobs;
         // ✅ Load only what's needed to show the form
-        await LoadCriticalDataAsync();
+        //await LoadCriticalDataAsync();
 
         // ✅ Load other data in background (non-blocking)
-        _ = LoadBackgroundDataAsync();
+      //  _ = LoadBackgroundDataAsync();
     }
 
     public void Dispose()
@@ -1726,7 +1726,7 @@ private async void ReloadJobs()
             var stateTask = StateService.GetStatesAsync();
             var companyTask = CompanyService.GetAllAsync();
             var branchtask = BranchService.GetAllAsync();
-            await Task.WhenAll(jobTask, accountTask, voucherTask,companyTask, stateTask, branchtask);
+            await Task.WhenAll(jobTask, accountTask, voucherTask, companyTask, stateTask, branchtask);
 
             // Set critical data
             JobList = jobTask.Result;
@@ -1738,7 +1738,7 @@ private async void ReloadJobs()
         (
             v.VoucherGroup.Trim().Equals("PURCHASE", StringComparison.OrdinalIgnoreCase)
             ||
-            v.VoucherGroup.Trim().Equals("DEBIT NOTE", StringComparison.OrdinalIgnoreCase) 
+            v.VoucherGroup.Trim().Equals("DEBIT NOTE", StringComparison.OrdinalIgnoreCase)
         ))
     .ToList();
             var allAccounts = accountTask.Result;
@@ -1781,13 +1781,13 @@ private async void ReloadJobs()
 
             var reportTask = ReportDataService.GetAllAsync();
             await Task.WhenAll(
-                serviceTask, currTask, unitTask,rateTask,
-                hsnTask, gstTask,   reportTask
+                serviceTask, currTask, unitTask, rateTask,
+                hsnTask, gstTask, reportTask
             );
 
             // Assign results
             RateMasterList = rateTask.Result;
-            ReportDataList  = reportTask.Result;
+            ReportDataList = (reportTask.Result).Where(r => r.DocType.Equals("Bill", StringComparison.OrdinalIgnoreCase)).ToList();
             ServiceList = serviceTask.Result;
             CurrList = currTask.Result;
             UnitList = unitTask.Result;
@@ -1808,6 +1808,7 @@ private async void ReloadJobs()
             Console.WriteLine($"❌ LoadBackgroundDataAsync error: {ex}");
         }
     }
+
 
     // ============================================
     // 🎯 STAGE 3: Lazy Load (On-Demand Only)
@@ -2017,13 +2018,14 @@ private async void ReloadJobs()
 
     public async Task Show(Bill bill)
     {
-
+        LoadingService.Show();
         // ✅ Show loading only if critical data not loaded
         if (!isCriticalDataLoaded)
         {
-            LoadingService.Show("Loading form...");
+           
+            _ = LoadBackgroundDataAsync();
             await LoadCriticalDataAsync();
-            LoadingService.Hide();
+         
         }
         EditModel = bill ?? new Bill();
         // Create EditContext when showing the form
@@ -2209,6 +2211,7 @@ private async void ReloadJobs()
         UnsavedChanges.Clear();
 
         Visible = true;
+        LoadingService.Hide();
         StateHasChanged();
         // _ =GetLocationListAsync();
         // _ =GetCargoListAsync();

@@ -871,21 +871,31 @@
     protected override async Task OnInitializedAsync()
     {
         InitializeGridColumns();
-        await LoadCriticalDataAsync();
-        _ = LoadBackgroundDataAsync();
+      //  await LoadCriticalDataAsync();
+       // _ = LoadBackgroundDataAsync();
     }
 
     private async Task LoadCriticalDataAsync()
     {
         try
         {
+           
+            var voucherTask = VoucherService.GetAllAsync();
+            var serviceTask = ServiceService.GetAllAsync();
             var accountTask = AccountService.GetAllAsync();
             var stateTask = StateService.GetStatesAsync();
             var companyTask = CompanyService.GetAllAsync();
             var branchTask = BranchService.GetAllAsync();
 
-            await Task.WhenAll(accountTask, stateTask, companyTask, branchTask);
+            await Task.WhenAll(serviceTask, voucherTask, accountTask, stateTask, companyTask, branchTask);
 
+             // Only get QUOTATION voucher types
+            VoucherList = voucherTask.Result
+                .Where(v => !string.IsNullOrWhiteSpace(v.VoucherGroup)
+                         && v.VoucherGroup.Trim().Equals("QUOTATION", StringComparison.OrdinalIgnoreCase))
+
+                .ToList();
+            ServiceList = serviceTask.Result;
             branchList = branchTask.Result;
             CompanyList = companyTask.Result;
 
@@ -897,6 +907,7 @@
             StateList = stateTask.Result;
 
             isCriticalDataLoaded = true;
+            _ = LoadBackgroundDataAsync();
             StateHasChanged();
         }
         catch (Exception ex)
@@ -909,8 +920,9 @@
     {
         try
         {
-            var voucherTask = VoucherService.GetAllAsync();
-            var serviceTask = ServiceService.GetAllAsync();
+            
+
+           
             var unitTask = UnitService.GetAllAsync();
             var hsnTask = HsnSacService.GetAllAsync();
             var gstTask = GstSlabService.GetAllAsync();
@@ -919,18 +931,14 @@
             var notifyTask = NotifyService.GetAllAsync();
             var currTask = CurrencyService.GetAllAsync();
 
-            await Task.WhenAll(serviceTask, voucherTask, unitTask, hsnTask, gstTask, reportTask, locationTask, notifyTask, currTask);
+            await Task.WhenAll( unitTask, hsnTask, gstTask, reportTask, locationTask, notifyTask, currTask);
 
-            // Only get QUOTATION voucher types
-            VoucherList = voucherTask.Result
-                .Where(v => !string.IsNullOrWhiteSpace(v.VoucherGroup)
-                         && v.VoucherGroup.Trim().Equals("QUOTATION", StringComparison.OrdinalIgnoreCase))
-                .ToList();
+           
 
             locationList = locationTask.Result;
             LineList = notifyTask.Result.Where(n => n.NotifyType == "LINE").ToList();
             ReportDataList = reportTask.Result;
-            ServiceList = serviceTask.Result;
+           
             UnitList = unitTask.Result;
             HsnList = hsnTask.Result;
             GstslabList = gstTask.Result;
@@ -938,6 +946,7 @@
             CurrList = currTask.Result;
 
             isBackgroundDataLoaded = true;
+           
             StateHasChanged();
         }
         catch (Exception ex)
@@ -989,13 +998,16 @@
         new SelectItem { Text = "DEXP", Value = "DEXP" }
     };
 
-    public async void Show(Bill quotation)
+    public async Task Show(Bill quotation)
     {
+         LoadingService.Show();
+
         if (!isCriticalDataLoaded)
         {
-            LoadingService.Show("Loading form...");
+            
             await LoadCriticalDataAsync();
-            LoadingService.Hide();
+         
+
         }
 
         //EditModel = quotation ?? new Bill();
@@ -1071,10 +1083,12 @@
             Title = "Add Quotation";
             InitializeQuotationDetails();
         }
-
+        
         UnsavedChanges.Clear();
         Visible = true;
+        LoadingService.Hide();
         StateHasChanged();
+        
     }
 
     private void Hide()

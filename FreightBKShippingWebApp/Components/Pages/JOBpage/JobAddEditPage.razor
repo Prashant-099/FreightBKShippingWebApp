@@ -2268,7 +2268,7 @@ MinWidth="200"
             vessels = await VesselService.GetAllAsync();
             countryList = await CountryService.GetAllAsync();
             Currencies = await CurrencyService.GetAllAsync();
-            ReportDataList= await ReportDataService.GetAllAsync();
+            ReportDataList= (await ReportDataService.GetAllAsync()).Where(r => r.DocType.Equals("Job", StringComparison.OrdinalIgnoreCase)).ToList();
 
             if (Currencies.Any())
                 EditModel.JobDefCurrId = Currencies.First().CurrencyId;

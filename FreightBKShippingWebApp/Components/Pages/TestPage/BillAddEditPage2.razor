@@ -1700,10 +1700,10 @@
         AuditLogService.OnJobChanged += ReloadJobs;
 
         // ✅ Load only what's needed to show the form
-        await LoadCriticalDataAsync();
+      //  await LoadCriticalDataAsync();
 
         // ✅ Load other data in background (non-blocking)
-        _ = LoadBackgroundDataAsync();
+      //  _ = LoadBackgroundDataAsync();
     }
 
     public void Dispose()
@@ -1725,14 +1725,25 @@ private async void ReloadJobs()
         try
         {
             // ✅ Only load what's ABSOLUTELY needed for initial render
+            var voucherTask = VoucherService.GetAllAsync();
+            var serviceTask = ServiceService.GetAllAsync();
             var jobTask = JobService.GetAllAsync();
             var accountTask = AccountService.GetAllAsync();
             var stateTask = StateService.GetStatesAsync();
             var companyTask = CompanyService.GetAllAsync();
             var branchtask = BranchService.GetAllAsync();
-            await Task.WhenAll(jobTask, accountTask, companyTask, stateTask, branchtask);
+            await Task.WhenAll(serviceTask, voucherTask,jobTask, accountTask, companyTask, stateTask, branchtask);
 
             // Set critical data
+            VoucherList = voucherTask.Result.Where(v =>
+        !string.IsNullOrWhiteSpace(v.VoucherGroup) &&
+        (
+            v.VoucherGroup.Trim().Equals("SALES", StringComparison.OrdinalIgnoreCase) ||
+            v.VoucherGroup.Trim().Equals("CREDIT NOTE", StringComparison.OrdinalIgnoreCase)
+        ))
+    .ToList();
+    ServiceList = serviceTask.Result;
+
             JobList = jobTask.Result;
             FilteredJobList = JobList;
             branchList = branchtask.Result;
@@ -1745,6 +1756,7 @@ private async void ReloadJobs()
             StateList = stateTask.Result;
 
             isCriticalDataLoaded = true;
+            _ = LoadBackgroundDataAsync();
             StateHasChanged(); // ✅ Form can now render!
         }
         catch (Exception ex)
@@ -1766,8 +1778,7 @@ private async void ReloadJobs()
         try
         {
             // ✅ Load common dropdowns that might be used soon
-            var voucherTask = VoucherService.GetAllAsync();
-            var serviceTask = ServiceService.GetAllAsync();
+            
 
             var currTask = CurrencyService.GetAllAsync();
             var unitTask = UnitService.GetAllAsync();
@@ -1777,23 +1788,16 @@ private async void ReloadJobs()
             var rateTask = RateMasterService.GetAllAsync();
 
             var reportTask = ReportDataService.GetAllAsync();
-            await Task.WhenAll(
-                serviceTask, voucherTask, currTask, unitTask,rateTask,
+            await Task.WhenAll( currTask, unitTask,rateTask,
                 hsnTask, gstTask,   reportTask
             );
 
             // Assign results
-            VoucherList = voucherTask.Result.Where(v =>
-        !string.IsNullOrWhiteSpace(v.VoucherGroup) &&
-        (
-            v.VoucherGroup.Trim().Equals("SALES", StringComparison.OrdinalIgnoreCase) ||
-            v.VoucherGroup.Trim().Equals("CREDIT NOTE", StringComparison.OrdinalIgnoreCase)
-        ))
-    .ToList();
+            
             RateMasterList = rateTask.Result;
-            ReportDataList  = reportTask.Result;
+            ReportDataList  = (reportTask.Result).Where(r => r.DocType.Equals("Bill", StringComparison.OrdinalIgnoreCase)).ToList();
 
-            ServiceList = serviceTask.Result;
+            
 
             CurrList = currTask.Result;
             UnitList = unitTask.Result;
@@ -2018,14 +2022,14 @@ private async void ReloadJobs()
 
         StateHasChanged();
     }
-    public async void Show(Bill bill)
+    public async Task Show(Bill bill)
     {
         // ✅ Show loading only if critical data not loaded
         if (!isCriticalDataLoaded)
         {
-            LoadingService.Show("Loading form...");
+            LoadingService.Show();
             await LoadCriticalDataAsync();
-            LoadingService.Hide();
+           
         }
         EditModel = bill ?? new Bill();
         // Create EditContext when showing the form
@@ -2196,6 +2200,7 @@ private async void ReloadJobs()
 
         //IsCreditnote = false;
         Visible = true;
+        LoadingService.Hide();
         StateHasChanged();
         // _ =GetLocationListAsync();
         // _ =GetCargoListAsync();
