@@ -81,6 +81,8 @@
         public int UnreadByAdmin { get; set; }
         public int MessageCount { get; set; }
         public List<TicketMessageAdminDto> Messages { get; set; } = new();
+
+
     }
 
     public class TicketMessageAdminDto
@@ -94,6 +96,7 @@
         public bool IsReadByUser { get; set; }
         public bool IsReadBySupport { get; set; }
         public DateTime CreatedAt { get; set; }
+        public string? ImageUrl { get; set; }
     }
 
     public class AdminUserDto

@@ -82,6 +82,38 @@ namespace FreightBKShippingWebApp.Services
         }
 
         // ===================== UPLOAD =====================
+        public async Task<FileUploadResponse?> AdminUploadFileAsync(
+    byte[] fileBytes,
+    string fileName,
+    string category,
+    string? subCategory,
+    string? referenceId,
+    int ticketCompanyId) // ✅ ticket ka companyId
+        {
+            using var content = new MultipartFormDataContent();
+            using var fileContent = new ByteArrayContent(fileBytes);
+
+            var extension = Path.GetExtension(fileName).ToLower();
+            fileContent.Headers.ContentType =
+                MediaTypeHeaderValue.Parse(GetContentType(extension));
+
+            content.Add(fileContent, "file", fileName);
+            content.Add(new StringContent(category), "category");
+            content.Add(new StringContent(ticketCompanyId.ToString()), "ticketCompanyId"); // ✅
+
+            if (!string.IsNullOrWhiteSpace(subCategory))
+                content.Add(new StringContent(subCategory), "subCategory");
+            if (!string.IsNullOrWhiteSpace(referenceId))
+                content.Add(new StringContent(referenceId), "referenceId");
+
+            var responseJson = await _api.PostAsync<string>("api/FileUpload/admin-upload", content);
+
+            return string.IsNullOrEmpty(responseJson)
+                ? null
+                : JsonSerializer.Deserialize<FileUploadResponse>(
+                    responseJson,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        }
 
         public async Task<FileUploadResponse?> UploadFileAsync(
             byte[] fileBytes,
@@ -173,6 +205,26 @@ namespace FreightBKShippingWebApp.Services
         };
 
 
+        // ✅ Admin ke liye — companyId bypass
+        // ─── Admin Documents (no companyId filter) ────────────────────────
+        public async Task<List<DocumentDto>> GetAdminDocumentsAsync(
+            string category,
+            string? referenceId = null)
+        {
+            var url = $"api/FileUpload/admin-documents?category={Uri.EscapeDataString(category)}";
+            if (!string.IsNullOrWhiteSpace(referenceId))
+                url += $"&referenceId={Uri.EscapeDataString(referenceId)}";
+            return await _api.GetFromJsonAsync<List<DocumentDto>>(url) ?? new List<DocumentDto>();
+        }
+
+        // ─── Admin SAS URL (no companyId filter) ──────────────────────────
+        public async Task<string?> GetAdminSasUrlAsync(long documentId, int expiresInMinutes = 60)
+        {
+            var url = $"api/FileUpload/admin-sas/{documentId}?expiresInMinutes={expiresInMinutes}";
+            var response = await _api.GetFromJsonAsync<SasUrlResponse>(url);
+            return response?.SasUrl;
+        }
+
     }
     
 
@@ -198,8 +250,10 @@ namespace FreightBKShippingWebApp.Services
         public long DocumentId { get; set; }
         public string Category { get; set; }
         public string? SubCategory { get; set; }
+        public string? ReferenceId { get; set; }
+        public int CompanyId { get; set; }
         public string OriginalFileName { get; set; }
-        public string? BlobUrl { get; set; } // optional, not used for access
+        public string? BlobUrl { get; set; } 
         public long FileSizeBytes { get; set; }
         public string ContentType { get; set; }
         public DateTime UploadedAt { get; set; }
