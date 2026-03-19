@@ -375,6 +375,7 @@
             this.tableRow16 = new DevExpress.XtraReports.UI.XRTableRow();
             this.tableCell34 = new DevExpress.XtraReports.UI.XRTableCell();
             this.tableCell35 = new DevExpress.XtraReports.UI.XRTableCell();
+            this.xrTableCell3 = new DevExpress.XtraReports.UI.XRTableCell();
             this.tableRow17 = new DevExpress.XtraReports.UI.XRTableRow();
             this.tableCell36 = new DevExpress.XtraReports.UI.XRTableCell();
             this.tableCell72 = new DevExpress.XtraReports.UI.XRTableCell();
@@ -428,7 +429,6 @@
             this.tableCell65 = new DevExpress.XtraReports.UI.XRTableCell();
             this.xrCrossBandBox1 = new DevExpress.XtraReports.UI.XRCrossBandBox();
             this.jsonDataSource1 = new DevExpress.DataAccess.Json.JsonDataSource(this.components);
-            this.xrTableCell3 = new DevExpress.XtraReports.UI.XRTableCell();
             ((System.ComponentModel.ISupportInitialize)(this.table3)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.table2)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.table1)).BeginInit();
@@ -999,6 +999,12 @@
             this.tableCell35.Multiline = true;
             this.tableCell35.Name = "tableCell35";
             this.tableCell35.Weight = 1.0442708730697632D;
+            // 
+            // xrTableCell3
+            // 
+            this.xrTableCell3.Multiline = true;
+            this.xrTableCell3.Name = "xrTableCell3";
+            this.xrTableCell3.Weight = 1.0442708730697632D;
             // 
             // tableRow17
             // 
@@ -1796,12 +1802,6 @@
             jsonSchemaNode1.Nodes.Add(jsonSchemaNode80);
             jsonSchemaNode1.Nodes.Add(jsonSchemaNode257);
             this.jsonDataSource1.Schema = jsonSchemaNode1;
-            // 
-            // xrTableCell3
-            // 
-            this.xrTableCell3.Multiline = true;
-            this.xrTableCell3.Name = "xrTableCell3";
-            this.xrTableCell3.Weight = 1.0442708730697632D;
             // 
             // Job_Print
             // 

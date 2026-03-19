@@ -169,9 +169,14 @@
         </div>
     </div>
 </DxPopup>
-
+@if (showQuotationaddeditPopup)
+{
 <QuotationAddEditPage @ref="popup" OnSaved="LoadQuotationsAsync" />
-<GridLayoutpPopup @ref="layoutManager" VoucherType="Quotation" Columns="@allColumns" OnLayoutChanged="HandleLayoutChanged" />
+}
+@if (showGridlayoutPopup)
+{
+    <GridLayoutpPopup @ref="layoutManager" VoucherType="Quotation" Columns="@allColumns" OnLayoutChanged="HandleLayoutChanged" />
+}
 <ConfirmationDialog />
 
 <script>
@@ -186,13 +191,18 @@
         URL.revokeObjectURL(url);
     };
 </script>
-<FreightBKShippingWebApp.Components.Pages.TestPage.BillAddEditPage2 @ref="billAddEditPage" />
 
-<FreightBKShippingWebApp.Components.Pages.PurchasePage.PurchaseAddEditPage @ref="purchasaddedit"></FreightBKShippingWebApp.Components.Pages.PurchasePage.PurchaseAddEditPage>
-
+@if (showBillPopup)
+{
+    <FreightBKShippingWebApp.Components.Pages.TestPage.BillAddEditPage2 @ref="billAddEditPage" />
+}
+@if (showPurchasePopup)
+{
+    <FreightBKShippingWebApp.Components.Pages.PurchasePage.PurchaseAddEditPage @ref="purchasaddedit" ></FreightBKShippingWebApp.Components.Pages.PurchasePage.PurchaseAddEditPage>
+}
 <DxContextMenu @ref="voucherMenu" ItemClick="@OnMenuItemClick">
     <Items>
-        @foreach (var voucher in VoucherList)
+        @foreach (var voucher in ActionVouchers)
         {
             <DxContextMenuItem Text="@voucher.VoucherName"
                                Name="@voucher.VoucherId.ToString()" />
@@ -200,6 +210,23 @@
     </Items>
 </DxContextMenu>
 @code {
+    bool showPurchasePopup = false;
+    bool showBillPopup = false;
+    bool showGridlayoutPopup = false;
+    bool showQuotationaddeditPopup = false;
+
+
+    private bool triggerPurchasePopup = false;
+    private Bill pendingPurchaseBill;
+
+    private bool triggerBillPopup = false;
+    private Bill pendingBill;
+
+    private bool triggerQuotationPopup = false;
+    private Bill pendingQuotationBill;
+
+    private bool triggerGridlayoutPopup = false;
+
     void OnMenuItemClick(ContextMenuItemClickEventArgs args)
     {
         var id = int.Parse(args.ItemInfo.Name);
@@ -222,9 +249,12 @@
         }
     }
     private List<Voucher> VoucherList = new();
+    private List<Voucher> ActionVouchers = new();
     BillAddEditPage2 billAddEditPage;
     async Task OpenBilleditPopup(Bill quot, Voucher voucher)
     {
+
+
         var bill = new Bill
         {
             BillJobId = quot.BillJobId,
@@ -235,8 +265,15 @@
             BillQuatationId = quot.BillId,
             BillVoucherId = voucher.VoucherId
         };
+        pendingBill = bill;
+        showBillPopup = true;
+        triggerBillPopup = true;
 
-        billAddEditPage.Show(bill);
+        await InvokeAsync(StateHasChanged);
+        // if (billAddEditPage != null)
+        // {
+        //     billAddEditPage.Show(bill);
+        // }
     }
 
 
@@ -244,6 +281,7 @@
     PurchaseAddEditPage purchasaddedit;
     async Task Openpurchaseadddedit(Bill quot, Voucher voucher)
     {
+
         var bill = new Bill
         {
             BillJobId = quot.BillJobId,
@@ -254,8 +292,46 @@
             BillQuatationId = quot.BillId,
             BillVoucherId = voucher.VoucherId
         };
+
+
+        pendingPurchaseBill = bill;
+        showPurchasePopup = true;
+        triggerPurchasePopup = true;
+
         await InvokeAsync(StateHasChanged);
-        await purchasaddedit.Show(bill);
+        //await purchasaddedit.Show(bill);
+
+    }
+
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (triggerPurchasePopup && purchasaddedit != null && pendingPurchaseBill != null)
+        {
+            triggerPurchasePopup = false;
+            await purchasaddedit.Show(pendingPurchaseBill);
+            pendingPurchaseBill = null; // ✅ clear
+        }
+
+        if (triggerBillPopup && billAddEditPage != null && pendingBill != null)
+        {
+            triggerBillPopup = false;
+            await billAddEditPage.Show(pendingBill);
+            pendingBill = null; // ✅ clear
+        }
+
+        if (triggerQuotationPopup && popup != null && pendingQuotationBill != null)
+        {
+            triggerQuotationPopup = false; // ✅ fixed
+            await popup.Show(pendingQuotationBill);
+            pendingQuotationBill = null; // ✅ clear
+        }
+        if (triggerGridlayoutPopup && layoutManager != null )
+        {
+            triggerGridlayoutPopup = false; // ✅ fixed
+            await layoutManager.ShowPopup();
+
+        }
     }
     private Bill selectedbilltype;
     DxContextMenu voucherMenu;
@@ -286,10 +362,19 @@
 
     private GridLayoutpPopup? layoutManager;
     private List<GridColumnLayout> allColumns = [];
-    
-    private async void ShowLayoutPopup()
+
+    private async Task ShowLayoutPopup()
     {
-        await InvokeAsync(() => layoutManager?.ShowPopup());
+
+
+        showGridlayoutPopup = true;
+        triggerGridlayoutPopup = true;
+
+        await InvokeAsync(StateHasChanged);
+        // if (layoutManager != null)
+        // {
+        //     await InvokeAsync(() => layoutManager?.ShowPopup());
+        // }
     }
 
     private async Task HandleLayoutChanged(List<GridColumnLayout> updatedLayout)
@@ -344,45 +429,42 @@
         try
         {
             LoadingService.Show();
+
+            if (VoucherList.Count==0 || ReportDataList.Count==0)
+            {
+                var Voucher =  VoucherService.GetAllAsync();
+                var Report =  ReportDataService.GetAllAsync();
+
+
+                await Task.WhenAll(Voucher, Report);
+                ReportDataList = (Report.Result).Where(r => r.DocType.Equals("Quotation", StringComparison.OrdinalIgnoreCase)).ToList();
+
+                VoucherList = Voucher.Result;
+                // 👉 Only for context menu
+                ActionVouchers = (Voucher.Result)
+                    .Where(v =>
+                        v.VoucherGroup.Equals("SALES", StringComparison.OrdinalIgnoreCase) ||
+                        v.VoucherGroup.Equals("PURCHASE", StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+            }
+
             
 
-            // 🚀 Parallel API calls
-        var voucherTask = VoucherService.GetAllAsync();
-        var billTask = BillService.GetAllAsync();
-        var reportTask = ReportDataService.GetAllAsync();
 
-        await Task.WhenAll(voucherTask, billTask, reportTask);
+            
+            var allBills = await BillService.GetAllAsync();
 
-        var allVouchers = voucherTask.Result;
-        var allBills = billTask.Result;
-        var allReports = reportTask.Result;
-
-            // ✅ Filter quotation vouchers
-            var quotationVoucherIds = allVouchers
-                .Where(v => v.VoucherGroup == "QUOTATION")
+            var quotationVoucherIds = VoucherList
+                .Where(v => v.VoucherGroup.Equals("QUOTATION", StringComparison.OrdinalIgnoreCase))
                 .Select(v => v.VoucherId)
-                .ToHashSet(); // 🔥 faster lookup
+                .ToHashSet();
 
-            // ✅ Filter quotations
             quotationList = allBills
                 .Where(q => q.BillYearId == YearStatechangeService.SelectedYearId
                          && quotationVoucherIds.Contains(q.BillVoucherId))
                 .ToList();
 
-            // ✅ Filter reports
-            ReportDataList = allReports
-                .Where(r => r.DocType.Equals("Quotation", StringComparison.OrdinalIgnoreCase))
-                .ToList();
 
-            // ✅ Filter dropdown vouchers (Sales + Purchase)
-            VoucherList = allVouchers
-                .Where(v =>
-                    !string.IsNullOrWhiteSpace(v.VoucherGroup) &&
-                    (
-                        v.VoucherGroup.Equals("SALES", StringComparison.OrdinalIgnoreCase) ||
-                        v.VoucherGroup.Equals("PURCHASE", StringComparison.OrdinalIgnoreCase)
-                    ))
-                .ToList();
             // // Get quotation voucher types
             // var quotationVoucherIds = (await VoucherService.GetAllAsync())
             //     .Where(v => v.VoucherGroup == "QUOTATION")
@@ -395,7 +477,7 @@
             //     .ToList();
 
             // ReportDataList = (await ReportDataService.GetAllAsync()).Where(r=>r.DocType="Quotation");
-            
+
             // var voucherTask = await VoucherService.GetAllAsync(); 
 
             // VoucherList = voucherTask.Where(v =>
@@ -417,12 +499,25 @@
 
     private async Task OnCreateNew(ToolbarItemClickEventArgs e)
     {
-        popup.Show(new Bill
-        {
-            BillDate = DateTime.Now,
-            BillDueDate = DateTime.Now.AddDays(30), // Default validity 30 days
-            BillStatus = true
-        });
+        var bill = new Bill
+            {
+                BillDate = DateTime.Now,
+                BillDueDate = DateTime.Now.AddDays(30), // Default validity 30 days
+                BillStatus = true
+            };
+        pendingQuotationBill = bill;
+        showQuotationaddeditPopup = true;
+        triggerQuotationPopup = true;
+
+        await InvokeAsync(StateHasChanged);
+        // if (popup != null) {
+        //     popup.Show(new Bill
+        //         {
+        //             BillDate = DateTime.Now,
+        //             BillDueDate = DateTime.Now.AddDays(30), // Default validity 30 days
+        //             BillStatus = true
+        //         });
+        // }
     }
 
     private async Task OnEdit(ToolbarItemClickEventArgs e)
@@ -438,7 +533,18 @@
                 .FirstOrDefault(x => x.BillId == quotation.BillId);
 
         if (freshData != null)
-            popup.Show(freshData);
+        {
+            
+            pendingQuotationBill = freshData;
+            showQuotationaddeditPopup = true;
+            triggerQuotationPopup = true;
+
+            await InvokeAsync(StateHasChanged);
+            // if (popup != null)
+            // {
+            // popup.Show(freshData);
+            // }
+        }
         await ClearSelection();
     }
 
