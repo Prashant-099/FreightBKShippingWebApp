@@ -81,6 +81,8 @@ namespace FreightBKShippingWebApp.Model
         public DateTime? ClosedAt { get; set; }
 
         public int UnreadCount { get; set; } = 0;
+
+        public string MessageText { get; set; } = string.Empty;
     }
 
     /// <summary>
