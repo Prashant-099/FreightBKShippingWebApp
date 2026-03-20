@@ -1,4 +1,4 @@
-﻿@page "/superadmin/support"
+@page "/superadmin/support"
 @attribute [Authorize]
 @using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Services
@@ -7,750 +7,227 @@
 @inject NavigationManager Nav
 
 <div class="sa-page">
-
-    <!-- Header -->
-    <div class="sa-header">
-        <div class="sa-header-left">
-            <div class="sa-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
-                </svg>
+    <div class="sa-shell">
+        <div class="sa-header">
+            <div class="sa-header-left">
+                <div class="sa-icon" aria-hidden="true">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="sa-title">Support Inbox</h1>
+                    <p class="sa-sub">All tickets across all companies</p>
+                </div>
             </div>
-            <div>
-                <h1 class="sa-title">Support Inbox</h1>
-                <p class="sa-sub">All tickets across all companies</p>
-            </div>
         </div>
-    </div>
 
-    <!-- Clickable Stat Cards (act as filters) -->
-    <div class="sa-stats">
-        <button class="sa-stat @(activeFilter == "" ? "active" : "")" @onclick='() => SetFilter("")'>
-            <span class="sa-stat-n">@allTickets.Count</span>
-            <span class="sa-stat-l">All</span>
-        </button>
-        <button class="sa-stat st-open @(activeFilter == "1" ? "active" : "")" @onclick='() => SetFilter("1")'>
-            <span class="sa-stat-n">@allTickets.Count(t => t.StatusId == 1)</span>
-            <span class="sa-stat-l">Open</span>
-        </button>
-        <button class="sa-stat st-prog @(activeFilter == "2" ? "active" : "")" @onclick='() => SetFilter("2")'>
-            <span class="sa-stat-n">@allTickets.Count(t => t.StatusId == 2)</span>
-            <span class="sa-stat-l">In Progress</span>
-        </button>
-        <button class="sa-stat st-wait @(activeFilter == "3" ? "active" : "")" @onclick='() => SetFilter("3")'>
-            <span class="sa-stat-n">@allTickets.Count(t => t.StatusId == 3)</span>
-            <span class="sa-stat-l">Waiting</span>
-        </button>
-        <button class="sa-stat st-res @(activeFilter == "4" ? "active" : "")" @onclick='() => SetFilter("4")'>
-            <span class="sa-stat-n">@allTickets.Count(t => t.StatusId == 4)</span>
-            <span class="sa-stat-l">Resolved</span>
-        </button>
-        <button class="sa-stat st-closed @(activeFilter == "5" ? "active" : "")" @onclick='() => SetFilter("5")'>
-            <span class="sa-stat-n">@allTickets.Count(t => t.StatusId == 5)</span>
-            <span class="sa-stat-l">Closed</span>
-        </button>
-        <button class="sa-stat st-unread @(activeFilter == "unread" ? "active" : "")" @onclick='() => SetFilter("unread")'>
-            <span class="sa-stat-n">@allTickets.Sum(t => t.UnreadByAdmin)</span>
-            <span class="sa-stat-l">Unread</span>
-        </button>
-    </div>
+        <div class="sa-stats">
+            <button class="sa-stat @(activeFilter == "" ? "active" : "")" @onclick='() => SetFilter("")'>
+                <span class="sa-stat-n">@allTickets.Count</span>
+                <span class="sa-stat-l">All</span>
+            </button>
+            <button class="sa-stat st-open @(activeFilter == "1" ? "active" : "")" @onclick='() => SetFilter("1")'>
+                <span class="sa-stat-n">@allTickets.Count(t => t.StatusId == 1)</span>
+                <span class="sa-stat-l">Open</span>
+            </button>
+            <button class="sa-stat st-prog @(activeFilter == "2" ? "active" : "")" @onclick='() => SetFilter("2")'>
+                <span class="sa-stat-n">@allTickets.Count(t => t.StatusId == 2)</span>
+                <span class="sa-stat-l">In Progress</span>
+            </button>
+            <button class="sa-stat st-wait @(activeFilter == "3" ? "active" : "")" @onclick='() => SetFilter("3")'>
+                <span class="sa-stat-n">@allTickets.Count(t => t.StatusId == 3)</span>
+                <span class="sa-stat-l">Waiting</span>
+            </button>
+            <button class="sa-stat st-res @(activeFilter == "4" ? "active" : "")" @onclick='() => SetFilter("4")'>
+                <span class="sa-stat-n">@allTickets.Count(t => t.StatusId == 4)</span>
+                <span class="sa-stat-l">Resolved</span>
+            </button>
+            <button class="sa-stat st-closed @(activeFilter == "5" ? "active" : "")" @onclick='() => SetFilter("5")'>
+                <span class="sa-stat-n">@allTickets.Count(t => t.StatusId == 5)</span>
+                <span class="sa-stat-l">Closed</span>
+            </button>
+            <button class="sa-stat st-unread @(activeFilter == "unread" ? "active" : "")" @onclick='() => SetFilter("unread")'>
+                <span class="sa-stat-n">@allTickets.Sum(t => t.UnreadByAdmin)</span>
+                <span class="sa-stat-l">Unread</span>
+            </button>
+        </div>
 
-    <!-- Filters Row -->
-    <div class="sa-filters">
-        <div class="sa-fgroup">
-            <select @bind="filterCompany" @bind:after="ApplyFilters">
-                <option value="">All Companies</option>
-                @foreach (var c in companies)
-                {
-                    <option value="@c.Key">@c.Value</option>
-                }
-            </select>
-        </div>
-        <div class="sa-fgroup">
-            <select @bind="filterPriority" @bind:after="ApplyFilters">
-                <option value="">All Priority</option>
-                <option value="1">🟢 Low</option>
-                <option value="2">🟡 Medium</option>
-                <option value="3">🟠 High</option>
-                <option value="4">🔴 Critical</option>
-            </select>
-        </div>
-        @if (filterCompany != "" || filterPriority != "" || activeFilter != "")
-        {
-            <button class="sa-btn-clear" @onclick="ClearFilters">✕ Clear</button>
-        }
-    </div>
-
-    <!-- Content -->
-    @if (isLoading)
-    {
-        <div class="sa-state">
-            <div class="sa-spinner"></div>
-            <p>Loading tickets...</p>
-        </div>
-    }
-    else if (!tickets.Any())
-    {
-        <div class="sa-state">
-            <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" fill="none" viewBox="0 0 24 24" stroke="#cbd5e1" stroke-width="1.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            <p>No tickets found</p>
-        </div>
-    }
-    else
-    {
-        <!-- Desktop Table -->
-        <div class="sa-table-wrap">
-            <table class="sa-table">
-                <thead>
-                    <tr>
-                        <th>Ticket</th>
-                        <th>Company</th>
-                        <th>Subject</th>
-                        <th>Priority</th>
-                        <th>Status</th>
-                        <th>Assigned</th>
-                        <th>Msgs</th>
-                        <th>Unread</th>
-                        <th>Created</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var t in tickets)
+        <div class="sa-filters">
+            <div class="sa-fgroup">
+                <select @bind="filterCompany" @bind:after="OnFilterChanged">
+                    <option value="">All Companies</option>
+                    @foreach (var c in companies)
                     {
-                        <tr class="sa-row @(t.UnreadByAdmin > 0 ? "row-unread" : "")" @onclick="() => OpenTicket(t.TicketId)">
-                            <td><span class="sa-tno">#@t.TicketNo</span></td>
-                            <td><span class="sa-co">@t.CompanyName</span></td>
-                            <td><span class="sa-subj">@t.Subject</span></td>
-                            <td><span class="badge pri-@GetPriorityClass(t.PriorityId)">@GetPriorityLabel(t.PriorityId)</span></td>
-                            <td><span class="badge sta-@GetStatusClass(t.StatusId)">@GetStatusLabel(t.StatusId)</span></td>
-                            <td>
-                                @if (!string.IsNullOrEmpty(t.AssignedToName))
-                                {
-                                    <span class="sa-asgn">@t.AssignedToName</span>
-                                }
-                                else
-                                {
+                        <option value="@c.Key">@c.Value</option>
+                    }
+                </select>
+            </div>
+            <div class="sa-fgroup">
+                <select @bind="filterPriority" @bind:after="OnFilterChanged">
+                    <option value="">All Priority</option>
+                    <option value="1">Low</option>
+                    <option value="2">Medium</option>
+                    <option value="3">High</option>
+                    <option value="4">Critical</option>
+                </select>
+            </div>
+            @if (filterCompany != "" || filterPriority != "" || activeFilter != "")
+            {
+                <button class="sa-btn-clear" @onclick="ClearFilters">Clear</button>
+            }
+        </div>
 
-                                    <span class="sa-unasgn">—</span>
-                                }
-                            </td>
-                            <td class="tc">@t.MessageCount</td>
-                            <td class="tc">
+        @if (isLoading)
+        {
+            <div class="sa-state">
+                <div class="sa-spinner"></div>
+                <p>Loading tickets...</p>
+            </div>
+        }
+        else if (!tickets.Any())
+        {
+            <div class="sa-state">
+                <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" fill="none" viewBox="0 0 24 24" stroke="#cbd5e1" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <p>No tickets found</p>
+            </div>
+        }
+        else
+        {
+            <div class="sa-list-card">
+                <div class="sa-list-head">
+                    <p>@tickets.Count ticket(s)</p>
+                    <span>Page size: @pageSize</span>
+                </div>
+
+                <div class="sa-table-wrap">
+                    <table class="sa-table">
+                        <thead>
+                            <tr>
+                                <th>Ticket</th>
+                                <th>Company</th>
+                                <th>Subject</th>
+                                <th>Priority</th>
+                                <th>Status</th>
+                                <th>Assigned</th>
+                                <th>Msgs</th>
+                                <th>Unread</th>
+                                <th>Created</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var t in PagedTickets)
+                            {
+                                <tr class="sa-row @(t.UnreadByAdmin > 0 ? "row-unread" : "")" @onclick="() => OpenTicket(t.TicketId)">
+                                    <td><span class="sa-tno">#@t.TicketNo</span></td>
+                                    <td><span class="sa-co">@t.CompanyName</span></td>
+                                    <td><span class="sa-subj">@t.Subject</span></td>
+                                    <td><span class="badge pri-@GetPriorityClass(t.PriorityId)">@GetPriorityLabel(t.PriorityId)</span></td>
+                                    <td><span class="badge sta-@GetStatusClass(t.StatusId)">@GetStatusLabel(t.StatusId)</span></td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(t.AssignedToName))
+                                        {
+                                            <span class="sa-asgn">@t.AssignedToName</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="sa-unasgn">--</span>
+                                        }
+                                    </td>
+                                    <td class="tc">@t.MessageCount</td>
+                                    <td class="tc">
+                                        @if (t.UnreadByAdmin > 0)
+                                        {
+                                            <span class="sa-udot">@t.UnreadByAdmin</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="sa-dash">--</span>
+                                        }
+                                    </td>
+                                    <td class="sa-dt">@t.CreatedAt.ToLocalTime().ToString("dd MMM, HH:mm")</td>
+                                    <td>
+                                        <button class="sa-btn-open" @onclick:stopPropagation="true" @onclick="() => OpenTicket(t.TicketId)">
+                                            Open
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="sa-cards">
+                    @foreach (var t in PagedTickets)
+                    {
+                        <div class="sa-card @(t.UnreadByAdmin > 0 ? "card-unread" : "")" @onclick="() => OpenTicket(t.TicketId)">
+                            <div class="sa-card-top">
+                                <span class="sa-tno">#@t.TicketNo</span>
+                                <div class="sa-card-badges">
+                                    <span class="badge pri-@GetPriorityClass(t.PriorityId)">@GetPriorityLabel(t.PriorityId)</span>
+                                    <span class="badge sta-@GetStatusClass(t.StatusId)">@GetStatusLabel(t.StatusId)</span>
+                                </div>
                                 @if (t.UnreadByAdmin > 0)
                                 {
                                     <span class="sa-udot">@t.UnreadByAdmin</span>
                                 }
-                                else
-                                {
-
-                                    <span class="sa-dash">—</span>
-                                }
-                            </td>
-                            <td class="sa-dt">@t.CreatedAt.ToLocalTime().ToString("dd MMM, HH:mm")</td>
-                            <td>
-                                <button class="sa-btn-open" @onclick:stopPropagation="true" @onclick="() => OpenTicket(t.TicketId)">
-                                    Open →
-                                </button>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-
-        <!-- Mobile Cards -->
-        <div class="sa-cards">
-            @foreach (var t in tickets)
-            {
-                <div class="sa-card @(t.UnreadByAdmin > 0 ? "card-unread" : "")" @onclick="() => OpenTicket(t.TicketId)">
-                    <div class="sa-card-top">
-                        <span class="sa-tno">#@t.TicketNo</span>
-                        <div class="sa-card-badges">
-                            <span class="badge pri-@GetPriorityClass(t.PriorityId)">@GetPriorityLabel(t.PriorityId)</span>
-                            <span class="badge sta-@GetStatusClass(t.StatusId)">@GetStatusLabel(t.StatusId)</span>
+                            </div>
+                            <div class="sa-card-subj">@t.Subject</div>
+                            <div class="sa-card-meta">
+                                <span class="sa-co">@t.CompanyName</span>
+                                <span class="sa-dt">@t.CreatedAt.ToLocalTime().ToString("dd MMM, HH:mm")</span>
+                            </div>
+                            @if (!string.IsNullOrEmpty(t.AssignedToName))
+                            {
+                                <div class="sa-card-asgn">Assigned: @t.AssignedToName</div>
+                            }
                         </div>
-                        @if (t.UnreadByAdmin > 0)
-                        {
-                            <span class="sa-udot">@t.UnreadByAdmin</span>
-                        }
-                    </div>
-                    <div class="sa-card-subj">@t.Subject</div>
-                    <div class="sa-card-meta">
-                        <span class="sa-co">@t.CompanyName</span>
-                        <span class="sa-dt">@t.CreatedAt.ToLocalTime().ToString("dd MMM, HH:mm")</span>
-                    </div>
-                    @if (!string.IsNullOrEmpty(t.AssignedToName))
-                    {
-                        <div class="sa-card-asgn">👤 @t.AssignedToName</div>
                     }
                 </div>
-            }
-        </div>
-    }
+
+                @if (TotalPages > 1)
+                {
+                    <div class="sa-pagination">
+                        <button class="sa-pg-btn" disabled="@(currentPage == 1)" @onclick="PrevPage" aria-label="Previous page">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+                            </svg>
+                        </button>
+                        @for (int i = 1; i <= TotalPages; i++)
+                        {
+                            var page = i;
+                            <button class="sa-pg-btn @(page == currentPage ? "pg-active" : "")" @onclick="() => GoToPage(page)">@(page)</button>
+                        }
+                        <button class="sa-pg-btn" disabled="@(currentPage == TotalPages)" @onclick="NextPage" aria-label="Next page">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                            </svg>
+                        </button>
+                    </div>
+                }
+            </div>
+        }
+    </div>
 </div>
 
-<style>
-    .sa-page {
-        padding: 20px 24px;
-        background: #f8fafc;
-        min-height: 100vh;
-        font-family: 'Segoe UI', system-ui, sans-serif;
-        max-width: 1400px;
-        margin: 0 auto;
-    }
-
-    /* Header */
-    .sa-header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-bottom: 20px;
-        flex-wrap: wrap;
-        gap: 12px;
-    }
-
-    .sa-header-left {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-    }
-
-    .sa-icon {
-        width: 40px;
-        height: 40px;
-        background: #ede9fe;
-        border-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #7c3aed;
-        flex-shrink: 0;
-    }
-
-    .sa-title {
-        font-size: 20px;
-        font-weight: 700;
-        color: #0f172a;
-        margin: 0;
-    }
-
-    .sa-sub {
-        font-size: 13px;
-        color: #64748b;
-        margin: 2px 0 0;
-    }
-
-    /* Stat Cards */
-    .sa-stats {
-        display: flex;
-        gap: 10px;
-        margin-bottom: 16px;
-        flex-wrap: wrap;
-    }
-
-    .sa-stat {
-        background: #fff;
-        border: 1.5px solid #e2e8f0;
-        border-radius: 12px;
-        padding: 10px 16px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        min-width: 72px;
-        cursor: pointer;
-        transition: all 0.15s;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-    }
-
-        .sa-stat:hover {
-            border-color: #7c3aed;
-            transform: translateY(-1px);
-        }
-
-        .sa-stat.active {
-            border-color: #7c3aed;
-            background: #ede9fe;
-        }
-
-    .sa-stat-n {
-        font-size: 20px;
-        font-weight: 700;
-        color: #0f172a;
-        line-height: 1;
-    }
-
-    .sa-stat-l {
-        font-size: 11px;
-        color: #64748b;
-        font-weight: 500;
-        margin-top: 3px;
-        white-space: nowrap;
-    }
-
-    .sa-stat.active .sa-stat-n {
-        color: #7c3aed;
-    }
-
-    .sa-stat.active .sa-stat-l {
-        color: #7c3aed;
-    }
-
-    .st-open.active {
-        background: #eff6ff;
-        border-color: #2563eb;
-    }
-
-        .st-open.active .sa-stat-n, .st-open.active .sa-stat-l {
-            color: #2563eb;
-        }
-
-    .st-prog.active {
-        background: #fff7ed;
-        border-color: #d97706;
-    }
-
-        .st-prog.active .sa-stat-n, .st-prog.active .sa-stat-l {
-            color: #d97706;
-        }
-
-    .st-wait.active {
-        background: #f5f3ff;
-        border-color: #7c3aed;
-    }
-
-    .st-res.active {
-        background: #f0fdf4;
-        border-color: #16a34a;
-    }
-
-        .st-res.active .sa-stat-n, .st-res.active .sa-stat-l {
-            color: #16a34a;
-        }
-
-    .st-closed.active {
-        background: #f1f5f9;
-        border-color: #64748b;
-    }
-
-        .st-closed.active .sa-stat-n, .st-closed.active .sa-stat-l {
-            color: #64748b;
-        }
-
-    .st-unread.active {
-        background: #fef2f2;
-        border-color: #dc2626;
-    }
-
-        .st-unread.active .sa-stat-n, .st-unread.active .sa-stat-l {
-            color: #dc2626;
-        }
-
-    /* Filters */
-    .sa-filters {
-        display: flex;
-        gap: 10px;
-        margin-bottom: 16px;
-        flex-wrap: wrap;
-        align-items: center;
-    }
-
-    .sa-fgroup select {
-        padding: 8px 14px;
-        border: 1.5px solid #e2e8f0;
-        border-radius: 8px;
-        font-size: 13px;
-        color: #334155;
-        background: #fff;
-        font-family: inherit;
-        cursor: pointer;
-        appearance: none;
-        min-width: 140px;
-    }
-
-        .sa-fgroup select:focus {
-            outline: none;
-            border-color: #7c3aed;
-        }
-
-    .sa-btn-clear {
-        padding: 8px 14px;
-        background: #fef2f2;
-        border: 1.5px solid #fecaca;
-        border-radius: 8px;
-        font-size: 12px;
-        font-weight: 600;
-        color: #dc2626;
-        cursor: pointer;
-        transition: all 0.15s;
-    }
-
-        .sa-btn-clear:hover {
-            background: #dc2626;
-            color: #fff;
-            border-color: #dc2626;
-        }
-
-    /* States */
-    .sa-state {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        padding: 60px;
-        background: #fff;
-        border-radius: 14px;
-        border: 1px solid #e2e8f0;
-        gap: 10px;
-        color: #64748b;
-        font-size: 14px;
-    }
-
-    .sa-spinner {
-        width: 28px;
-        height: 28px;
-        border: 3px solid #e2e8f0;
-        border-top-color: #7c3aed;
-        border-radius: 50%;
-        animation: saspin 0.8s linear infinite;
-    }
-
-    @@keyframes saspin {
-        to {
-            transform: rotate(360deg);
-        }
-    }
-
-    /* Desktop Table */
-    .sa-table-wrap {
-        background: #fff;
-        border: 1px solid #e2e8f0;
-        border-radius: 14px;
-        overflow: hidden;
-        box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-        display: block;
-    }
-
-    .sa-table {
-        width: 100%;
-        border-collapse: collapse;
-    }
-
-        .sa-table thead {
-            background: #fafbfc;
-            border-bottom: 1px solid #f1f5f9;
-        }
-
-        .sa-table th {
-            padding: 11px 14px;
-            text-align: left;
-            font-size: 11px;
-            font-weight: 600;
-            color: #64748b;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            white-space: nowrap;
-        }
-
-        .sa-table td {
-            padding: 12px 14px;
-            color: #334155;
-            vertical-align: middle;
-            font-size: 13px;
-        }
-
-    .sa-row {
-        border-bottom: 1px solid #f1f5f9;
-        cursor: pointer;
-        transition: background 0.1s;
-    }
-
-        .sa-row:last-child {
-            border-bottom: none;
-        }
-
-        .sa-row:hover {
-            background: #f8fafc;
-        }
-
-    .row-unread {
-        background: #fefce8 !important;
-    }
-
-        .row-unread:hover {
-            background: #fef9c3 !important;
-        }
-
-    .sa-tno {
-        font-family: monospace;
-        font-weight: 700;
-        color: #7c3aed;
-        font-size: 12px;
-    }
-
-    .sa-co {
-        font-weight: 600;
-        color: #1e40af;
-        font-size: 12px;
-    }
-
-    .sa-subj {
-        font-weight: 500;
-        color: #0f172a;
-        display: -webkit-box;
-        -webkit-line-clamp: 1;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-        max-width: 200px;
-    }
-
-    .sa-asgn {
-        font-size: 12px;
-        font-weight: 600;
-        color: #0284c7;
-    }
-
-    .sa-unasgn {
-        font-size: 12px;
-        color: #94a3b8;
-    }
-
-    .sa-dash {
-        color: #cbd5e1;
-    }
-
-    .sa-dt {
-        font-size: 12px;
-        color: #64748b;
-        white-space: nowrap;
-    }
-
-    .tc {
-        text-align: center;
-    }
-
-    .sa-udot {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        background: #dc2626;
-        color: #fff;
-        font-size: 10px;
-        font-weight: 700;
-        border-radius: 50%;
-        width: 20px;
-        height: 20px;
-    }
-
-    .sa-btn-open {
-        background: #f5f3ff;
-        border: 1px solid #ddd6fe;
-        border-radius: 7px;
-        padding: 5px 12px;
-        font-size: 12px;
-        font-weight: 600;
-        color: #7c3aed;
-        cursor: pointer;
-        transition: all 0.15s;
-        white-space: nowrap;
-    }
-
-        .sa-btn-open:hover {
-            background: #7c3aed;
-            border-color: #7c3aed;
-            color: #fff;
-        }
-
-    /* Badges */
-    .badge {
-        display: inline-block;
-        padding: 3px 9px;
-        border-radius: 20px;
-        font-size: 11px;
-        font-weight: 600;
-        white-space: nowrap;
-    }
-
-    .pri-low {
-        background: #f0fdf4;
-        color: #16a34a;
-    }
-
-    .pri-medium {
-        background: #fef9c3;
-        color: #b45309;
-    }
-
-    .pri-high {
-        background: #fff7ed;
-        color: #ea580c;
-    }
-
-    .pri-critical {
-        background: #fef2f2;
-        color: #dc2626;
-    }
-
-    .sta-open {
-        background: #eff6ff;
-        color: #2563eb;
-    }
-
-    .sta-inprogress {
-        background: #fff7ed;
-        color: #d97706;
-    }
-
-    .sta-waiting {
-        background: #f5f3ff;
-        color: #7c3aed;
-    }
-
-    .sta-resolved {
-        background: #f0fdf4;
-        color: #16a34a;
-    }
-
-    .sta-closed {
-        background: #f1f5f9;
-        color: #64748b;
-    }
-
-    /* Mobile Cards - hidden on desktop */
-    .sa-cards {
-        display: none;
-        flex-direction: column;
-        gap: 10px;
-    }
-
-    .sa-card {
-        background: #fff;
-        border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        padding: 14px;
-        cursor: pointer;
-        transition: all 0.15s;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-    }
-
-        .sa-card:hover {
-            border-color: #7c3aed;
-        }
-
-    .card-unread {
-        background: #fefce8 !important;
-        border-color: #fde047;
-    }
-
-    .sa-card-top {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-bottom: 6px;
-        flex-wrap: wrap;
-    }
-
-    .sa-card-badges {
-        display: flex;
-        gap: 6px;
-        flex-wrap: wrap;
-    }
-
-    .sa-card-subj {
-        font-size: 14px;
-        font-weight: 600;
-        color: #0f172a;
-        margin-bottom: 8px;
-        line-height: 1.4;
-    }
-
-    .sa-card-meta {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 4px;
-    }
-
-    .sa-card-asgn {
-        font-size: 12px;
-        color: #0284c7;
-        font-weight: 500;
-        margin-top: 6px;
-    }
-
-    /* Responsive */
-    @@media (max-width: 768px) {
-        .sa-page {
-            padding: 14px 16px;
-        }
-
-        .sa-title {
-            font-size: 17px;
-        }
-
-        .sa-stats {
-            gap: 8px;
-        }
-
-        .sa-stat {
-            min-width: 60px;
-            padding: 8px 12px;
-        }
-
-        .sa-stat-n {
-            font-size: 18px;
-        }
-
-        .sa-table-wrap {
-            display: none;
-        }
-
-        .sa-cards {
-            display: flex;
-        }
-
-        .sa-filters {
-            gap: 8px;
-        }
-
-        .sa-fgroup select {
-            min-width: 120px;
-            font-size: 12px;
-        }
-    }
-
-    @@media (max-width: 480px) {
-        .sa-stats {
-            gap: 6px;
-        }
-
-        .sa-stat {
-            min-width: 52px;
-            padding: 7px 10px;
-        }
-
-        .sa-stat-n {
-            font-size: 16px;
-        }
-
-        .sa-stat-l {
-            font-size: 10px;
-        }
-    }
-</style>
-
 @code {
-    List<SupportTicketAdminDto> allTickets = new(); // sab tickets
-    List<SupportTicketAdminDto> tickets = new();    // filtered tickets
+    List<SupportTicketAdminDto> allTickets = new();
+    List<SupportTicketAdminDto> tickets = new();
     Dictionary<int, string> companies = new();
     bool isLoading = true;
 
     string filterCompany = "";
     string filterPriority = "";
-    string activeFilter = ""; // stat card filter
+    string activeFilter = "";
+
+    int currentPage = 1;
+    int pageSize = 10;
+
+    int TotalPages => Math.Max(1, (int)Math.Ceiling((double)tickets.Count / pageSize));
+    IEnumerable<SupportTicketAdminDto> PagedTickets => tickets.Skip((currentPage - 1) * pageSize).Take(pageSize);
 
     protected override async Task OnInitializedAsync()
     {
@@ -760,37 +237,54 @@
     async Task LoadTickets()
     {
         isLoading = true;
-        allTickets = await AdminService.GetAllTicketsAsync(null, null, null);
+
+        allTickets = (await AdminService.GetAllTicketsAsync(null, null, null))
+            .OrderByDescending(t => t.CreatedAt)
+            .ToList();
+
         companies = allTickets
             .GroupBy(t => t.CompanyId)
             .ToDictionary(g => g.Key, g => g.First().CompanyName);
+
         ApplyFilters();
         isLoading = false;
     }
 
     void SetFilter(string filter)
     {
-        activeFilter = activeFilter == filter ? "" : filter; // toggle
+        activeFilter = activeFilter == filter ? "" : filter;
+        currentPage = 1;
+        ApplyFilters();
+    }
+
+    void OnFilterChanged()
+    {
+        currentPage = 1;
         ApplyFilters();
     }
 
     void ApplyFilters()
     {
-        tickets = allTickets;
+        IEnumerable<SupportTicketAdminDto> query = allTickets;
 
-        // Stat card filter
         if (activeFilter == "unread")
-            tickets = tickets.Where(t => t.UnreadByAdmin > 0).ToList();
+            query = query.Where(t => t.UnreadByAdmin > 0);
         else if (!string.IsNullOrEmpty(activeFilter))
-            tickets = tickets.Where(t => t.StatusId.ToString() == activeFilter).ToList();
+            query = query.Where(t => t.StatusId.ToString() == activeFilter);
 
-        // Company filter
         if (!string.IsNullOrEmpty(filterCompany))
-            tickets = tickets.Where(t => t.CompanyId.ToString() == filterCompany).ToList();
+            query = query.Where(t => t.CompanyId.ToString() == filterCompany);
 
-        // Priority filter
         if (!string.IsNullOrEmpty(filterPriority))
-            tickets = tickets.Where(t => t.PriorityId.ToString() == filterPriority).ToList();
+            query = query.Where(t => t.PriorityId.ToString() == filterPriority);
+
+        tickets = query.ToList();
+
+        if (currentPage > TotalPages)
+            currentPage = TotalPages;
+
+        if (currentPage < 1)
+            currentPage = 1;
     }
 
     void ClearFilters()
@@ -798,10 +292,15 @@
         filterCompany = "";
         filterPriority = "";
         activeFilter = "";
+        currentPage = 1;
         ApplyFilters();
     }
 
     void OpenTicket(int id) => Nav.NavigateTo($"/superadmin/support/{id}");
+
+    void PrevPage() { if (currentPage > 1) currentPage--; }
+    void NextPage() { if (currentPage < TotalPages) currentPage++; }
+    void GoToPage(int page) => currentPage = page;
 
     string GetPriorityLabel(int id) => id switch { 1 => "Low", 2 => "Medium", 3 => "High", 4 => "Critical", _ => "?" };
     string GetPriorityClass(int id) => id switch { 1 => "low", 2 => "medium", 3 => "high", 4 => "critical", _ => "low" };

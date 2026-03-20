@@ -13,10 +13,6 @@ namespace FreightBKShippingWebApp.Services
 
         public string GetApiBaseUrl() => _api.GetBaseUrl();
 
-        // ✅ FIX 4: Token cache with a 4-minute TTL.
-        // The old code cached forever — after a token rotation the SignalR
-        // reconnect would try the stale token and get a 401.
-        // Access tokens expire in 5 min; refreshing at 4 min gives a 1-min buffer.
         private string? _cachedToken;
         private DateTime _tokenCachedAt = DateTime.MinValue;
         private const int TokenCacheTtlMinutes = 4;
@@ -110,13 +106,15 @@ namespace FreightBKShippingWebApp.Services
             catch (Exception ex) { Console.WriteLine($"[DashboardService] GetTicketDetail error: {ex.Message}"); return null; }
         }
 
-        public async Task<TicketMessageAdminDto?> ReplyAsync(int ticketId, string message)
+        // ✅ FIX: mediaDocumentId optional parameter add kiya
+        // SuperAdminController ke TicketReplyAdminDto mein MediaDocumentId map hoga
+        public async Task<TicketMessageAdminDto?> ReplyAsync(int ticketId, string message, long? mediaDocumentId = null)
         {
             try
             {
                 return await _api.PostAsync<TicketMessageAdminDto, object>(
                     $"api/superadmin/tickets/{ticketId}/reply",
-                    new { Message = message });
+                    new { Message = message, MediaDocumentId = mediaDocumentId });
             }
             catch (Exception ex) { Console.WriteLine($"[DashboardService] Reply error: {ex.Message}"); return null; }
         }
