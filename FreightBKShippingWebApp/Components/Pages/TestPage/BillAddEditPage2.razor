@@ -1756,7 +1756,7 @@ private async void ReloadJobs()
             StateList = stateTask.Result;
 
             isCriticalDataLoaded = true;
-            _ = LoadBackgroundDataAsync();
+           
             StateHasChanged(); // ✅ Form can now render!
         }
         catch (Exception ex)
@@ -2024,10 +2024,12 @@ private async void ReloadJobs()
     }
     public async Task Show(Bill bill)
     {
+        LoadingService.Show();
         // ✅ Show loading only if critical data not loaded
         if (!isCriticalDataLoaded)
         {
-            LoadingService.Show();
+            
+            _ = LoadBackgroundDataAsync();
             await LoadCriticalDataAsync();
            
         }

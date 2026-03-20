@@ -502,8 +502,10 @@
             }
             else replyError = "Failed to send message.";
         }
-        catch (Exception ex) { replyError = ex.Message; }
-        finally { isSending = false; }
+        finally
+        {
+            isSending = false;
+        }
     }
 
     async Task CloseTicket()
@@ -622,11 +624,204 @@
 
     void OnVideoLoaded(int messageId) { if (videoPlaybackFailed.Remove(messageId)) _ = InvokeAsync(StateHasChanged); }
 
+    void UpsertMessage(TicketReply incoming)
+    {
+        var existing = messages.FirstOrDefault(m => m.MessageId == incoming.MessageId);
+        if (existing == null)
+        {
+            messages.Add(incoming);
+            return;
+        }
+
+        existing.SenderType = incoming.SenderType;
+        existing.CreatedAt = incoming.CreatedAt == default ? existing.CreatedAt : incoming.CreatedAt;
+
+        if (string.IsNullOrWhiteSpace(existing.MessageText) && !string.IsNullOrWhiteSpace(incoming.MessageText))
+        {
+            existing.MessageText = incoming.MessageText;
+        }
+
+        if (string.IsNullOrWhiteSpace(existing.ImageUrl) && !string.IsNullOrWhiteSpace(incoming.ImageUrl))
+        {
+            existing.ImageUrl = incoming.ImageUrl;
+        }
+    }
+
+    bool IsProbableDuplicate(string senderType, string? messageText, DateTime createdAt, int messageId)
+    {
+        if (messageId > 0 && messages.Any(m => m.MessageId == messageId))
+        {
+            return true;
+        }
+
+        var incomingText = (messageText ?? string.Empty).Trim();
+        if (incomingText.Length == 0)
+        {
+            return false;
+        }
+
+        return messages.Any(m =>
+            string.Equals(m.SenderType, senderType, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals((m.MessageText ?? string.Empty).Trim(), incomingText, StringComparison.Ordinal) &&
+            Math.Abs((m.CreatedAt - createdAt).TotalSeconds) <= 2);
+    }
+
+    bool IsVideoMessage(TicketReply msg)
+    {
+        if (messageContentTypes.TryGetValue(msg.MessageId, out var contentType) && IsVideoContentType(contentType))
+        {
+            return true;
+        }
+
+        return IsVideoFileName(msg.ImageUrl);
+    }
+
+    string GetMessageContentType(TicketReply msg)
+    {
+        messageContentTypes.TryGetValue(msg.MessageId, out var contentType);
+        return ResolveContentType(contentType, msg.ImageUrl);
+    }
+
+    void SetMessageContentType(int messageId, string? contentType, string? fallbackFileName)
+    {
+        if (messageId <= 0)
+        {
+            return;
+        }
+
+        var resolved = ResolveContentType(contentType, fallbackFileName);
+        if (!string.IsNullOrWhiteSpace(resolved))
+        {
+            messageContentTypes[messageId] = resolved;
+        }
+    }
+
+    static bool IsAllowedImage(string? contentType, string extension) =>
+        AllowedImageExtensions.Contains(extension) || IsImageContentType(contentType);
+
+    static bool IsAllowedVideo(string? contentType, string extension) =>
+        AllowedVideoExtensions.Contains(extension) || IsVideoContentType(contentType);
+
+    static bool IsImageContentType(string? contentType) =>
+        !string.IsNullOrWhiteSpace(contentType) &&
+        contentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
+
+    static bool IsVideoContentType(string? contentType) =>
+        !string.IsNullOrWhiteSpace(contentType) &&
+        contentType.StartsWith("video/", StringComparison.OrdinalIgnoreCase);
+
+    static bool IsVideoFileName(string? pathOrName)
+    {
+        if (string.IsNullOrWhiteSpace(pathOrName))
+        {
+            return false;
+        }
+
+        var clean = pathOrName.Split('?', '#')[0];
+        var ext = Path.GetExtension(clean);
+        return AllowedVideoExtensions.Contains(ext);
+    }
+
+    static string ResolveContentType(string? contentType, string? fileName)
+    {
+        if (!string.IsNullOrWhiteSpace(contentType) && !IsGenericBinaryContentType(contentType))
+        {
+            return contentType;
+        }
+
+        var ext = Path.GetExtension(fileName ?? string.Empty).ToLowerInvariant();
+        return ext switch
+        {
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".png" => "image/png",
+            ".gif" => "image/gif",
+            ".webp" => "image/webp",
+            ".mp4" => "video/mp4",
+            ".webm" => "video/webm",
+            ".mov" => "video/quicktime",
+            _ => "application/octet-stream"
+        };
+    }
+
+    static bool IsGenericBinaryContentType(string contentType) =>
+        contentType.Equals("application/octet-stream", StringComparison.OrdinalIgnoreCase) ||
+        contentType.Equals("binary/octet-stream", StringComparison.OrdinalIgnoreCase);
+
+    static long GetMaxUploadBytes(IBrowserFile file)
+    {
+        var ext = Path.GetExtension(file.Name);
+        return IsAllowedVideo(file.ContentType, ext) ? MaxVideoBytes : MaxImageBytes;
+    }
+
+    static string FormatFileSize(long bytes)
+    {
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1024 * 1024) return $"{bytes / 1024d:0.#} KB";
+        return $"{bytes / (1024d * 1024):0.#} MB";
+    }
+
+    void ClearReplyMedia()
+    {
+        replyMedia = null;
+        replyMediaPreview = null;
+        replyMediaFileName = null;
+        replyMediaContentType = null;
+        replyMediaSizeBytes = 0;
+    }
+
+    async Task OnVideoLoadError(TicketReply msg)
+    {
+        if (videoPlaybackFailed.Contains(msg.MessageId))
+        {
+            return;
+        }
+
+        if (msg.MessageId <= 0 || !messageDocumentIds.TryGetValue(msg.MessageId, out var documentId))
+        {
+            videoPlaybackFailed.Add(msg.MessageId);
+            return;
+        }
+
+        try
+        {
+            var freshUrl = (await FileUploadService.GetSasUrlAsync(documentId, 60))?.Trim();
+            if (!string.IsNullOrWhiteSpace(freshUrl) && !string.Equals(freshUrl, msg.ImageUrl, StringComparison.Ordinal))
+            {
+                msg.ImageUrl = freshUrl;
+                videoPlaybackFailed.Remove(msg.MessageId);
+                await InvokeAsync(StateHasChanged);
+                return;
+            }
+        }
+        catch
+        {
+        }
+
+        videoPlaybackFailed.Add(msg.MessageId);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    void OnVideoLoaded(int messageId)
+    {
+        if (videoPlaybackFailed.Remove(messageId))
+        {
+            _ = InvokeAsync(StateHasChanged);
+        }
+    }
+
     public async ValueTask DisposeAsync()
     {
         if (_hub != null)
         {
-            try { if (_hub.State == HubConnectionState.Connected) { await _hub.InvokeAsync("LeaveTicket", TicketId); await _hub.StopAsync(); } await _hub.DisposeAsync(); }
+            try
+            {
+                if (_hub.State == HubConnectionState.Connected)
+                {
+                    await _hub.InvokeAsync("LeaveTicket", TicketId);
+                    await _hub.StopAsync();
+                }
+                await _hub.DisposeAsync();
+            }
             catch { }
         }
     }

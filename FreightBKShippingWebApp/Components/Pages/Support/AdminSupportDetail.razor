@@ -634,8 +634,6 @@
             }
             else replyError = "Failed to send reply.";
         }
-        catch (Exception ex) { replyError = ex.Message; }
-        finally { isSending = false; }
     }
 
     public async ValueTask DisposeAsync()
@@ -791,6 +789,11 @@
         }
         finally { isUpdating = false; }
         await Task.Delay(2000); updateSuccess = false; await InvokeAsync(StateHasChanged);
+    }
+
+        await Task.Delay(2000);
+        updateSuccess = false;
+        await InvokeAsync(StateHasChanged);
     }
 
     async Task AssignTicket()
