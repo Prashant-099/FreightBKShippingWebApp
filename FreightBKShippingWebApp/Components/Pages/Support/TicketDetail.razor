@@ -1,4 +1,4 @@
-﻿@page "/tickets/{TicketId:int}"
+@page "/tickets/{TicketId:int}"
 @attribute [Authorize]
 @implements IAsyncDisposable
 @using FreightBKShippingWebApp.Model
@@ -9,291 +9,253 @@
 @inject TicketService TicketService
 @inject NavigationManager Nav
 @inject IJSRuntime JS
+@inject FileUploadService FileUploadService
 
-<div class="support-page">
-
-    <!-- Header -->
-    <div class="page-header">
-        <button class="btn-back" @onclick="GoBack">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
-            </svg>
-            All Tickets
-        </button>
-        @if (ticket != null)
-        {
-            <div class="header-info">
-                <h1 class="page-title">
-                    <span class="ticket-no-label">#@ticket.TicketNo</span>
-                    @ticket.Subject
-                </h1>
-                <div class="header-badges">
-                    <span class="ticket-badge priority-@GetPriorityClass(ticket.PriorityId)">@GetPriorityLabel(ticket.PriorityId)</span>
-                    <span class="ticket-badge status-@GetStatusClass(ticket.StatusId)">@GetStatusLabel(ticket.StatusId)</span>
+<div class="td-page">
+    <div class="td-shell">
+        <div class="td-header">
+            <button class="td-back" @onclick="GoBack">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+                </svg>
+                <span class="td-back-text">All Tickets</span>
+            </button>
+            @if (ticket != null)
+            {
+                <div class="td-header-info">
+                    <h1 class="td-title">
+                        <span class="td-tno">#@ticket.TicketNo</span>
+                        @ticket.Subject
+                    </h1>
+                    <div class="td-badges">
+                        <span class="badge pri-@GetPriorityClass(ticket.PriorityId)">@GetPriorityLabel(ticket.PriorityId)</span>
+                        <span class="badge sta-@GetStatusClass(ticket.StatusId)">@GetStatusLabel(ticket.StatusId)</span>
+                    </div>
                 </div>
+            }
+        </div>
+
+        @if (isLoading)
+        {
+            <div class="td-loading">
+                <div class="td-spinner"></div>
+                <p>Loading ticket...</p>
             </div>
         }
-    </div>
+        else if (ticket != null)
+        {
+            <div class="td-layout">
+                <div class="td-chat">
+                    <div class="td-chat-hdr">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                        </svg>
+                        Conversation
+                        <span class="td-msg-cnt">@messages.Count messages</span>
+                        @if (isConnected)
+                        {
+                            <span class="td-live" title="Live"></span>
+                        }
+                    </div>
 
-    @if (isLoading)
-    {
-        <div class="loading-state">
-            <div class="spinner"></div>
-            <p>Loading ticket...</p>
-        </div>
-    }
-    else
-    {
-        <div class="detail-layout">
+                    <div class="td-msgs" id="chat-messages">
+                        @if (!messages.Any())
+                        {
+                            <div class="td-empty-msgs">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" fill="none" viewBox="0 0 24 24" stroke="#cbd5e1" stroke-width="1.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                                </svg>
+                                <p>No messages yet. Send the first message below.</p>
+                            </div>
+                        }
+                        else
+                        {
+                            @foreach (var msg in messages.OrderBy(x => x.CreatedAt))
+                            {
+                                var mediaUrl = msg.ImageUrl?.Trim();
+                                var mediaType = GetMessageContentType(msg);
+                                <div class="td-msg @(msg.SenderType == "User" ? "msg-me" : "msg-them")">
+                                    <div class="td-av @(msg.SenderType == "User" ? "av-me" : "av-them")">
+                                        @if (msg.SenderType == "User")
+                                        {
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" viewBox="0 0 24 24">
+                                                <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" />
+                                            </svg>
+                                        }
+                                        else
+                                        {
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" viewBox="0 0 24 24">
+                                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z" />
+                                            </svg>
+                                        }
+                                    </div>
+                                    <div class="td-msg-body">
+                                        <div class="td-msg-meta">
+                                            <span class="td-sender">@(msg.SenderType == "User" ? "You" : "Support Team")</span>
+                                            <span class="td-time">@msg.CreatedAt.ToLocalTime().ToString("MMM dd, HH:mm")</span>
+                                        </div>
+                                        <div class="td-bubble @(msg.SenderType == "User" ? "bbl-me" : "bbl-them")">
+                                            @if (!string.IsNullOrEmpty(msg.MessageText))
+                                            {
+                                                <div class="td-msg-text">@msg.MessageText</div>
+                                            }
+                                            @if (!string.IsNullOrEmpty(mediaUrl))
+                                            {
+                                                @if (IsVideoMessage(msg))
+                                                {
+                                                    <video class="td-video" controls playsinline preload="metadata"
+                                                           @onerror="() => OnVideoLoadError(msg)"
+                                                           @onloadedmetadata="() => OnVideoLoaded(msg.MessageId)">
+                                                        <source src="@mediaUrl" type="@mediaType" />
+                                                        Your browser does not support this video format.
+                                                    </video>
+                                                    @if (videoPlaybackFailed.Contains(msg.MessageId))
+                                                    {
+                                                        <a class="td-media-link" href="@mediaUrl" target="_blank" rel="noopener noreferrer">Open Video</a>
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    <img src="@mediaUrl" class="td-img" alt="attachment" />
+                                                }
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
 
-            <!-- Left: Chat Panel -->
-            <div class="chat-panel">
-                <div class="chat-panel-header">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                    </svg>
-                    Conversation
-                    <span class="msg-count">@messages.Count messages</span>
-                </div>
-
-                <div class="chat-messages" id="chat-messages">
-                    @if (!messages.Any())
+                    @if (ticket.StatusId != 5)
                     {
-                        <div class="no-messages">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" fill="none" viewBox="0 0 24 24" stroke="#cbd5e1" stroke-width="1.5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                            </svg>
-                            <p>No messages yet. Send the first message below.</p>
+                        <div class="td-reply">
+                            @if (!string.IsNullOrEmpty(replyError))
+                            {
+                                <div class="td-reply-err">@replyError</div>
+                            }
+                            <InputFile accept=".jpg,.jpeg,.png,.gif,.webp,.mp4,.webm,.mov,image/*,video/*"
+                                       OnChange="OnReplyMediaSelected" id="replyMediaInput"
+                                       style="display:none" />
+
+                            @if (replyMedia != null)
+                            {
+                                <div class="td-img-wrap">
+                                    @if (!string.IsNullOrEmpty(replyMediaPreview))
+                                    {
+                                        <img src="@replyMediaPreview" class="td-img-prev" alt="Preview" />
+                                    }
+                                    else
+                                    {
+                                        <div class="td-media-chip">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14v-4z" />
+                                                <rect x="3" y="6" width="12" height="12" rx="2" />
+                                            </svg>
+                                            <span class="td-media-name">@replyMediaFileName</span>
+                                            <span class="td-media-size">@FormatFileSize(replyMediaSizeBytes)</span>
+                                        </div>
+                                    }
+                                    <button type="button" class="td-img-rm" @onclick="RemoveReplyMedia">x</button>
+                                </div>
+                            }
+
+                            <div class="td-compose-box">
+                                <textarea class="td-textarea" rows="3"
+                                          @bind="replyMessage"
+                                          @bind:event="oninput"
+                                          maxlength="@MaxMessageChars"
+                                          placeholder="Type your message here"
+                                          @onkeydown="HandleKeyDown"></textarea>
+
+                                <div class="td-reply-bottom">
+                                    <label for="replyMediaInput" class="td-img-lbl" title="Attach image/video">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        </svg>
+                                        <span class="td-img-lbl-text">Attach Media</span>
+                                    </label>
+
+                                    <button class="td-btn-send" @onclick="SendReply"
+                                            disabled="@(isSending || (string.IsNullOrWhiteSpace(replyMessage) && replyMedia == null))"
+                                            title="Send">
+                                        @if (isSending)
+                                        {
+                                            <span class="td-spin"></span>
+                                        }
+                                        else
+                                        {
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                                            </svg>
+                                        }
+                                        <span class="td-send-text">Send</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <span class="td-hint">Ctrl+Enter to send. Images up to 5 MB, videos up to 25 MB.</span>
                         </div>
                     }
                     else
                     {
-                        @foreach (var m in messages.OrderBy(m => m.CreatedAt))
-                        {
-                            <div class="message-wrapper @(m.SenderType == "User" ? "from-user" : "from-support")">
-                                <div class="message-avatar">
-                                    @if (m.SenderType == "User")
-                                    {
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 24 24">
-                                            <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" />
-                                        </svg>
-                                    }
-                                    else
-                                    {
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 24 24">
-                                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z" />
-                                        </svg>
-                                    }
-                                </div>
-                                <div class="message-content">
-                                    <div class="message-meta">
-                                        <span class="sender-name">@(m.SenderType == "User" ? "You" : "Support Team")</span>
-                                        <span class="message-time">@m.CreatedAt.ToLocalTime().ToString("MMM dd, HH:mm")</span>
-                                    </div>
-                                    <div class="message-bubble">@m.MessageText</div>
-                                </div>
-                            </div>
-                        }
+                        <div class="td-closed">
+                            Ticket is closed. Replies are disabled.
+                        </div>
                     }
                 </div>
 
-                @if (ticket.StatusId != 5)
-                {
-                    <div class="reply-box">
-                        @if (!string.IsNullOrEmpty(replyError))
-                        {
-                            <div class="reply-error">@replyError</div>
-                        }
-                        <textarea class="reply-textarea" rows="3"
-                                  @bind="replyMessage"
-                                  @bind:event="oninput"
-                                  placeholder="Type your message here..."
-                                  @onkeydown="HandleKeyDown"></textarea>
-                        <div class="reply-actions">
-                            <span class="reply-hint">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                Ctrl+Enter to send
-                            </span>
-                            <button class="btn-send" @onclick="SendReply" disabled="@(isSending || string.IsNullOrWhiteSpace(replyMessage))">
-                                @if (isSending) { <span class="btn-spinner"></span> }
+                <div class="td-info">
+                    <div class="td-card">
+                        <h3 class="td-card-title">Ticket Info</h3>
+                        <div class="td-info-row">
+                            <span class="td-lbl">Ticket No</span>
+                            <span class="td-val tno-val">#@ticket.TicketNo</span>
+                        </div>
+                        <div class="td-info-row">
+                            <span class="td-lbl">Subject</span>
+                            <span class="td-val">@ticket.Subject</span>
+                        </div>
+                        <div class="td-info-row">
+                            <span class="td-lbl">Priority</span>
+                            <span class="badge pri-@GetPriorityClass(ticket.PriorityId)">@GetPriorityLabel(ticket.PriorityId)</span>
+                        </div>
+                        <div class="td-info-row">
+                            <span class="td-lbl">Status</span>
+                            <span class="badge sta-@GetStatusClass(ticket.StatusId)">@GetStatusLabel(ticket.StatusId)</span>
+                        </div>
+                        <div class="td-info-row">
+                            <span class="td-lbl">Created</span>
+                            <span class="td-val">@ticket.CreatedAt.ToLocalTime().ToString("dd MMM yyyy, HH:mm")</span>
+                        </div>
+                    </div>
+
+                    @if (ticket.StatusId != 5)
+                    {
+                        <div class="td-card td-danger-card">
+                            <h3 class="td-card-title">Close Ticket</h3>
+                            <p class="td-danger-txt">Once closed, replies will be disabled. Close only after your issue is fully resolved.</p>
+                            <button class="td-btn-close" @onclick="CloseTicket" disabled="@isClosing">
+                                @if (isClosing)
+                                {
+                                    <span class="td-spin"></span>
+                                    <span>Closing...</span>
+                                }
                                 else
                                 {
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                                     </svg>
+                                    <span>Close Ticket</span>
                                 }
-                                Send
                             </button>
-                        </div>
-                    </div>
-                }
-                else
-                {
-                    <div class="ticket-closed-notice">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                        </svg>
-                        This ticket is closed. Replies are disabled.
-                    </div>
-                }
-            </div>
-
-            <!-- Right: Info Panel -->
-            <div class="info-panel">
-                <div class="info-card">
-                    <h3 class="info-card-title">Ticket Details</h3>
-                    <div class="info-field">
-                        <label>Subject</label>
-                        <p>@ticket.Subject</p>
-                    </div>
-                    <div class="info-field">
-                        <label>Status</label>
-                        <div class="select-wrapper">
-                            <select class="form-select" @bind="ticket.StatusId">
-                                <option value="1">Open</option>
-                                <option value="2">In Progress</option>
-                                <option value="3">Waiting User</option>
-                                <option value="4">Resolved</option>
-                                <option value="5">Closed</option>
-                            </select>
-                            <svg class="select-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-                            </svg>
-                        </div>
-                    </div>
-                    <div class="info-field">
-                        <label>Priority</label>
-                        <div class="select-wrapper">
-                            <select class="form-select" @bind="ticket.PriorityId">
-                                <option value="1">Low</option>
-                                <option value="2">Medium</option>
-                                <option value="3">High</option>
-                                <option value="4">Critical</option>
-                            </select>
-                            <svg class="select-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-                            </svg>
-                        </div>
-                    </div>
-                    <button class="btn-update" @onclick="UpdateTicket" disabled="@isUpdating">
-                        @if (isUpdating) { <span class="btn-spinner dark"></span> <span>Updating...</span> }
-                        else
-                        {
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                            </svg>
-                            <span>Update Ticket</span>
-                        }
-                    </button>
-                    @if (updateSuccess)
-                    {
-                        <div class="update-success">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                            </svg>
-                            Updated successfully!
                         </div>
                     }
                 </div>
-
-                @if (ticket.StatusId != 5)
-                {
-                    <div class="info-card danger-card">
-                        <h3 class="info-card-title">Close Ticket</h3>
-                        <p class="danger-text">Once closed, replies will be disabled. Close only when your issue is fully resolved.</p>
-                        <button class="btn-close-ticket" @onclick="CloseTicket" disabled="@isClosing">
-                            @if (isClosing) { <span class="btn-spinner"></span> <span>Closing...</span> }
-                            else
-                            {
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                                <span>Close Ticket</span>
-                            }
-                        </button>
-                    </div>
-                }
             </div>
-        </div>
-    }
+        }
+    </div>
 </div>
-
-<style>
-    .support-page { padding: 24px 32px; background: #f8fafc; min-height: 100vh; font-family: 'Segoe UI', system-ui, sans-serif; }
-    .page-header { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
-    .header-info { flex: 1; }
-    .page-title { font-size: 18px; font-weight: 700; color: #0f172a; margin: 0 0 6px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-    .ticket-no-label { font-family: monospace; font-size: 15px; color: #0284c7; background: #e0f2fe; padding: 2px 8px; border-radius: 6px; }
-    .header-badges { display: flex; gap: 8px; flex-wrap: wrap; }
-    .btn-back { display: inline-flex; align-items: center; gap: 6px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 14px; font-size: 13px; font-weight: 600; color: #64748b; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
-    .btn-back:hover { background: #f1f5f9; color: #334155; }
-    .support-page .ticket-badge { display: inline-block !important; padding: 4px 11px !important; border-radius: 20px !important; font-size: 12px !important; font-weight: 600 !important; white-space: nowrap !important; }
-    .support-page .priority-low      { background: #f0fdf4 !important; color: #16a34a !important; }
-    .support-page .priority-medium   { background: #fef9c3 !important; color: #b45309 !important; }
-    .support-page .priority-high     { background: #fff7ed !important; color: #ea580c !important; }
-    .support-page .priority-critical { background: #fef2f2 !important; color: #dc2626 !important; }
-    .support-page .status-open       { background: #eff6ff !important; color: #2563eb !important; }
-    .support-page .status-inprogress { background: #fff7ed !important; color: #d97706 !important; }
-    .support-page .status-waiting    { background: #f5f3ff !important; color: #7c3aed !important; }
-    .support-page .status-resolved   { background: #f0fdf4 !important; color: #16a34a !important; }
-    .support-page .status-closed     { background: #f1f5f9 !important; color: #64748b !important; }
-    .detail-layout { display: flex; gap: 20px; align-items: flex-start; }
-    .chat-panel { flex: 1; background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); overflow: hidden; display: flex; flex-direction: column; min-height: 520px; }
-    .chat-panel-header { display: flex; align-items: center; gap: 8px; padding: 14px 18px; border-bottom: 1px solid #f1f5f9; font-size: 14px; font-weight: 600; color: #374151; background: #fafbfc; }
-    .msg-count { margin-left: auto; font-size: 12px; font-weight: 400; color: #94a3b8; }
-    .chat-messages { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; max-height: 420px; }
-    .no-messages { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 40px; color: #94a3b8; font-size: 14px; text-align: center; }
-    .message-wrapper { display: flex; gap: 10px; align-items: flex-start; }
-    .message-wrapper.from-user { flex-direction: row-reverse; }
-    .message-avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-    .from-user    .message-avatar { background: #dbeafe; color: #2563eb; }
-    .from-support .message-avatar { background: #f0fdf4; color: #16a34a; }
-    .message-content { max-width: 72%; display: flex; flex-direction: column; gap: 4px; }
-    .from-user .message-content { align-items: flex-end; }
-    .message-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-    .from-user .message-meta { flex-direction: row-reverse; }
-    .sender-name { font-size: 12px; font-weight: 600; color: #374151; }
-    .message-time { font-size: 11px; color: #94a3b8; }
-    .message-bubble { padding: 10px 14px; border-radius: 14px; font-size: 14px; line-height: 1.5; word-break: break-word; }
-    .from-user    .message-bubble { background: #0284c7; color: #fff; border-bottom-right-radius: 4px; }
-    .from-support .message-bubble { background: #f1f5f9; color: #334155; border-bottom-left-radius: 4px; }
-    .reply-box { border-top: 1px solid #f1f5f9; padding: 16px 18px; background: #fafbfc; }
-    .reply-error { font-size: 12px; color: #dc2626; margin-bottom: 8px; }
-    .reply-textarea { width: 100%; padding: 10px 14px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 14px; font-family: inherit; color: #0f172a; resize: none; box-sizing: border-box; transition: border-color 0.15s; }
-    .reply-textarea:focus { outline: none; border-color: #0284c7; box-shadow: 0 0 0 3px rgba(2,132,199,0.1); }
-    .reply-actions { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
-    .reply-hint { display: flex; align-items: center; gap: 5px; font-size: 12px; color: #94a3b8; }
-    .btn-send { display: inline-flex; align-items: center; gap: 7px; background: #0284c7; border: none; border-radius: 9px; padding: 9px 18px; font-size: 14px; font-weight: 600; color: #fff; cursor: pointer; transition: background 0.18s; }
-    .btn-send:hover:not(:disabled) { background: #0369a1; }
-    .btn-send:disabled { opacity: 0.5; cursor: not-allowed; }
-    .ticket-closed-notice { display: flex; align-items: center; gap: 8px; padding: 14px 18px; background: #f8fafc; border-top: 1px solid #f1f5f9; color: #64748b; font-size: 13px; }
-    .info-panel { width: 280px; flex-shrink: 0; display: flex; flex-direction: column; gap: 16px; }
-    .info-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-    .info-card-title { font-size: 13px; font-weight: 700; color: #374151; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 16px; }
-    .info-field { margin-bottom: 14px; }
-    .info-field label { display: block; font-size: 12px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
-    .info-field p { font-size: 14px; color: #334155; margin: 0; font-weight: 500; }
-    .select-wrapper { position: relative; }
-    .form-select { width: 100%; padding: 9px 34px 9px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 13px; color: #334155; background: #fff; appearance: none; cursor: pointer; font-family: inherit; transition: border-color 0.15s; }
-    .form-select:focus { outline: none; border-color: #0284c7; }
-    .select-icon { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: #94a3b8; pointer-events: none; }
-    .btn-update { display: flex; align-items: center; justify-content: center; gap: 7px; width: 100%; padding: 10px; background: #0f172a; border: none; border-radius: 9px; font-size: 13px; font-weight: 600; color: #fff; cursor: pointer; margin-top: 4px; transition: background 0.18s; }
-    .btn-update:hover:not(:disabled) { background: #1e293b; }
-    .btn-update:disabled { opacity: 0.6; cursor: not-allowed; }
-    .update-success { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #16a34a; margin-top: 8px; justify-content: center; }
-    .danger-card { border-color: #fecaca; }
-    .danger-text { font-size: 12px; color: #64748b; line-height: 1.5; margin: 0 0 14px; }
-    .btn-close-ticket { display: flex; align-items: center; justify-content: center; gap: 7px; width: 100%; padding: 9px; background: #fff; border: 1.5px solid #dc2626; border-radius: 9px; font-size: 13px; font-weight: 600; color: #dc2626; cursor: pointer; transition: all 0.15s; }
-    .btn-close-ticket:hover:not(:disabled) { background: #dc2626; color: #fff; }
-    .btn-close-ticket:disabled { opacity: 0.6; cursor: not-allowed; }
-    .loading-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px; color: #64748b; gap: 12px; }
-    .spinner { width: 30px; height: 30px; border: 3px solid #e2e8f0; border-top-color: #0284c7; border-radius: 50%; animation: spin 0.8s linear infinite; }
-    .btn-spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.4); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; display: inline-block; }
-    .btn-spinner.dark { border-color: rgba(0,0,0,0.15); border-top-color: #fff; }
-    @@keyframes spin { to { transform: rotate(360deg); } }
-</style>
 
 @code {
     [Parameter] public int TicketId { get; set; }
@@ -305,16 +267,34 @@
 
     bool isLoading = true;
     bool isSending = false;
-    bool isUpdating = false;
     bool isClosing = false;
-    bool updateSuccess = false;
     bool isConnected = false;
 
-    private HubConnection? _hub;
+    const int MaxMessageChars = 2000;
+    const long MaxImageBytes = 5L * 1024 * 1024;
+    const long MaxVideoBytes = 25L * 1024 * 1024;
 
-    // ✅ FIX 1: Pre-fetched on circuit thread. ProtectedLocalStorage requires
-    // JS interop which only works on the Blazor circuit — NOT on SignalR's
-    // background thread that calls AccessTokenProvider.
+    static readonly HashSet<string> AllowedImageExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".jpg", ".jpeg", ".png", ".gif", ".webp"
+    };
+
+    static readonly HashSet<string> AllowedVideoExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".mp4", ".webm", ".mov"
+    };
+
+    readonly Dictionary<int, string> messageContentTypes = new();
+    readonly Dictionary<int, long> messageDocumentIds = new();
+    readonly HashSet<int> videoPlaybackFailed = new();
+
+    IBrowserFile? replyMedia;
+    string? replyMediaPreview;
+    string? replyMediaFileName;
+    string? replyMediaContentType;
+    long replyMediaSizeBytes;
+
+    private HubConnection? _hub;
     private string? _hubToken;
 
     protected override async Task OnParametersSetAsync()
@@ -322,15 +302,30 @@
         try
         {
             isLoading = true;
-
-            // ✅ FIX 1: Fetch token while on the circuit thread.
             _hubToken = await TicketService.GetAuthTokenAsync();
-
             ticket = await TicketService.GetByIdAsync(TicketId) ?? new Ticket();
             messages = await TicketService.GetRepliesAsync(TicketId) ?? new List<TicketReply>();
+            messageContentTypes.Clear();
+            messageDocumentIds.Clear();
+            videoPlaybackFailed.Clear();
 
+            var attachments = await FileUploadService.GetDocumentsAsync("TicketMessage", TicketId.ToString());
+            foreach (var msg in messages)
+            {
+                var doc = attachments.FirstOrDefault(a =>
+                    a.SubCategory == msg.MessageId.ToString() ||
+                    (a.SubCategory == "image" && a.ReferenceId == TicketId.ToString())
+                );
+                if (doc != null)
+                {
+                    msg.ImageUrl = (await FileUploadService.GetSasUrlAsync(doc.DocumentId, 60))?.Trim();
+                    SetMessageContentType(msg.MessageId, doc.ContentType, doc.OriginalFileName);
+                    messageDocumentIds[msg.MessageId] = doc.DocumentId;
+                }
+            }
+
+            await InvokeAsync(StateHasChanged);
             await StartHub();
-
             isLoading = false;
             await InvokeAsync(ScrollToBottom);
         }
@@ -344,8 +339,6 @@
 
     private async Task StartHub()
     {
-        Console.WriteLine($"[SignalR] Init TicketId={TicketId}");
-
         if (_hub != null)
         {
             try
@@ -364,74 +357,58 @@
         try
         {
             var apiBase = TicketService.GetApiBaseUrl().TrimEnd('/');
-
-            // ✅ FIX 1: Capture token — the lambda runs off-circuit, must not
-            // call any JS interop.
             var capturedToken = _hubToken;
 
             _hub = new HubConnectionBuilder()
                 .WithUrl($"{apiBase}/tickethub", options =>
                 {
-                    // ✅ FIX 1: Plain string, zero JS interop, safe off-circuit.
                     options.AccessTokenProvider = () => Task.FromResult<string?>(capturedToken);
-
-                    // ✅ FIX 3: Add transport fallbacks — WS can fail behind proxies.
-                    options.Transports = HttpTransportType.WebSockets
-                                       | HttpTransportType.ServerSentEvents
-                                       | HttpTransportType.LongPolling;
+                    options.Transports = HttpTransportType.WebSockets | HttpTransportType.ServerSentEvents | HttpTransportType.LongPolling;
                 })
                 .WithAutomaticReconnect()
                 .Build();
 
-            _hub.Closed += async (ex) =>
+            _hub.Closed += async _ =>
             {
-                Console.WriteLine($"[SignalR] Closed: {ex?.Message}");
                 isConnected = false;
                 await InvokeAsync(StateHasChanged);
             };
 
-            _hub.Reconnecting += (ex) =>
+            _hub.Reconnecting += _ =>
             {
-                Console.WriteLine("[SignalR] Reconnecting...");
                 isConnected = false;
                 InvokeAsync(StateHasChanged);
                 return Task.CompletedTask;
             };
 
-            _hub.Reconnected += async (_) =>
+            _hub.Reconnected += async _ =>
             {
-                Console.WriteLine("[SignalR] Reconnected — rejoining group");
-                try { await _hub.InvokeAsync("JoinTicket", TicketId); }
-                catch (Exception ex) { Console.WriteLine($"[SignalR] Rejoin failed: {ex.Message}"); }
+                try { await _hub.InvokeAsync("JoinTicket", TicketId); } catch { }
                 isConnected = true;
                 await InvokeAsync(StateHasChanged);
             };
 
-            _hub.On<string, string, DateTime, int>(
-                "ReceiveMessage",
+            _hub.On<string, string, DateTime, int>("ReceiveMessage",
                 async (senderType, messageText, createdAt, messageId) =>
                 {
                     await InvokeAsync(async () =>
                     {
-                        // Dedup: skip if sender already added this locally in SendReply()
-                        if (messages.Any(m => m.MessageId == messageId))
-                            return;
+                        if (IsProbableDuplicate(senderType, messageText, createdAt, messageId)) return;
 
-                        messages.Add(new TicketReply
+                        UpsertMessage(new TicketReply
                         {
-                            MessageId   = messageId,
-                            TicketId    = TicketId,
+                            MessageId = messageId,
+                            TicketId = TicketId,
                             MessageText = messageText,
-                            SenderType  = senderType,
-                            CreatedAt   = createdAt
+                            SenderType = senderType,
+                            CreatedAt = createdAt
                         });
-
                         await InvokeAsync(StateHasChanged);
                         await ScrollToBottom();
                     });
                 });
 
-            _hub.On<int>("TicketClosed", async (ticketId) =>
+            _hub.On<int>("TicketClosed", async ticketId =>
             {
                 if (ticketId == TicketId && ticket != null)
                 {
@@ -442,9 +419,6 @@
 
             await _hub.StartAsync();
             await _hub.InvokeAsync("JoinTicket", TicketId);
-
-            Console.WriteLine($"[SignalR] Connected & joined ticket-{TicketId}");
-
             isConnected = true;
             await InvokeAsync(StateHasChanged);
         }
@@ -458,8 +432,7 @@
 
     private async Task ScrollToBottom()
     {
-        try { await JS.InvokeVoidAsync("scrollToBottom", "chat-messages"); }
-        catch { }
+        try { await JS.InvokeVoidAsync("scrollToBottom", "chat-messages"); } catch { }
     }
 
     async Task HandleKeyDown(KeyboardEventArgs e)
@@ -467,31 +440,122 @@
         if (e.CtrlKey && e.Key == "Enter") await SendReply();
     }
 
+    async Task OnReplyMediaSelected(InputFileChangeEventArgs e)
+    {
+        replyError = string.Empty;
+        ClearReplyMedia();
+
+        var selected = e.File;
+        if (selected == null)
+        {
+            return;
+        }
+
+        var ext = Path.GetExtension(selected.Name);
+        var isImage = IsAllowedImage(selected.ContentType, ext);
+        var isVideo = IsAllowedVideo(selected.ContentType, ext);
+
+        if (!isImage && !isVideo)
+        {
+            replyError = "Only JPG, JPEG, PNG, GIF, WEBP, MP4, WEBM and MOV files are allowed.";
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        var maxBytes = isVideo ? MaxVideoBytes : MaxImageBytes;
+        if (selected.Size > maxBytes)
+        {
+            replyError = isVideo
+                ? "Video size must be 25 MB or less."
+                : "Image size must be 5 MB or less.";
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        replyMedia = selected;
+        replyMediaFileName = selected.Name;
+        replyMediaSizeBytes = selected.Size;
+        replyMediaContentType = ResolveContentType(selected.ContentType, selected.Name);
+
+        if (isImage)
+        {
+            using var ms = new MemoryStream();
+            await selected.OpenReadStream(MaxImageBytes).CopyToAsync(ms);
+            replyMediaPreview = $"data:{replyMediaContentType};base64,{Convert.ToBase64String(ms.ToArray())}";
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    void RemoveReplyMedia()
+    {
+        ClearReplyMedia();
+    }
+
     async Task SendReply()
     {
-        if (string.IsNullOrWhiteSpace(replyMessage)) return;
+        if (isSending) return;
+        if (string.IsNullOrWhiteSpace(replyMessage) && replyMedia == null) return;
+
+        var msgText = string.IsNullOrWhiteSpace(replyMessage) ? null : replyMessage.Trim();
+        if ((msgText?.Length ?? 0) > MaxMessageChars)
+        {
+            replyError = $"Message can have at most {MaxMessageChars} characters.";
+            return;
+        }
 
         isSending = true;
         replyError = string.Empty;
-        var msgText = replyMessage;
 
         try
         {
             var reply = new TicketReply
             {
-                TicketId    = TicketId,
+                TicketId = TicketId,
                 MessageText = msgText,
-                SenderType  = "User",
-                CreatedAt   = DateTime.UtcNow
+                SenderType = "User",
+                CreatedAt = DateTime.UtcNow
             };
 
             var result = await TicketService.ReplyAsync(reply);
-
             if (result != null)
             {
-                // Set real MessageId so the dedup guard in ReceiveMessage works
                 reply.MessageId = result.MessageId;
-                messages.Add(reply);
+                reply.CreatedAt = result.CreatedAt;
+
+                if (replyMedia != null)
+                {
+                    using var ms = new MemoryStream();
+                    await replyMedia.OpenReadStream(GetMaxUploadBytes(replyMedia)).CopyToAsync(ms);
+                    var upload = await FileUploadService.UploadFileAsync(
+                        ms.ToArray(),
+                        replyMedia.Name,
+                        category: "TicketMessage",
+                        subCategory: result.MessageId.ToString(),
+                        referenceId: TicketId.ToString());
+
+                    if (upload?.DocumentId > 0)
+                    {
+                        reply.ImageUrl = (await FileUploadService.GetSasUrlAsync(upload.DocumentId, 60))?.Trim();
+                    }
+                    else if (!string.IsNullOrWhiteSpace(upload?.Url))
+                    {
+                        reply.ImageUrl = upload.Url.Trim();
+                    }
+                    else
+                    {
+                        reply.ImageUrl = replyMediaPreview;
+                    }
+
+                    SetMessageContentType(result.MessageId, replyMediaContentType, replyMedia.Name);
+                    if (upload?.DocumentId > 0)
+                    {
+                        messageDocumentIds[result.MessageId] = upload.DocumentId;
+                    }
+                    ClearReplyMedia();
+                }
+
+                UpsertMessage(reply);
                 replyMessage = string.Empty;
                 await InvokeAsync(StateHasChanged);
                 await ScrollToBottom();
@@ -501,19 +565,14 @@
                 replyError = "Failed to send message.";
             }
         }
-        catch (Exception ex) { replyError = ex.Message; }
-        finally { isSending = false; }
-    }
-
-    async Task UpdateTicket()
-    {
-        isUpdating = true;
-        updateSuccess = false;
-        try { var success = await TicketService.UpdateAsync(ticket); if (success) updateSuccess = true; }
-        finally { isUpdating = false; }
-        await Task.Delay(2000);
-        updateSuccess = false;
-        await InvokeAsync(StateHasChanged);
+        catch (Exception ex)
+        {
+            replyError = ex.Message;
+        }
+        finally
+        {
+            isSending = false;
+        }
     }
 
     async Task CloseTicket()
@@ -521,13 +580,205 @@
         isClosing = true;
         try
         {
-            var success = await TicketService.CloseAsync(TicketId);
-            if (success && ticket != null) { ticket.StatusId = 5; await InvokeAsync(StateHasChanged); }
+            var ok = await TicketService.CloseAsync(TicketId);
+            if (ok && ticket != null)
+            {
+                ticket.StatusId = 5;
+                await InvokeAsync(StateHasChanged);
+            }
         }
-        finally { isClosing = false; }
+        finally
+        {
+            isClosing = false;
+        }
     }
 
     void GoBack() => Nav.NavigateTo("/tickets");
+
+    void UpsertMessage(TicketReply incoming)
+    {
+        var existing = messages.FirstOrDefault(m => m.MessageId == incoming.MessageId);
+        if (existing == null)
+        {
+            messages.Add(incoming);
+            return;
+        }
+
+        existing.SenderType = incoming.SenderType;
+        existing.CreatedAt = incoming.CreatedAt == default ? existing.CreatedAt : incoming.CreatedAt;
+
+        if (string.IsNullOrWhiteSpace(existing.MessageText) && !string.IsNullOrWhiteSpace(incoming.MessageText))
+        {
+            existing.MessageText = incoming.MessageText;
+        }
+
+        if (string.IsNullOrWhiteSpace(existing.ImageUrl) && !string.IsNullOrWhiteSpace(incoming.ImageUrl))
+        {
+            existing.ImageUrl = incoming.ImageUrl;
+        }
+    }
+
+    bool IsProbableDuplicate(string senderType, string? messageText, DateTime createdAt, int messageId)
+    {
+        if (messageId > 0 && messages.Any(m => m.MessageId == messageId))
+        {
+            return true;
+        }
+
+        var incomingText = (messageText ?? string.Empty).Trim();
+        if (incomingText.Length == 0)
+        {
+            return false;
+        }
+
+        return messages.Any(m =>
+            string.Equals(m.SenderType, senderType, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals((m.MessageText ?? string.Empty).Trim(), incomingText, StringComparison.Ordinal) &&
+            Math.Abs((m.CreatedAt - createdAt).TotalSeconds) <= 2);
+    }
+
+    bool IsVideoMessage(TicketReply msg)
+    {
+        if (messageContentTypes.TryGetValue(msg.MessageId, out var contentType) && IsVideoContentType(contentType))
+        {
+            return true;
+        }
+
+        return IsVideoFileName(msg.ImageUrl);
+    }
+
+    string GetMessageContentType(TicketReply msg)
+    {
+        messageContentTypes.TryGetValue(msg.MessageId, out var contentType);
+        return ResolveContentType(contentType, msg.ImageUrl);
+    }
+
+    void SetMessageContentType(int messageId, string? contentType, string? fallbackFileName)
+    {
+        if (messageId <= 0)
+        {
+            return;
+        }
+
+        var resolved = ResolveContentType(contentType, fallbackFileName);
+        if (!string.IsNullOrWhiteSpace(resolved))
+        {
+            messageContentTypes[messageId] = resolved;
+        }
+    }
+
+    static bool IsAllowedImage(string? contentType, string extension) =>
+        AllowedImageExtensions.Contains(extension) || IsImageContentType(contentType);
+
+    static bool IsAllowedVideo(string? contentType, string extension) =>
+        AllowedVideoExtensions.Contains(extension) || IsVideoContentType(contentType);
+
+    static bool IsImageContentType(string? contentType) =>
+        !string.IsNullOrWhiteSpace(contentType) &&
+        contentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
+
+    static bool IsVideoContentType(string? contentType) =>
+        !string.IsNullOrWhiteSpace(contentType) &&
+        contentType.StartsWith("video/", StringComparison.OrdinalIgnoreCase);
+
+    static bool IsVideoFileName(string? pathOrName)
+    {
+        if (string.IsNullOrWhiteSpace(pathOrName))
+        {
+            return false;
+        }
+
+        var clean = pathOrName.Split('?', '#')[0];
+        var ext = Path.GetExtension(clean);
+        return AllowedVideoExtensions.Contains(ext);
+    }
+
+    static string ResolveContentType(string? contentType, string? fileName)
+    {
+        if (!string.IsNullOrWhiteSpace(contentType) && !IsGenericBinaryContentType(contentType))
+        {
+            return contentType;
+        }
+
+        var ext = Path.GetExtension(fileName ?? string.Empty).ToLowerInvariant();
+        return ext switch
+        {
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".png" => "image/png",
+            ".gif" => "image/gif",
+            ".webp" => "image/webp",
+            ".mp4" => "video/mp4",
+            ".webm" => "video/webm",
+            ".mov" => "video/quicktime",
+            _ => "application/octet-stream"
+        };
+    }
+
+    static bool IsGenericBinaryContentType(string contentType) =>
+        contentType.Equals("application/octet-stream", StringComparison.OrdinalIgnoreCase) ||
+        contentType.Equals("binary/octet-stream", StringComparison.OrdinalIgnoreCase);
+
+    static long GetMaxUploadBytes(IBrowserFile file)
+    {
+        var ext = Path.GetExtension(file.Name);
+        return IsAllowedVideo(file.ContentType, ext) ? MaxVideoBytes : MaxImageBytes;
+    }
+
+    static string FormatFileSize(long bytes)
+    {
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1024 * 1024) return $"{bytes / 1024d:0.#} KB";
+        return $"{bytes / (1024d * 1024):0.#} MB";
+    }
+
+    void ClearReplyMedia()
+    {
+        replyMedia = null;
+        replyMediaPreview = null;
+        replyMediaFileName = null;
+        replyMediaContentType = null;
+        replyMediaSizeBytes = 0;
+    }
+
+    async Task OnVideoLoadError(TicketReply msg)
+    {
+        if (videoPlaybackFailed.Contains(msg.MessageId))
+        {
+            return;
+        }
+
+        if (msg.MessageId <= 0 || !messageDocumentIds.TryGetValue(msg.MessageId, out var documentId))
+        {
+            videoPlaybackFailed.Add(msg.MessageId);
+            return;
+        }
+
+        try
+        {
+            var freshUrl = (await FileUploadService.GetSasUrlAsync(documentId, 60))?.Trim();
+            if (!string.IsNullOrWhiteSpace(freshUrl) && !string.Equals(freshUrl, msg.ImageUrl, StringComparison.Ordinal))
+            {
+                msg.ImageUrl = freshUrl;
+                videoPlaybackFailed.Remove(msg.MessageId);
+                await InvokeAsync(StateHasChanged);
+                return;
+            }
+        }
+        catch
+        {
+        }
+
+        videoPlaybackFailed.Add(msg.MessageId);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    void OnVideoLoaded(int messageId)
+    {
+        if (videoPlaybackFailed.Remove(messageId))
+        {
+            _ = InvokeAsync(StateHasChanged);
+        }
+    }
 
     public async ValueTask DisposeAsync()
     {
@@ -548,6 +799,6 @@
 
     string GetPriorityLabel(int id) => id switch { 1 => "Low", 2 => "Medium", 3 => "High", 4 => "Critical", _ => "Unknown" };
     string GetPriorityClass(int id) => id switch { 1 => "low", 2 => "medium", 3 => "high", 4 => "critical", _ => "low" };
-    string GetStatusLabel(int id)   => id switch { 1 => "Open", 2 => "In Progress", 3 => "Waiting User", 4 => "Resolved", 5 => "Closed", _ => "Unknown" };
-    string GetStatusClass(int id)   => id switch { 1 => "open", 2 => "inprogress", 3 => "waiting", 4 => "resolved", 5 => "closed", _ => "open" };
+    string GetStatusLabel(int id) => id switch { 1 => "Open", 2 => "In Progress", 3 => "Waiting User", 4 => "Resolved", 5 => "Closed", _ => "Unknown" };
+    string GetStatusClass(int id) => id switch { 1 => "open", 2 => "inprogress", 3 => "waiting", 4 => "resolved", 5 => "closed", _ => "open" };
 }

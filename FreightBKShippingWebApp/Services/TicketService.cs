@@ -73,17 +73,17 @@ namespace FreightBKShippingWebApp.Services
         }
 
         // ─── Create Ticket ─────────────────────────────────────────────────
-        public async Task<bool> CreateAsync(Ticket ticket)
+        public async Task<Ticket?> CreateAsync(Ticket ticket)
         {
             try
             {
-                // ✅ FIX: explicit type arguments — T1=bool, T2=Ticket
-                return await _api.PostAsync<bool, Ticket>("api/Tickets", ticket);
+                // ✅ bool se Ticket return type change karo
+                return await _api.PostAsync<Ticket, Ticket>("api/Tickets", ticket);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"[TicketService] CreateAsync error: {ex.Message}");
-                return false;
+                return null;
             }
         }
 

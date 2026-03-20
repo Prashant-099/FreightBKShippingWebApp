@@ -93,12 +93,15 @@ namespace FreightBKShippingWebApp.Model
     {
         public int MessageId { get; set; }   // ✅ Required for SignalR duplicate prevention
         public int TicketId { get; set; }
-        public string MessageText { get; set; } = string.Empty;
+
+        public string? MessageText { get; set; }
         public string SenderId { get; set; } = string.Empty;
         public string SenderType { get; set; } = "User"; // "User" or "Support"
         public bool IsReadByUser { get; set; }
         public bool IsReadBySupport { get; set; }
         public DateTime CreatedAt { get; set; }
+
+        public string? ImageUrl { get; set; }
     }
     public class TicketMessageDto
     {
