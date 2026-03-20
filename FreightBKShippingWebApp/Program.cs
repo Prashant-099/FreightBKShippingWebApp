@@ -8,12 +8,16 @@ using FreightBKShippingWebApp.Services;
 using FreightBKShippingWebApp.Services.PdfReaderAndHelperService;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.HttpOverrides;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
+var secureCookiePolicy = builder.Environment.IsDevelopment()
+    ? CookieSecurePolicy.SameAsRequest
+    : CookieSecurePolicy.Always;
 
 DXDrawingEngine.ForceSkia(); // DevExpress drawing engine
 
@@ -25,8 +29,10 @@ builder.Services.AddRazorComponents()
 
 builder.Services.AddAntiforgery(options =>
 {
-    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-    options.Cookie.Name = "__Host-Antiforgery-FreightBK"; // Extra credit: Use __Host- prefix for better security
+    options.Cookie.SecurePolicy = secureCookiePolicy;
+    options.Cookie.Name = builder.Environment.IsDevelopment()
+        ? "Antiforgery-FreightBK"
+        : "__Host-Antiforgery-FreightBK";
 });
 // Protect SignalR payload size (VERY IMPORTANT FOR SaaS)
 builder.Services.AddSignalR(options =>
@@ -80,14 +86,15 @@ builder.Services.AddAuthentication(options =>
     options.LoginPath = "/login";
     options.AccessDeniedPath = "/403";
     options.Cookie.HttpOnly = true;
-    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    options.Cookie.SecurePolicy = secureCookiePolicy;
     options.Cookie.SameSite = SameSiteMode.Strict;
-}); builder.Services.AddCascadingAuthenticationState();
+});
+builder.Services.AddCascadingAuthenticationState();
 
 //builder.Services.ConfigureApplicationCookie(options =>
 //{
 //    options.Cookie.HttpOnly = true;
-//    options.Cookie.SecurePolicy = CookieSecurePolicy.Always; // HTTPS only
+//    options.Cookie.SecurePolicy = secureCookiePolicy; // HTTPS only
 //    options.Cookie.SameSite = SameSiteMode.Strict;
 //});
 
@@ -270,7 +277,7 @@ app.UseForwardedHeaders();
 // 2?? Exception + HSTS (Production only)
 if (!app.Environment.IsDevelopment())
 {
-    // 500 — unhandled server errors
+    // 500 â€” unhandled server errors
     app.UseExceptionHandler("/500");
     app.UseHsts();
 }
@@ -297,7 +304,10 @@ app.UseStatusCodePages(async context =>
     }
 });
 // 3?? HTTPS
-app.UseHttpsRedirection();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
 // 4?? Compression
 app.UseResponseCompression();
@@ -322,4 +332,3 @@ app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 app.MapControllers();
 app.Run();
-

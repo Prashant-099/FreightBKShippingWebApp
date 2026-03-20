@@ -12,1011 +12,302 @@
 @inject FileUploadService FileUploadService
 
 <div class="asd-page">
+    <div class="asd-shell">
+        <div class="asd-header">
+            <button class="asd-back" @onclick="GoBack">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+                </svg>
+                <span class="asd-back-text">All Tickets</span>
+            </button>
+            @if (ticket != null)
+            {
+                <div class="asd-header-info">
+                    <h1 class="asd-title">
+                        <span class="asd-tno">#@ticket.TicketNo</span>
+                        @ticket.Subject
+                    </h1>
+                    <div class="asd-meta">
+                        <span class="asd-co-pill">@ticket.CompanyName</span>
+                        <span class="badge pri-@GetPriorityClass(ticket.PriorityId)">@GetPriorityLabel(ticket.PriorityId)</span>
+                        <span class="badge sta-@GetStatusClass(ticket.StatusId)">@GetStatusLabel(ticket.StatusId)</span>
+                        @if (isConnected)
+                        {
+                            <span class="asd-live" title="Live"></span>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
 
-    <!-- Header -->
-    <div class="asd-header">
-        <button class="asd-back" @onclick="GoBack">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
-            </svg>
-            All Tickets
-        </button>
-        @if (ticket != null)
+        @if (isLoading)
         {
-            <div class="asd-header-info">
-                <h1 class="asd-title">
-                    <span class="asd-tno">#@ticket.TicketNo</span>
-                    @ticket.Subject
-                </h1>
-                <div class="asd-meta">
-                    <span class="asd-co-pill">@ticket.CompanyName</span>
-                    <span class="badge pri-@GetPriorityClass(ticket.PriorityId)">@GetPriorityLabel(ticket.PriorityId)</span>
-                    <span class="badge sta-@GetStatusClass(ticket.StatusId)">@GetStatusLabel(ticket.StatusId)</span>
-                    @if (isConnected)
+            <div class="asd-state">
+                <div class="asd-spinner"></div>
+                <p>Loading ticket...</p>
+            </div>
+        }
+        else if (ticket == null)
+        {
+            <div class="asd-state"><p>Ticket not found.</p></div>
+        }
+        else
+        {
+            <div class="asd-layout">
+                <div class="asd-chat">
+                    <div class="asd-chat-hdr">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                        </svg>
+                        Conversation
+                        <span class="asd-msg-cnt">@(ticket.Messages.Count) messages</span>
+                    </div>
+
+                    <div class="asd-msgs" id="sad-messages">
+                        @if (!ticket.Messages.Any())
+                        {
+                            <div class="asd-empty-msgs"><p>No messages yet.</p></div>
+                        }
+                        else
+                        {
+                            @foreach (var m in ticket.Messages.OrderBy(x => x.CreatedAt))
+                            {
+                                var mediaType = GetMessageContentType(m);
+                                <div class="asd-msg @(m.SenderType == "Support" ? "msg-support" : "msg-user")">
+                                    <div class="asd-av @(m.SenderType == "Support" ? "av-support" : "av-user")">
+                                        @if (m.SenderType == "Support")
+                                        {
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 24 24">
+                                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z" />
+                                            </svg>
+                                        }
+                                        else
+                                        {
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 24 24">
+                                                <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" />
+                                            </svg>
+                                        }
+                                    </div>
+                                    <div class="asd-msg-body">
+                                        <div class="asd-msg-meta">
+                                            <span class="asd-sender">@(m.SenderType == "Support" ? "Support Team" : m.SenderName)</span>
+                                            <span class="asd-time">@m.CreatedAt.ToLocalTime().ToString("MMM dd, HH:mm")</span>
+                                        </div>
+                                        <div class="asd-bubble @(m.SenderType == "Support" ? "bbl-support" : "bbl-user")">
+                                            @if (!string.IsNullOrEmpty(m.MessageText))
+                                            {
+                                                <span>@m.MessageText</span>
+                                            }
+                                            @if (!string.IsNullOrEmpty(m.ImageUrl))
+                                            {
+                                                @if (IsVideoMessage(m))
+                                                {
+                                                    <video class="asd-video" controls playsinline preload="metadata"
+                                                           @onerror="() => OnVideoLoadError(m)"
+                                                           @onloadedmetadata="() => OnVideoLoaded(m.MessageId)">
+                                                        <source src="@m.ImageUrl" type="@mediaType" />
+                                                        Your browser does not support this video format.
+                                                    </video>
+                                                    @if (videoPlaybackFailed.Contains(m.MessageId))
+                                                    {
+                                                        <a class="asd-media-link" href="@m.ImageUrl" target="_blank" rel="noopener noreferrer">Open Video</a>
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    <img src="@m.ImageUrl" class="asd-img" alt="attachment" />
+                                                }
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
+
+                    @if (ticket.StatusId != 5)
                     {
-                        <span class="asd-live" title="Live"></span>
+                        <div class="asd-reply">
+                            @if (!string.IsNullOrEmpty(replyError))
+                            {
+                                <div class="asd-reply-err">@replyError</div>
+                            }
+                            <InputFile accept=".jpg,.jpeg,.png,.gif,.webp,.mp4,.webm,.mov,image/*,video/*" OnChange="OnReplyMediaSelected" id="adminMediaInput" style="display:none" />
+
+                            @if (replyMedia != null)
+                            {
+                                <div class="asd-img-wrap">
+                                    @if (!string.IsNullOrEmpty(replyMediaPreview))
+                                    {
+                                        <img src="@replyMediaPreview" class="asd-img-preview" alt="Preview" />
+                                    }
+                                    else
+                                    {
+                                        <div class="asd-media-chip">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14v-4z" />
+                                                <rect x="3" y="6" width="12" height="12" rx="2" />
+                                            </svg>
+                                            <span class="asd-media-name">@replyMediaFileName</span>
+                                            <span class="asd-media-size">@FormatFileSize(replyMediaSizeBytes)</span>
+                                        </div>
+                                    }
+                                    <button type="button" class="asd-img-remove" @onclick="RemoveReplyMedia">x</button>
+                                </div>
+                            }
+
+                            <div class="asd-compose-box">
+                                <textarea class="asd-textarea" rows="3"
+                                          @bind="replyMessage"
+                                          @bind:event="oninput"
+                                          maxlength="@MaxMessageChars"
+                                          placeholder="Type reply as Support Team"
+                                          @onkeydown="HandleKeyDown"></textarea>
+
+                                <div class="asd-reply-actions">
+                                    <label for="adminMediaInput" class="asd-img-label" title="Attach image/video">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        </svg>
+                                        <span class="asd-img-label-text">Attach Media</span>
+                                    </label>
+
+                                    <button class="asd-btn-send" @onclick="SendReply"
+                                            disabled="@(isSending || (string.IsNullOrWhiteSpace(replyMessage) && replyMedia == null))"
+                                            title="Send">
+                                        @if (isSending)
+                                        {
+                                            <span class="asd-spin"></span>
+                                        }
+                                        else
+                                        {
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                                            </svg>
+                                        }
+                                        <span class="asd-send-text">Send</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <span class="asd-hint">Ctrl+Enter to send. Images up to 5 MB, videos up to 25 MB.</span>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="asd-closed">
+                            Ticket is closed. No further replies.
+                        </div>
+                    }
+                </div>
+
+                <div class="asd-info">
+                    <div class="asd-card">
+                        <h3 class="asd-card-title">Ticket Info</h3>
+                        <div class="asd-row"><span class="asd-lbl">Company</span><span class="asd-val co-val">@ticket.CompanyName</span></div>
+                        <div class="asd-row"><span class="asd-lbl">Created by</span><span class="asd-val">@ticket.CreatedByName</span></div>
+                        <div class="asd-row"><span class="asd-lbl">Created at</span><span class="asd-val">@ticket.CreatedAt.ToLocalTime().ToString("dd MMM, HH:mm")</span></div>
+                        @if (ticket.UpdatedAt.HasValue)
+                        {
+                            <div class="asd-row"><span class="asd-lbl">Updated</span><span class="asd-val">@ticket.UpdatedAt.Value.ToLocalTime().ToString("dd MMM, HH:mm")</span></div>
+                        }
+                    </div>
+
+                    <div class="asd-card">
+                        <h3 class="asd-card-title">Update Ticket</h3>
+                        <div class="asd-field">
+                            <label>Status</label>
+                            <select class="asd-select" @bind="editStatus">
+                                <option value="1">Open</option>
+                                <option value="2">In Progress</option>
+                                <option value="3">Waiting User</option>
+                                <option value="4">Resolved</option>
+                                <option value="5">Closed</option>
+                            </select>
+                        </div>
+                        <div class="asd-field">
+                            <label>Priority</label>
+                            <select class="asd-select" @bind="editPriority">
+                                <option value="1">Low</option>
+                                <option value="2">Medium</option>
+                                <option value="3">High</option>
+                                <option value="4">Critical</option>
+                            </select>
+                        </div>
+                        <button class="asd-btn-update" @onclick="UpdateStatus" disabled="@isUpdating">
+                            @if (isUpdating)
+                            {
+                                <span class="asd-spin dark"></span>
+                                <span>Updating...</span>
+                            }
+                            else
+                            {
+                                <span>Save Changes</span>
+                            }
+                        </button>
+                        @if (updateSuccess)
+                        {
+                            <div class="asd-ok">Updated</div>
+                        }
+                    </div>
+
+                    <div class="asd-card">
+                        <h3 class="asd-card-title">Assign Developer</h3>
+                        @if (!string.IsNullOrEmpty(ticket.AssignedToName))
+                        {
+                            <div class="asd-assigned-now">Currently: <strong>@ticket.AssignedToName</strong></div>
+                        }
+                        <div class="asd-field">
+                            <label>Assign to</label>
+                            <select class="asd-select" @bind="selectedAssignee">
+                                <option value="">Select Developer</option>
+                                @foreach (var u in adminUsers)
+                                {
+                                    <option value="@u.UserId">@u.UserName</option>
+                                }
+                            </select>
+                        </div>
+                        <button class="asd-btn-assign" @onclick="AssignTicket" disabled="@(isAssigning || string.IsNullOrEmpty(selectedAssignee))">
+                            @if (isAssigning)
+                            {
+                                <span class="asd-spin"></span>
+                                <span>Assigning...</span>
+                            }
+                            else
+                            {
+                                <span>Assign</span>
+                            }
+                        </button>
+                        @if (assignSuccess)
+                        {
+                            <div class="asd-ok">Assigned</div>
+                        }
+                    </div>
+
+                    @if (ticket.StatusId != 5)
+                    {
+                        <div class="asd-card asd-danger-card">
+                            <h3 class="asd-card-title">Close Ticket</h3>
+                            <p class="asd-danger-txt">Closes the ticket and disables all future replies.</p>
+                            <button class="asd-btn-close" @onclick="CloseTicket" disabled="@isClosing">
+                                @if (isClosing)
+                                {
+                                    <span class="asd-spin"></span>
+                                    <span>Closing...</span>
+                                }
+                                else
+                                {
+                                    <span>Close Ticket</span>
+                                }
+                            </button>
+                        </div>
                     }
                 </div>
             </div>
         }
     </div>
-
-    @if (isLoading)
-    {
-        <div class="asd-state">
-            <div class="asd-spinner"></div>
-            <p>Loading ticket...</p>
-        </div>
-    }
-    else if (ticket == null)
-    {
-        <div class="asd-state"><p>Ticket not found.</p></div>
-    }
-    else
-    {
-        <div class="asd-layout">
-
-            <!-- Chat Panel -->
-            <div class="asd-chat">
-                <div class="asd-chat-hdr">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                    </svg>
-                    Conversation
-                    <span class="asd-msg-cnt">@(ticket?.Messages?.Count ?? 0) messages</span>
-                </div>
-
-                <div class="asd-msgs" id="sad-messages">
-                    @if (!ticket.Messages.Any())
-                    {
-                        <div class="asd-empty-msgs"><p>No messages yet.</p></div>
-                    }
-                    else
-                    {
-                        @foreach (var m in ticket.Messages.OrderBy(x => x.CreatedAt))
-                        {
-                            <div class="asd-msg @(m.SenderType == "Support" ? "msg-support" : "msg-user")">
-                                <div class="asd-av @(m.SenderType == "Support" ? "av-support" : "av-user")">
-                                    @if (m.SenderType == "Support")
-                                    {
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 24 24">
-                                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z" />
-                                        </svg>
-                                    }
-                                    else
-                                    {
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 24 24">
-                                            <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" />
-                                        </svg>
-                                    }
-                                </div>
-                                <div class="asd-msg-body">
-                                    <div class="asd-msg-meta">
-                                        <span class="asd-sender">@(m.SenderType == "Support" ? "Support Team" : m.SenderName)</span>
-                                        <span class="asd-time">@m.CreatedAt.ToLocalTime().ToString("MMM dd, HH:mm")</span>
-                                    </div>
-                                    <div class="asd-bubble @(m.SenderType == "Support" ? "bbl-support" : "bbl-user")">
-                                        @if (!string.IsNullOrEmpty(m.MessageText))
-                                        {
-                                            <span>@m.MessageText</span>
-                                        }
-                                        @if (!string.IsNullOrEmpty(m.ImageUrl))
-                                        {
-                                            <img src="@m.ImageUrl" class="asd-img" alt="attachment" />
-                                        }
-                                    </div>
-                                </div>
-                            </div>
-                        }
-                    }
-                </div>
-
-                @if (ticket.StatusId != 5)
-                {
-                    <div class="asd-reply">
-                        @if (!string.IsNullOrEmpty(replyError))
-                        {
-                            <div class="asd-reply-err">@replyError</div>
-                        }
-                        <textarea class="asd-textarea" rows="3"
-                                  @bind="replyMessage"
-                                  @bind:event="oninput"
-                                  placeholder="Type reply as Support Team..."
-                                  @onkeydown="HandleKeyDown"></textarea>
-
-                        <div class="asd-img-area">
-                            <InputFile accept="image/*" capture="environment" OnChange="OnReplyImageSelected" id="adminImgInput" style="display:none" />
-                            @if (replyImagePreview != null)
-                            {
-                                <div class="asd-img-wrap">
-                                    <img src="@replyImagePreview" class="asd-img-preview" />
-                                    <button type="button" class="asd-img-remove" @onclick="RemoveReplyImage">✕</button>
-                                </div>
-                            }
-                            else
-                            {
-                                <label for="adminImgInput" class="asd-img-label">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    </svg>
-                                    Attach Image
-                                </label>
-                            }
-                        </div>
-
-                        <div class="asd-reply-actions">
-                            <span class="asd-hint">Ctrl+Enter to send · as "Support Team"</span>
-                            <button class="asd-btn-send" @onclick="SendReply"
-                                    disabled="@(isSending || (string.IsNullOrWhiteSpace(replyMessage) && replyImage == null))">
-                                @if (isSending)
-                                {
-                                    <span class="asd-spin"></span>
-                                }
-                                else
-                                {
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                                    </svg>
-                                }
-                                Send as Support
-                            </button>
-                        </div>
-                    </div>
-                }
-                else
-                {
-                    <div class="asd-closed">
-                        🔒 Ticket is closed. No further replies.
-                    </div>
-                }
-            </div>
-
-            <!-- Info Panel -->
-            <div class="asd-info">
-
-                <!-- Ticket Info -->
-                <div class="asd-card">
-                    <h3 class="asd-card-title">Ticket Info</h3>
-                    <div class="asd-row"><span class="asd-lbl">Company</span><span class="asd-val co-val">@ticket.CompanyName</span></div>
-                    <div class="asd-row"><span class="asd-lbl">Created by</span><span class="asd-val">@ticket.CreatedByName</span></div>
-                    <div class="asd-row"><span class="asd-lbl">Created at</span><span class="asd-val">@ticket.CreatedAt.ToLocalTime().ToString("dd MMM, HH:mm")</span></div>
-                    @if (ticket.UpdatedAt.HasValue)
-                    {
-                        <div class="asd-row"><span class="asd-lbl">Updated</span><span class="asd-val">@ticket.UpdatedAt.Value.ToLocalTime().ToString("dd MMM, HH:mm")</span></div>
-                    }
-                </div>
-
-                <!-- Update -->
-                <div class="asd-card">
-                    <h3 class="asd-card-title">Update Ticket</h3>
-                    <div class="asd-field">
-                        <label>Status</label>
-                        <select class="asd-select" @bind="editStatus">
-                            <option value="1">Open</option>
-                            <option value="2">In Progress</option>
-                            <option value="3">Waiting User</option>
-                            <option value="4">Resolved</option>
-                            <option value="5">Closed</option>
-                        </select>
-                    </div>
-                    <div class="asd-field">
-                        <label>Priority</label>
-                        <select class="asd-select" @bind="editPriority">
-                            <option value="1">🟢 Low</option>
-                            <option value="2">🟡 Medium</option>
-                            <option value="3">🟠 High</option>
-                            <option value="4">🔴 Critical</option>
-                        </select>
-                    </div>
-                    <button class="asd-btn-update" @onclick="UpdateStatus" disabled="@isUpdating">
-                        @if (isUpdating)
-                        {
-                            <span class="asd-spin dark"></span>
-                            <span>Updating...</span>
-     }
-                        else
-                        {
-                            <span>✓ Save Changes</span>
-                        }
-                    </button>
-                    @if (updateSuccess)
-                    {
-                        <div class="asd-ok">✓ Updated!</div>
-                    }
-                </div>
-
-                <!-- Assign -->
-                <div class="asd-card">
-                    <h3 class="asd-card-title">Assign Developer</h3>
-                    @if (!string.IsNullOrEmpty(ticket.AssignedToName))
-                    {
-                        <div class="asd-assigned-now">👤 Currently: <strong>@ticket.AssignedToName</strong></div>
-                    }
-                    <div class="asd-field">
-                        <label>Assign to</label>
-                        <select class="asd-select" @bind="selectedAssignee">
-                            <option value="">— Select Developer —</option>
-                            @foreach (var u in adminUsers)
-                            {
-                                <option value="@u.UserId">@u.UserName</option>
-                            }
-                        </select>
-                    </div>
-                    <button class="asd-btn-assign" @onclick="AssignTicket" disabled="@(isAssigning || string.IsNullOrEmpty(selectedAssignee))">
-                        @if (isAssigning)
-                        {
-                            <span class="asd-spin"></span>
-                            <span>Assigning...</span>
-     }
-                        else
-                        {
-                            <span>👤 Assign</span>
-                        }
-                    </button>
-                    @if (assignSuccess)
-                    {
-                        <div class="asd-ok">✓ Assigned!</div>
-                    }
-                </div>
-
-                <!-- Close -->
-                @if (ticket.StatusId != 5)
-                {
-                    <div class="asd-card asd-danger-card">
-                        <h3 class="asd-card-title">Close Ticket</h3>
-                        <p class="asd-danger-txt">Closes the ticket and disables all future replies.</p>
-                        <button class="asd-btn-close" @onclick="CloseTicket" disabled="@isClosing">
-                            @if (isClosing)
-                            {
-                                <span class="asd-spin"></span>
-                                <span>Closing...</span>
-         }
-                            else
-                            {
-                                <span>✕ Close Ticket</span>
-                            }
-                        </button>
-                    </div>
-                }
-            </div>
-        </div>
-    }
 </div>
-
-<style>
-    .asd-page {
-        padding: 20px 24px;
-        background: #f8fafc;
-        min-height: 100vh;
-        font-family: 'Segoe UI', system-ui, sans-serif;
-    }
-
-    /* Header */
-    .asd-header {
-        display: flex;
-        align-items: flex-start;
-        gap: 12px;
-        margin-bottom: 18px;
-        flex-wrap: wrap;
-    }
-
-    .asd-header-info {
-        flex: 1;
-        min-width: 0;
-    }
-
-    .asd-title {
-        font-size: 16px;
-        font-weight: 700;
-        color: #0f172a;
-        margin: 0 0 6px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        flex-wrap: wrap;
-    }
-
-    .asd-tno {
-        font-family: monospace;
-        font-size: 13px;
-        color: #7c3aed;
-        background: #ede9fe;
-        padding: 2px 8px;
-        border-radius: 5px;
-        white-space: nowrap;
-    }
-
-    .asd-meta {
-        display: flex;
-        gap: 6px;
-        flex-wrap: wrap;
-        align-items: center;
-    }
-
-    .asd-co-pill {
-        background: #dbeafe;
-        color: #1e40af;
-        font-size: 11px;
-        font-weight: 600;
-        padding: 2px 9px;
-        border-radius: 20px;
-    }
-
-    .asd-live {
-        width: 8px;
-        height: 8px;
-        background: #16a34a;
-        border-radius: 50%;
-        animation: asdpulse 2s ease-in-out infinite;
-        display: inline-block;
-    }
-
-    @@keyframes asdpulse {
-        0%, 100% {
-            opacity: 1;
-        }
-
-        50% {
-            opacity: 0.3;
-        }
-    }
-
-    .asd-back {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        background: #fff;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        padding: 8px 12px;
-        font-size: 12px;
-        font-weight: 600;
-        color: #64748b;
-        cursor: pointer;
-        transition: all 0.15s;
-        white-space: nowrap;
-        flex-shrink: 0;
-    }
-
-        .asd-back:hover {
-            background: #f1f5f9;
-        }
-
-    /* Badges */
-    .badge {
-        display: inline-block;
-        padding: 3px 9px;
-        border-radius: 20px;
-        font-size: 11px;
-        font-weight: 600;
-        white-space: nowrap;
-    }
-
-    .pri-low {
-        background: #f0fdf4;
-        color: #16a34a;
-    }
-
-    .pri-medium {
-        background: #fef9c3;
-        color: #b45309;
-    }
-
-    .pri-high {
-        background: #fff7ed;
-        color: #ea580c;
-    }
-
-    .pri-critical {
-        background: #fef2f2;
-        color: #dc2626;
-    }
-
-    .sta-open {
-        background: #eff6ff;
-        color: #2563eb;
-    }
-
-    .sta-inprogress {
-        background: #fff7ed;
-        color: #d97706;
-    }
-
-    .sta-waiting {
-        background: #f5f3ff;
-        color: #7c3aed;
-    }
-
-    .sta-resolved {
-        background: #f0fdf4;
-        color: #16a34a;
-    }
-
-    .sta-closed {
-        background: #f1f5f9;
-        color: #64748b;
-    }
-
-    /* State */
-    .asd-state {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        padding: 60px;
-        background: #fff;
-        border-radius: 14px;
-        border: 1px solid #e2e8f0;
-        gap: 10px;
-        color: #64748b;
-    }
-
-    .asd-spinner {
-        width: 26px;
-        height: 26px;
-        border: 3px solid #e2e8f0;
-        border-top-color: #7c3aed;
-        border-radius: 50%;
-        animation: asdspin 0.8s linear infinite;
-    }
-
-    @@keyframes asdspin {
-        to {
-            transform: rotate(360deg);
-        }
-    }
-
-    /* Layout */
-    .asd-layout {
-        display: flex;
-        gap: 16px;
-        align-items: flex-start;
-    }
-
-    /* Chat */
-    .asd-chat {
-        flex: 1;
-        min-width: 0;
-        background: #fff;
-        border: 1px solid #e2e8f0;
-        border-radius: 14px;
-        box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-        display: flex;
-        flex-direction: column;
-        min-height: 500px;
-        overflow: hidden;
-    }
-
-    .asd-chat-hdr {
-        display: flex;
-        align-items: center;
-        gap: 7px;
-        padding: 12px 15px;
-        border-bottom: 1px solid #f1f5f9;
-        font-size: 13px;
-        font-weight: 600;
-        color: #374151;
-        background: #fafbfc;
-    }
-
-    .asd-msg-cnt {
-        margin-left: auto;
-        font-size: 11px;
-        font-weight: 400;
-        color: #94a3b8;
-    }
-
-    .asd-msgs {
-        flex: 1;
-        padding: 15px;
-        overflow-y: auto;
-        display: flex;
-        flex-direction: column;
-        gap: 13px;
-        max-height: 440px;
-    }
-
-    .asd-empty-msgs {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 40px;
-        color: #94a3b8;
-        font-size: 13px;
-    }
-
-    /* Messages */
-    .asd-msg {
-        display: flex;
-        gap: 8px;
-        align-items: flex-start;
-    }
-
-    .msg-support {
-        flex-direction: row-reverse;
-    }
-
-    .asd-av {
-        width: 28px;
-        height: 28px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-    }
-
-    .av-support {
-        background: #ede9fe;
-        color: #7c3aed;
-    }
-
-    .av-user {
-        background: #dbeafe;
-        color: #2563eb;
-    }
-
-    .asd-msg-body {
-        max-width: 74%;
-        display: flex;
-        flex-direction: column;
-        gap: 3px;
-    }
-
-    .msg-support .asd-msg-body {
-        align-items: flex-end;
-    }
-
-    .asd-msg-meta {
-        display: flex;
-        align-items: center;
-        gap: 7px;
-        flex-wrap: wrap;
-    }
-
-    .msg-support .asd-msg-meta {
-        flex-direction: row-reverse;
-    }
-
-    .asd-sender {
-        font-size: 11px;
-        font-weight: 600;
-        color: #374151;
-    }
-
-    .asd-time {
-        font-size: 10px;
-        color: #94a3b8;
-    }
-
-    .asd-bubble {
-        padding: 9px 13px;
-        border-radius: 13px;
-        font-size: 13px;
-        line-height: 1.5;
-        word-break: break-word;
-    }
-
-    .bbl-support {
-        background: #7c3aed;
-        color: #fff;
-        border-bottom-right-radius: 3px;
-    }
-
-    .bbl-user {
-        background: #f1f5f9;
-        color: #334155;
-        border-bottom-left-radius: 3px;
-    }
-
-    .asd-img {
-        max-width: 220px;
-        max-height: 180px;
-        border-radius: 9px;
-        margin-top: 7px;
-        display: block;
-        object-fit: cover;
-    }
-
-    /* Reply */
-    .asd-reply {
-        border-top: 1px solid #f1f5f9;
-        padding: 13px 15px;
-        background: #fafbfc;
-    }
-
-    .asd-reply-err {
-        font-size: 12px;
-        color: #dc2626;
-        margin-bottom: 6px;
-    }
-
-    .asd-textarea {
-        width: 100%;
-        padding: 9px 12px;
-        border: 1.5px solid #e2e8f0;
-        border-radius: 9px;
-        font-size: 13px;
-        font-family: inherit;
-        color: #0f172a;
-        resize: none;
-        box-sizing: border-box;
-        transition: border-color 0.15s;
-    }
-
-        .asd-textarea:focus {
-            outline: none;
-            border-color: #7c3aed;
-            box-shadow: 0 0 0 3px rgba(124,58,237,0.1);
-        }
-
-    .asd-img-area {
-        margin: 7px 0;
-    }
-
-    .asd-img-label {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 5px 11px;
-        border: 1.5px dashed #cbd5e1;
-        border-radius: 8px;
-        cursor: pointer;
-        font-size: 12px;
-        color: #64748b;
-        transition: all 0.15s;
-    }
-
-        .asd-img-label:hover {
-            border-color: #7c3aed;
-            color: #7c3aed;
-        }
-
-    .asd-img-wrap {
-        position: relative;
-        display: inline-block;
-    }
-
-    .asd-img-preview {
-        max-height: 85px;
-        max-width: 170px;
-        border-radius: 8px;
-        border: 1px solid #e2e8f0;
-    }
-
-    .asd-img-remove {
-        position: absolute;
-        top: -6px;
-        right: -6px;
-        background: #ef4444;
-        color: #fff;
-        border: none;
-        border-radius: 50%;
-        width: 17px;
-        height: 17px;
-        font-size: 9px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .asd-reply-actions {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        margin-top: 8px;
-        gap: 8px;
-        flex-wrap: wrap;
-    }
-
-    .asd-hint {
-        font-size: 11px;
-        color: #94a3b8;
-    }
-
-    .asd-btn-send {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        background: #7c3aed;
-        border: none;
-        border-radius: 8px;
-        padding: 8px 16px;
-        font-size: 13px;
-        font-weight: 600;
-        color: #fff;
-        cursor: pointer;
-        transition: background 0.15s;
-    }
-
-        .asd-btn-send:hover:not(:disabled) {
-            background: #6d28d9;
-        }
-
-        .asd-btn-send:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-    .asd-closed {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 12px 15px;
-        border-top: 1px solid #f1f5f9;
-        background: #f8fafc;
-        color: #64748b;
-        font-size: 12px;
-    }
-
-    /* Spinners */
-    .asd-spin {
-        width: 12px;
-        height: 12px;
-        border: 2px solid rgba(255,255,255,0.4);
-        border-top-color: #fff;
-        border-radius: 50%;
-        animation: asdspin 0.7s linear infinite;
-        display: inline-block;
-    }
-
-        .asd-spin.dark {
-            border-color: rgba(0,0,0,0.15);
-            border-top-color: #fff;
-        }
-
-    /* Info Panel */
-    .asd-info {
-        width: 260px;
-        flex-shrink: 0;
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-    }
-
-    .asd-card {
-        background: #fff;
-        border: 1px solid #e2e8f0;
-        border-radius: 13px;
-        padding: 16px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-    }
-
-    .asd-card-title {
-        font-size: 10px;
-        font-weight: 700;
-        color: #64748b;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-        margin: 0 0 12px;
-    }
-
-    .asd-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        gap: 8px;
-        margin-bottom: 8px;
-        font-size: 12px;
-    }
-
-    .asd-lbl {
-        color: #94a3b8;
-        font-weight: 500;
-        flex-shrink: 0;
-    }
-
-    .asd-val {
-        color: #334155;
-        font-weight: 500;
-        text-align: right;
-        word-break: break-word;
-    }
-
-    .co-val {
-        color: #1e40af !important;
-        font-weight: 600 !important;
-    }
-
-    .asd-field {
-        margin-bottom: 9px;
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-    }
-
-        .asd-field label {
-            font-size: 11px;
-            font-weight: 600;
-            color: #64748b;
-        }
-
-    .asd-select {
-        width: 100%;
-        padding: 7px 10px;
-        border: 1.5px solid #e2e8f0;
-        border-radius: 7px;
-        font-size: 12px;
-        color: #334155;
-        background: #fff;
-        appearance: none;
-        font-family: inherit;
-        cursor: pointer;
-    }
-
-        .asd-select:focus {
-            outline: none;
-            border-color: #7c3aed;
-        }
-
-    .asd-btn-update {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 100%;
-        padding: 9px;
-        background: #0f172a;
-        border: none;
-        border-radius: 8px;
-        font-size: 12px;
-        font-weight: 600;
-        color: #fff;
-        cursor: pointer;
-        margin-top: 4px;
-        transition: background 0.15s;
-    }
-
-        .asd-btn-update:hover:not(:disabled) {
-            background: #1e293b;
-        }
-
-        .asd-btn-update:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-    .asd-btn-assign {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 6px;
-        width: 100%;
-        padding: 9px;
-        background: #0284c7;
-        border: none;
-        border-radius: 8px;
-        font-size: 12px;
-        font-weight: 600;
-        color: #fff;
-        cursor: pointer;
-        transition: background 0.15s;
-    }
-
-        .asd-btn-assign:hover:not(:disabled) {
-            background: #0369a1;
-        }
-
-        .asd-btn-assign:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-    .asd-assigned-now {
-        font-size: 12px;
-        color: #0284c7;
-        background: #e0f2fe;
-        border-radius: 7px;
-        padding: 7px 10px;
-        margin-bottom: 10px;
-    }
-
-    .asd-ok {
-        font-size: 11px;
-        color: #16a34a;
-        margin-top: 6px;
-        text-align: center;
-    }
-
-    .asd-danger-card {
-        border-color: #fecaca !important;
-    }
-
-    .asd-danger-txt {
-        font-size: 12px;
-        color: #64748b;
-        margin: 0 0 11px;
-        line-height: 1.5;
-    }
-
-    .asd-btn-close {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 6px;
-        width: 100%;
-        padding: 9px;
-        background: #fff;
-        border: 1.5px solid #dc2626;
-        border-radius: 8px;
-        font-size: 12px;
-        font-weight: 600;
-        color: #dc2626;
-        cursor: pointer;
-        transition: all 0.15s;
-    }
-
-        .asd-btn-close:hover:not(:disabled) {
-            background: #dc2626;
-            color: #fff;
-        }
-
-        .asd-btn-close:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-    /* Responsive */
-    @@media (max-width: 768px) {
-        .asd-page {
-            padding: 14px 16px;
-        }
-
-        .asd-layout {
-            flex-direction: column;
-        }
-
-        .asd-info {
-            width: 100%;
-            flex-direction: row;
-            flex-wrap: wrap;
-        }
-
-        .asd-card {
-            flex: 1;
-            min-width: 240px;
-        }
-
-        .asd-msgs {
-            max-height: 350px;
-        }
-
-        .asd-msg-body {
-            max-width: 83%;
-        }
-
-        .asd-hint {
-            display: none;
-        }
-    }
-
-    @@media (max-width: 480px) {
-        .asd-page {
-            padding: 12px;
-        }
-
-        .asd-info {
-            flex-direction: column;
-        }
-
-        .asd-card {
-            min-width: unset;
-        }
-
-        .asd-msgs {
-            max-height: 300px;
-        }
-
-        .asd-bubble {
-            font-size: 13px;
-        }
-
-        .asd-img {
-            max-width: 170px;
-        }
-    }
-</style>
 
 @code {
     [Parameter] public int TicketId { get; set; }
@@ -1038,6 +329,30 @@
 
     int editStatus;
     int editPriority;
+
+    const int MaxMessageChars = 2000;
+    const long MaxImageBytes = 5L * 1024 * 1024;
+    const long MaxVideoBytes = 25L * 1024 * 1024;
+
+    static readonly HashSet<string> AllowedImageExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".jpg", ".jpeg", ".png", ".gif", ".webp"
+    };
+
+    static readonly HashSet<string> AllowedVideoExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".mp4", ".webm", ".mov"
+    };
+
+    readonly Dictionary<int, string> messageContentTypes = new();
+    readonly Dictionary<int, long> messageDocumentIds = new();
+    readonly HashSet<int> videoPlaybackFailed = new();
+
+    IBrowserFile? replyMedia;
+    string? replyMediaPreview;
+    string? replyMediaFileName;
+    string? replyMediaContentType;
+    long replyMediaSizeBytes;
 
     private HubConnection? _hub;
     private string? _hubToken;
@@ -1062,6 +377,9 @@
                 editStatus = ticket.StatusId;
                 editPriority = ticket.PriorityId;
                 ticket.Messages ??= new List<TicketMessageAdminDto>();
+                messageContentTypes.Clear();
+                messageDocumentIds.Clear();
+                videoPlaybackFailed.Clear();
 
                 var attachments = await FileUploadService.GetAdminDocumentsAsync("TicketMessage", TicketId.ToString());
                 foreach (var msg in ticket.Messages)
@@ -1072,7 +390,11 @@
                         (a.SubCategory == "image" && a.ReferenceId == TicketId.ToString()))
                     );
                     if (doc != null)
+                    {
                         msg.ImageUrl = (await FileUploadService.GetAdminSasUrlAsync(doc.DocumentId, 60))?.Trim();
+                        SetMessageContentType(msg.MessageId, doc.ContentType, doc.OriginalFileName);
+                        messageDocumentIds[msg.MessageId] = doc.DocumentId;
+                    }
                 }
                 await InvokeAsync(StateHasChanged);
             }
@@ -1093,7 +415,15 @@
     {
         if (_hub != null)
         {
-            try { if (_hub.State == HubConnectionState.Connected) { await _hub.InvokeAsync("LeaveTicket", TicketId); await _hub.StopAsync(); } await _hub.DisposeAsync(); }
+            try
+            {
+                if (_hub.State == HubConnectionState.Connected)
+                {
+                    await _hub.InvokeAsync("LeaveTicket", TicketId);
+                    await _hub.StopAsync();
+                }
+                await _hub.DisposeAsync();
+            }
             catch { }
             _hub = null;
         }
@@ -1112,9 +442,20 @@
                 .WithAutomaticReconnect()
                 .Build();
 
-            _hub.Closed += async (ex) => { isConnected = false; await InvokeAsync(StateHasChanged); };
-            _hub.Reconnecting += (ex) => { isConnected = false; InvokeAsync(StateHasChanged); return Task.CompletedTask; };
-            _hub.Reconnected += async (_) =>
+            _hub.Closed += async _ =>
+            {
+                isConnected = false;
+                await InvokeAsync(StateHasChanged);
+            };
+
+            _hub.Reconnecting += _ =>
+            {
+                isConnected = false;
+                InvokeAsync(StateHasChanged);
+                return Task.CompletedTask;
+            };
+
+            _hub.Reconnected += async _ =>
             {
                 try { await _hub.InvokeAsync("JoinTicket", TicketId); } catch { }
                 isConnected = true;
@@ -1128,16 +469,29 @@
                     {
                         if (ticket == null) return;
                         ticket.Messages ??= new List<TicketMessageAdminDto>();
-                        if (ticket.Messages.Any(m => m.MessageId == messageId)) return;
-                        ticket.Messages.Add(new TicketMessageAdminDto { MessageId = messageId, TicketId = TicketId, MessageText = messageText, SenderType = senderType, CreatedAt = createdAt });
+                        if (IsProbableDuplicate(senderType, messageText, createdAt, messageId)) return;
+
+                        UpsertMessage(new TicketMessageAdminDto
+                        {
+                            MessageId = messageId,
+                            TicketId = TicketId,
+                            MessageText = messageText,
+                            SenderType = senderType,
+                            CreatedAt = createdAt
+                        });
+
                         await InvokeAsync(StateHasChanged);
                         await ScrollToBottom();
                     });
                 });
 
-            _hub.On<int>("TicketClosed", async (ticketId) =>
+            _hub.On<int>("TicketClosed", async ticketId =>
             {
-                if (ticketId == TicketId && ticket != null) { ticket.StatusId = 5; await InvokeAsync(StateHasChanged); }
+                if (ticketId == TicketId && ticket != null)
+                {
+                    ticket.StatusId = 5;
+                    await InvokeAsync(StateHasChanged);
+                }
             });
 
             await _hub.StartAsync();
@@ -1145,7 +499,12 @@
             isConnected = true;
             await InvokeAsync(StateHasChanged);
         }
-        catch (Exception ex) { Console.WriteLine($"[AdminHub] ERROR: {ex.Message}"); isConnected = false; await InvokeAsync(StateHasChanged); }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[AdminHub] ERROR: {ex.Message}");
+            isConnected = false;
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
     private async Task ScrollToBottom()
@@ -1160,58 +519,302 @@
 
     async Task SendReply()
     {
-        if (string.IsNullOrWhiteSpace(replyMessage) && replyImage == null) return;
+        if (isSending) return;
+        if (string.IsNullOrWhiteSpace(replyMessage) && replyMedia == null) return;
+        if (ticket == null) return;
+
+        var msgText = string.IsNullOrWhiteSpace(replyMessage) ? string.Empty : replyMessage.Trim();
+        if (msgText.Length > MaxMessageChars)
+        {
+            replyError = $"Message can have at most {MaxMessageChars} characters.";
+            return;
+        }
+
         isSending = true;
         replyError = string.Empty;
-        var msgText = replyMessage;
+
         try
         {
             var savedMsg = await AdminService.ReplyAsync(TicketId, msgText);
-            if (savedMsg != null && ticket != null)
+            if (savedMsg != null)
             {
                 ticket.Messages ??= new List<TicketMessageAdminDto>();
                 var newMsg = new TicketMessageAdminDto
                 {
                     MessageId = savedMsg.MessageId,
                     TicketId = TicketId,
-                    MessageText = string.IsNullOrWhiteSpace(msgText) ? null : msgText,
+                    MessageText = msgText,
                     SenderType = "Support",
                     CreatedAt = savedMsg.CreatedAt
                 };
-                if (replyImage != null)
+
+                if (replyMedia != null)
                 {
                     using var ms = new MemoryStream();
-                    await replyImage.OpenReadStream(5 * 1024 * 1024).CopyToAsync(ms);
-                    await FileUploadService.AdminUploadFileAsync(ms.ToArray(), replyImage.Name,
+                    await replyMedia.OpenReadStream(GetMaxUploadBytes(replyMedia)).CopyToAsync(ms);
+                    var upload = await FileUploadService.AdminUploadFileAsync(
+                        ms.ToArray(),
+                        replyMedia.Name,
                         category: "TicketMessage",
                         subCategory: savedMsg.MessageId.ToString(),
                         referenceId: TicketId.ToString(),
                         ticketCompanyId: ticket.CompanyId);
-                    newMsg.ImageUrl = replyImagePreview;
-                    replyImage = null;
-                    replyImagePreview = null;
+
+                    if (upload?.DocumentId > 0)
+                    {
+                        newMsg.ImageUrl = (await FileUploadService.GetAdminSasUrlAsync(upload.DocumentId, 60))?.Trim();
+                    }
+                    else if (!string.IsNullOrWhiteSpace(upload?.Url))
+                    {
+                        newMsg.ImageUrl = upload.Url.Trim();
+                    }
+                    else
+                    {
+                        newMsg.ImageUrl = replyMediaPreview;
+                    }
+
+                    SetMessageContentType(savedMsg.MessageId, replyMediaContentType, replyMedia.Name);
+                    if (upload?.DocumentId > 0)
+                    {
+                        messageDocumentIds[savedMsg.MessageId] = upload.DocumentId;
+                    }
+                    ClearReplyMedia();
                 }
-                ticket.Messages.Add(newMsg);
+
+                UpsertMessage(newMsg);
                 replyMessage = string.Empty;
                 await InvokeAsync(StateHasChanged);
                 await ScrollToBottom();
             }
-            else { replyError = "Failed to send reply."; }
+            else
+            {
+                replyError = "Failed to send reply.";
+            }
         }
-        catch (Exception ex) { replyError = ex.Message; }
-        finally { isSending = false; }
+        catch (Exception ex)
+        {
+            replyError = ex.Message;
+        }
+        finally
+        {
+            isSending = false;
+        }
     }
 
     public async ValueTask DisposeAsync()
     {
         if (_hub != null)
         {
-            try { if (_hub.State == HubConnectionState.Connected) { await _hub.InvokeAsync("LeaveTicket", TicketId); await _hub.StopAsync(); } await _hub.DisposeAsync(); }
+            try
+            {
+                if (_hub.State == HubConnectionState.Connected)
+                {
+                    await _hub.InvokeAsync("LeaveTicket", TicketId);
+                    await _hub.StopAsync();
+                }
+                await _hub.DisposeAsync();
+            }
             catch { }
         }
     }
 
     void GoBack() => Nav.NavigateTo("/superadmin/support");
+
+    void UpsertMessage(TicketMessageAdminDto incoming)
+    {
+        if (ticket == null)
+        {
+            return;
+        }
+
+        ticket.Messages ??= new List<TicketMessageAdminDto>();
+        var existing = ticket.Messages.FirstOrDefault(m => m.MessageId == incoming.MessageId);
+        if (existing == null)
+        {
+            ticket.Messages.Add(incoming);
+            return;
+        }
+
+        existing.SenderType = incoming.SenderType;
+        existing.CreatedAt = incoming.CreatedAt == default ? existing.CreatedAt : incoming.CreatedAt;
+
+        if (string.IsNullOrWhiteSpace(existing.MessageText) && !string.IsNullOrWhiteSpace(incoming.MessageText))
+        {
+            existing.MessageText = incoming.MessageText;
+        }
+
+        if (string.IsNullOrWhiteSpace(existing.ImageUrl) && !string.IsNullOrWhiteSpace(incoming.ImageUrl))
+        {
+            existing.ImageUrl = incoming.ImageUrl;
+        }
+    }
+
+    bool IsProbableDuplicate(string senderType, string? messageText, DateTime createdAt, int messageId)
+    {
+        if (ticket?.Messages == null)
+        {
+            return false;
+        }
+
+        if (messageId > 0 && ticket.Messages.Any(m => m.MessageId == messageId))
+        {
+            return true;
+        }
+
+        var incomingText = (messageText ?? string.Empty).Trim();
+        if (incomingText.Length == 0)
+        {
+            return false;
+        }
+
+        return ticket.Messages.Any(m =>
+            string.Equals(m.SenderType, senderType, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals((m.MessageText ?? string.Empty).Trim(), incomingText, StringComparison.Ordinal) &&
+            Math.Abs((m.CreatedAt - createdAt).TotalSeconds) <= 2);
+    }
+
+    bool IsVideoMessage(TicketMessageAdminDto msg)
+    {
+        if (messageContentTypes.TryGetValue(msg.MessageId, out var contentType) && IsVideoContentType(contentType))
+        {
+            return true;
+        }
+
+        return IsVideoFileName(msg.ImageUrl);
+    }
+
+    string GetMessageContentType(TicketMessageAdminDto msg)
+    {
+        messageContentTypes.TryGetValue(msg.MessageId, out var contentType);
+        return ResolveContentType(contentType, msg.ImageUrl);
+    }
+
+    void SetMessageContentType(int messageId, string? contentType, string? fallbackFileName)
+    {
+        if (messageId <= 0)
+        {
+            return;
+        }
+
+        var resolved = ResolveContentType(contentType, fallbackFileName);
+        if (!string.IsNullOrWhiteSpace(resolved))
+        {
+            messageContentTypes[messageId] = resolved;
+        }
+    }
+
+    static bool IsAllowedImage(string? contentType, string extension) =>
+        AllowedImageExtensions.Contains(extension) || IsImageContentType(contentType);
+
+    static bool IsAllowedVideo(string? contentType, string extension) =>
+        AllowedVideoExtensions.Contains(extension) || IsVideoContentType(contentType);
+
+    static bool IsImageContentType(string? contentType) =>
+        !string.IsNullOrWhiteSpace(contentType) &&
+        contentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
+
+    static bool IsVideoContentType(string? contentType) =>
+        !string.IsNullOrWhiteSpace(contentType) &&
+        contentType.StartsWith("video/", StringComparison.OrdinalIgnoreCase);
+
+    static bool IsVideoFileName(string? pathOrName)
+    {
+        if (string.IsNullOrWhiteSpace(pathOrName))
+        {
+            return false;
+        }
+
+        var clean = pathOrName.Split('?', '#')[0];
+        var ext = Path.GetExtension(clean);
+        return AllowedVideoExtensions.Contains(ext);
+    }
+
+    static string ResolveContentType(string? contentType, string? fileName)
+    {
+        if (!string.IsNullOrWhiteSpace(contentType) && !IsGenericBinaryContentType(contentType))
+        {
+            return contentType;
+        }
+
+        var ext = Path.GetExtension(fileName ?? string.Empty).ToLowerInvariant();
+        return ext switch
+        {
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".png" => "image/png",
+            ".gif" => "image/gif",
+            ".webp" => "image/webp",
+            ".mp4" => "video/mp4",
+            ".webm" => "video/webm",
+            ".mov" => "video/quicktime",
+            _ => "application/octet-stream"
+        };
+    }
+
+    static bool IsGenericBinaryContentType(string contentType) =>
+        contentType.Equals("application/octet-stream", StringComparison.OrdinalIgnoreCase) ||
+        contentType.Equals("binary/octet-stream", StringComparison.OrdinalIgnoreCase);
+
+    static long GetMaxUploadBytes(IBrowserFile file)
+    {
+        var ext = Path.GetExtension(file.Name);
+        return IsAllowedVideo(file.ContentType, ext) ? MaxVideoBytes : MaxImageBytes;
+    }
+
+    static string FormatFileSize(long bytes)
+    {
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1024 * 1024) return $"{bytes / 1024d:0.#} KB";
+        return $"{bytes / (1024d * 1024):0.#} MB";
+    }
+
+    void ClearReplyMedia()
+    {
+        replyMedia = null;
+        replyMediaPreview = null;
+        replyMediaFileName = null;
+        replyMediaContentType = null;
+        replyMediaSizeBytes = 0;
+    }
+
+    async Task OnVideoLoadError(TicketMessageAdminDto msg)
+    {
+        if (videoPlaybackFailed.Contains(msg.MessageId))
+        {
+            return;
+        }
+
+        if (msg.MessageId <= 0 || !messageDocumentIds.TryGetValue(msg.MessageId, out var documentId))
+        {
+            videoPlaybackFailed.Add(msg.MessageId);
+            return;
+        }
+
+        try
+        {
+            var freshUrl = (await FileUploadService.GetAdminSasUrlAsync(documentId, 60))?.Trim();
+            if (!string.IsNullOrWhiteSpace(freshUrl) && !string.Equals(freshUrl, msg.ImageUrl, StringComparison.Ordinal))
+            {
+                msg.ImageUrl = freshUrl;
+                videoPlaybackFailed.Remove(msg.MessageId);
+                await InvokeAsync(StateHasChanged);
+                return;
+            }
+        }
+        catch
+        {
+        }
+
+        videoPlaybackFailed.Add(msg.MessageId);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    void OnVideoLoaded(int messageId)
+    {
+        if (videoPlaybackFailed.Remove(messageId))
+        {
+            _ = InvokeAsync(StateHasChanged);
+        }
+    }
 
     string GetPriorityLabel(int id) => id switch { 1 => "Low", 2 => "Medium", 3 => "High", 4 => "Critical", _ => "Unknown" };
     string GetPriorityClass(int id) => id switch { 1 => "low", 2 => "medium", 3 => "high", 4 => "critical", _ => "low" };
@@ -1220,38 +823,122 @@
 
     async Task UpdateStatus()
     {
-        isUpdating = true; updateSuccess = false;
-        try { var ok = await AdminService.UpdateStatusAsync(TicketId, editStatus, editPriority); if (ok && ticket != null) { ticket.StatusId = editStatus; ticket.PriorityId = editPriority; updateSuccess = true; } }
-        finally { isUpdating = false; }
-        await Task.Delay(2000); updateSuccess = false; await InvokeAsync(StateHasChanged);
+        isUpdating = true;
+        updateSuccess = false;
+        try
+        {
+            var ok = await AdminService.UpdateStatusAsync(TicketId, editStatus, editPriority);
+            if (ok && ticket != null)
+            {
+                ticket.StatusId = editStatus;
+                ticket.PriorityId = editPriority;
+                updateSuccess = true;
+            }
+        }
+        finally
+        {
+            isUpdating = false;
+        }
+
+        await Task.Delay(2000);
+        updateSuccess = false;
+        await InvokeAsync(StateHasChanged);
     }
 
     async Task AssignTicket()
     {
         if (string.IsNullOrEmpty(selectedAssignee)) return;
-        isAssigning = true; assignSuccess = false;
-        try { var ok = await AdminService.AssignTicketAsync(TicketId, selectedAssignee); if (ok && ticket != null) { var dev = adminUsers.FirstOrDefault(u => u.UserId == selectedAssignee); ticket.AssignedToUserId = selectedAssignee; ticket.AssignedToName = dev?.UserName ?? selectedAssignee; assignSuccess = true; } }
-        finally { isAssigning = false; }
-        await Task.Delay(2000); assignSuccess = false; await InvokeAsync(StateHasChanged);
+
+        isAssigning = true;
+        assignSuccess = false;
+        try
+        {
+            var ok = await AdminService.AssignTicketAsync(TicketId, selectedAssignee);
+            if (ok && ticket != null)
+            {
+                var dev = adminUsers.FirstOrDefault(u => u.UserId == selectedAssignee);
+                ticket.AssignedToUserId = selectedAssignee;
+                ticket.AssignedToName = dev?.UserName ?? selectedAssignee;
+                assignSuccess = true;
+            }
+        }
+        finally
+        {
+            isAssigning = false;
+        }
+
+        await Task.Delay(2000);
+        assignSuccess = false;
+        await InvokeAsync(StateHasChanged);
     }
 
     async Task CloseTicket()
     {
         isClosing = true;
-        try { var ok = await AdminService.CloseTicketAsync(TicketId); if (ok && ticket != null) { ticket.StatusId = 5; await InvokeAsync(StateHasChanged); } }
-        finally { isClosing = false; }
+        try
+        {
+            var ok = await AdminService.CloseTicketAsync(TicketId);
+            if (ok && ticket != null)
+            {
+                ticket.StatusId = 5;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        finally
+        {
+            isClosing = false;
+        }
     }
 
-    IBrowserFile? replyImage;
-    string? replyImagePreview;
-
-    async Task OnReplyImageSelected(InputFileChangeEventArgs e)
+    async Task OnReplyMediaSelected(InputFileChangeEventArgs e)
     {
-        replyImage = e.File;
-        using var ms = new MemoryStream();
-        await replyImage.OpenReadStream(5 * 1024 * 1024).CopyToAsync(ms);
-        replyImagePreview = $"data:{replyImage.ContentType};base64,{Convert.ToBase64String(ms.ToArray())}";
+        replyError = string.Empty;
+        ClearReplyMedia();
+
+        var selected = e.File;
+        if (selected == null)
+        {
+            return;
+        }
+
+        var ext = Path.GetExtension(selected.Name);
+        var isImage = IsAllowedImage(selected.ContentType, ext);
+        var isVideo = IsAllowedVideo(selected.ContentType, ext);
+
+        if (!isImage && !isVideo)
+        {
+            replyError = "Only JPG, JPEG, PNG, GIF, WEBP, MP4, WEBM and MOV files are allowed.";
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        var maxBytes = isVideo ? MaxVideoBytes : MaxImageBytes;
+        if (selected.Size > maxBytes)
+        {
+            replyError = isVideo
+                ? "Video size must be 25 MB or less."
+                : "Image size must be 5 MB or less.";
+            await InvokeAsync(StateHasChanged);
+            return;
+        }
+
+        replyMedia = selected;
+        replyMediaFileName = selected.Name;
+        replyMediaSizeBytes = selected.Size;
+        replyMediaContentType = ResolveContentType(selected.ContentType, selected.Name);
+
+        if (isImage)
+        {
+            using var ms = new MemoryStream();
+            await selected.OpenReadStream(MaxImageBytes).CopyToAsync(ms);
+            replyMediaPreview = $"data:{replyMediaContentType};base64,{Convert.ToBase64String(ms.ToArray())}";
+        }
+
+        await InvokeAsync(StateHasChanged);
     }
 
-    void RemoveReplyImage() { replyImage = null; replyImagePreview = null; }
+    void RemoveReplyMedia()
+    {
+        ClearReplyMedia();
+    }
 }
