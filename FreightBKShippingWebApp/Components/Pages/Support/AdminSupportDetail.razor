@@ -1,4 +1,4 @@
-@page "/superadmin/support/{TicketId:int}"
+﻿@page "/superadmin/support/{TicketId:int}"
 @attribute [Authorize]
 @using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Services
@@ -23,10 +23,7 @@
             @if (ticket != null)
             {
                 <div class="asd-header-info">
-                    <h1 class="asd-title">
-                        <span class="asd-tno">#@ticket.TicketNo</span>
-                        @ticket.Subject
-                    </h1>
+                    <h1 class="asd-title"><span class="asd-tno">#@ticket.TicketNo</span>@ticket.Subject</h1>
                     <div class="asd-meta">
                         <span class="asd-co-pill">@ticket.CompanyName</span>
                         <span class="badge pri-@GetPriorityClass(ticket.PriorityId)">@GetPriorityLabel(ticket.PriorityId)</span>
@@ -42,10 +39,7 @@
 
         @if (isLoading)
         {
-            <div class="asd-state">
-                <div class="asd-spinner"></div>
-                <p>Loading ticket...</p>
-            </div>
+            <div class="asd-state"><div class="asd-spinner"></div><p>Loading ticket...</p></div>
         }
         else if (ticket == null)
         {
@@ -157,13 +151,9 @@
                             }
 
                             <div class="asd-compose-box">
-                                <textarea class="asd-textarea" rows="3"
-                                          @bind="replyMessage"
-                                          @bind:event="oninput"
-                                          maxlength="@MaxMessageChars"
-                                          placeholder="Type reply as Support Team"
+                                <textarea class="asd-textarea" rows="3" @bind="replyMessage" @bind:event="oninput"
+                                          maxlength="@MaxMessageChars" placeholder="Type reply as Support Team"
                                           @onkeydown="HandleKeyDown"></textarea>
-
                                 <div class="asd-reply-actions">
                                     <label for="adminMediaInput" class="asd-img-label" title="Attach image/video">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -172,10 +162,8 @@
                                         </svg>
                                         <span class="asd-img-label-text">Attach Media</span>
                                     </label>
-
                                     <button class="asd-btn-send" @onclick="SendReply"
-                                            disabled="@(isSending || (string.IsNullOrWhiteSpace(replyMessage) && replyMedia == null))"
-                                            title="Send">
+                                            disabled="@(isSending || (string.IsNullOrWhiteSpace(replyMessage) && replyMedia == null))" title="Send">
                                         @if (isSending)
                                         {
                                             <span class="asd-spin"></span>
@@ -190,15 +178,12 @@
                                     </button>
                                 </div>
                             </div>
-
                             <span class="asd-hint">Ctrl+Enter to send. Images up to 5 MB, videos up to 25 MB.</span>
                         </div>
                     }
                     else
                     {
-                        <div class="asd-closed">
-                            Ticket is closed. No further replies.
-                        </div>
+                        <div class="asd-closed">Ticket is closed. No further replies.</div>
                     }
                 </div>
 
@@ -314,48 +299,29 @@
 
     SupportTicketAdminDto? ticket;
     List<AdminUserDto> adminUsers = new();
-    string replyMessage = string.Empty;
-    string replyError = string.Empty;
-    string selectedAssignee = string.Empty;
-
-    bool isLoading = true;
-    bool isSending = false;
-    bool isUpdating = false;
-    bool isAssigning = false;
-    bool isClosing = false;
-    bool updateSuccess = false;
-    bool assignSuccess = false;
-    bool isConnected = false;
-
-    int editStatus;
-    int editPriority;
+    string replyMessage = string.Empty, replyError = string.Empty, selectedAssignee = string.Empty;
+    bool isLoading = true, isSending = false, isUpdating = false, isAssigning = false, isClosing = false;
+    bool updateSuccess = false, assignSuccess = false, isConnected = false;
+    int editStatus, editPriority;
 
     const int MaxMessageChars = 2000;
     const long MaxImageBytes = 5L * 1024 * 1024;
     const long MaxVideoBytes = 25L * 1024 * 1024;
 
     static readonly HashSet<string> AllowedImageExtensions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ".jpg", ".jpeg", ".png", ".gif", ".webp"
-    };
-
+        { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
     static readonly HashSet<string> AllowedVideoExtensions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ".mp4", ".webm", ".mov"
-    };
+        { ".mp4", ".webm", ".mov" };
 
     readonly Dictionary<int, string> messageContentTypes = new();
     readonly Dictionary<int, long> messageDocumentIds = new();
     readonly HashSet<int> videoPlaybackFailed = new();
 
     IBrowserFile? replyMedia;
-    string? replyMediaPreview;
-    string? replyMediaFileName;
-    string? replyMediaContentType;
+    string? replyMediaPreview, replyMediaFileName, replyMediaContentType;
     long replyMediaSizeBytes;
-
-    private HubConnection? _hub;
-    private string? _hubToken;
+    HubConnection? _hub;
+    string? _hubToken;
 
     protected override async Task OnInitializedAsync()
     {
@@ -374,28 +340,27 @@
 
             if (ticket != null)
             {
-                editStatus = ticket.StatusId;
-                editPriority = ticket.PriorityId;
-                ticket.Messages ??= new List<TicketMessageAdminDto>();
-                messageContentTypes.Clear();
-                messageDocumentIds.Clear();
-                videoPlaybackFailed.Clear();
+                editStatus = ticket.StatusId; editPriority = ticket.PriorityId;
+                ticket.Messages ??= new();
+                messageContentTypes.Clear(); messageDocumentIds.Clear(); videoPlaybackFailed.Clear();
 
                 var attachments = await FileUploadService.GetAdminDocumentsAsync("TicketMessage", TicketId.ToString());
-                foreach (var msg in ticket.Messages)
+                var sasTasks = ticket.Messages.Select(async msg =>
                 {
                     var doc = attachments.FirstOrDefault(a =>
                         a.CompanyId == ticket.CompanyId &&
-                        (a.SubCategory == msg.MessageId.ToString() ||
-                        (a.SubCategory == "image" && a.ReferenceId == TicketId.ToString()))
-                    );
+                        (a.SubCategory == msg.MessageId.ToString()
+                         || (a.SubCategory == "pending"
+                             && a.ReferenceId == TicketId.ToString()
+                             && Math.Abs((a.UploadedAt - msg.CreatedAt).TotalMinutes) < 3)));
                     if (doc != null)
                     {
-                        msg.ImageUrl = (await FileUploadService.GetAdminSasUrlAsync(doc.DocumentId, 60))?.Trim();
+                        msg.ImageUrl = (await FileUploadService.GetAdminSasUrlAsync(doc.DocumentId, 120))?.Trim();
                         SetMessageContentType(msg.MessageId, doc.ContentType, doc.OriginalFileName);
                         messageDocumentIds[msg.MessageId] = doc.DocumentId;
                     }
-                }
+                }).ToList();
+                await Task.WhenAll(sasTasks);
                 await InvokeAsync(StateHasChanged);
             }
 
@@ -411,7 +376,7 @@
         }
     }
 
-    private async Task StartHub()
+    async Task StartHub()
     {
         if (_hub != null)
         {
@@ -442,46 +407,79 @@
                 .WithAutomaticReconnect()
                 .Build();
 
-            _hub.Closed += async _ =>
-            {
-                isConnected = false;
-                await InvokeAsync(StateHasChanged);
-            };
-
-            _hub.Reconnecting += _ =>
-            {
-                isConnected = false;
-                InvokeAsync(StateHasChanged);
-                return Task.CompletedTask;
-            };
-
+            _hub.Closed += async _ => { isConnected = false; await InvokeAsync(StateHasChanged); };
+            _hub.Reconnecting += _ => { isConnected = false; InvokeAsync(StateHasChanged); return Task.CompletedTask; };
             _hub.Reconnected += async _ =>
             {
                 try { await _hub.InvokeAsync("JoinTicket", TicketId); } catch { }
-                isConnected = true;
-                await InvokeAsync(StateHasChanged);
+                isConnected = true; await InvokeAsync(StateHasChanged);
             };
 
-            _hub.On<string, string, DateTime, int>("ReceiveMessage",
-                async (senderType, messageText, createdAt, messageId) =>
+            _hub.On<string, string, DateTime, int, long>("ReceiveMessage",
+                async (senderType, messageText, createdAt, messageId, mediaDocumentId) =>
                 {
                     await InvokeAsync(async () =>
                     {
                         if (ticket == null) return;
-                        ticket.Messages ??= new List<TicketMessageAdminDto>();
-                        if (IsProbableDuplicate(senderType, messageText, createdAt, messageId)) return;
+                        ticket.Messages ??= new();
 
-                        UpsertMessage(new TicketMessageAdminDto
+                        // Agar message already exist karta hai (admin ne khud bheja)
+                        // aur mediaDocumentId hai toh ImageUrl update karo — skip mat karo
+                        var existing = ticket.Messages.FirstOrDefault(m => m.MessageId == messageId);
+                        if (existing != null)
+                        {
+                            if (mediaDocumentId > 0 && string.IsNullOrWhiteSpace(existing.ImageUrl))
+                            {
+                                try
+                                {
+                                    var sasUrl = (await FileUploadService.GetAdminSasUrlAsync(mediaDocumentId, 120))?.Trim();
+                                    existing.ImageUrl = sasUrl;
+                                    messageDocumentIds[messageId] = mediaDocumentId;
+                                    if (!string.IsNullOrWhiteSpace(sasUrl))
+                                        SetMessageContentType(messageId, null, sasUrl.Split('?')[0]);
+                                    await InvokeAsync(StateHasChanged);
+                                }
+                                catch (Exception ex) { Console.WriteLine($"[AdminHub] ImageUrl update failed: {ex.Message}"); }
+                            }
+                            return;
+                        }
+
+                        // Naya message — text only duplicate check
+                        if (IsProbableDuplicateTextOnly(senderType, messageText, createdAt)) return;
+
+                        var newMsg = new TicketMessageAdminDto
                         {
                             MessageId = messageId,
                             TicketId = TicketId,
                             MessageText = messageText,
                             SenderType = senderType,
                             CreatedAt = createdAt
-                        });
+                        };
 
+                        if (mediaDocumentId > 0)
+                        {
+                            try
+                            {
+                                var sasUrl = (await FileUploadService.GetAdminSasUrlAsync(mediaDocumentId, 120))?.Trim();
+                                newMsg.ImageUrl = sasUrl;
+                                messageDocumentIds[messageId] = mediaDocumentId;
+                                if (!string.IsNullOrWhiteSpace(sasUrl))
+                                    SetMessageContentType(messageId, null, sasUrl.Split('?')[0]);
+                            }
+                            catch (Exception ex) { Console.WriteLine($"[AdminHub] SAS fetch failed: {ex.Message}"); }
+                        }
+
+                        UpsertMessage(newMsg);
                         await InvokeAsync(StateHasChanged);
                         await ScrollToBottom();
+
+                        // FIX: Background retry — handles both cases:
+                        // 1. mediaDocumentId arrived but SAS fetch returned null (permission/timing)
+                        // 2. mediaDocumentId == 0 — server broadcast before media was associated
+                        if (mediaDocumentId > 0 && string.IsNullOrWhiteSpace(newMsg.ImageUrl))
+                            _ = RetryAdminSasAsync(messageId, mediaDocumentId);
+                        else if (mediaDocumentId == 0 && messageId > 0)
+                            _ = PollAdminAttachmentAsync(messageId, createdAt);
                     });
                 });
 
@@ -507,38 +505,109 @@
         }
     }
 
-    private async Task ScrollToBottom()
+    // Retry when SAS returned null (permission/timing issue)
+    async Task RetryAdminSasAsync(int messageId, long docId)
     {
-        try { await JS.InvokeVoidAsync("scrollToBottom", "sad-messages"); } catch { }
+        for (int i = 1; i <= 3; i++)
+        {
+            await Task.Delay(2000 * i);
+            await InvokeAsync(async () =>
+            {
+                var msg = ticket?.Messages?.FirstOrDefault(m => m.MessageId == messageId);
+                if (msg == null || !string.IsNullOrWhiteSpace(msg.ImageUrl)) return;
+                try
+                {
+                    var sasUrl = (await FileUploadService.GetAdminSasUrlAsync(docId, 120))?.Trim();
+                    if (string.IsNullOrWhiteSpace(sasUrl)) return;
+                    msg.ImageUrl = sasUrl;
+                    messageDocumentIds[messageId] = docId;
+                    SetMessageContentType(messageId, null, sasUrl.Split('?')[0]);
+                    await InvokeAsync(StateHasChanged);
+                }
+                catch { }
+            });
+            var current = ticket?.Messages?.FirstOrDefault(m => m.MessageId == messageId);
+            if (!string.IsNullOrWhiteSpace(current?.ImageUrl)) break;
+        }
     }
 
-    async Task HandleKeyDown(KeyboardEventArgs e)
+    // Poll attachments from DB when mediaDocumentId == 0 in broadcast
+    async Task PollAdminAttachmentAsync(int messageId, DateTime createdAt)
     {
-        if (e.CtrlKey && e.Key == "Enter") await SendReply();
+        for (int i = 0; i < 4; i++)
+        {
+            await Task.Delay(2000);
+            try
+            {
+                var msg = ticket?.Messages?.FirstOrDefault(m => m.MessageId == messageId);
+                if (msg != null && !string.IsNullOrWhiteSpace(msg.ImageUrl)) return;
+
+                var attachments = await FileUploadService.GetAdminDocumentsAsync("TicketMessage", TicketId.ToString());
+                var doc = attachments.FirstOrDefault(a =>
+                    a.SubCategory == messageId.ToString() ||
+                    (a.SubCategory == "pending"
+                     && a.ReferenceId == TicketId.ToString()
+                     && Math.Abs((a.UploadedAt - createdAt).TotalMinutes) < 3));
+
+                if (doc == null) continue;
+
+                await InvokeAsync(async () =>
+                {
+                    var m = ticket?.Messages?.FirstOrDefault(x => x.MessageId == messageId);
+                    if (m == null || !string.IsNullOrWhiteSpace(m.ImageUrl)) return;
+                    var sasUrl = (await FileUploadService.GetAdminSasUrlAsync(doc.DocumentId, 120))?.Trim();
+                    if (string.IsNullOrWhiteSpace(sasUrl)) return;
+                    m.ImageUrl = sasUrl;
+                    messageDocumentIds[messageId] = doc.DocumentId;
+                    SetMessageContentType(messageId, doc.ContentType, doc.OriginalFileName);
+                    await InvokeAsync(StateHasChanged);
+                });
+
+                if (!string.IsNullOrWhiteSpace(
+                    ticket?.Messages?.FirstOrDefault(m => m.MessageId == messageId)?.ImageUrl)) break;
+            }
+            catch (Exception ex) { Console.WriteLine($"[AdminHub] PollAttachment error: {ex.Message}"); }
+        }
     }
+
+    async Task ScrollToBottom() { try { await JS.InvokeVoidAsync("scrollToBottom", "sad-messages"); } catch { } }
+    async Task HandleKeyDown(KeyboardEventArgs e) { if (e.CtrlKey && e.Key == "Enter") await SendReply(); }
 
     async Task SendReply()
     {
         if (isSending) return;
         if (string.IsNullOrWhiteSpace(replyMessage) && replyMedia == null) return;
         if (ticket == null) return;
-
         var msgText = string.IsNullOrWhiteSpace(replyMessage) ? string.Empty : replyMessage.Trim();
-        if (msgText.Length > MaxMessageChars)
-        {
-            replyError = $"Message can have at most {MaxMessageChars} characters.";
-            return;
-        }
+        if (msgText.Length > MaxMessageChars) { replyError = $"Message can have at most {MaxMessageChars} characters."; return; }
 
-        isSending = true;
-        replyError = string.Empty;
+        isSending = true; replyError = string.Empty;
+        var capturedMedia = replyMedia;
+        var capturedMediaName = replyMediaFileName;
+        var capturedMediaContentType = replyMediaContentType;
+        var capturedPreview = replyMediaPreview;
 
         try
         {
-            var savedMsg = await AdminService.ReplyAsync(TicketId, msgText);
+            long? mediaDocumentId = null;
+            if (capturedMedia != null)
+            {
+                using var ms = new MemoryStream();
+                await capturedMedia.OpenReadStream(GetMaxUploadBytes(capturedMedia)).CopyToAsync(ms);
+                var upload = await FileUploadService.AdminUploadFileAsync(
+                    ms.ToArray(), capturedMediaName!,
+                    category: "TicketMessage", subCategory: "pending",
+                    referenceId: TicketId.ToString(), ticketCompanyId: ticket.CompanyId);
+                if (upload?.DocumentId > 0) mediaDocumentId = upload.DocumentId;
+            }
+
+            var savedMsg = await AdminService.ReplyAsync(TicketId, msgText, mediaDocumentId);
             if (savedMsg != null)
             {
-                ticket.Messages ??= new List<TicketMessageAdminDto>();
+                if (mediaDocumentId > 0)
+                    _ = FileUploadService.UpdateSubCategoryAsync(mediaDocumentId.Value, savedMsg.MessageId.ToString());
+
+                ticket.Messages ??= new();
                 var newMsg = new TicketMessageAdminDto
                 {
                     MessageId = savedMsg.MessageId,
@@ -548,57 +617,25 @@
                     CreatedAt = savedMsg.CreatedAt
                 };
 
-                if (replyMedia != null)
+                if (mediaDocumentId > 0)
                 {
-                    using var ms = new MemoryStream();
-                    await replyMedia.OpenReadStream(GetMaxUploadBytes(replyMedia)).CopyToAsync(ms);
-                    var upload = await FileUploadService.AdminUploadFileAsync(
-                        ms.ToArray(),
-                        replyMedia.Name,
-                        category: "TicketMessage",
-                        subCategory: savedMsg.MessageId.ToString(),
-                        referenceId: TicketId.ToString(),
-                        ticketCompanyId: ticket.CompanyId);
-
-                    if (upload?.DocumentId > 0)
-                    {
-                        newMsg.ImageUrl = (await FileUploadService.GetAdminSasUrlAsync(upload.DocumentId, 60))?.Trim();
-                    }
-                    else if (!string.IsNullOrWhiteSpace(upload?.Url))
-                    {
-                        newMsg.ImageUrl = upload.Url.Trim();
-                    }
-                    else
-                    {
-                        newMsg.ImageUrl = replyMediaPreview;
-                    }
-
-                    SetMessageContentType(savedMsg.MessageId, replyMediaContentType, replyMedia.Name);
-                    if (upload?.DocumentId > 0)
-                    {
-                        messageDocumentIds[savedMsg.MessageId] = upload.DocumentId;
-                    }
-                    ClearReplyMedia();
+                    newMsg.ImageUrl = (await FileUploadService.GetAdminSasUrlAsync(mediaDocumentId.Value, 120))?.Trim();
+                    SetMessageContentType(savedMsg.MessageId, capturedMediaContentType, capturedMediaName);
+                    messageDocumentIds[savedMsg.MessageId] = mediaDocumentId.Value;
                 }
+                else if (!string.IsNullOrEmpty(capturedPreview))
+                    newMsg.ImageUrl = capturedPreview;
 
+                ClearReplyMedia();
                 UpsertMessage(newMsg);
                 replyMessage = string.Empty;
                 await InvokeAsync(StateHasChanged);
                 await ScrollToBottom();
             }
-            else
-            {
-                replyError = "Failed to send reply.";
-            }
+            else replyError = "Failed to send reply.";
         }
-        catch (Exception ex)
-        {
-            replyError = ex.Message;
-        }
-        finally
-        {
-            isSending = false;
-        }
+        catch (Exception ex) { replyError = ex.Message; }
+        finally { isSending = false; }
     }
 
     public async ValueTask DisposeAsync()
@@ -622,122 +659,62 @@
 
     void UpsertMessage(TicketMessageAdminDto incoming)
     {
-        if (ticket == null)
-        {
-            return;
-        }
-
-        ticket.Messages ??= new List<TicketMessageAdminDto>();
+        if (ticket == null) return;
+        ticket.Messages ??= new();
         var existing = ticket.Messages.FirstOrDefault(m => m.MessageId == incoming.MessageId);
-        if (existing == null)
-        {
-            ticket.Messages.Add(incoming);
-            return;
-        }
-
+        if (existing == null) { ticket.Messages.Add(incoming); return; }
         existing.SenderType = incoming.SenderType;
         existing.CreatedAt = incoming.CreatedAt == default ? existing.CreatedAt : incoming.CreatedAt;
-
-        if (string.IsNullOrWhiteSpace(existing.MessageText) && !string.IsNullOrWhiteSpace(incoming.MessageText))
-        {
-            existing.MessageText = incoming.MessageText;
-        }
-
-        if (string.IsNullOrWhiteSpace(existing.ImageUrl) && !string.IsNullOrWhiteSpace(incoming.ImageUrl))
-        {
-            existing.ImageUrl = incoming.ImageUrl;
-        }
+        if (string.IsNullOrWhiteSpace(existing.MessageText) && !string.IsNullOrWhiteSpace(incoming.MessageText)) existing.MessageText = incoming.MessageText;
+        if (string.IsNullOrWhiteSpace(existing.ImageUrl) && !string.IsNullOrWhiteSpace(incoming.ImageUrl)) existing.ImageUrl = incoming.ImageUrl;
     }
 
-    bool IsProbableDuplicate(string senderType, string? messageText, DateTime createdAt, int messageId)
+    bool IsProbableDuplicateTextOnly(string senderType, string? messageText, DateTime createdAt)
     {
-        if (ticket?.Messages == null)
-        {
-            return false;
-        }
-
-        if (messageId > 0 && ticket.Messages.Any(m => m.MessageId == messageId))
-        {
-            return true;
-        }
-
-        var incomingText = (messageText ?? string.Empty).Trim();
-        if (incomingText.Length == 0)
-        {
-            return false;
-        }
-
+        if (ticket?.Messages == null) return false;
+        var t = (messageText ?? string.Empty).Trim();
+        if (t.Length == 0) return false;
         return ticket.Messages.Any(m =>
             string.Equals(m.SenderType, senderType, StringComparison.OrdinalIgnoreCase) &&
-            string.Equals((m.MessageText ?? string.Empty).Trim(), incomingText, StringComparison.Ordinal) &&
+            string.Equals((m.MessageText ?? string.Empty).Trim(), t, StringComparison.Ordinal) &&
             Math.Abs((m.CreatedAt - createdAt).TotalSeconds) <= 2);
     }
 
     bool IsVideoMessage(TicketMessageAdminDto msg)
     {
-        if (messageContentTypes.TryGetValue(msg.MessageId, out var contentType) && IsVideoContentType(contentType))
-        {
-            return true;
-        }
-
+        if (messageContentTypes.TryGetValue(msg.MessageId, out var ct) && IsVideoContentType(ct)) return true;
         return IsVideoFileName(msg.ImageUrl);
     }
 
     string GetMessageContentType(TicketMessageAdminDto msg)
     {
-        messageContentTypes.TryGetValue(msg.MessageId, out var contentType);
-        return ResolveContentType(contentType, msg.ImageUrl);
+        messageContentTypes.TryGetValue(msg.MessageId, out var ct);
+        return ResolveContentType(ct, msg.ImageUrl);
     }
 
-    void SetMessageContentType(int messageId, string? contentType, string? fallbackFileName)
+    void SetMessageContentType(int messageId, string? ct, string? fallbackFileName)
     {
-        if (messageId <= 0)
-        {
-            return;
-        }
-
-        var resolved = ResolveContentType(contentType, fallbackFileName);
-        if (!string.IsNullOrWhiteSpace(resolved))
-        {
-            messageContentTypes[messageId] = resolved;
-        }
+        if (messageId <= 0) return;
+        var resolved = ResolveContentType(ct, fallbackFileName);
+        if (!string.IsNullOrWhiteSpace(resolved)) messageContentTypes[messageId] = resolved;
     }
 
-    static bool IsAllowedImage(string? contentType, string extension) =>
-        AllowedImageExtensions.Contains(extension) || IsImageContentType(contentType);
+    static bool IsAllowedImage(string? ct, string ext) => AllowedImageExtensions.Contains(ext) || IsImageContentType(ct);
+    static bool IsAllowedVideo(string? ct, string ext) => AllowedVideoExtensions.Contains(ext) || IsVideoContentType(ct);
+    static bool IsImageContentType(string? ct) => !string.IsNullOrWhiteSpace(ct) && ct.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
+    static bool IsVideoContentType(string? ct) => !string.IsNullOrWhiteSpace(ct) && ct.StartsWith("video/", StringComparison.OrdinalIgnoreCase);
 
-    static bool IsAllowedVideo(string? contentType, string extension) =>
-        AllowedVideoExtensions.Contains(extension) || IsVideoContentType(contentType);
-
-    static bool IsImageContentType(string? contentType) =>
-        !string.IsNullOrWhiteSpace(contentType) &&
-        contentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
-
-    static bool IsVideoContentType(string? contentType) =>
-        !string.IsNullOrWhiteSpace(contentType) &&
-        contentType.StartsWith("video/", StringComparison.OrdinalIgnoreCase);
-
-    static bool IsVideoFileName(string? pathOrName)
+    static bool IsVideoFileName(string? p)
     {
-        if (string.IsNullOrWhiteSpace(pathOrName))
-        {
-            return false;
-        }
-
-        var clean = pathOrName.Split('?', '#')[0];
-        var ext = Path.GetExtension(clean);
-        return AllowedVideoExtensions.Contains(ext);
+        if (string.IsNullOrWhiteSpace(p)) return false;
+        return AllowedVideoExtensions.Contains(Path.GetExtension(p.Split('?')[0]));
     }
 
-    static string ResolveContentType(string? contentType, string? fileName)
+    static string ResolveContentType(string? ct, string? fileName)
     {
-        if (!string.IsNullOrWhiteSpace(contentType) && !IsGenericBinaryContentType(contentType))
-        {
-            return contentType;
-        }
-
-        var ext = Path.GetExtension(fileName ?? string.Empty).ToLowerInvariant();
-        return ext switch
+        if (!string.IsNullOrWhiteSpace(ct) && !IsGenericBinaryContentType(ct)) return ct;
+        var cleanName = (fileName ?? string.Empty).Split('?')[0];
+        return Path.GetExtension(cleanName).ToLowerInvariant() switch
         {
             ".jpg" or ".jpeg" => "image/jpeg",
             ".png" => "image/png",
@@ -750,9 +727,9 @@
         };
     }
 
-    static bool IsGenericBinaryContentType(string contentType) =>
-        contentType.Equals("application/octet-stream", StringComparison.OrdinalIgnoreCase) ||
-        contentType.Equals("binary/octet-stream", StringComparison.OrdinalIgnoreCase);
+    static bool IsGenericBinaryContentType(string ct) =>
+        ct.Equals("application/octet-stream", StringComparison.OrdinalIgnoreCase) ||
+        ct.Equals("binary/octet-stream", StringComparison.OrdinalIgnoreCase);
 
     static long GetMaxUploadBytes(IBrowserFile file)
     {
@@ -769,29 +746,21 @@
 
     void ClearReplyMedia()
     {
-        replyMedia = null;
-        replyMediaPreview = null;
-        replyMediaFileName = null;
-        replyMediaContentType = null;
+        replyMedia = null; replyMediaPreview = null;
+        replyMediaFileName = null; replyMediaContentType = null;
         replyMediaSizeBytes = 0;
     }
 
     async Task OnVideoLoadError(TicketMessageAdminDto msg)
     {
-        if (videoPlaybackFailed.Contains(msg.MessageId))
+        if (videoPlaybackFailed.Contains(msg.MessageId)) return;
+        if (msg.MessageId <= 0 || !messageDocumentIds.TryGetValue(msg.MessageId, out var docId))
         {
-            return;
+            videoPlaybackFailed.Add(msg.MessageId); return;
         }
-
-        if (msg.MessageId <= 0 || !messageDocumentIds.TryGetValue(msg.MessageId, out var documentId))
-        {
-            videoPlaybackFailed.Add(msg.MessageId);
-            return;
-        }
-
         try
         {
-            var freshUrl = (await FileUploadService.GetAdminSasUrlAsync(documentId, 60))?.Trim();
+            var freshUrl = (await FileUploadService.GetAdminSasUrlAsync(docId, 120))?.Trim();
             if (!string.IsNullOrWhiteSpace(freshUrl) && !string.Equals(freshUrl, msg.ImageUrl, StringComparison.Ordinal))
             {
                 msg.ImageUrl = freshUrl;
@@ -800,21 +769,12 @@
                 return;
             }
         }
-        catch
-        {
-        }
-
+        catch { }
         videoPlaybackFailed.Add(msg.MessageId);
         await InvokeAsync(StateHasChanged);
     }
 
-    void OnVideoLoaded(int messageId)
-    {
-        if (videoPlaybackFailed.Remove(messageId))
-        {
-            _ = InvokeAsync(StateHasChanged);
-        }
-    }
+    void OnVideoLoaded(int messageId) { if (videoPlaybackFailed.Remove(messageId)) _ = InvokeAsync(StateHasChanged); }
 
     string GetPriorityLabel(int id) => id switch { 1 => "Low", 2 => "Medium", 3 => "High", 4 => "Critical", _ => "Unknown" };
     string GetPriorityClass(int id) => id switch { 1 => "low", 2 => "medium", 3 => "high", 4 => "critical", _ => "low" };
@@ -823,34 +783,20 @@
 
     async Task UpdateStatus()
     {
-        isUpdating = true;
-        updateSuccess = false;
+        isUpdating = true; updateSuccess = false;
         try
         {
             var ok = await AdminService.UpdateStatusAsync(TicketId, editStatus, editPriority);
-            if (ok && ticket != null)
-            {
-                ticket.StatusId = editStatus;
-                ticket.PriorityId = editPriority;
-                updateSuccess = true;
-            }
+            if (ok && ticket != null) { ticket.StatusId = editStatus; ticket.PriorityId = editPriority; updateSuccess = true; }
         }
-        finally
-        {
-            isUpdating = false;
-        }
-
-        await Task.Delay(2000);
-        updateSuccess = false;
-        await InvokeAsync(StateHasChanged);
+        finally { isUpdating = false; }
+        await Task.Delay(2000); updateSuccess = false; await InvokeAsync(StateHasChanged);
     }
 
     async Task AssignTicket()
     {
         if (string.IsNullOrEmpty(selectedAssignee)) return;
-
-        isAssigning = true;
-        assignSuccess = false;
+        isAssigning = true; assignSuccess = false;
         try
         {
             var ok = await AdminService.AssignTicketAsync(TicketId, selectedAssignee);
@@ -862,14 +808,8 @@
                 assignSuccess = true;
             }
         }
-        finally
-        {
-            isAssigning = false;
-        }
-
-        await Task.Delay(2000);
-        assignSuccess = false;
-        await InvokeAsync(StateHasChanged);
+        finally { isAssigning = false; }
+        await Task.Delay(2000); assignSuccess = false; await InvokeAsync(StateHasChanged);
     }
 
     async Task CloseTicket()
@@ -878,67 +818,32 @@
         try
         {
             var ok = await AdminService.CloseTicketAsync(TicketId);
-            if (ok && ticket != null)
-            {
-                ticket.StatusId = 5;
-                await InvokeAsync(StateHasChanged);
-            }
+            if (ok && ticket != null) { ticket.StatusId = 5; await InvokeAsync(StateHasChanged); }
         }
-        finally
-        {
-            isClosing = false;
-        }
+        finally { isClosing = false; }
     }
 
     async Task OnReplyMediaSelected(InputFileChangeEventArgs e)
     {
-        replyError = string.Empty;
-        ClearReplyMedia();
-
+        replyError = string.Empty; ClearReplyMedia();
         var selected = e.File;
-        if (selected == null)
-        {
-            return;
-        }
-
+        if (selected == null) return;
         var ext = Path.GetExtension(selected.Name);
         var isImage = IsAllowedImage(selected.ContentType, ext);
         var isVideo = IsAllowedVideo(selected.ContentType, ext);
-
-        if (!isImage && !isVideo)
-        {
-            replyError = "Only JPG, JPEG, PNG, GIF, WEBP, MP4, WEBM and MOV files are allowed.";
-            await InvokeAsync(StateHasChanged);
-            return;
-        }
-
+        if (!isImage && !isVideo) { replyError = "Only JPG, JPEG, PNG, GIF, WEBP, MP4, WEBM and MOV files are allowed."; await InvokeAsync(StateHasChanged); return; }
         var maxBytes = isVideo ? MaxVideoBytes : MaxImageBytes;
-        if (selected.Size > maxBytes)
-        {
-            replyError = isVideo
-                ? "Video size must be 25 MB or less."
-                : "Image size must be 5 MB or less.";
-            await InvokeAsync(StateHasChanged);
-            return;
-        }
-
-        replyMedia = selected;
-        replyMediaFileName = selected.Name;
-        replyMediaSizeBytes = selected.Size;
+        if (selected.Size > maxBytes) { replyError = isVideo ? "Video size must be 25 MB or less." : "Image size must be 5 MB or less."; await InvokeAsync(StateHasChanged); return; }
+        replyMedia = selected; replyMediaFileName = selected.Name; replyMediaSizeBytes = selected.Size;
         replyMediaContentType = ResolveContentType(selected.ContentType, selected.Name);
-
         if (isImage)
         {
             using var ms = new MemoryStream();
             await selected.OpenReadStream(MaxImageBytes).CopyToAsync(ms);
             replyMediaPreview = $"data:{replyMediaContentType};base64,{Convert.ToBase64String(ms.ToArray())}";
         }
-
         await InvokeAsync(StateHasChanged);
     }
 
-    void RemoveReplyMedia()
-    {
-        ClearReplyMedia();
-    }
+    void RemoveReplyMedia() => ClearReplyMedia();
 }
