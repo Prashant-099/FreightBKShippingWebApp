@@ -1073,14 +1073,16 @@ var purchaseVoucherIds = allVouchers
             double totalDiscount = selectedBills.Sum(b => b.DiscountAmount);
             double totalTds = selectedBills.Sum(b => b.TdsAmount);
             double totalShortage = selectedBills.Sum(b => b.ShortageAmount);
+          
 
             EditModel.JournalTotalDiscount = (float)totalDiscount;
             EditModel.JournalTotalTds = (float)totalTds;
             EditModel.JournalTotalShort = (float)totalShortage;
 
-             EditModel.JournalTotal = (float)(totalSettled + totalDiscount + totalTds + totalShortage);
+             EditModel.JournalTotal = (float)(totalSettled);
+             double total = (float)(totalSettled + totalDiscount + totalTds + totalShortage);
            // EditModel.JournalTotal = totalSettled + EditModel.JournalTotalDiscount + EditModel.JournalTotalTds + EditModel.JournalTotalShort;
-            EditModel.JournalOnAccount = (float)(EditModel.JournalAmount - EditModel.JournalTotal);
+            EditModel.JournalOnAccount = (float)(EditModel.JournalAmount - total);
         }
         else
         {

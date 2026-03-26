@@ -650,7 +650,8 @@
 
                 if (layoutBytes == null || layoutBytes.Length == 0)
                 {
-                    ToastService.Error($"Failed to load report layout for Report ID: {reportId}");
+                    var billNos = string.Join(", ", groupQuotations.Select(q => q.BillNo));
+                    ToastService.Error($"Failed to load report layout for Report ID: {reportId}, Bill No: {billNos}");
                     continue;
                 }
 

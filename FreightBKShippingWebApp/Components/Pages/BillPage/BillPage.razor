@@ -1207,30 +1207,74 @@ DefaultFileName="@PendingFileName"
             return;
         }
 
-        // Get bill numbers safely
-        var billNumbers = SelectedBills
-            .Cast<Bill>()
-            .Select(b => b.BillNo)   // Make sure BillNumber property exists
-            .Where(x => !string.IsNullOrWhiteSpace(x))
-            .Select(x => x.Replace("/", "-").Replace("\\", "-")) // sanitize filename
-            .ToList();
+        // // Get bill numbers safely
+        // var billNumbers = SelectedBills
+        //     .Cast<Bill>()
+        //     .Select(b => b.BillNo)   // Make sure BillNumber property exists
+        //     .Where(x => !string.IsNullOrWhiteSpace(x))
+        //     .Select(x => x.Replace("/", "-").Replace("\\", "-")) // sanitize filename
+        //     .ToList();
 
-        // Dynamic file name
-        var fileName = billNumbers.Count == 1
-            ? $"{billNumbers.First()}.pdf"
-            : $"Bills_{DateTime.Now:yyyyMMddHHmmss}.pdf";
+        // // Dynamic file name
+        // var fileName = billNumbers.Count == 1
+        //     ? $"{billNumbers.First()}.pdf"
+        //     : $"Bills_{DateTime.Now:yyyyMMddHHmmss}.pdf";
 
-        var reportId = SelectedReportId.Value;
+        // var reportId = SelectedReportId.Value;
 
-        await ReportManager.PreviewAsync<Bill, PrintBillFullDto>(
-            SelectedBills.Cast<Bill>().ToList(),
-            _ => Task.FromResult(reportId),
-            c => BillService.GetPrintableBillAsync(c.BillId),
-            c => "Bill",
-            fileName
-        );
+        // await ReportManager.PreviewAsync<Bill, PrintBillFullDto>(
+        //     SelectedBills.Cast<Bill>().ToList(),
+        //     _ => Task.FromResult(reportId),
+        //     c => BillService.GetPrintableBillAsync(c.BillId),
+        //     c => "Bill",
+        //     fileName
+        // );
+        var billList = SelectedBills.Cast<Bill>().ToList();
+        LoadingService.Show("Building merged report...");
 
-        await ClearSelection();
+        try
+        {
+            var layoutBytes = await ReportDataService.GetLayoutBytesAsync(SelectedReportId.Value);
+
+            if (layoutBytes == null || layoutBytes.Length == 0)
+            {
+                ToastService.Error($"Failed to load report layout for Report ID: {SelectedReportId}");
+                return;
+            }
+
+            var dtoList = new List<PrintBillFullDto?>();
+            foreach (var bill in billList)
+            {
+                var dto = await BillService.GetPrintableBillAsync(bill.BillId);
+                dtoList.Add(dto);
+            }
+
+            var dtoDict = billList.Select((bill, i) => new { bill, dto = dtoList[i] })
+                .ToDictionary(x => x.bill, x => x.dto);
+
+            await ReportService.CreateMergedReportAsync(
+                billList,
+                bill => dtoDict.ContainsKey(bill) ? dtoDict[bill] : null,
+                layoutBytes);
+
+            if (ReportService.MergedReport == null)
+            {
+                ToastService.Error("Failed to generate report.");
+                return;
+            }
+
+            Navigation.NavigateTo("/reportviewer");
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Failed to generate report: {ex.Message}");
+        }
+        finally
+        {
+            LoadingService.Hide();
+            await ClearSelection();
+        }
+      
     }
 
     [Inject] private Sentwpcerti Sentwpcerti { get; set; } = default!;

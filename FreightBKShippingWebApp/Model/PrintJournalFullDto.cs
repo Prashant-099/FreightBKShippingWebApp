@@ -31,11 +31,17 @@
         public string? CompanyMobile { get; set; }
         public string? CompanyEmail { get; set; }
 
+        public string? CompanyWebsite { get; set; }
+        public string? CompanyState { get; set; }
+        public string? CompanyPanno { get; set; }
+
+
         // Bank Info
         public string? BankName { get; set; }
         public string? BankAccountNo { get; set; }
         public string? BankIFSC { get; set; }
         public string? BankBranch { get; set; }
+        public string? BankAddress { get; set; }
     }
     public class BillRefDetailPrintDto
     {
@@ -52,6 +58,8 @@
         public float Balance { get; set; }
 
         public int BillId { get; set; }
+        public string? AccountName { get; set; }
+
     }
 
 }
