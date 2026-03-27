@@ -109,6 +109,18 @@ namespace FreightBKShippingWebApp.Services
                 return false;
             }
         }
+        public async Task<PrintJournalFullDto?> GetPrintableBillAsync(int id)
+        {
+            try
+            {
+                return await _api.GetFromJsonAsync<PrintJournalFullDto>($"api/Journals/print/{id}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Error fetching printable bill {id}: {ex.Message}");
+                return null;
+            }
+        }
 
         // ✅ Get BillRefDetails for a Journal
         public async Task<List<BillRefDetail>> GetBillRefDetailsAsync(int journalId)
