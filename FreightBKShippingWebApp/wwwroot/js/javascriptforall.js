@@ -176,10 +176,16 @@ window.downloadFile = function (filename, bytesBase64) {
 }
 
 window.scrollToBottom = function (elementId) {
-    const el = document.getElementById(elementId);
-    if (el) {
+    setTimeout(function () {
+        const el = document.getElementById(elementId);
+        if (!el) return;
         el.scrollTop = el.scrollHeight;
-    }
+
+        // Jab bhi image/video load ho, phir se scroll karo
+        const mediaItems = el.querySelectorAll('img, video');
+        mediaItems.forEach(function (media) {
+            media.addEventListener('load', function () { el.scrollTop = el.scrollHeight; });
+            media.addEventListener('loadedmetadata', function () { el.scrollTop = el.scrollHeight; });
+        });
+    }, 300);
 };
-
-
