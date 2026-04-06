@@ -39,8 +39,7 @@ namespace FreightBKShippingWebApp.Model
         public bool VoucherDetailIsDuplicate { get; set; }
 
         [Column("voucher_detail_status")]
-        public bool VoucherDetailStatus { get; set; }
-
+        public bool VoucherDetailStatus { get; set; } = true;
         [Column("voucher_detail_created")]
         public DateTime VoucherDetailCreated { get; set; } = DateTime.UtcNow;
 
