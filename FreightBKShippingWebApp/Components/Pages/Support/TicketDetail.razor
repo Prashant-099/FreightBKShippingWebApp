@@ -409,8 +409,15 @@
         }
     }
 
-    async Task ScrollToBottom() { try { await JS.InvokeVoidAsync("scrollToBottom", "chat-messages"); } catch { } }
-    async Task HandleKeyDown(KeyboardEventArgs e) { if (e.CtrlKey && e.Key == "Enter") await SendReply(); }
+    async Task ScrollToBottom()
+    {
+        try
+        {
+            await Task.Delay(100);
+            await JS.InvokeVoidAsync("scrollToBottom", "chat-messages");
+        }
+        catch { }
+    }
 
     async Task OnReplyMediaSelected(InputFileChangeEventArgs e)
     {
@@ -635,4 +642,9 @@
     string GetPriorityClass(int id) => id switch { 1 => "low", 2 => "medium", 3 => "high", 4 => "critical", _ => "low" };
     string GetStatusLabel(int id) => id switch { 1 => "Open", 2 => "In Progress", 3 => "Waiting User", 4 => "Resolved", 5 => "Closed", _ => "Unknown" };
     string GetStatusClass(int id) => id switch { 1 => "open", 2 => "inprogress", 3 => "waiting", 4 => "resolved", 5 => "closed", _ => "open" };
+
+    async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.CtrlKey && e.Key == "Enter") await SendReply();
+    }
 }

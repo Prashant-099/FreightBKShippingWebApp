@@ -5,6 +5,7 @@
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.SignalR.Client
 @using Microsoft.AspNetCore.Http.Connections;
+@using Microsoft.AspNetCore.Components.Web
 @implements IAsyncDisposable
 @inject DashboardService AdminService
 @inject NavigationManager Nav
@@ -57,7 +58,7 @@
                         <span class="asd-msg-cnt">@(ticket.Messages.Count) messages</span>
                     </div>
 
-                    <div class="asd-msgs" id="sad-messages">
+                    <div class="asd-msgs" id="chat-messages">
                         @if (!ticket.Messages.Any())
                         {
                             <div class="asd-empty-msgs"><p>No messages yet.</p></div>
@@ -570,8 +571,15 @@
         }
     }
 
-    async Task ScrollToBottom() { try { await JS.InvokeVoidAsync("scrollToBottom", "sad-messages"); } catch { } }
-    async Task HandleKeyDown(KeyboardEventArgs e) { if (e.CtrlKey && e.Key == "Enter") await SendReply(); }
+    async Task ScrollToBottom()
+    {
+        try
+        {
+            await Task.Delay(100);
+            await JS.InvokeVoidAsync("scrollToBottom", "chat-messages");
+        }
+        catch { }
+    }
 
     async Task SendReply()
     {
@@ -846,4 +854,9 @@
     }
 
     void RemoveReplyMedia() => ClearReplyMedia();
+
+    async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.CtrlKey && e.Key == "Enter") await SendReply();
+    }
 }
