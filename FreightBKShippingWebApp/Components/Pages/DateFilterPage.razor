@@ -3,6 +3,7 @@
 @using System.ComponentModel.DataAnnotations
 @inject ToasteService ToastService
 @inject VoucherService VoucherService
+@inject AccountService AccountService
 <style>
     .date-filter-body {
         padding: 0.5rem;
@@ -120,6 +121,22 @@
                         </ChildContent>
                     </DxFormLayoutItem>
                 }
+                @if (ShowAccountFilter)
+                {
+                    <DxFormLayoutItem Caption="Accounts">
+                        <ChildContent Context="ctx">
+                            <DxComboBox Data="@AccountList" TData="Account" TValue="int?"
+                                        @bind-Value="EditModel.SelectedAccount"
+                                        NullText="Select Account"
+                                        TextFieldName="AccountName"
+                                        ValueFieldName="AccountId"
+                                        AllowUserInput="true"
+                                        SearchMode="ListSearchMode.AutoSearch"
+                                        SearchFilterCondition="ListSearchFilterCondition.Contains"
+                                        ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                        </ChildContent>
+                    </DxFormLayoutItem>
+                }
                 <DxFormLayoutItem Caption="From Date">
                     <ChildContent Context="ctx">
                         <DxDateEdit @bind-Date="EditModel.FromDate"
@@ -161,9 +178,10 @@
 @code {
     private EditContext? editContext;
 
-    [Parameter] public EventCallback<(DateTime? FromDate, DateTime? ToDate, string? JobType, int? Vouchertype, string? ShowOutstandingTypeFilter)> OnFilterApplied { get; set; }
+    [Parameter] public EventCallback<(DateTime? FromDate, DateTime? ToDate, string? JobType, int? Vouchertype, string? ShowOutstandingTypeFilter, int? Account)> OnFilterApplied { get; set; }
     [Parameter] public bool ShowJobTypeFilter { get; set; } = false;
     [Parameter] public bool ShowVoucherTypeFilter { get; set; } = false;
+    [Parameter] public bool ShowAccountFilter { get; set; } = false;
     [Parameter] public bool ShowOutstandingTypeFilter { get; set; } = false;
     private bool Visible { get; set; }
     private string Title { get; set; } = "Filter by Date Range";
@@ -172,7 +190,8 @@
     private List<string> jobTypeslist = new() { "IMPORT", "EXPORT" };
     private List<string> OutstandingTypeslist = new() { "RECEIVABLE", "PAYABLE" };
     private List<Voucher> voucherTypes = new();
-    public void Show(DateTime? fromDate, DateTime? toDate , string? SelectedJobType ,int? vouchertype, string? outstandingType)
+    private List<Account> AccountList = new();
+    public void Show(DateTime? fromDate, DateTime? toDate, string? SelectedJobType, int? vouchertype, string? outstandingType, int? Accounts)
     {
         EditModel = new DateFilterModel
         {
@@ -180,7 +199,8 @@
             ToDate = toDate,
             SelectedJobType = SelectedJobType,
             SelectedVoucherType = vouchertype,
-            SelectedOutstandingType = outstandingType
+            SelectedOutstandingType = outstandingType,
+            SelectedAccount = Accounts,
         };
 
         editContext = new EditContext(EditModel);
@@ -209,7 +229,10 @@
 
         }
 
-    
+        if (ShowAccountFilter == true)
+        {
+            AccountList = await AccountService.GetAllAsync();
+        }
     }
     private async Task HandleValidSubmit()
     {
@@ -228,7 +251,7 @@
         // Invoke callback
         if (OnFilterApplied.HasDelegate)
         {
-            await OnFilterApplied.InvokeAsync((EditModel.FromDate, EditModel.ToDate, EditModel.SelectedJobType, EditModel.SelectedVoucherType, EditModel.SelectedOutstandingType));
+            await OnFilterApplied.InvokeAsync((EditModel.FromDate, EditModel.ToDate, EditModel.SelectedJobType, EditModel.SelectedVoucherType, EditModel.SelectedOutstandingType, EditModel.SelectedAccount));
         }
 
         ToastService.Success("Date filter applied successfully!");
@@ -243,7 +266,7 @@
 
         if (OnFilterApplied.HasDelegate)
         {
-            await OnFilterApplied.InvokeAsync((null, null, null,null,null));
+            await OnFilterApplied.InvokeAsync((null, null, null,null,null,null));
         }
 
         ToastService.Info("Date filter cleared.");
@@ -324,5 +347,6 @@
         public string? SelectedJobType { get; set; }
         public int? SelectedVoucherType { get; set; }
         public string? SelectedOutstandingType { get; set; }
+        public int? SelectedAccount { get; set; }
     }
 }

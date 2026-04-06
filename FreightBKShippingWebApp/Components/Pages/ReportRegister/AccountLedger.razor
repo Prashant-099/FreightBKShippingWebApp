@@ -1,0 +1,813 @@
+﻿@page "/accountledger"
+@attribute [Authorize]
+@using Microsoft.AspNetCore.Authorization
+@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Services
+@using System.Text.Json
+@inject AccountService AccountService
+@inject VoucherService VoucherService
+@inject ToasteService ToastService
+@inject LoadingService LoadingService
+@inject YearStatechangeService YearStatechangeService
+@inject GridLayoutService GridLayoutService
+@inject IJSRuntime JS
+@inject LedgerService LedgerService
+<style>
+    .grid-size {
+        max-height: 570px;
+    }
+
+    .layout-combobox {
+        border-radius: 6px;
+        width: 185px;
+    }
+
+    .toolbar-title {
+        display: flex;
+        align-items: center;
+    }
+
+    /* Debit / Credit / Balance color indicators */
+    .debit-cell {
+        color: #c0392b;
+        font-weight: 600;
+    }
+
+    .credit-cell {
+        color: #00ff86;
+        font-weight: 600;
+    }
+
+    .balance-dr {
+        color: #c0392b;
+        font-weight: 700;
+    }
+
+    .balance-cr {
+        color: #00ff86;
+        font-weight: 700;
+    }
+
+    .opening-row {
+        font-style: italic;
+        color: #666;
+    }
+
+    /* Print section hidden normally */
+    .print-only-section {
+        display: none;
+    }
+
+    @@media print {
+        body * {
+            visibility: hidden;
+        }
+
+        .print-only-section,
+        .print-only-section * {
+            visibility: visible;
+        }
+
+        .print-only-section {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            display: block !important;
+        }
+
+        @@page {
+            size: A4 landscape;
+            margin: 1cm;
+        }
+    }
+
+    /* Print table styling */
+    .print-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+        font-size: 11px;
+    }
+
+        .print-table th,
+        .print-table td {
+            border: 1px solid #000;
+            padding: 6px;
+            text-align: left;
+        }
+
+        .print-table th {
+            background-color: #f0f0f0;
+            font-weight: bold;
+        }
+
+        .print-table tfoot td {
+            font-weight: bold;
+            background-color: #e8e8e8;
+        }
+
+    .print-header {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+        .print-header h2 {
+            margin: 5px 0;
+        }
+
+    .print-info {
+        margin-bottom: 15px;
+        font-size: 13px;
+    }
+
+    /* Filter bar */
+    .ledger-filter-bar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        padding: 8px 0 4px 0;
+    }
+
+    .ledger-filter-bar label {
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 0;
+        white-space: nowrap;
+    }
+
+    .filter-input {
+        border-radius: 5px;
+        border: 1px solid #ced4da;
+        padding: 4px 8px;
+        font-size: 13px;
+        height: 32px;
+    }
+
+    .skip-opening-label {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 13px;
+        cursor: pointer;
+        user-select: none;
+    }
+</style>
+
+
+<div class="px-3 py-3">
+    <!-- ── Main Grid ── -->
+    <DxGrid TItem="AccountLedgerEntry"
+            Data="@ledgerEntries"
+            @ref="MyGrid"
+            KeyFieldName="EntryId"
+            ShowSearchBox="true"
+            PageSize="100"
+            PageSizeSelectorVisible="false"
+            ShowGroupPanel="true"
+            FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always"
+            FocusedRowEnabled="true"
+            ColumnResizeMode="GridColumnResizeMode.NextColumn"
+            CssClass="grid-size"
+            AllowSelectRowByClick="true"
+            AllowColumnReorder="true">
+
+        <ToolbarTemplate Context="gridContext">
+            <DxToolbar>
+                <!-- Title -->
+                <DxToolbarItem Alignment="ToolbarItemAlignment.Left">
+                    <Template Context="t">
+                        <div class="toolbar-title">
+                            <i class="bi bi-journal-text me-2"></i>
+                            <span class="fs-5">Account Ledger</span>
+                        </div>
+                    </Template>
+                </DxToolbarItem>
+
+                <DxToolbarItem Text="Refresh"
+                               IconCssClass="bi bi-arrow-clockwise"
+                               Click="OnShow"
+                               RenderStyle="ButtonRenderStyle.None"
+                               AdaptivePriority="1" />
+
+            <DxToolbarItem Text="Filter"
+                           IconCssClass="bi bi-funnel-fill"
+                           Click="OpenDateFilter"
+                           RenderStyle="ButtonRenderStyle.None"
+                           AdaptivePriority="2" />
+
+                <DxToolbarItem Text="Export"
+                               RenderStyle="ButtonRenderStyle.None"
+                               AdaptivePriority="2">
+                    <Items>
+                        <DxToolbarItem Text="Excel"
+                                       RenderStyle="ButtonRenderStyle.None"
+                                       IconCssClass="bi bi-file-earmark-spreadsheet"
+                                       Click="ExportXlsx" />
+                        <DxToolbarItem Text="Print"
+                                       RenderStyle="ButtonRenderStyle.None"
+                                       IconCssClass="bi bi-printer"
+                                       Click="PrintLedger" />
+                    </Items>
+                </DxToolbarItem>
+                <DxToolbarItem >
+                    <Template>
+                        <div class="d-flex align-items-center gap-2">
+                            <DxCheckBox Checked="SkipOpening"
+                                        CheckedChanged="@(async (bool value) => { SkipOpening = value; await OnShow(); })" />
+                            <span style="font-size:13px;">Skip Opening</span>
+                        </div>
+                    </Template>
+                </DxToolbarItem>
+                <DxToolbarItem Alignment="ToolbarItemAlignment.Right"
+                               RenderStyle="ButtonRenderStyle.Secondary"
+                               IconCssClass="bi bi-gear-wide-connected"
+                               Click="ShowLayoutPopup" />
+            </DxToolbar>
+        </ToolbarTemplate>
+
+        <Columns>
+            <DxGridDataColumn FieldName="EntryId"
+                              Caption="ID"
+                              Width="@(layoutManager?.GetColumnWidth("EntryId") ?? "70px")"
+                              Visible="@(layoutManager?.GetColumnVisibility("EntryId") ?? false)" />
+
+            <DxGridDataColumn FieldName="VoucherDate"
+                              Caption="Voucher Date"
+                              DisplayFormat="dd/MM/yyyy"
+                              SortIndex="0"
+                              SortOrder="GridColumnSortOrder.Ascending"
+                              Width="@(layoutManager?.GetColumnWidth("VoucherDate") ?? "120px")"
+                              Visible="@(layoutManager?.GetColumnVisibility("VoucherDate") ?? true)" />
+
+            <DxGridDataColumn FieldName="VchName"
+                              Caption="Vch Name"
+                              Width="@(layoutManager?.GetColumnWidth("VchName") ?? "110px")"
+                              Visible="@(layoutManager?.GetColumnVisibility("VchName") ?? true)" />
+
+            <DxGridDataColumn FieldName="VoucherNo"
+                              Caption="Voucher No"
+                              Width="@(layoutManager?.GetColumnWidth("VoucherNo") ?? "160px")"
+                              Visible="@(layoutManager?.GetColumnVisibility("VoucherNo") ?? true)" />
+
+            <DxGridDataColumn FieldName="AccountName"
+                              Caption="Account Name"
+                              Width="@(layoutManager?.GetColumnWidth("AccountName") ?? "200px")"
+                              Visible="@(layoutManager?.GetColumnVisibility("AccountName") ?? true)" />
+
+            <DxGridDataColumn FieldName="Particulars"
+                              Caption="Particulars"
+                              Width="@(layoutManager?.GetColumnWidth("Particulars") ?? "360px")"
+                              Visible="@(layoutManager?.GetColumnVisibility("Particulars") ?? true)" />
+
+            <DxGridDataColumn FieldName="Debit"
+                              Caption="Debit"
+                              DisplayFormat="N2"
+                              Width="@(layoutManager?.GetColumnWidth("Debit") ?? "130px")"
+                              Visible="@(layoutManager?.GetColumnVisibility("Debit") ?? true)">
+                <CellDisplayTemplate Context="cellContext">
+                    @{
+                        var debit = cellContext.Value is decimal d ? d : 0m;
+                    }
+                    @if (debit != 0)
+                    {
+                        <span class="debit-cell">@debit.ToString("N2")</span>
+                    }
+                    else
+                    {
+                        <span>–</span>
+                    }
+                </CellDisplayTemplate>
+            </DxGridDataColumn>
+
+            <DxGridDataColumn FieldName="Credit"
+                              Caption="Credit"
+                              DisplayFormat="N2"
+                              Width="@(layoutManager?.GetColumnWidth("Credit") ?? "130px")"
+                              Visible="@(layoutManager?.GetColumnVisibility("Credit") ?? true)">
+                <CellDisplayTemplate Context="cellContext">
+                    @{
+                        var credit = cellContext.Value is decimal c ? c : 0m;
+                    }
+                    @if (credit != 0)
+                    {
+                        <span class="credit-cell">@credit.ToString("N2")</span>
+                    }
+                    else
+                    {
+                        <span>–</span>
+                    }
+                </CellDisplayTemplate>
+            </DxGridDataColumn>
+
+            <DxGridDataColumn FieldName="Balance"
+                              Caption="Balance"
+                              DisplayFormat="N2"
+                              Width="@(layoutManager?.GetColumnWidth("Balance") ?? "140px")"
+                              Visible="@(layoutManager?.GetColumnVisibility("Balance") ?? true)">
+                <CellDisplayTemplate Context="cellContext">
+                    @{
+                        var entry = (AccountLedgerEntry)cellContext.DataItem;
+                        var balClass = entry.DrCr == "Dr" ? "balance-dr" : "balance-cr";
+                    }
+                    <span class="@balClass">@entry.Balance.ToString("N2")</span>
+                </CellDisplayTemplate>
+            </DxGridDataColumn>
+
+            <DxGridDataColumn FieldName="DrCr"
+                              Caption="Dr/Cr"
+                              Width="@(layoutManager?.GetColumnWidth("DrCr") ?? "70px")"
+                              Visible="@(layoutManager?.GetColumnVisibility("DrCr") ?? true)">
+                <CellDisplayTemplate Context="cellContext">
+                    @{
+                        var drCr = cellContext.Value?.ToString() ?? "";
+                        var drCrClass = drCr == "Dr" ? "balance-dr" : "balance-cr";
+                    }
+                    <span class="@drCrClass">@drCr</span>
+                </CellDisplayTemplate>
+            </DxGridDataColumn>
+        </Columns>
+
+        <TotalSummary>
+            <DxGridSummaryItem SummaryType="GridSummaryItemType.Count"
+                               FieldName="EntryId"
+                                />
+            <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum"
+                               FieldName="Debit"
+                                />
+            <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum"
+                               FieldName="Credit"
+                                />
+        </TotalSummary>
+    </DxGrid>
+    </div>
+    <!-- Closing Balance Bar -->
+    @if (ledgerEntries != null && ledgerEntries.Any())
+    {
+        var lastEntry = ledgerEntries.Last();
+        var closingClass = lastEntry.DrCr == "Dr" ? "balance-dr" : "balance-cr";
+        <div class="d-flex justify-content-end mt-2 pe-2 gap-4" style="font-size:13px; font-weight:600;">
+            <span>
+                Total Debit: <span class="debit-cell">@ledgerEntries.Sum(e => e.Debit).ToString("N2")</span>
+            </span>
+            <span>
+                Total Credit: <span class="credit-cell">@ledgerEntries.Sum(e => e.Credit).ToString("N2")</span>
+            </span>
+            <span>
+                Closing Balance: <span class="@closingClass">@lastEntry.Balance.ToString("N2") @lastEntry.DrCr</span>
+            </span>
+        </div>
+    }
+
+
+<!-- ── PRINT ONLY SECTION ── -->
+<div class="print-only-section" id="printLedgerSection">
+    <div class="print-header">
+        <h2>Account Ledger</h2>
+        <div class="print-info">
+            <strong>Account:</strong> @SelectedAccountName &nbsp;&nbsp;
+            <strong>From:</strong> @FromDate?.ToString("dd/MM/yyyy") &nbsp;&nbsp;
+            <strong>To:</strong> @ToDate?.ToString("dd/MM/yyyy") &nbsp;&nbsp;
+            <strong>Print Date:</strong> @DateTime.Now.ToString("dd/MM/yyyy hh:mm tt")
+        </div>
+    </div>
+
+    <table class="print-table">
+        <thead>
+            <tr>
+                <th>Voucher Date</th>
+                <th>Vch Name</th>
+                <th>Voucher No</th>
+                <th>Account Name</th>
+                <th>Particulars</th>
+                <th>Debit</th>
+                <th>Credit</th>
+                <th>Balance</th>
+                <th>Dr/Cr</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (ledgerEntries != null && ledgerEntries.Any())
+            {
+                @foreach (var item in ledgerEntries)
+                {
+                    <tr>
+                        <td>@item.VoucherDate.ToString("dd/MM/yyyy")</td>
+                        <td>@item.VchName</td>
+                        <td>@item.VoucherNo</td>
+                        <td>@item.AccountName</td>
+                        <td>@item.Particulars</td>
+                        <td style="color:#c0392b">@(item.Debit != 0 ? item.Debit.ToString("N2") : "–")</td>
+                        <td style="color:#00ff86">@(item.Credit != 0 ? item.Credit.ToString("N2") : "–")</td>
+                        <td style="@(item.DrCr == "Dr" ? "color:#c0392b" : "color:#00ff86")">
+                            @item.Balance.ToString("N2")
+                        </td>
+                        <td style="@(item.DrCr == "Dr" ? "color:#c0392b" : "color:#00ff86")">
+                            @item.DrCr
+                        </td>
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr>
+                    <td colspan="9" style="text-align:center">No records available</td>
+                </tr>
+            }
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="5"><strong>Total:</strong></td>
+                <td style="color:#c0392b">
+                    <strong>@ledgerEntries?.Sum(e => e.Debit).ToString("N2")</strong>
+                </td>
+                <td style="color:#00ff86">
+                    <strong>@ledgerEntries?.Sum(e => e.Credit).ToString("N2")</strong>
+                </td>
+                @{
+                    var last = ledgerEntries?.LastOrDefault();
+                }
+                <td style="@(last?.DrCr == "Dr" ? "color:#c0392b" : "color:#00ff86")">
+                    <strong>@last?.Balance.ToString("N2")</strong>
+                </td>
+                <td style="@(last?.DrCr == "Dr" ? "color:#c0392b" : "color:#00ff86")">
+                    <strong>@last?.DrCr</strong>
+                </td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+
+<!-- ── Voucher Detail Popup ── -->
+@if (showVoucherPopup && selectedEntry != null)
+{
+    <div class="modal fade show d-block"
+         style="background-color:rgba(0,0,0,0.5); z-index:1050;">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-receipt me-2"></i>Voucher Detail – @selectedEntry.VoucherNo
+                    </h5>
+                    <button class="btn-close" @onclick="CloseVoucherPopup"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-2">
+                        <div class="col-md-4">
+                            <strong>Date:</strong> @selectedEntry.VoucherDate.ToString("dd/MM/yyyy")
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Voucher Type:</strong> @selectedEntry.VchName
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Voucher No:</strong> @selectedEntry.VoucherNo
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-md-6">
+                            <strong>Account:</strong> @selectedEntry.AccountName
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Particulars:</strong> @selectedEntry.Particulars
+                        </div>
+                    </div>
+                    <hr />
+                    <div class="row">
+                        <div class="col-md-4">
+                            <strong>Debit:</strong>
+                            <span class="debit-cell ms-2">@selectedEntry.Debit.ToString("N2")</span>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Credit:</strong>
+                            <span class="credit-cell ms-2">@selectedEntry.Credit.ToString("N2")</span>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Balance:</strong>
+                            <span class="@(selectedEntry.DrCr == "Dr" ? "balance-dr" : "balance-cr") ms-2">
+                                @selectedEntry.Balance.ToString("N2") @selectedEntry.DrCr
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CloseVoucherPopup">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<ConfirmationDialog />
+
+<GridLayoutpPopup @ref="layoutManager"
+                  VoucherType="AccountLedger"
+                  Columns="@allColumns"
+                  OnLayoutChanged="HandleLayoutChanged" />
+<DateFilterPage @ref="dateFilterPopup" ShowAccountFilter="true" OnFilterApplied="HandleFilterApplied" />
+@code {
+
+    private async Task HandleFilterApplied((DateTime? FromDate, DateTime? ToDate, string? JobType, int? SelectedVoucherType, string? OutstandingType, int? SelectedAccount) f)
+    {
+        FromDate = f.FromDate;
+        ToDate = f.ToDate;
+        SelectedAccountId = f.SelectedAccount;
+        await  OnShow();
+    }
+    private DateFilterPage dateFilterPopup;
+
+    private void OpenDateFilter()
+    {
+        dateFilterPopup.Show(FromDate, ToDate, null, null, null, SelectedAccountId);
+    }
+
+    // ── Model ──────────────────────────────────────────────────────────────
+
+    public class AccountLedgerEntry
+    {
+        public int EntryId { get; set; }
+        public DateTime VoucherDate { get; set; }
+        public string VchName { get; set; } = "";
+        public string VoucherNo { get; set; } = "";
+        public string AccountName { get; set; } = "";
+        public string Particulars { get; set; } = "";
+        public decimal Debit { get; set; }
+        public decimal Credit { get; set; }
+        public decimal Balance { get; set; }
+        public string DrCr { get; set; } = "Dr";  // "Dr" | "Cr"
+    }
+
+    // ── State ───────────────────────────────────────────────────────────────
+
+    private IGrid MyGrid;
+    private List<AccountLedgerEntry> ledgerEntries = new();
+    private List<Account> allAccounts = new();
+
+    // Filter
+    private int? SelectedAccountId;
+    private string SelectedAccountName => allAccounts.FirstOrDefault(a => a.AccountId == SelectedAccountId)?.AccountName ?? "";
+    private DateTime? FromDate = DateTime.Today;
+    private DateTime? ToDate = DateTime.Today;
+    
+
+    // Popup
+    private bool showVoucherPopup;
+    private AccountLedgerEntry? selectedEntry;
+
+    // Grid Layout
+    private GridLayoutpPopup? layoutManager;
+    private List<GridColumnLayout> allColumns = new();
+
+    // ── Lifecycle ───────────────────────────────────────────────────────────
+
+    protected override async Task OnInitializedAsync()
+    {
+        InitializeColumns();
+        await LoadAccounts();
+    }
+
+    // ── Column Layout ───────────────────────────────────────────────────────
+
+    private void InitializeColumns()
+    {
+        allColumns = new List<GridColumnLayout>
+        {
+            new() { FieldName = "EntryId",      Caption = "ID",           Visible = false, Width = 70,  DisplayIndex = 0 },
+            new() { FieldName = "VoucherDate",  Caption = "Voucher Date", Visible = true,  Width = 120, DisplayIndex = 1 },
+            new() { FieldName = "VchName",      Caption = "Vch Name",     Visible = true,  Width = 110, DisplayIndex = 2 },
+            new() { FieldName = "VoucherNo",    Caption = "Voucher No",   Visible = true,  Width = 160, DisplayIndex = 3 },
+            new() { FieldName = "AccountName",  Caption = "Account Name", Visible = true,  Width = 200, DisplayIndex = 4 },
+            new() { FieldName = "Particulars",  Caption = "Particulars",  Visible = true,  Width = 360, DisplayIndex = 5 },
+            new() { FieldName = "Debit",        Caption = "Debit",        Visible = true,  Width = 130, DisplayIndex = 6 },
+            new() { FieldName = "Credit",       Caption = "Credit",       Visible = true,  Width = 130, DisplayIndex = 7 },
+            new() { FieldName = "Balance",      Caption = "Balance",      Visible = true,  Width = 140, DisplayIndex = 8 },
+            new() { FieldName = "DrCr",         Caption = "Dr/Cr",        Visible = true,  Width = 70,  DisplayIndex = 9 },
+        };
+    }
+
+    private async Task HandleLayoutChanged(List<GridColumnLayout> updatedLayout)
+    {
+        allColumns = updatedLayout;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async void ShowLayoutPopup()
+    {
+        await InvokeAsync(() => layoutManager?.ShowPopup());
+    }
+
+    // ── Data Loading ────────────────────────────────────────────────────────
+
+    private async Task LoadAccounts()
+    {
+        try
+        {
+            LoadingService.Show("Loading accounts...");
+            allAccounts = await AccountService.GetAllAsync();
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Failed to load accounts: {ex.Message}");
+        }
+        finally
+        {
+            LoadingService.Hide();
+        }
+    }
+
+    private async Task OnShow()
+    {
+        if (SelectedAccountId == null || SelectedAccountId == 0)
+        {
+            ToastService.Warning("Please select an account.");
+            return;
+        }
+
+        try
+        {
+            LoadingService.Show("Loading ledger...");
+
+            var vouchers = await LedgerService.GetLedgerAsync(SelectedAccountId??0, FromDate,ToDate);
+            //     SelectedAccountId.Value,
+            //     FromDate,
+            //     ToDate,
+            //     YearStatechangeService.SelectedYearId);
+
+            // Build running balance entries
+            var entries = BuildLedgerEntries(vouchers);
+
+            if (SkipOpening)
+                entries = entries.Where(e => e.VchName != "Opening").ToList();
+
+            ledgerEntries = entries;
+
+            if (ledgerEntries.Count == 0)
+                ToastService.Warning("No ledger entries found for the selected criteria.");
+            else
+                ToastService.Success($"Loaded {ledgerEntries.Count} entries.");
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Failed to load ledger: {ex.Message}");
+        }
+        finally
+        {
+            LoadingService.Hide();
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    /// <summary>
+    /// Converts raw voucher rows into ledger entries with a running balance.
+    /// Expects VoucherService to return rows ordered by date ascending.
+    /// </summary>
+    /// 
+    bool SkipOpening = false;
+    private List<AccountLedgerEntry> BuildLedgerEntries(List<LedgerDto> vouchers)
+    {
+        var result = new List<AccountLedgerEntry>();
+        decimal runningBalance = 0m;
+        // Get account opening
+        var acc = allAccounts.FirstOrDefault(a => a.AccountId == SelectedAccountId);
+
+       
+
+        if (acc != null)
+        {
+            decimal opening = (decimal)(acc.AccountOpening ?? 0);
+
+            if (acc.AccountBalanceType == "Cr")
+                opening = -opening;
+
+            // 👉 If SkipOpening = false → start from opening
+            if (!SkipOpening)
+                runningBalance = opening;
+
+            // 👉 Add opening row only if not skipping
+            if (!SkipOpening)
+            {
+                result.Add(new AccountLedgerEntry
+                {
+                    EntryId = 0,
+                    VoucherDate = FromDate ?? DateTime.Today,
+                    VchName = "Opening",
+                    VoucherNo = "",
+                    AccountName = acc.AccountName,
+                    Particulars = "Opening Balance",
+                    Debit = opening > 0 ? opening : 0,
+                    Credit = opening < 0 ? Math.Abs(opening) : 0,
+                    Balance = Math.Abs(opening),
+                    DrCr = opening >= 0 ? "Dr" : "Cr"
+                });
+            }
+        }
+
+
+        //     // Opening Row
+        //     result.Add(new AccountLedgerEntry
+        //     {
+        //         EntryId = 0,
+        //         VoucherDate = FromDate ?? DateTime.Today,
+        //         VchName = "Opening",
+        //         VoucherNo = "",
+        //         AccountName = acc.AccountName,
+        //         Particulars = "Opening Balance",
+        //         Debit = runningBalance > 0 ? runningBalance : 0,
+        //         Credit = runningBalance < 0 ? Math.Abs(runningBalance) : 0,
+        //         Balance = Math.Abs(runningBalance),
+        //         DrCr = runningBalance >= 0 ? "Dr" : "Cr"
+        //     });
+        // }
+        int idx = 1;
+        foreach (var r in vouchers.OrderBy(x => x.VoucherDate))
+    {
+        runningBalance += r.Debit - r.Credit;
+
+        result.Add(new AccountLedgerEntry
+        {
+            EntryId = idx++,
+            VoucherDate = r.VoucherDate,
+            VchName = r.VchName,
+            VoucherNo = r.VoucherNo,
+            AccountName = r.AccountName,
+            Particulars = r.Particulars,
+            Debit = r.Debit,
+            Credit = r.Credit,
+            Balance = Math.Abs(runningBalance),
+            DrCr = runningBalance >= 0 ? "Dr" : "Cr"
+        });
+    }
+
+        // foreach (var v in vouchers.OrderBy(v => v.VoucherUpdated).ThenBy(v => v.VoucherId))
+        // {
+        //     runningBalance += v.Debit - v.Credit;
+
+        //     result.Add(new AccountLedgerEntry
+        //     {
+        //         EntryId      = idx++,
+        //         VoucherDate  = v.VoucherDate,
+        //         VchName      = v.VoucherType ?? "",
+        //         VoucherNo    = v.VoucherNo   ?? "",
+        //         AccountName  = v.AccountName ?? SelectedAccountName,
+        //         Particulars  = v.Particulars ?? "",
+        //         Debit        = v.Debit,
+        //         Credit       = v.Credit,
+        //         Balance      = Math.Abs(runningBalance),
+        //         DrCr         = runningBalance >= 0 ? "Dr" : "Cr"
+        //     });
+        // }
+
+        return result;
+    }
+
+    // ── Export / Print ──────────────────────────────────────────────────────
+
+    private async Task ExportXlsx()
+    {
+        if (ledgerEntries == null || !ledgerEntries.Any())
+        {
+            ToastService.Warning("No data to export.");
+            return;
+        }
+        await MyGrid.ExportToXlsxAsync("AccountLedger.xlsx");
+    }
+
+    private async Task PrintLedger()
+    {
+        if (ledgerEntries == null || !ledgerEntries.Any())
+        {
+            ToastService.Warning("No data to print.");
+            return;
+        }
+
+        try
+        {
+            await JS.InvokeVoidAsync("window.print");
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Print error: {ex.Message}");
+        }
+    }
+
+    // ── Row Double-Click (Voucher Detail) ────────────────────────────────────
+
+    private void OnRowDoubleClick(GridRowClickEventArgs e)
+    {
+        if (e.VisibleIndex < 0) return;
+
+        var entry = (AccountLedgerEntry)e.Grid.GetDataItem(e.VisibleIndex);
+        if (entry == null) return;
+
+        selectedEntry    = entry;
+        showVoucherPopup = true;
+    }
+
+    private void CloseVoucherPopup()
+    {
+        showVoucherPopup = false;
+        selectedEntry    = null;
+    }
+    
+
+}

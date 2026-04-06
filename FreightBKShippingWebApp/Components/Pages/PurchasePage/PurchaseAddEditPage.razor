@@ -2496,7 +2496,7 @@ private async void ReloadJobs()
         {
             model.BillReportId = voucher?.VoucherReportId ?? voucher?.VoucherReportId2 ?? 0;
             model.BillBankId = voucher?.VoucherBank1 ?? voucher?.VoucherBank2 ?? 0;
-
+            model.BillType = voucher.VoucherGroup;
             // Example property name: change "VoucherMethod" to your real field
             if (string.Equals(voucher.VoucherMethod, "Manual", StringComparison.OrdinalIgnoreCase))
             {
@@ -3396,7 +3396,14 @@ private async void ReloadJobs()
              EditModel.BillIrnNo = "";
               EditModel.BillAckNo = "";
                EditModel.BillAckDate = "";
-
+            if (string.Equals(EditModel.BillType, "PURCHASE", StringComparison.OrdinalIgnoreCase))
+            {
+                EditModel.BillDrCr = "Cr";
+            }
+            else
+            {
+                EditModel.BillDrCr = "Dr";
+            }
             // --- STEP 4: Filter only valid detail lines ---
             var validDetails = activeDetails
                 .Where(d => d.BillDetailProductId > 0 || !string.IsNullOrEmpty(d.BillDetailHsnCode))
@@ -3561,7 +3568,14 @@ private async void ReloadJobs()
             EditModel.BillTotal = EditModel.BillNetAmount;
             EditModel.BillYearId = YearStatechangeService.SelectedYearId;
             EditModel.BillNo = EditModel.BillNo;
-
+            if (string.Equals(EditModel.BillType, "Purchase", StringComparison.OrdinalIgnoreCase))
+            {
+                EditModel.BillDrCr = "Cr";
+            }
+            else
+            {
+                EditModel.BillDrCr = "Dr";
+            }
             // --- STEP 4: Filter only valid detail lines ---
             var validDetails = activeDetails
                 .Where(d => d.BillDetailProductId > 0 || !string.IsNullOrEmpty(d.BillDetailHsnCode))

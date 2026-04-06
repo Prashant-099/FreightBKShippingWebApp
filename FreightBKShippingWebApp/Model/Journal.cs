@@ -111,6 +111,15 @@ namespace FreightBKShippingWebApp.Models
         [Column("journal_bill_id")]
         public int? JournalBillId { get; set; }
 
+        [Column("TDSAcccountId")]
+        public int? TDSAcccountId { get; set; } = 0;
+
+        [Column("ShortageAccountId")]
+        public int? ShortageAccountId { get; set; } = 0;
+
+        [Column("DiscountAccountId")]
+        public int? DiscountAccountId { get; set; } = 0;
+
         // ✅ Navigation Properties
         [ForeignKey("JournalPartyId")]
         public virtual Account? Party { get; set; }

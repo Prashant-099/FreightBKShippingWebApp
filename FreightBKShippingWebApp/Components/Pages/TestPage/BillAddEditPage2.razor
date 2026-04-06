@@ -1700,22 +1700,22 @@
         AuditLogService.OnJobChanged += ReloadJobs;
 
         // ✅ Load only what's needed to show the form
-      //  await LoadCriticalDataAsync();
+        //  await LoadCriticalDataAsync();
 
         // ✅ Load other data in background (non-blocking)
-      //  _ = LoadBackgroundDataAsync();
+        //  _ = LoadBackgroundDataAsync();
     }
 
     public void Dispose()
-{
+    {
         AuditLogService.OnJobChanged -= ReloadJobs;
-}
-private async void ReloadJobs()
-{
-    JobList = await JobService.GetAllAsync();
-    FilteredJobList = JobList;
-    await InvokeAsync(StateHasChanged);
-}
+    }
+    private async void ReloadJobs()
+    {
+        JobList = await JobService.GetAllAsync();
+        FilteredJobList = JobList;
+        await InvokeAsync(StateHasChanged);
+    }
     /// <summary>
     /// STAGE 1: Load ONLY data needed to display the form immediately
     /// This runs FIRST and FAST (2-4 API calls max)
@@ -1742,7 +1742,7 @@ private async void ReloadJobs()
             v.VoucherGroup.Trim().Equals("CREDIT NOTE", StringComparison.OrdinalIgnoreCase)
         ))
     .ToList();
-    ServiceList = serviceTask.Result;
+            ServiceList = serviceTask.Result;
 
             JobList = jobTask.Result;
             FilteredJobList = JobList;
@@ -1756,7 +1756,7 @@ private async void ReloadJobs()
             StateList = stateTask.Result;
 
             isCriticalDataLoaded = true;
-           
+
             StateHasChanged(); // ✅ Form can now render!
         }
         catch (Exception ex)
@@ -1778,7 +1778,7 @@ private async void ReloadJobs()
         try
         {
             // ✅ Load common dropdowns that might be used soon
-            
+
 
             var currTask = CurrencyService.GetAllAsync();
             var unitTask = UnitService.GetAllAsync();
@@ -1793,11 +1793,11 @@ private async void ReloadJobs()
             );
 
             // Assign results
-            
+
             RateMasterList = rateTask.Result;
             ReportDataList  = (reportTask.Result).Where(r => r.DocType.Equals("Bill", StringComparison.OrdinalIgnoreCase)).ToList();
 
-            
+
 
             CurrList = currTask.Result;
             UnitList = unitTask.Result;
@@ -2028,10 +2028,10 @@ private async void ReloadJobs()
         // ✅ Show loading only if critical data not loaded
         if (!isCriticalDataLoaded)
         {
-            
+
             _ = LoadBackgroundDataAsync();
             await LoadCriticalDataAsync();
-           
+
         }
         EditModel = bill ?? new Bill();
         // Create EditContext when showing the form
@@ -2182,11 +2182,11 @@ private async void ReloadJobs()
 
 
 
-           await  OnJobDetailsChanged(EditModel.BillJobNo);
-           await  OnvoucherChanged(EditModel,EditModel.BillVoucherId);
+            await  OnJobDetailsChanged(EditModel.BillJobNo);
+            await  OnvoucherChanged(EditModel,EditModel.BillVoucherId);
             await OnBillAgainstChanged(EditModel.BillQuatationId);
-            
-           // nextSNo = 1;
+
+            // nextSNo = 1;
             if (EditModel.BillVoucherId == 0)
             {
                 IsCreditnote = false;
@@ -2470,7 +2470,7 @@ private async void ReloadJobs()
 
     private void OnJobTypeChanged(string selectedType)
     {
-        
+
         JobType = selectedType;
         EditModel.BillJobType = selectedType;
         FilteredJobList = JobList
@@ -3356,7 +3356,15 @@ private async void ReloadJobs()
             EditModel.BillIrnNo = "";
             EditModel.BillAckNo = "";
             EditModel.BillAckDate = "";
-
+            EditModel.BillDrCr = "Dr";
+            if (string.Equals(EditModel.BillType, "Sales", StringComparison.OrdinalIgnoreCase))
+            {
+                EditModel.BillDrCr = "Dr";
+            }
+            else
+            {
+                EditModel.BillDrCr = "Cr";
+            }
             // --- STEP 4: Filter only valid detail lines ---
             var validDetails = activeDetails
                 .Where(d => d.BillDetailProductId > 0 || !string.IsNullOrEmpty(d.BillDetailHsnCode))
@@ -3528,7 +3536,14 @@ private async void ReloadJobs()
             EditModel.BillTotal = EditModel.BillNetAmount;
             EditModel.BillYearId = YearStatechangeService.SelectedYearId;
             EditModel.BillNo = EditModel.BillNo;
-
+            if (string.Equals(EditModel.BillType, "Sales", StringComparison.OrdinalIgnoreCase))
+            {
+                EditModel.BillDrCr = "Dr";
+            }
+            else
+            {
+                EditModel.BillDrCr = "Cr";
+            }
             // --- STEP 4: Filter only valid detail lines ---
             var validDetails = activeDetails
                 .Where(d => d.BillDetailProductId > 0 || !string.IsNullOrEmpty(d.BillDetailHsnCode))

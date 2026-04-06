@@ -21,6 +21,9 @@
 @inject VoucherService VoucherService
 @inject IBranchContext BranchContext
 @inject AuditLogService AuditLogService
+@inject NavigationManager Navigation
+@inject ReportService ReportService
+@inject ReportDataService ReportDataService
 <style>
     .grid-size {
         max-height: 570px;
@@ -75,7 +78,7 @@
                     <Items>
                         @* <DxToolbarItem Text="Send WhatsApp" IconCssClass="bi bi-whatsapp" Click="@(async () => await DownloadReport(true))" /> *@
                         <DxToolbarItem Text="Download PDF" IconCssClass="bi bi-printer" Click="@(async () => await PrintReports(false))" />
-                        <DxToolbarItem Text="Preview" IconCssClass="bi bi-printer" Click="@((_) => PreviewReport())"></DxToolbarItem>
+                        <DxToolbarItem Text="Preview" IconCssClass="bi bi-printer" Click="@((_) => ShowReportPopup())"></DxToolbarItem>
                     </Items>
                 </DxToolbarItem>
                 <DxToolbarItem Alignment="ToolbarItemAlignment.Right"
@@ -245,7 +248,32 @@
     </Columns>
 
 </DxGrid>
-
+<DxPopup @bind-Visible="IsReportPopupVisible"
+         ShowCloseButton="true"
+         Width="400px"
+         HeaderText="Select Report"
+         CloseOnOutsideClick="true"
+         CloseOnEscape="true">
+    <div class="p-3">
+        <DxFormLayout>
+            <DxFormLayoutItem Caption="Report" ColSpanMd="12">
+                <DxComboBox Data="@ReportDataList"
+                            TextFieldName="FormatName"
+                            ValueFieldName="ReportDataId"
+                            AllowUserInput="true"
+                            NullText="-- Select Report --"
+                            @bind-Value="SelectedReportId"
+                            SearchMode="ListSearchMode.AutoSearch"
+                            SearchFilterCondition="ListSearchFilterCondition.StartsWith"
+                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+            </DxFormLayoutItem>
+        </DxFormLayout>
+        <div class="mt-3 d-flex justify-content-end gap-2">
+            <DxButton Text="OK" RenderStyle="ButtonRenderStyle.Primary" IconCssClass="bi bi-box-arrow-right" Click="@ConfirmReportSelection" />
+            <DxButton Text="Cancel" RenderStyle="ButtonRenderStyle.Danger" IconCssClass="bi bi-x-circle" Click="@(() => IsReportPopupVisible = false)" />
+        </div>
+    </div>
+</DxPopup>
 <JobAddEditPage @ref="popup" OnSaved="LoadJobsAsync" JobType="@JobType" />
 
 <ConfirmationDialog />
@@ -421,7 +449,7 @@
     private int? CurrentYearId { get; set; }
 
     private bool showPdfImportDialog = false;
-
+    private List<ReportData> ReportDataList = new();
  
 
     protected override async Task OnInitializedAsync()
@@ -433,7 +461,7 @@
             await LoadJobsAsync();
            
            
-
+            ReportDataList = (await ReportDataService.GetAllAsync()).Where(r => r.DocType.Equals("Job", StringComparison.OrdinalIgnoreCase)).ToList();
             var voucherTask = await VoucherService.GetAllAsync(); // ya jo bhi tumhara method hai
 
             VoucherList = voucherTask.Where(v =>
@@ -686,6 +714,7 @@
         var fileName = jobNumbers.Count == 1
          ? $"{jobNumbers.First()}.pdf"
          : $"Job_{DateTime.Now:yyyyMMddHHmmss}.pdf";
+
         await ReportManager.DownloadAsync<Job, JobreportDto>(
             SelectedJobs.Cast<Job>().ToList(),
 
@@ -697,7 +726,29 @@
 
         await ClearSelection();
     }
+    private bool IsReportPopupVisible = false;
+    private int? SelectedReportId;
+    private async Task ShowReportPopup()
+    {
+        if (ReportDataList?.Any() != true)
+        {
+            ToastService.Warning("No reports available.");
+            return;
+        }
+        SelectedReportId = null;
+        IsReportPopupVisible = true;
+    }
 
+    private async Task ConfirmReportSelection()
+    {
+        if (SelectedReportId == null)
+        {
+            ToastService.Warning("Please select a report first.");
+            return;
+        }
+        IsReportPopupVisible = false;
+        await PreviewReport();
+    }
     private async Task PreviewReport()
     {
         if (!SelectedJobs.Any())
@@ -705,29 +756,95 @@
             ToastService.Warning("Please select at least one certificate.");
             return;
         }
-        var jobsNumbers = SelectedJobs
-         .Cast<Job>()
-         .Select(b => b.JobNo)   // Make sure BillNumber property exists
-         .Where(x => !string.IsNullOrWhiteSpace(x))
-         .Select(x => x.Replace("/", "-").Replace("\\", "-")) // sanitize filename
-         .ToList();
+        if (SelectedReportId == null)
+        {
+            ToastService.Warning("Please select a report format.");
+            return;
+        }
 
-        // Dynamic file name
-        var fileName = jobsNumbers.Count == 1
-            ? $"{jobsNumbers.First()}.pdf"
-            : $"Jobs_{DateTime.Now:yyyyMMddHHmmss}.pdf";
-        await ReportManager.PreviewAsync<Job, JobreportDto>(
-            SelectedJobs.Cast<Job>().ToList(),
+        // var jobsNumbers = SelectedJobs
+        //  .Cast<Job>()
+        //  .Select(b => b.JobNo)   // Make sure BillNumber property exists
+        //  .Where(x => !string.IsNullOrWhiteSpace(x))
+        //  .Select(x => x.Replace("/", "-").Replace("\\", "-")) // sanitize filename
+        //  .ToList();
 
-            c => Task.FromResult(c.JobReportId ?? 0),
+        // // Dynamic file name
+        // var fileName = jobsNumbers.Count == 1
+        //     ? $"{jobsNumbers.First()}.pdf"
+        //     : $"Jobs_{DateTime.Now:yyyyMMddHHmmss}.pdf";
+        // await ReportManager.PreviewAsync<Job, JobreportDto>(
+        //     SelectedJobs.Cast<Job>().ToList(),
 
-            c => JobService.GetJobWithContainerAsync(c.JobId),
-            c => "Job",
-            fileName
+        //     c => Task.FromResult(c.JobReportId ?? 0),
 
-        );
+        //     c => JobService.GetJobWithContainerAsync(c.JobId),
+        //     c => "Job",
+        //     fileName
 
-        await ClearSelection();
+        // );
+        var jobList = SelectedJobs.Cast<Job>().ToList();
+        LoadingService.Show("Building report...");
+
+        try
+        {
+            // ✅ Load report layout
+            var layoutBytes = await ReportDataService.GetLayoutBytesAsync(SelectedReportId.Value);
+
+            if (layoutBytes == null || layoutBytes.Length == 0)
+            {
+                ToastService.Error($"Failed to load report layout for Report ID: {SelectedReportId}");
+                return;
+            }
+
+            // ✅ Prepare DTO list
+            var dtoList = new List<JobreportDto>();
+
+            foreach (var job in jobList)
+            {
+                var dto = await JobService.GetJobWithContainerAsync(job.JobId);
+                dtoList.Add(dto);
+            }
+
+            // ✅ Map Job → DTO
+            var dtoDict = jobList
+                .Select((job, i) => new { job, dto = dtoList[i] })
+                .ToDictionary(x => x.job, x => x.dto);
+
+            // ✅ Create merged report
+            try
+            {
+                await ReportService.CreateMergedReportAsync(
+                    jobList,
+                    job => dtoDict.ContainsKey(job) ? dtoDict[job] : null,
+                    layoutBytes
+                );
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("CodeDOM"))
+            {
+                ToastService.Error("Report format incompatible. Please update report template.");
+                return;
+            }
+
+            if (ReportService.MergedReport == null)
+            {
+                ToastService.Error("Failed to generate report.");
+                return;
+            }
+
+            // ✅ 🔥 THIS IS WHAT YOU WANT
+            Navigation.NavigateTo("/reportviewer");
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Failed to generate report: {ex.Message}");
+        }
+        finally
+        {
+            LoadingService.Hide();
+            await ClearSelection();
+        }
+   
     }
 
 

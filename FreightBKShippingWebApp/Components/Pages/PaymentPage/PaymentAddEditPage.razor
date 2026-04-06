@@ -411,6 +411,10 @@
     private IGrid ReceiptGrid { get; set; }
 
     private List<Voucher> VoucherList = new();
+    private List<Account> AccountList = new();
+     private Account? TdsAccount;
+private Account? DiscountAccount;
+private Account? ShortageAccount;
     private List<Account> CustomerList = new();
     private List<Account> BankAccountList = new();
     private List<BillSettlement> PendingBills = new();
@@ -576,10 +580,23 @@
                 .Where(v => v.VoucherGroup?.Equals("PAYMENT", StringComparison.OrdinalIgnoreCase) == true)
                 .ToList();
 
-            var allAccounts = accountTask.Result;
+           AccountList = accountTask.Result;
 
-            CustomerList = allAccounts.Where(a => a.AccountTypeId == 18).ToList();
-            BankAccountList = allAccounts.Where(a => a.AccountTypeId == 10 || a.AccountTypeId == 11).ToList();
+            CustomerList = AccountList.Where(a => a.AccountTypeId == 18).ToList();
+            BankAccountList = AccountList.Where(a => a.AccountTypeId == 10 || a.AccountTypeId == 11).ToList();
+
+             TdsAccount = AccountList
+    .Where(a => a.AccountGroupId == 3)
+    .FirstOrDefault();
+
+DiscountAccount = AccountList
+    .Where(a => a.AccountGroupId == 26 && a.AccountName.ToLower().Contains("discount"))
+    .FirstOrDefault();
+
+ShortageAccount = AccountList
+    .Where(a => a.AccountGroupId == 26 && a.AccountName.ToLower().Contains("shortage"))
+    .FirstOrDefault();
+
         }
         catch (Exception ex)
         {
@@ -1079,10 +1096,11 @@ var purchaseVoucherIds = allVouchers
             EditModel.JournalTotalTds = (float)totalTds;
             EditModel.JournalTotalShort = (float)totalShortage;
 
-             EditModel.JournalTotal = (float)(totalSettled);
-             double total = (float)(totalSettled + totalDiscount + totalTds + totalShortage);
-           // EditModel.JournalTotal = totalSettled + EditModel.JournalTotalDiscount + EditModel.JournalTotalTds + EditModel.JournalTotalShort;
-            EditModel.JournalOnAccount = (float)(EditModel.JournalAmount - total);
+             // EditModel.JournalTotal = (float)(totalSettled);
+             // double total = (float)(totalSettled + totalDiscount + totalTds + totalShortage);
+            EditModel.JournalTotal = totalSettled + EditModel.JournalTotalDiscount + EditModel.JournalTotalTds + EditModel.JournalTotalShort;
+            // EditModel.JournalOnAccount = (float)(EditModel.JournalAmount - total);
+            EditModel.JournalOnAccount = (float)(EditModel.JournalAmount -  EditModel.JournalTotal);
         }
         else
         {
@@ -1195,7 +1213,7 @@ var purchaseVoucherIds = allVouchers
                     EditModel.BillRefDetails.Add(new BillRefDetail
                     {
                         BillRefAgainstId = EditModel.JournalId,
-                        BillRefVchType = settlement.VoucherType,
+                        BillRefVchType = "PAYMENT",
                         BillRefVchNo = settlement.BillNo,
                         BillRefVchId = settlement.BillId,
                         BillRefVchDate = settlement.BillDate,
@@ -1215,6 +1233,11 @@ var purchaseVoucherIds = allVouchers
 
             EditModel.JournalYearId = YearStatechangeService.SelectedYearId;
             EditModel.JournalMasterType = "PAYMENT";
+             EditModel.JournalRefType = "Dr";
+             EditModel.TDSAcccountId = EditModel.JournalTotalTds > 0 ? TdsAccount?.AccountId : 0;
+EditModel.DiscountAccountId = EditModel.JournalTotalDiscount > 0 ? DiscountAccount?.AccountId : 0;
+EditModel.ShortageAccountId = EditModel.JournalTotalShort > 0 ? ShortageAccount?.AccountId : 0;
+
 
             bool result;
             if (EditModel.JournalId == 0)

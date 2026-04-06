@@ -160,7 +160,7 @@ namespace FreightBKShippingWebApp.Model
 
         [Column("bill_drcr")]
        
-        public string? BillDrCr { get; set; }="Dr";
+        public string? BillDrCr { get; set; }
 
         [Column("bill_iscancel")]
         public bool BillIsCancel { get; set; }

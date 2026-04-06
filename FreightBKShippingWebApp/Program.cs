@@ -240,7 +240,7 @@ builder.Services.AddScoped<Gstr2TemplateService>();
 builder.Services.AddScoped<Gstr3BTemplateService>();
 builder.Services.AddScoped<VehicleService>();
 builder.Services.AddScoped<TicketService>();
-
+builder.Services.AddScoped<LedgerService>();
 // PDF Services
 builder.Services.AddScoped<DataCleanupService>();
 builder.Services.AddScoped<ExportJobBuilderService>();
