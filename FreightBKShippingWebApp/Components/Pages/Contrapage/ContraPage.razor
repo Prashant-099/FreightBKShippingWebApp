@@ -17,6 +17,7 @@
 @inject NavigationManager Navigation
 @inject ReportService ReportService
 @inject ReportDataService ReportDataService
+@inject YearStatechangeService YearStatechangeService
 <PageTitle>Contra</PageTitle>
 <style>
     .grid-size {
@@ -243,7 +244,7 @@
         {
             LoadingService.Show();
             ContraList = (await JournalService.GetAllAsync())
-                .Where(j => j.JournalMasterType == "CONTRA")
+                .Where(j => j.JournalMasterType == "CONTRA" && j.JournalYearId == YearStatechangeService.SelectedYearId)
                 .OrderByDescending(j => j.JournalDate)
                 .ToList();
         }

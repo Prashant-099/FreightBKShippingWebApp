@@ -1713,7 +1713,7 @@
     private async void ReloadJobs()
     {
         JobList = await JobService.GetAllAsync();
-        FilteredJobList = JobList;
+        FilteredJobList = JobList.Where(j => j.JobYearId == YearStatechangeService.SelectedYearId.ToString()).ToList(); 
         await InvokeAsync(StateHasChanged);
     }
     /// <summary>
@@ -1745,7 +1745,7 @@
             ServiceList = serviceTask.Result;
 
             JobList = jobTask.Result;
-            FilteredJobList = JobList;
+            FilteredJobList = JobList.Where(j => j.JobYearId == YearStatechangeService.SelectedYearId.ToString()).ToList();
             branchList = branchtask.Result;
             CompanyList = companyTask.Result;
             var allAccounts = accountTask.Result;
@@ -1970,7 +1970,7 @@
         BankList = allAccounts.Where(a => a.AccountTypeId == 10).ToList();
 
         JobList = jobTask.Result;
-        FilteredJobList = JobList;
+        FilteredJobList = JobList.Where(j => j.JobYearId == YearStatechangeService.SelectedYearId.ToString()).ToList();
 
         StateHasChanged();
     }
@@ -2474,7 +2474,7 @@
         JobType = selectedType;
         EditModel.BillJobType = selectedType;
         FilteredJobList = JobList
-            .Where(j => j.JobType == selectedType)
+            .Where(j => j.JobType == selectedType && j.JobYearId == YearStatechangeService.SelectedYearId.ToString())
             .ToList();
     }
     private async Task OnBranchChanged(Bill model, int branchId)

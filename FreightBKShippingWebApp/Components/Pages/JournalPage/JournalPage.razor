@@ -17,6 +17,7 @@
 @inject ReportService ReportService
 @inject ReportDataService ReportDataService
 @inject IJSRuntime JSRuntime
+@inject YearStatechangeService YearStatechangeService
 <PageTitle>Journal Entries</PageTitle>
 
 <style>
@@ -239,7 +240,7 @@
         {
             LoadingService.Show();
             JournalList = (await JournalService.GetAllAsync())
-                .Where(j => j.JournalMasterType == "JOURNAL")
+                .Where(j => j.JournalMasterType == "JOURNAL" && j.JournalYearId == YearStatechangeService.SelectedYearId)
                 .OrderByDescending(j => j.JournalDate)
                 .ToList();
         }

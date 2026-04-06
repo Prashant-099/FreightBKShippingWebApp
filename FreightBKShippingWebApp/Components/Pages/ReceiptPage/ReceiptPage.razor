@@ -17,6 +17,7 @@
 @inject ReportDataService ReportDataService
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
+@inject YearStatechangeService YearStatechangeService
 <PageTitle>Receipts</PageTitle>
 <style>
     .grid-size {
@@ -297,7 +298,7 @@
         {
             LoadingService.Show();
             ReceiptList = (await JournalService.GetAllAsync())
-                .Where(j => j.JournalMasterType == "RECEIPT")
+                .Where(j => j.JournalMasterType == "RECEIPT" && j.JournalYearId == YearStatechangeService.SelectedYearId)
                 .OrderByDescending(j => j.JournalDate)
                 .ToList();
         }
