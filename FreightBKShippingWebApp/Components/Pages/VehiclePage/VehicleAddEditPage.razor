@@ -1,6 +1,6 @@
 ﻿@using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Services
-
+@using System.Text.Json
 @inject VehicleService VehicleService
 @inject ToasteService ToastService
 @inject LoadingService LoadingService
@@ -41,6 +41,18 @@
                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
                     </ChildContent>
                 </DxFormLayoutItem>
+
+                <DxFormLayoutItem Caption="Vehicle A/c">
+                    <ChildContent Context="ctx">
+                        <DxComboBox Data="AccountList" @bind-Value="EditModel.VehicleAccountId"
+                        TextFieldName="AccountName" ValueFieldName="AccountId"
+                         ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                                AllowUserInput="true"
+                                                SearchMode="ListSearchMode.AutoSearch"
+                                                SearchFilterCondition="ListSearchFilterCondition.Contains"/>
+                    </ChildContent>
+                </DxFormLayoutItem>
+
                 <DxFormLayoutItem Caption="Driver">
                     <ChildContent Context="ctx">
                         <DxComboBox Data="driverlist" @bind-Value="EditModel.VehicleDriverId"
@@ -136,7 +148,7 @@
     private string Title { get; set; } = "Add/Edit Vehicle";
     private Vehicle EditModel { get; set; } = new();
     private List<Account> driverlist = new();
-
+    private List<Account> AccountList = new();
     // private EditContext? editContext;
     private bool IsActive
     {
@@ -146,8 +158,8 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var driverlists = await AccountService.GetAllAsync();
-        driverlist = driverlists.Where(a => a.AccountTypeId== 16).ToList();
+        AccountList = await AccountService.GetAllAsync();
+        driverlist = AccountList.Where(a => a.AccountTypeId == 16).ToList();
     }
 
 
@@ -155,22 +167,24 @@
     {
         if (vehicle != null && vehicle.VehicleId > 0)
         {
-            EditModel = new Vehicle
-            {
-                VehicleId = vehicle.VehicleId,
-                VehicleNo = vehicle.VehicleNo,
-                VehicleOwnerType = vehicle.VehicleOwnerType,
-                VehicleMake = vehicle.VehicleMake,
-                VehicleModel = vehicle.VehicleModel,
-                VehicleLoadCapacity = vehicle.VehicleLoadCapacity,
-                VehicleEngineNo = vehicle.VehicleEngineNo,
-                VehicleChassisNo = vehicle.VehicleChassisNo,
-                VehicleInsurance = vehicle.VehicleInsurance,
-                VehicleFitness = vehicle.VehicleFitness,
-                VehicleStatus = vehicle.VehicleStatus,
-                VehicleDriverId =vehicle.VehicleDriverId
-            };
-
+            // EditModel = new Vehicle
+            // {
+            //     VehicleId = vehicle.VehicleId,
+            //     VehicleNo = vehicle.VehicleNo,
+            //     VehicleOwnerType = vehicle.VehicleOwnerType,
+            //     VehicleMake = vehicle.VehicleMake,
+            //     VehicleModel = vehicle.VehicleModel,
+            //     VehicleLoadCapacity = vehicle.VehicleLoadCapacity,
+            //     VehicleEngineNo = vehicle.VehicleEngineNo,
+            //     VehicleChassisNo = vehicle.VehicleChassisNo,
+            //     VehicleInsurance = vehicle.VehicleInsurance,
+            //     VehicleFitness = vehicle.VehicleFitness,
+            //     VehicleStatus = vehicle.VehicleStatus,
+            //     VehicleDriverId =vehicle.VehicleDriverId
+            // };
+            // EditModel = vehicle;
+            var json = JsonSerializer.Serialize(vehicle);
+            EditModel = JsonSerializer.Deserialize<Vehicle>(json) ?? new Vehicle();
             Title = "Edit Vehicle";
         }
         else

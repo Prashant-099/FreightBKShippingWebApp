@@ -78,5 +78,10 @@ namespace FreightBKShipping.Client.Services
                    ?? new List<LrListVM>();
         }
 
+        public async Task<LrPrintDto?> GetPrintableLRAsync(int id)
+        {
+            return await _http.GetFromJsonAsync<LrPrintDto>($"api/Lr/print/{id}");
+        }
+
     }
 }

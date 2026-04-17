@@ -139,8 +139,13 @@
             ToastService.Warning("Please select a vehicle to edit.");
             return;
         }
+        // Always take fresh object from latest cargoList
+        var freshData = vehicleList
+            .FirstOrDefault(x => x.VehicleId == vehicle.VehicleId);
 
-        popup.Show(vehicle);
+        if (freshData != null)
+            popup.Show(freshData);
+        // popup.Show(vehicle);
         await ClearSelection();
     }
     private async Task ClearSelection()

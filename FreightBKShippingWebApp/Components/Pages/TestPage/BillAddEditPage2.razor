@@ -3567,7 +3567,11 @@
                 else
                 {
                    // ToastService.Error(BillService.LastError);
-                    ToastService.Error("Failed to created Bill!");
+                    ToastService.Error(
+          string.IsNullOrWhiteSpace(BillService.LastError)
+              ? "Failed to update Bill!"
+              : BillService.LastError
+      );
                     return;
 
                 }

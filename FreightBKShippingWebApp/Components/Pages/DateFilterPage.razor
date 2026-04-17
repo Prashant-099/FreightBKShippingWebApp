@@ -141,6 +141,7 @@
                     <ChildContent Context="ctx">
                         <DxDateEdit @bind-Date="EditModel.FromDate"
                                     Format="dd-MM-yyyy"
+                                    ShowValidationIcon="true"
                                     ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
                                     NullText="Select start date..." />
                     </ChildContent>
@@ -150,6 +151,7 @@
                     <ChildContent Context="ctx">
                         <DxDateEdit @bind-Date="EditModel.ToDate"
                                     Format="dd-MM-yyyy"
+                                    ShowValidationIcon="true"
                                     ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
                                     NullText="Select end date..." />
                     </ChildContent>
@@ -169,7 +171,7 @@
     <FooterContentTemplate Context="ftrdt">
         <div class="mt-3 text-end">
             <DxButton Text="Clear" RenderStyle="ButtonRenderStyle.Secondary" Click="ClearFilter" />
-            <DxButton Text="Apply" RenderStyle="ButtonRenderStyle.Primary" SubmitFormOnClick="true" Form="dateFilterForm" />
+            <DxButton Text="Apply" RenderStyle="ButtonRenderStyle.Primary" Click="HandleValidSubmit" SubmitFormOnClick="true" Form="dateFilterForm" />
            @*  <DxButton Text="Cancel" RenderStyle="ButtonRenderStyle.Secondary" Click="Hide" /> *@
         </div>
     </FooterContentTemplate>
@@ -237,6 +239,22 @@
     private async Task HandleValidSubmit()
     {
         ErrorMessage = string.Empty;
+
+
+        // 🔥 Manual validation trigger
+    var isValid = editContext?.Validate() ?? false;
+
+    if (!isValid)
+    {
+        var firstError = editContext.GetValidationMessages().FirstOrDefault();
+        if (!string.IsNullOrEmpty(firstError))
+        {
+            ToastService.Error(firstError);
+        }
+        return; 
+    }
+
+
 
         // Validation
         if (EditModel.FromDate.HasValue && EditModel.ToDate.HasValue)

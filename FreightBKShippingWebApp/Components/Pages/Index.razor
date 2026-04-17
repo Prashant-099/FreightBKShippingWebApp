@@ -290,7 +290,7 @@
                         </div>
                     </div>
 
-                    <div class="stat-card" @onclick="@(() => Navigation.NavigateTo("/bill"))">
+                    @* <div class="stat-card" @onclick="@(() => Navigation.NavigateTo("/bill"))">
                         <div class="stat-icon-wrap si-bill"><i class="bi bi-receipt"></i></div>
                         <div class="stat-body">
                             <div class="stat-label">Total Invoices</div>
@@ -306,8 +306,38 @@
                             <div class="stat-value" style="color:#0891b2">₹@stats.TotalRevenue.ToString("N0")</div>
                             <div class="stat-sub">↑ ₹@stats.RevenueThisMonth.ToString("N0") this month</div>
                         </div>
+                    </div> *@
+                    <!-- SALES CARD -->
+                    <div class="stat-card " @onclick="@(() => Navigation.NavigateTo("/invoiceregister"))">
+                        <div class="stat-icon-wrap" style="background:linear-gradient(135deg,#10b981,#059669)">
+                            <i class="bi bi-graph-up-arrow"></i>
+                        </div>
+                        <div class="stat-body">
+                            <div class="stat-label">Sales</div>
+                            <div class="stat-value" style="color:#10b981">
+                                ₹@stats.SalesAmount.ToString("N0")
+                            </div>
+                            <div class="stat-sub">
+                                @stats.SalesBillCount Sales Bills
+                            </div>
+                        </div>
                     </div>
 
+                    <!-- PURCHASE CARD -->
+                    <div class="stat-card " @onclick="@(() => Navigation.NavigateTo("/invoiceregister"))">
+                        <div class="stat-icon-wrap" style="background:linear-gradient(135deg,#f59e0b,#d97706)">
+                            <i class="bi bi-bag-check"></i>
+                        </div>
+                        <div class="stat-body">
+                            <div class="stat-label">Purchase</div>
+                            <div class="stat-value" style="color:#f59e0b">
+                                ₹@stats.PurchaseAmount.ToString("N0")
+                            </div>
+                            <div class="stat-sub">
+                                @stats.PurchaseBillCount Purchase Bills
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 @* <!-- Charts — Slide 1: Pie + Bar --> *@

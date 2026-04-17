@@ -12,6 +12,9 @@
 @inject ToasteService ToastService
 @inject ConfirmationDialogService ConfirmDialogService
 @inject IJSRuntime JS
+@inject ReportService ReportService
+@inject ReportDataService ReportDataService
+@inject NavigationManager Navigation
 
 <style>
     /* ── Amount badges ─────────────────────────────────────────── */
@@ -378,6 +381,17 @@
                 <DxToolbarItem Text="Delete" IconCssClass="bi bi-trash" Click="OnDelete"
                                Enabled="@(SelectedLrs?.Any() == true)" />
                 <DxToolbarItem Text="Refresh" IconCssClass="bi bi-arrow-clockwise" Click="LoadDataAsync" />
+                 <DxToolbarItem Context="cfdr"
+                               Text="Print"
+                               RenderStyleMode="ToolbarItemRenderStyleMode.Contained"
+                               RenderStyle="ButtonRenderStyle.Secondary"
+                               IconCssClass="bi bi-printer">
+                    <Items>
+                        <DxToolbarItem Text="Print PDF" IconCssClass="bi bi-printer" Click="@(async () => await PrintReports())" />
+                        <DxToolbarItem Text="Print Preview" IconCssClass="bi bi-printer" Click="@((_) => ShowReportPopup())"></DxToolbarItem>
+                    </Items>
+                </DxToolbarItem>
+
                 <DxToolbarItem Alignment="ToolbarItemAlignment.Right"
                                RenderStyle="ButtonRenderStyle.Secondary"
                                IconCssClass="bi bi-gear-wide-connected"
@@ -625,7 +639,44 @@
                   VoucherType="Company"
                   Columns="@allColumns"
                   OnLayoutChanged="HandleLayoutChanged" />
-
+<DxPopup @bind-Visible="IsReportPopupVisible"
+         ShowCloseButton="true"
+         Width="400px"
+         HeaderText="Select Report"
+         CloseOnOutsideClick="true"
+         CloseOnEscape="true">
+    <div class="p-3">
+        <DxFormLayout>
+            <DxFormLayoutItem Caption="Report" ColSpanMd="12">
+                <DxComboBox Data="@ReportDataList"
+                            TextFieldName="FormatName"
+                            ValueFieldName="ReportDataId"
+                            AllowUserInput="true"
+                            NullText="-- Select Report --"
+                            @bind-Value="SelectedReportId"
+                            SearchMode="ListSearchMode.AutoSearch"
+                            SearchFilterCondition="ListSearchFilterCondition.StartsWith"
+                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+            </DxFormLayoutItem>
+        </DxFormLayout>
+        <div class="mt-3 d-flex justify-content-end gap-2">
+            <DxButton Text="OK" RenderStyle="ButtonRenderStyle.Primary" IconCssClass="bi bi-box-arrow-right" Click="@ConfirmReportSelection" />
+            <DxButton Text="Cancel" RenderStyle="ButtonRenderStyle.Danger" IconCssClass="bi bi-x-circle" Click="@(() => IsReportPopupVisible = false)" />
+        </div>
+    </div>
+</DxPopup>
+<script>
+    window.downloadFileFromStream = async (fileName, contentStreamReference) => {
+        const arrayBuffer = await contentStreamReference.arrayBuffer();
+        const blob = new Blob([arrayBuffer]);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+</script>
 @code {
 
     // ── JS Tooltip ──────────────────────────────────────────────────
@@ -789,6 +840,8 @@
     {
         InitializeColumns();
         await LoadDataAsync();
+        ReportDataList = (await ReportDataService.GetAllAsync()).Where(r => r.DocType.Equals("LR", StringComparison.OrdinalIgnoreCase)).ToList();
+
     }
 
     private void InitializeColumns()
@@ -870,5 +923,205 @@
             await LoadDataAsync();
         }
         finally { LoadingService.Hide(); await ClearSelectionManual(); }
+    }
+    private async Task ClearSelection()
+    {
+        await Task.Delay(100); // Small delay for UI update
+        await ClearSelectionManual();
+    }
+
+    private List<ReportData> ReportDataList = new();
+    private bool IsReportPopupVisible = false;
+    private int? SelectedReportId;
+    private async Task PrintReports()
+    {
+        if (SelectedLrs == null || SelectedLrs.Count == 0)
+        {
+            ToastService.Warning("Select at least one Payment.");
+            return;
+        }
+
+        var PaymentList = SelectedLrs.Cast<LrListVM>().ToList();
+        LoadingService.Show("Building merged PDF...");
+
+        try
+        {
+            var paymentByReportId = ReportDataList;
+            var allReports = new List<DevExpress.XtraReports.UI.XtraReport>();
+
+            foreach (var group in paymentByReportId)
+            {
+                var reportId = group.ReportDataId;
+                var groupPayment = PaymentList.ToList();
+                var layoutBytes = await ReportDataService.GetLayoutBytesAsync(reportId);
+
+                if (layoutBytes == null || layoutBytes.Length == 0)
+                {
+                    var billNos = string.Join(", ", groupPayment.Select(q => q.LrNoStr));
+                    ToastService.Error($"Failed to load report layout for Report ID: {reportId}, Payment No: {billNos}");
+                    continue;
+                }
+
+                var dtoList = new List<LrPrintDto>();
+                foreach (var payment in groupPayment)
+                {
+                    var dto = await LrService.GetPrintableLRAsync(payment.LrId);
+                    dtoList.Add(dto);
+                }
+
+                var dtoDict = groupPayment.Select((payment, i) => new { payment, dto = dtoList[i] })
+                    .ToDictionary(x => x.payment, x => x.dto);
+
+                await ReportService.CreateMergedReportAsync(
+                    groupPayment,
+                    payment => dtoDict.ContainsKey(payment) ? dtoDict[payment] : null,
+                    layoutBytes);
+
+                if (ReportService.MergedReport != null)
+                {
+                    allReports.Add(ReportService.MergedReport);
+                }
+            }
+
+            if (!allReports.Any())
+            {
+                ToastService.Error("Failed to generate any reports.");
+                return;
+            }
+
+            using var pdfStream = new MemoryStream();
+
+            if (allReports.Count == 1)
+            {
+                allReports[0].ExportToPdf(pdfStream);
+            }
+            else
+            {
+                var combinedReport = new DevExpress.XtraReports.UI.XtraReport();
+                foreach (var report in allReports)
+                {
+                    if (report.Pages.Count == 0) report.CreateDocument();
+                    foreach (DevExpress.XtraPrinting.Page page in report.Pages)
+                    {
+                        combinedReport.Pages.Add(page);
+                    }
+                }
+                combinedReport.ExportToPdf(pdfStream);
+            }
+
+            pdfStream.Position = 0;
+
+            string fileName = PaymentList.Count == 1
+                ? $"{PaymentList.First().LrNoStr?.Replace("/", "_") ?? "Payment"}.pdf"
+                : $"Payments_{PaymentList.First().LrNoStr?.Replace("/", "_")}_to_{PaymentList.Last().LrNoStr?.Replace("/", "_")}.pdf";
+
+            using var streamRef = new Microsoft.JSInterop.DotNetStreamReference(pdfStream);
+            await JS.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
+
+            ToastService.Success("PDF downloaded successfully.");
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Failed to generate report: {ex.Message}");
+        }
+        finally
+        {
+            LoadingService.Hide();
+            await ClearSelection();
+        }
+    }
+    private async Task ShowReportPopup()
+    {
+        if (ReportDataList?.Any() != true)
+        {
+            ToastService.Warning("No reports available.");
+            return;
+        }
+        SelectedReportId = null;
+        IsReportPopupVisible = true;
+    }
+
+    private async Task ConfirmReportSelection()
+    {
+        if (SelectedReportId == null)
+        {
+            ToastService.Warning("Please select a report first.");
+            return;
+        }
+        IsReportPopupVisible = false;
+        await PreviewMergedReports();
+    }
+    private async Task PreviewMergedReports()
+    {
+        if (SelectedLrs == null || SelectedLrs.Count == 0)
+        {
+            ToastService.Warning("Select at least one Payment.");
+            return;
+        }
+
+        if (SelectedReportId == null)
+        {
+            ToastService.Warning("Please select a report format.");
+            return;
+        }
+
+        var paymentList = SelectedLrs.Cast<LrListVM>().ToList();
+        LoadingService.Show("Building merged report...");
+
+        try
+        {
+            // Get the report layout
+            var layoutBytes = await ReportDataService.GetLayoutBytesAsync(SelectedReportId.Value);
+
+            if (layoutBytes == null || layoutBytes.Length == 0)
+            {
+                ToastService.Error($"Failed to load report layout for Report ID: {SelectedReportId}");
+                return;
+            }
+
+            // Prepare DTOs for all selected bills
+            var dtoList = new List<LrPrintDto>();
+            foreach (var payment in paymentList)
+            {
+                var dto = await LrService.GetPrintableLRAsync(payment.LrId);
+                dtoList.Add(dto);
+            }
+
+            var dtoDict = paymentList.Select((payment, i) => new { payment, dto = dtoList[i] })
+                                  .ToDictionary(x => x.payment, x => x.dto);
+
+            // Create the merged report
+            try
+            {
+                await ReportService.CreateMergedReportAsync(
+                    paymentList,
+                    payment => dtoDict.ContainsKey(payment) ? dtoDict[payment] : null,
+                    layoutBytes);
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("CodeDOM"))
+            {
+                ToastService.Error("Report format incompatible. Please contact administrator to update report template.");
+                LoadingService.Hide();
+                return;
+            }
+
+            if (ReportService.MergedReport == null)
+            {
+                ToastService.Error("Failed to generate report.");
+                return;
+            }
+
+            // Navigate to the report viewer
+            Navigation.NavigateTo("/reportviewer");
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Failed to generate report: {ex.Message}");
+        }
+        finally
+        {
+            LoadingService.Hide();
+            await ClearSelection();
+        }
     }
 }

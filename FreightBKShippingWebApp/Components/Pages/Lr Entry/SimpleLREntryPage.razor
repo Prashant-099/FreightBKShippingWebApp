@@ -1,0 +1,2868 @@
+﻿@page "/lrentry"
+@page "/lrentry/{LrId:int}"
+@using FreightBKShipping.Client.Services
+@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Services
+@using DevExpress.Blazor
+@using static FreightBKShippingWebApp.Components.Pages.FileUploadpopup
+@inject AuditLogService AuditLogService
+@inject ToasteService ToastService
+@inject PayTypeService PayTypeService
+@inject LocationService LocationService
+@inject NotifyService NotifyService
+@inject AccountService AccountService
+@inject ContainerAddServices ContainerAddServices
+@inject CargoService CargoService
+@inject ReportDataService ReportDataService
+@inject FileUploadService FileUploadService
+@inject IJSRuntime JS
+@inject LrApiService LrApiService
+@inject NavigationManager NavManager
+@inject VehicleService VehicleService
+@inject GridLayoutService GridLayoutService
+@inject YearStatechangeService YearStatechangeService
+
+<style>
+    :root {
+        --clr-bg: #f4f6fb;
+        --clr-surface: #ffffff;
+        --clr-border: #e2e8f0;
+        --clr-primary: #2563eb;
+        --clr-primary-dk: #1d4ed8;
+        --clr-accent: #0ea5e9;
+        --clr-text: #1e293b;
+        --clr-muted: #2c679f;
+        --clr-danger: #ef4444;
+        --radius-card: 12px;
+        --radius-inner: 8px;
+        --shadow-card: 0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.06);
+        --shadow-footer: 0 -2px 12px rgba(0,0,0,.08);
+        --font-main: 'Sora', 'Segoe UI', sans-serif;
+    }
+
+    .dxbl-grid-header-cell,
+    .dxbl-grid-header-cell button,
+    .dxbl-grid-header-cell a {
+        outline: none !important;
+    }
+
+    .dxbl-grid-header-row {
+        pointer-events: auto;
+    }
+    .dxbl-grid-header-row *:not(button):not(a):not(input) {
+        pointer-events: none;
+    }
+
+    .lr-page {
+     height: 93vh;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    font-family: var(--font-main);
+    color: var(--clr-text);
+    overflow: hidden;
+}
+
+.lr-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+    border-top: 4px solid var(--clr-primary);
+   /*  border-radius: var(--radius-inner); */
+    padding: 5px 16px;
+    box-shadow: var(--shadow-card);
+    flex-wrap: nowrap;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: var(--clr-surface);
+}
+
+.lr-header-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 6px;
+    background: #eff4ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--clr-primary);
+    flex-shrink: 0;
+}
+
+.lr-header-divider {
+    width: 1px;
+    height: 32px;
+    background: var(--clr-border);
+    flex-shrink: 0;
+}
+
+.lr-header-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    min-width: 0;
+}
+
+.lr-header h1 {
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: -.02em;
+    margin: 0;
+    line-height: 1.2;
+    white-space: nowrap;
+    color: var(--clr-text);
+}
+
+.lr-header span {
+    font-size: .75rem;
+    color: var(--clr-muted);
+    white-space: nowrap;
+    line-height: 1.2;
+}
+
+.lr-header-badge {
+    margin-left: auto;
+    background: #eff4ff;
+    color: var(--clr-primary);
+    font-size: 0.6rem;
+    font-weight: 600;
+    letter-spacing: .08em;
+    padding: 3px 8px;
+    border-radius: 3px;
+    text-transform: uppercase;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+    .lr-header-badge.edit-mode {
+        background: #fef3c7;
+        color: #b45309;
+    }
+
+.btn-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #f1f5f9;
+    color: var(--clr-text);
+    border: 1px solid var(--clr-border);
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: .8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s;
+    white-space: nowrap;
+    flex-shrink: 0;
+    text-decoration: none;
+}
+
+    .btn-back:hover {
+        background: #e2e8f0;
+    }
+
+/* ── Column toggle button ── */
+.btn-columns {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #f1f5f9;
+    color: var(--clr-text);
+    border: 1px solid var(--clr-border);
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: .8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+    .btn-columns:hover {
+        background: #e2e8f0;
+    }
+
+/* ── Panel backdrop ── */
+.col-panel-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.25);
+    z-index: 999;
+}
+
+/* ── Slide-in panel ── */
+.col-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 260px;
+    height: 100vh;
+    background: #fff;
+    border-left: 1px solid #e2e8f0;
+    box-shadow: -4px 0 24px rgba(0,0,0,.12);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    animation: slideIn .2s ease;
+}
+
+@@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+    }
+
+    to {
+        transform: translateX(0);
+    }
+}
+
+.col-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 3px 16px;
+    font-weight: 600;
+    font-size: 13px;
+    border-bottom: 1px solid #f1f5f9;
+    color: #1e293b;
+}
+
+    .col-panel-header button {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 16px;
+        color: #64748b;
+        line-height: 1;
+    }
+
+.col-panel-actions {
+    display: flex;
+    gap: 8px;
+    padding: 7px 16px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+    .col-panel-actions button {
+        flex: 1;
+        padding: 5px 0;
+        border: 1px solid #cbd5e1;
+        border-radius: 5px;
+        background: #f8fafc;
+        font-size: 12px;
+        cursor: pointer;
+        color: #475569;
+    }
+
+        .col-panel-actions button:hover {
+            background: #e2e8f0;
+        }
+
+.col-panel-list {
+    flex: 1;
+    overflow-y: auto;
+    /* padding: 6px 0;*/
+}
+
+.col-toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #334155;
+    transition: background .1s;
+    user-select: none;
+}
+
+    .col-toggle-row:hover {
+        background: #f8fafc;
+    }
+
+    .col-toggle-row input[type="checkbox"] {
+        width: 15px;
+        height: 15px;
+        accent-color: #3b82f6;
+        cursor: pointer;
+        flex-shrink: 0;
+    }
+
+@@media (max-width: 640px) {
+    .lr-header {
+        padding: 8px 12px;
+        gap: 8px;
+        margin-bottom: 8px;
+    }
+
+        .lr-header h1 {
+            font-size: .9rem;
+        }
+
+        .lr-header span {
+            font-size: .68rem;
+        }
+
+    .lr-header-divider {
+        display: none;
+    }
+
+    .lr-header-badge {
+        display: none;
+    }
+}
+
+.lr-card {
+    background: var(--clr-surface);
+    border: 1px solid var(--clr-border);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+    margin-bottom: 5px;
+    overflow: hidden;
+}
+
+    .lr-card-Trans {
+        background: var(--clr-surface);
+        margin-bottom: 12px;
+        overflow: hidden;
+    }
+.lr-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--clr-border);
+    background: linear-gradient(90deg, #f8faff 0%, #fff 100%);
+}
+
+    .lr-card-header h2 {
+        font-size: .8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: .06em;
+        color: var(--clr-primary);
+        margin: 0;
+    }
+.lr-card-body-Add {
+    padding: 6px 16px;
+    overflow-y: auto;
+    height:280px;
+}
+.lr-card-body {
+    padding: 6px 16px;
+}
+
+    .lr-card-body-Trans {
+        padding: 5px 5px;
+    }
+.field-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 5px 4px;
+}
+
+    /* Container for the fields */
+    .field-grid-header {
+        display: flex;
+        align-items: center;
+        gap: 12px; /* Gap thoda kam kiya taaki desktop pe fit ho sake */
+        flex-wrap: wrap;
+    }
+
+    /* Field wrapper setup */
+    .field-inline {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex: 1; /* Yeh desktop pe space ke hisaab se adjust hoga */
+    }
+
+        /* Label styling */
+        .field-inline label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--clr-muted);
+            white-space: nowrap;
+            width: 60px; /* Sabhi labels ki fixed width taaki inputs align rahein */
+        }
+
+        /* Input styling */
+        .field-inline .dxbl-text-edit,
+        .field-inline .dxbl-spin-edit,
+        .field-inline .dxbl-date-edit,
+        .field-inline .dxbl-combobox {
+            flex: 1; /* Input bachi hui puri jagah le lega */
+            min-width: 100px;
+        }
+
+    /* --- Mobile Specific Changes --- */
+    @@media (max-width: 768px) {
+        .field-grid-header
+
+    {
+        flex-direction: column; /* Mobile pe ek ke niche ek */
+        align-items: stretch;
+    }
+
+    .field-inline {
+        width: 100%; /* Mobile pe full width */
+    }
+
+        .field-inline label {
+            width: 80px; /* Mobile pe label ko thoda zyada space */
+        }
+
+    }
+.twoinone {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+@@media (max-width: 1100px) {
+    .field-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@@media (max-width: 640px) {
+    .field-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .lr-page {
+        padding: 0;
+    }
+
+    .km-group {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+.field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+    .field-group label {
+        font-size: .7rem;
+        font-weight: 700;
+        color: var(--clr-muted);
+        text-transform: uppercase;
+        letter-spacing: .05em;
+        line-height: 1.2;
+    }
+
+.km-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px 16px;
+}
+
+.lr-tabs-wrapper {
+    background: var(--clr-surface);
+    border: 1px solid var(--clr-border);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+    overflow: hidden;
+    margin-bottom: 12px;
+}
+
+.lr-tab-body {
+    padding: 10px;
+}
+
+.validation-summary-errors {
+    background: #fff5f5;
+    border: 1px solid #fca5a5;
+    border-radius: var(--radius-inner);
+    padding: 10px 14px;
+    margin-bottom: 12px;
+    color: var(--clr-danger);
+    font-size: .8rem;
+    line-height: 1.4;
+}
+
+    .validation-summary-errors ul {
+        margin: 0;
+        padding-left: 14px;
+    }
+
+.lr-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    background: var(--clr-surface);
+    border-top: 1px solid var(--clr-border);
+    box-shadow: var(--shadow-footer);
+    padding: 10px 24px;
+    gap: 12px;
+    height: 52px;
+    flex-shrink: 0;
+    z-index: 100;
+}
+
+   
+.lr-footer-meta {
+    font-size: .75rem;
+    color: var(--clr-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+    line-height: 1.4;
+}
+
+    .lr-footer-meta strong {
+        color: var(--clr-text);
+        font-weight: 600;
+    }
+
+.btn-save {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(135deg, var(--clr-primary) 0%, var(--clr-accent) 100%);
+    color: #fff !important;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 20px;
+    font-size: .85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity .15s, transform .1s;
+    letter-spacing: .01em;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+    .btn-save:hover {
+        opacity: .9;
+        transform: translateY(-1px);
+    }
+
+    .btn-save:active {
+        transform: translateY(0);
+    }
+
+@@media (max-width: 640px) {
+    .lr-footer {
+        padding: 8px 16px;
+        height: 48px;
+    }
+
+    .btn-save {
+        padding: 7px 14px;
+        font-size: .8rem;
+    }
+
+        .lr-tab-body {
+            padding: 10px;
+            width:290px;
+        }
+    }
+
+.lr-form-scroll {
+    overflow-y: auto;
+    padding: 0 16px 12px;
+    min-height: 0; /* critical for grid row 1fr to shrink correctly */
+}
+
+.loading-overlay {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    color: var(--clr-muted);
+    font-size: .9rem;
+    gap: 8px;
+}
+
+
+
+
+
+
+
+
+
+
+
+    /* ===== Flex Layout for Booking + Billing ===== */
+    .lr-tab-flex {
+        display: flex;
+        gap: 16px;
+        align-items: flex-start;
+    }
+
+    /* Left Section */
+    .lr-tab-left {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    /* Right Billing Section */
+    .lr-tab-right {
+        flex: 0 0 360px;
+        position: sticky;
+        top: 10px;
+    }
+
+    /* Billing Wrapper */
+    .billing-wrapper {
+        background: var(--clr-surface);
+        border: 1px solid var(--clr-border);
+        border-radius: var(--radius-card);
+        box-shadow: var(--shadow-card);
+        overflow: hidden;
+    }
+
+    /* Billing Body */
+    .billing-body {
+        padding: 14px;
+    }
+
+    /* Billing Row */
+    .billing-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-bottom: 12px;
+    }
+
+    /* Action Buttons */
+    .billing-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 12px 0;
+    }
+
+        .billing-actions .dx-button {
+            flex: 1 1 calc(50% - 4px);
+        }
+
+   
+
+    .summary-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 6px;
+        font-size: 0.9rem;
+    }
+
+        .summary-row strong {
+            font-size: 1.1rem;
+        }
+
+    .text-primary {
+        color: var(--clr-primary);
+    }
+
+    /* ===== Responsive Design ===== */
+    @@media (max-width: 992px) {
+        .lr-tab-flex
+
+    {
+        flex-direction: column;
+    }
+
+    .lr-tab-right {
+        flex: 1 1 auto;
+        width: 100%;
+        position: static;
+        margin-top: 12px;
+    }
+
+    }
+
+
+
+
+    /* Outline Button Style */
+    .btn-outline {
+        background: #eff6ff;
+        border: 1px solid var(--clr-primary);
+        color: var(--clr-primary);
+        font-weight: 600;
+    }
+
+        .btn-outline:hover {
+            background: #dbeafe;
+        }
+
+    /* Summary Section */
+    .billing-summary {
+        border-top: 1px dashed var(--clr-border);
+        border-bottom: 1px dashed var(--clr-border);
+       /*  padding: 12px 0; */
+        margin: 10px 0;
+    }
+
+    .summary-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.95rem;
+    }
+
+        .summary-row.total strong,
+        .billing-summary.balance strong {
+            font-size: 1.2rem;
+        }
+
+    .summary-sub {
+        font-size: 0.75rem;
+        color: var(--clr-muted);
+    }
+
+    /* Payment List */
+    .payment-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin: 10px 0;
+    }
+
+    .payment-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px;
+        background: #f8fafc;
+        border: 1px solid var(--clr-border);
+        border-radius: var(--radius-inner);
+    }
+
+    .payment-info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+        .payment-info strong {
+            font-size: 0.85rem;
+        }
+
+        .payment-info span {
+            font-size: 0.8rem;
+            color: var(--clr-muted);
+        }
+
+        .payment-info small {
+            font-size: 0.7rem;
+            color: #64748b;
+        }
+
+    .payment-amount {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-weight: 600;
+    }
+
+    /* Balance Highlight */
+    .billing-summary.balance {
+        background: #f8fafc;
+        border-radius: var(--radius-inner);
+        padding: 12px;
+    }
+
+
+    /* Wrapper for Expense and Driver Payment */
+    .expense-driver-wrapper {
+        display: flex;
+        gap: 16px;
+        align-items: stretch;
+    }
+
+    /* Equal width sections */
+    .expense-section,
+    .driver-section {
+        flex: 1;
+        min-width: 0;
+    }
+
+        /* Ensure cards take full height */
+        .expense-section .lr-card,
+        .driver-section .lr-card {
+            height: 100%;
+        }
+
+    .clickable {
+        cursor: pointer;
+    }
+    /* Mobile View: Stack vertically */
+   @@media (max-width: 768px) {
+        .expense-driver-wrapper
+
+    {
+        flex-direction: column;
+    }
+
+    }
+
+
+    /* Wrapper for both sections */
+    .lr-details-wrapper {
+        display: flex;
+        gap: 16px;
+        align-items: flex-start;
+    }
+
+    /* Left section -*/
+    .lr-main-details {
+        flex: 1; /* 65% width */
+        min-width: 210px;
+        
+    }
+
+    /* Right section */
+    .lr-additional-details {
+        flex: 0 0 35%; /*  width (~35%) */
+        min-width: 0;
+       
+    }
+
+    /* Grid inside sections */
+    .field-grid-main,
+    .field-grid-additional {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+    /* Responsive: Mobile view */
+    @@media (max-width: 768px) {
+        .lr-details-wrapper
+
+    {
+        flex-direction: column;
+    }
+
+    .lr-main-details,
+    .lr-additional-details {
+        flex: 1 1 100%;
+        width: 100%;
+    }
+
+        .field-grid-main,
+        .field-grid-additional {
+            display: grid;
+            grid-template-columns: repeat(1, 1fr);
+            gap: 10px;
+        }
+
+        .billing-row {
+            display: grid;
+            grid-template-columns: repeat(1, 1fr);
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+    }
+
+    /*  for commison */
+    .input-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+</style>
+
+
+<div class="lr-page">
+
+    <!-- ══ HEADER ══ -->
+    <div class="lr-header">
+        <div class="lr-header-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="1.75"
+                 stroke-linecap="round" stroke-linejoin="round">
+                <rect x="1" y="3" width="15" height="13" rx="1" />
+                <path d="M16 8h4l3 4v4h-7V8z" />
+                <circle cx="5.5" cy="18.5" r="2.5" />
+                <circle cx="18.5" cy="18.5" r="2.5" />
+            </svg>
+        </div>
+        <div class="lr-header-divider"></div>
+        <div class="lr-header-text">
+            <h1>LR Entry</h1>
+            <span>Lorry Receipt</span>
+        </div>
+        <button type="button" class="btn-back" @onclick="GoBack">← List</button>
+        <div class="lr-header-badge @(IsEditMode ? "edit-mode" : "")">
+            @(IsEditMode ? "Edit" : "New Entry")
+        </div>
+        <button type="button" class="btn-columns" @onclick="() => showPanel = !showPanel">⚙ Columns</button>
+    </div>
+
+    <!-- ══ COLUMN VISIBILITY PANEL ══ -->
+    @if (showPanel)
+    {
+        <div class="col-panel-backdrop" @onclick="CloseFieldPanel"></div>
+        <div class="col-panel">
+            <div class="col-panel-header">
+                <span>Show / Hide Fields</span>
+                <button type="button" @onclick="CloseFieldPanel">✕</button>
+            </div>
+            <div class="col-panel-actions">
+                <button type="button" @onclick="SelectAll">Select All</button>
+                <button type="button" @onclick="SelectNone">Clear All</button>
+                <button type="button" disabled="@_isSavingFields" @onclick="SaveFieldLayout">
+                    @(_isSavingFields ? "..." : "Save")
+                </button>
+            </div>
+            <div class="col-panel-list">
+                @foreach (var key in Visible.Keys.ToList())
+                {
+                    var capturedKey = key;
+                    <label class="col-toggle-row">
+                        <input type="checkbox"
+                               checked="@Visible[capturedKey]"
+                               @onchange="e => OnFieldVisibilityChanged(capturedKey, (bool)e.Value!)" />
+                        <span>@Labels[capturedKey]</span>
+                    </label>
+                }
+            </div>
+        </div>
+    }
+
+    @if (IsLoading)
+    {
+        <div class="loading-overlay"><span>⏳ Lsdoading LR data...</span></div>
+    }
+    else
+    {
+        <div class="lr-form-scroll">
+            <EditForm Model="@model" OnValidSubmit="@Save">
+                <DataAnnotationsValidator />
+                <ValidationSummary class="validation-summary-errors" />
+                <div class="lr-card">
+                    
+                    <div class="lr-card-body">
+                        <div class="field-grid-header">
+                            
+                            @if (Visible["LrNo"] || Visible["LrDate"])
+                            {
+                                
+                                    @if (Visible["LrNo"])
+                                    {
+                                        
+                                               
+                                        <div class="field-inline">
+                                                                    <label>LR No</label>
+                                                <DxTextBox @bind-Text="model.LrNoStr" />
+
+                                    </div>
+                                  
+                                    }
+                                    @if (Visible["LrDate"])
+                                    {
+
+
+                                    <div class="field-inline">
+                                                                    <label>LR Date </label>
+                                                <DxDateEdit @bind-Date="model.LrDate" Format="dd-MM-yyyy" />
+
+                                           
+                                        </div>
+                                    }
+                          }
+                          
+                            <div class="field-inline">
+                                                                    <label>Vehicle NO </label>
+                                <DxComboBox Data="@vehiclelist" TData="Vehicle" TValue="int?"
+                                            TextFieldName="VehicleNo" ValueFieldName="VehicleId"
+                                            Value="@model.LrVehicleId" ValueChanged="@((int? val)=>OnVehicleChanged(val))"
+                                            ValueExpression="() => model.LrVehicleId"
+                                            NullText="Select Vehicle"
+                                            AllowUserInput="true"
+                                            SearchMode="ListSearchMode.AutoSearch"
+                                            SearchFilterCondition="ListSearchFilterCondition.Contains" />
+                                  </div>
+                            @if (Visible["PaymentMode"] || Visible["TripNo"])
+                            {
+                                
+                                        @if (Visible["PaymentMode"])
+                                        {
+                                         
+                                                    <div class="field-inline">
+                                                                    <label>To Pay </label>
+                                                    <DxComboBox Data="@PaymethodList"
+                                                                @bind-Value="model.LrPaymentType"
+                                                                TextFieldName="Text"
+                                                                ValueFieldName="Value"
+                                                                ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                                                SearchMode="ListSearchMode.AutoSearch"
+                                                                SearchFilterCondition="ListSearchFilterCondition.Contains"
+                                                                AllowUserInput="false"
+                                                                NullText="Payment Mode"
+                                                                TData="SelectItem"
+                                                                TValue="string" />
+                                         </div>
+                                         
+                                        }
+                                        @if (Visible["TripNo"])
+                                        {
+
+
+                                    <div class="field-inline">
+                                                                    <label>Trip No </label>
+                                                <DxSpinEdit @bind-Value="model.LrTripNo" ShowSpinButtons="false" />
+                                                  </div>
+                                          
+                                        }
+                                 
+                            }
+                           </div>
+                       
+                    </div>
+                </div>
+
+
+                <!-- ══ Booking DETAILS ══ -->
+                <div class="lr-card">
+                  @*   <div class="lr-card-header"><h2>Booking Details</h2></div> *@
+                    <div class="lr-card-body">
+
+                        <DxTabs CssClass="lr-tabs">
+            
+           
+            <DxTabPage Text="Booking Details">
+                 <div class="lr-tab-flex">
+
+        <!-- LEFT SIDE : Existing Booking Details -->
+        <div class="lr-tab-left">
+
+
+                <div class="lr-tab-body">
+
+
+                        
+
+                                                <div class="lr-details-wrapper">
+                                                <div class="lr-main-details">
+                                                    <div class="lr-card">
+                                                        <div class="lr-card-header">
+                                                            <h2>Main Details</h2>
+                                                        </div>
+                                                        <div class="lr-card-body">
+                                                            <!-- Billing Party -->
+                                                            <div class="field-group">
+                                                                <label>Billing Party</label>
+                                                                <DxComboBox Data="@accountSupplierlist" TData="Account" TValue="int"
+                                                                            TextFieldName="AccountName" ValueFieldName="AccountId"
+                                                                            @bind-Value="model.LrPartyAccountId"
+                                                                            NullText="Select billing party"
+                                                                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                                                            AllowUserInput="true"
+                                                                            SearchMode="ListSearchMode.AutoSearch"
+                                                                            SearchFilterCondition="ListSearchFilterCondition.Contains" />
+                                                            </div>
+                                                            <div class="field-grid-main">
+
+                                                                <!-- Vehicle -->
+                                                              @*   <div class="field-group">
+                                                                    <label>Vehicle</label>
+                                                                    <DxComboBox Data="@vehiclelist" TData="Vehicle" TValue="int?"
+                                                                                TextFieldName="VehicleNo" ValueFieldName="VehicleId"
+                                                                                Value="@model.LrVehicleId" ValueChanged="@((int? val)=>OnVehicleChanged(val))"
+                                                                               ValueExpression="() => model.LrVehicleId"
+                                                                               NullText="Select Vehicle"
+                                                                                AllowUserInput="true"
+                                                                                SearchMode="ListSearchMode.AutoSearch"
+                                                                                SearchFilterCondition="ListSearchFilterCondition.Contains" />
+                                                                </div> *@
+
+                                                                
+
+                                                                <!-- Supplier -->
+                                                                @* <div class="field-group">
+                                                                    <label>Supplier</label>
+                                                                    <DxComboBox Data="@accountSupplierlist" TData="Account" TValue="int?"
+                                                                                TextFieldName="AccountName" ValueFieldName="AccountId"
+                                                                                @bind-Value="model.LrSupplierAccountId"
+                                                                                NullText="Select supplier"
+                                                                                AllowUserInput="true"
+                                                                                SearchMode="ListSearchMode.AutoSearch"
+                                                                                SearchFilterCondition="ListSearchFilterCondition.Contains" />
+                                                                </div> *@
+
+                                                                
+                                                                <!-- Consignor -->
+                                                                <div class="field-group">
+                                                                    <label>Consignor</label>
+                                                                    <DxComboBox Data="@notifylist" TData="Notify" TValue="int?"
+                                                                                TextFieldName="NotifyName" ValueFieldName="NotifyId"
+                                                                                @bind-Value="model.LrConsignorNotifyId"
+                                                                                NullText="Select consignor"
+                                                                                AllowUserInput="true"
+                                                                                SearchMode="ListSearchMode.AutoSearch"
+                                                                                SearchFilterCondition="ListSearchFilterCondition.Contains" />
+                                                                </div>
+
+                                                                <!-- Consignee -->
+                                                                <div class="field-group">
+                                                                    <label>Consignee</label>
+                                                                    <DxComboBox Data="@notifylist" TData="Notify" TValue="int?"
+                                                                                TextFieldName="NotifyName" ValueFieldName="NotifyId"
+                                                                                @bind-Value="model.LrConsigneeNotifyId"
+                                                                                NullText="Select consignee"
+                                                                                AllowUserInput="true"
+                                                                                SearchMode="ListSearchMode.AutoSearch"
+                                                                                SearchFilterCondition="ListSearchFilterCondition.Contains" />
+                                                                </div>
+
+                                                               
+
+                                                                <!-- Locations -->
+                                                                <div class="field-group">
+                                                                    <label>From Location</label>
+                                                                    <DxComboBox Data="@StationLocationList" TData="Location" TValue="int?"
+                                                                                TextFieldName="LocationName" ValueFieldName="LocationId"
+                                                                                @bind-Value="model.LrFromLocationId"
+                                                                                NullText="Select Location" />
+                                                                </div>
+
+                                                                <div class="field-group">
+                                                                    <label>To Location</label>
+                                                                    <DxComboBox Data="@LocationList" TData="Location" TValue="int?"
+                                                                                TextFieldName="LocationName" ValueFieldName="LocationId"
+                                                                                @bind-Value="model.LrToLocationId"
+                                                                                NullText="Select Location" />
+                                                                </div>
+
+                                                                <div class="field-group">
+                                                                    <label>Back Location</label>
+                                                                    <DxComboBox Data="@LocationList" TData="Location" TValue="int?"
+                                                                                TextFieldName="LocationName" ValueFieldName="LocationId"
+                                                                                @bind-Value="model.LrBackLocationId"
+                                                                                NullText="Select Location" />
+                                                                </div>
+                                                                 <!-- Product -->
+                                                                <div class="field-group">
+                                                                    <label>Product</label>
+
+                                                                    <DxComboBox Data="@ProductList" TData="Cargo" TValue="int?"
+                                                                                TextFieldName="CargoName" ValueFieldName="CargoId"
+                                                                                @bind-Value="model.LrProductId"
+                                                                                NullText="Select Product"
+                                                                                AllowUserInput="true"
+                                                                                SearchMode="ListSearchMode.AutoSearch"
+                                                                                SearchFilterCondition="ListSearchFilterCondition.Contains" />
+                                                                </div>
+
+                                                                <div class="field-group">
+                                                                    <label>Conatiner 1</label>
+                                                                    <DxTextBox @bind-Text="model.LrContainer1" />
+                                                                </div>
+                                                                 <div class="field-group">
+                                                                    <label>Conatiner 2</label>
+                                                                    <DxTextBox @bind-Text="model.LrContainer2" />
+                                                                </div>
+
+                                                             @*    <div class="field-group">
+                                                                    <label>Unload Wt</label>
+
+                                                                  <DxSpinEdit Value="@model.LrUnloadWt"
+                                                                                ValueChanged="@((double val) => OnUnloadWtChanged(val))"
+                                                                                ValueExpression="() => model.LrUnloadWt"
+                                                                                ShowSpinButtons="false" /> 
+                                                                </div> *@
+
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="lr-additional-details">
+                                                    <div class="lr-card">
+                                                        <div class="lr-card-header">
+                                                            <h2>Additional Details</h2>
+                                                        </div>
+                                                        <div class="lr-card-body-Add">
+                                                            <div class="field-grid-additional">
+
+                                                                <div class="field-group">
+                                                                    <label>Gross Wt</label>
+                                                                    <DxSpinEdit  Value="@model.LrGrossWt"
+                                                                                ValueChanged="@((double? val) => OnGrossWtChanged(val))"
+                                                                                ValueExpression="() => model.LrGrossWt"
+                                                                                ShowSpinButtons="false" />
+                                                                </div>
+
+                                                                <div class="field-group">
+                                                                    <label>Tare Wt</label>
+                                                                    <DxSpinEdit Value="@model.LrTareWt"
+                                                                                ValueChanged="@((double? v) => OnTareWtChanged(v))"
+                                                                                ValueExpression="() => model.LrTareWt"
+                                                                                ShowSpinButtons="false" />
+                                                                </div>
+                                                                <div class="field-group">
+                                                                    <label>Load Wt</label>
+
+                                                                    <DxSpinEdit Value="@model.LrLoadWt"
+                                                                                ValueChanged="@((double val) => OnloadWtChanged(val))"
+                                                                                ValueExpression="() => model.LrLoadWt"
+                                                                                ShowSpinButtons="false" />
+                                                                </div>
+                                                                <div class="field-group">
+                                                                    <label>Unload Wt</label>
+
+                                                                    <DxSpinEdit Value="@model.LrUnloadWt"
+                                                                                ValueChanged="@((double val) => OnUnloadWtChanged(val))"
+                                                                                ValueExpression="() => model.LrUnloadWt"
+                                                                                ShowSpinButtons="false" />
+                                                                </div>
+                                                                <div class="field-group">
+                                                                    <label>Invoice No</label>
+                                                                    <DxTextBox @bind-Text="model.LrInvoiceNo" />
+                                                                </div>
+
+                                                                <div class="field-group">
+                                                                    <label>Invoice Date</label>
+                                                                    <DxDateEdit @bind-Date="model.LrInvoiceDate" Format="dd-MM-yyyy" />
+                                                                </div>
+
+                                                                <div class="field-group">
+                                                                    <label>Invoice Value</label>
+                                                                    <DxSpinEdit @bind-Value="model.LrInvoiceValue" ShowSpinButtons="false" />
+                                                                </div>
+
+                                                                <div class="field-group">
+                                                                    <label>E-Way Bill No</label>
+                                                                    <DxTextBox @bind-Text="model.LrEwayBillNo" />
+                                                                </div>
+
+                                                                <div class="field-group">
+                                                                    <label>E-Way Bill Date</label>
+                                                                    <DxDateEdit @bind-Date="model.LrEwayBillExpDt" Format="dd-MM-yyyy" />
+                                                                </div>
+
+                                                                <div class="field-group">
+                                                                    <label>GP/BE No</label>
+                                                                    <DxTextBox @bind-Text="model.LrGroupNo" />
+                                                                </div>
+                                                                
+                                                                <div class="field-group">
+                                                                    <label>Bags/Articles</label>
+                                                                    <DxSpinEdit @bind-Value="model.LrTotalBags" ShowSpinButtons="false" />
+                                                                </div>
+                                                               <div class="field-group">
+                                                                    <label>Custom 1</label>
+                                                                    <DxTextBox @bind-Text="model.LrCustom1" />
+                                                                </div>
+                                                                <div class="field-group">
+                                                                    <label>Custom 2</label>
+                                                                    <DxTextBox @bind-Text="model.LrCustom2" />
+                                                                </div>
+                                                                <div class="field-group">
+                                                                    <label>Custom 3</label>
+                                                                    <DxTextBox @bind-Text="model.LrCustom3" />
+                                                                </div>
+                                                                <div class="field-group">
+                                                                    <label>Custom 4</label>
+                                                                    <DxTextBox @bind-Text="model.LrCustom4" />
+                                                                </div>
+                                                                <div class="field-group">
+                                                                    <label>Custom 5</label>
+                                                                    <DxTextBox @bind-Text="model.LrCustom5" />
+                                                                </div>
+                                                                <div class="field-group">
+                                                                    <label>Custom 6</label>
+                                                                    <DxTextBox @bind-Text="model.LrCustom6" />
+                                                                </div>
+                                                                <div class="field-group">
+                                                                    <label>Custom 7</label>
+                                                                    <DxTextBox @bind-Text="model.LrCustom7" />
+                                                                </div>
+                                                                <div class="field-group">
+                                                                    <label>Custom 8</label>
+                                                                    <DxTextBox @bind-Text="model.LrCustom8" />
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    </div>
+                                                </div>
+                           
+
+                      
+                                            <!-- Expense & Driver Payment Wrapper -->
+                                            <div class="expense-driver-wrapper">
+                                                <!-- Expense Section (Left) -->
+                                                <div class="expense-section">
+                                                    <div class="lr-card mt-2">
+                                                        <div class="lr-card-header">
+                                                            <h2 class="section-title clickable" @onclick="OnExpenseClick">
+                                                                <i class="bi bi-plus-circle-dotted"></i>
+                                                                <span>Expense</span>
+                                                            </h2>
+                                                        </div>
+                                                        <div class="lr-card-body">
+                                                            @* Add your expense content here *@
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Driver Payment Section (Right) -->
+                                                <div class="driver-section">
+                                                    <div class="lr-card mt-2">
+                                                        <div class="lr-card-header">
+                                                            <h2 class="section-title clickable" @onclick="OnDriverPaymentClick">
+                                                                <i class="bi bi-plus-circle-dotted"></i>
+                                                                <span>Driver Payment</span>
+                                                            </h2>
+                                                        </div>
+                                                        <div class="lr-card-body">
+                                                            @if (DriverPayments != null && DriverPayments.Any())
+                                                            {
+                                                                @foreach (var payment in DriverPayments)
+                                                                {
+                                                                    <div class="payment-item">
+                                                                        <div class="payment-info">
+                                                                            <strong>@payment.VoucherNo</strong>
+                                                                            <span>@payment.Description</span>
+                                                                            <small>@payment.Date.ToString("dd/MM/yyyy hh:mm tt")</small>
+                                                                        </div>
+                                                                        <div class="payment-amount">
+                                                                            ₹@payment.Amount.ToString("N0")
+                                                                        </div>
+                                                                    </div>
+                                                                }
+                                                            }
+                                                            else
+                                                            {
+                                                                <div class="text-muted"></div>
+                                                            }
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                        <!-- ══ Transporter DETAILS ══ -->
+                       @*   <div class="lr-card-Trans mt-2">
+                    <div class="lr-card-header"><h2>Transporter Details</h2></div>
+                    <div class="lr-card-body-Trans">
+                        <div class="field-grid">
+                           
+                             
+
+
+                        </div>
+                    </div>
+                </div> *@
+
+
+                                </div>
+
+
+                                    </div>
+
+
+
+                                    <div class="lr-tab-right mb-2 mt-2">
+            <div class="billing-wrapper">
+                <DxTabs CssClass="billing-tabs">
+                    <DxTabPage Text="Customer Billing">
+                        <div class="billing-body">
+                            <div class="billing-row">
+
+                         <div class="field-group">
+                                    <label>Billing Type</label>
+                                                                <DxComboBox Data="@BillTypeList"
+                                                                            TData="BillTypeVM"
+                                                                            TValue="string"
+                                                                            TextFieldName="Name"
+                                                                            ValueFieldName="Name"
+                                                                            Value="@model.LrBillTypeBill"
+                                                                            ValueChanged="@((string val) =>OnBillTypeChanged(val))"
+                                                                            ValueExpression="() => model.LrBillTypeBill"
+                                                                            NullText="Select Billing Type"
+                                                                            SearchMode="ListSearchMode.AutoSearch"
+                                                                            SearchFilterCondition="ListSearchFilterCondition.Contains"
+                                                                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                                </div>
+                                                    @* <div class="field-group">
+                                                        <label>Load Wt</label>
+
+                                                                <DxSpinEdit Value="@model.LrLoadWt"
+                                                                            ValueChanged="@((double val) => OnloadWtChanged(val))"
+                                                                            ValueExpression="() => model.LrLoadWt"
+                                                                            ShowSpinButtons="false" /> 
+                                                    </div> *@
+                                                    <div class="field-group">
+                                                        <label>Billing Rate </label>
+                                                                <DxSpinEdit Value="@model.LrRateBill"
+                                                                            ValueChanged="@((double v) => OnBillRateChanged(v))"
+                                                                            ValueExpression="() => model.LrRateBill"
+                                                                            ShowSpinButtons="false" />
+                                                    </div>
+                                                         <div class="field-group">
+                                                        <label>Charge Wt </label>
+                                                                <DxSpinEdit Value="@model.LrChargeQty"
+                                                                            ValueChanged="@((double v) => OnBillChargeWtChanged(v))"
+                                                                            ValueExpression="() => model.LrChargeQty"
+                                                                            ShowSpinButtons="false" />
+                                                    </div>    
+                                                    <div class="field-group">
+                                                        <label>Gross Freight </label>
+                                                                <DxSpinEdit @bind-Value="model.LrGrossFreightBill" ShowSpinButtons="false" ReadOnly="true" />
+                                                    </div>
+                                                            <div class="field-group">
+                                                                <label>Commision </label>
+                                                                <div class="input-row">
+                                                                    <DxSpinEdit Value="@model.LrCommPerBill"
+                                                                                ValueChanged="@((float v) => OnBillCommPctChanged(v))"
+                                                                                ValueExpression="() => model.LrCommPerBill"
+                                                                                NullText="%" ShowSpinButtons="false" />
+                                                                    <DxSpinEdit Value="@model.LrCommAmtBill"
+                                                                                ValueChanged="@((float v) => OnBillCommAmtChanged(v))"
+                                                                                ValueExpression="() => model.LrCommAmtBill"
+                                                                                NullText="₹" ShowSpinButtons="false" />
+                                                                </div>
+                                                            </div>
+                                                           
+                                                     </div>
+
+                                                      <!-- Adjustments -->
+                                                            <div class="lr-card mt-3">
+                                                            <div class="lr-card-header">
+                                                                    <h2 class="section-title clickable" @onclick="OpenCustomerAdjustment">
+                                                                          <i class="bi bi-plus-circle-dotted"></i>
+                                                                        Adjustments
+                                                                    </h2>
+                                                                </div>
+                                                                <div class="lr-card-body">
+                                                                    @foreach (var adj in CustomerAdjustments)
+                                                                    {
+                                                                        <div class="payment-item">
+                                                                            <div class="payment-info">
+                                                                                <strong>@adj.VoucherNo</strong>
+                                                                                <span>@adj.Description</span>
+                                                                                <small>@adj.Date.ToString("dd/MM/yyyy")</small>
+                                                                            </div>
+                                                                            <div class="payment-amount">
+                                                                                ₹@adj.Amount.ToString("N2")
+                                                                            </div>
+                                                                        </div>
+                                                                    }
+                                                                </div>
+                                                            </div>
+
+
+                                                              <!-- Payments -->
+                <div class="lr-card mt-3">
+                    <div class="lr-card-header">
+                                                                <h2 class="section-title clickable" @onclick="OpenCustomerPayment">
+                              <i class="bi bi-plus-circle-dotted"></i>
+                            Payments
+                        </h2>
+                    </div>
+                    <div class="lr-card-body">
+                        @foreach (var pay in CustomerPayments)
+                        {
+                            <div class="payment-item">
+                                <div class="payment-info">
+                                    <strong>@pay.VoucherNo</strong>
+                                    <span>@pay.Description</span>
+                                    <small>@pay.Date.ToString("dd/MM/yyyy")</small>
+                                </div>
+                                <div class="payment-amount">
+                                    ₹@pay.Amount.ToString("N2")
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+                                                        <!-- Summary -->
+                                                        <div class="billing-summary mt-3">
+                                                            <div class="summary-row">
+                                                                <span>Net Freight</span>
+                                                                <strong>₹@model.LrNetFreightBill.ToString("N2")</strong>
+                                                            </div>
+                                                            @* <div class="summary-row">
+                                                                <span>Total Adjustments</span>
+                                                                <strong>₹@CustomerAdjustments.Sum(x => x.Amount).ToString("N2")</strong>
+                                                            </div>
+                                                            <div class="summary-row">
+                                                                <span>Total Payments</span>
+                                                                <strong>₹@CustomerPayments.Sum(x => x.Amount).ToString("N2")</strong>
+                                                            </div>
+                                                            <div class="summary-row total text-primary">
+                                                                <span>Balance Receivable</span>
+                                                                                                                        <strong>
+                                                                                                                            ₹@(
+                                                                                                                            (Convert.ToDecimal(model.LrNetFreightBill)
+                                                                                                                            + CustomerAdjustments.Sum(x => x.Amount)
+                                                                                                                            - CustomerPayments.Sum(x => x.Amount))
+                                                                                                                            .ToString("N2")
+                                                                                                                                )
+                                                            </strong>
+                                                        </div> *@
+                                                    </div>
+
+
+                                                      </div>
+                                                </DxTabPage>
+                                                <DxTabPage Text="Supplier Billing">
+                                                     <div class="billing-body">
+                                                        <div class="field-group">
+                                                            <label>Supplier</label>
+                                                            <DxComboBox Data="@accountSupplierlist" TData="Account" TValue="int?"
+                                                                        TextFieldName="AccountName" ValueFieldName="AccountId"
+                                                                        @bind-Value="model.LrSupplierAccountId"
+                                                                        NullText="Select supplier"
+                                                                        AllowUserInput="true"
+                                                                        SearchMode="ListSearchMode.AutoSearch"
+                                                                        SearchFilterCondition="ListSearchFilterCondition.Contains" />
+                                                        </div>
+                            <div class="billing-row mt-2">
+
+                                                           
+                                                    
+
+                                                    <div class="field-group">
+                                                        <label>Pay Type  </label>
+                                                                 <DxComboBox Data="@BillTypeList"
+                                                                            TData="BillTypeVM"
+                                                                            TValue="string"
+                                                                            TextFieldName="Name"
+                                                                            ValueFieldName="Name"
+                                                                            Value="@model.LrTopayMode"
+                                                                            ValueChanged="@((string val) =>OnPayTypeChanged(val))"
+                                                                            ValueExpression="() => model.LrBillTypeTruck"
+                                                                            NullText="Select Pay Type"
+                                                                            SearchMode="ListSearchMode.AutoSearch"
+                                                                            SearchFilterCondition="ListSearchFilterCondition.Contains"
+                                                                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                                                    </div>
+
+                                                    <div class="field-group">
+                                                        <label>Payable Rate  </label>
+                                                                <DxSpinEdit Value="@model.LrBillRateTruck"
+                                                                            ValueChanged="@((double v) => OnTruckRateChanged(v))"
+                                                                            ValueExpression="() => model.LrBillRateTruck"
+                                                                            ShowSpinButtons="false" />
+                                                    </div>
+                                                    
+                                                  <div class="field-group">
+                                                        <label>Payable  Gross Freight</label>
+                                                        <DxSpinEdit @bind-Value="model.LrGrossFreightTruck" ShowSpinButtons="false" ReadOnly="true"/>
+                                                    </div>
+                                                            <div class="field-group Commision">
+                                                                <label>Commision</label>
+                                                                <div class="input-row">
+                                                                    <DxSpinEdit Value="@model.LrCommPerTruck"
+                                                                                ValueChanged="@((float v) => OnTruckCommPctChanged(v))"
+                                                                                ValueExpression="() => model.LrCommPerTruck"
+                                                                                NullText="%" ShowSpinButtons="false" />
+                                                                    <DxSpinEdit Value="@model.LrCommAmtTruck"
+                                                                                ValueChanged="@((float v) => OnTruckCommAmtChanged(v))"
+                                                                                ValueExpression="() => model.LrCommAmtTruck"
+                                                                                NullText="₹" ShowSpinButtons="false" />
+                                                                </div>
+                                                            </div>
+                                                    </div>
+
+                                                    <!-- Supplier Adjustments -->
+                                                            <div class="lr-card mt-3">
+                                                                <div class="lr-card-header">
+                                                                <h2 class="section-title clickable" @onclick="OpenSupplierAdjustment">
+                                                                          <i class="bi bi-plus-circle-dotted"></i>
+                                                                        Adjustments
+                                                                    </h2>
+                                                                </div>
+                                                                <div class="lr-card-body">
+                                                                    @foreach (var adj in CustomerAdjustments)
+                                                                    {
+                                                                        <div class="payment-item">
+                                                                            <div class="payment-info">
+                                                                                <strong>@adj.VoucherNo</strong>
+                                                                                <span>@adj.Description</span>
+                                                                                <small>@adj.Date.ToString("dd/MM/yyyy")</small>
+                                                                            </div>
+                                                                            <div class="payment-amount">
+                                                                                ₹@adj.Amount.ToString("N2")
+                                                                            </div>
+                                                                        </div>
+                                                                    }
+                                                                </div>
+                                                            </div>
+
+
+                                                              <!-- Supplier Payments -->
+                <div class="lr-card mt-3">
+                    <div class="lr-card-header">
+                                                                <h2 class="section-title clickable" @onclick="OpenSupplierPayment">
+                              <i class="bi bi-plus-circle-dotted"></i>
+                            Payments
+                        </h2>
+                    </div>
+                    <div class="lr-card-body">
+                        @foreach (var pay in CustomerPayments)
+                        {
+                            <div class="payment-item">
+                                <div class="payment-info">
+                                    <strong>@pay.VoucherNo</strong>
+                                    <span>@pay.Description</span>
+                                    <small>@pay.Date.ToString("dd/MM/yyyy")</small>
+                                </div>
+                                <div class="payment-amount">
+                                    ₹@pay.Amount.ToString("N2")
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+                                                        <!-- Summary -->
+                                                        <div class="billing-summary mt-3">
+                                                            <div class="summary-row">
+                                                                <span>Payable Freight</span>
+                                                                <strong>₹@model.LrNetFreightTruck.ToString("N2")</strong>
+                                                            </div>
+                                                            @* <div class="summary-row">
+                                                                <span>Total Adjustments</span>
+                                                                <strong>₹@CustomerAdjustments.Sum(x => x.Amount).ToString("N2")</strong>
+                                                            </div>
+                                                            <div class="summary-row">
+                                                                <span>Total Payments</span>
+                                                                <strong>₹@CustomerPayments.Sum(x => x.Amount).ToString("N2")</strong>
+                                                            </div>
+                                                            <div class="summary-row total text-primary">
+                                                                <span>Balance Receivable</span>
+                                                                                                                        <strong>
+                                                                                                                            ₹@(
+                                                                                                                            (Convert.ToDecimal(model.LrNetFreightBill)
+                                                                                                                            + CustomerAdjustments.Sum(x => x.Amount)
+                                                                                                                            - CustomerPayments.Sum(x => x.Amount))
+                                                                                                                            .ToString("N2")
+                                                                                                                                )
+                                                            </strong>
+                                                        </div> *@
+                                                    </div>
+
+
+                                                    </div>
+                                                </DxTabPage>
+                                            </DxTabs>
+                     </div>
+
+
+                                    </div>
+
+
+
+
+
+
+
+
+
+
+                                </div>
+
+
+
+                            </DxTabPage>
+
+                            <!-- ══ Other DETAILS ══ -->
+                             <DxTabPage Text="Other Details">
+                <div class="lr-tab-body">
+
+
+
+                                    <!-- ══ Driver DETAILS ══ -->
+                    <div class="lr-card-header"><h2>Driver Details</h2></div>
+                    <div class="lr-card-body">
+                        <div class="field-grid">
+
+                            <div class="field-group">
+                                                                    <label>Driver Name</label>
+                                                <DxComboBox Data="@accountlist" TData="Account" TValue="int?"
+                                                                                TextFieldName="AccountName" ValueFieldName="AccountId"
+                                                                                @bind-Value="model.LrDriverId"
+                                                                                NullText="Select Driver "
+                                                                                ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                                                                AllowUserInput="true"
+                                                                                SearchMode="ListSearchMode.AutoSearch"
+                                                                                SearchFilterCondition="ListSearchFilterCondition.Contains" />
+                                                                </div>
+
+                                    <div class="field-group">
+                                <label>Bhatta </label>
+                                <DxSpinEdit @bind-Value="model.LrBhattaExtra" ShowSpinButtons="false" />
+                            </div>
+                                   <div class="field-group">
+                                   <label>Diesel </label>
+                                  <DxSpinEdit @bind-Value="model.LrDieselExtra" ShowSpinButtons="false" />
+                              </div>
+                                                  <div class="field-group">
+                                                    <label>Urea </label>
+                                                    <DxSpinEdit @bind-Value="model.LrUreaQty" ShowSpinButtons="false" />
+                                                </div>
+                                                    <div class="field-group">
+                                                        <label>Opening>>Diesel-Urea </label>
+                                                        <DxSpinEdit @bind-Value="model.LrDieselOpening" ShowSpinButtons="false" />
+                                                        @* <DxSpinEdit @bind-Value="model.LrUreaOpening" ShowSpinButtons="false" /> *@
+                                                    </div>
+                                                    <div class="field-group">
+                                                        <label>Driver Remarks </label>
+                                                        <DxMemo @bind-Text="model.LrDriverRemarks" Rows="1"
+                                                        ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                                                    </div>
+
+                                                </div>
+                                        <!-- ══ Shortage DETAILS ══ -->
+                                                 <div class="lr-card-header mb-2"><h2>Shortage Details</h2></div>
+                                        <div class="field-grid">
+                                        <div class="field-group">
+                                            <label>Shortage Type </label>
+                                            
+                                                <DxComboBox Data="@ShortTypeList"
+                                                            TData="Shorttype"
+                                                            TValue="string"
+                                                            TextFieldName="Name"
+                                                            ValueFieldName="Name"
+                                                            Value="@model.LrShortAllowType"
+                                                            ValueChanged="@((string val) =>OnShortTypeChanged(val))"
+                                                            ValueExpression="() => model.LrShortAllowType"
+                                                            NullText="Select Shortage Type"
+                                                            SearchMode="ListSearchMode.AutoSearch"
+                                                            SearchFilterCondition="ListSearchFilterCondition.Contains"
+                                                            ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                                        </div>
+                                            <div class="field-group">
+                                                <label>Short Wt </label>
+                                                <DxSpinEdit @bind-Value="model.LrShortWt" ShowSpinButtons="false" ReadOnly="true" />
+                                            </div>
+                                            @if (shortallowperVisible)
+                                            {
+                                                <div class="field-group">
+                                                    <label>Party>> Allow Wt(%) </label>
+                                                   @*  <DxSpinEdit @bind-Value="model.LrShortPerBill" ShowSpinButtons="false" /> *@
+
+                                                    <DxSpinEdit Value="@model.LrShortPerBill"
+                                                                ValueChanged="@((double v) => OnPartyShortAllowPerChanged(v))"
+                                                                ValueExpression="() => model.LrShortPerBill"
+                                                                NullText="%" ShowSpinButtons="false" />
+                                                </div>
+                                            }
+                                            <div class="field-group">
+                                                <label>Party>> Allow Wt</label>
+                                            @* <DxSpinEdit @bind-Value="model.LrShortAllowBill" ShowSpinButtons="false" /> *@
+                                                <DxSpinEdit Value="@model.LrShortAllowBill"
+                                                            ValueChanged="@((double v) => OnPartyShortAllowWtChanged(v))"
+                                                            ValueExpression="() => model.LrShortAllowBill"
+                                                            NullText="₹" ShowSpinButtons="false" />
+                                        </div>
+
+                                        <div class="field-group">
+                                            <label>Net Short </label>
+                                                <DxSpinEdit @bind-Value="model.LrShortAmtBill" ShowSpinButtons="false" ReadOnly="true" />
+                                        </div>
+                                         <div class="field-group">
+                                            <label>Ded. Rate </label>
+                                            @* <DxSpinEdit @bind-Value="model.LrShortRateBill" ShowSpinButtons="false" /> *@
+                                                <DxSpinEdit Value="@model.LrShortRateBill"
+                                                            ValueChanged="@((double v) => OnPartyShortDedrateChanged(v))"
+                                                            ValueExpression="() => model.LrShortRateBill"
+                                                            ShowSpinButtons="false" />
+                                        </div>
+                                        <div class="field-group">
+                                            <label>Short. Amt </label>
+                                                <DxSpinEdit @bind-Value="model.LrShortNetBill" ShowSpinButtons="false" ReadOnly="true" />
+                                        </div>
+                                        
+                                        @if (shortallowperVisible)
+                                            {
+                                        <div class="field-group">
+                                            <label>Supplier>> Allow Wt(%) </label>
+                                           @*  <DxSpinEdit @bind-Value="model.LrShortPerTruck" ShowSpinButtons="false" /> *@
+                                                    <DxSpinEdit Value="@model.LrShortPerTruck"
+                                                                ValueChanged="@((float v) => OnSupplierShortAllowPerChanged(v))"
+                                                                ValueExpression="() => model.LrShortPerTruck"
+                                                                NullText="%" ShowSpinButtons="false" />
+                                        </div>
+                                            }
+                                        <div class="field-group">
+                                                <label>Supplier>>Allow Wt</label>
+                                            @* <DxSpinEdit @bind-Value="model.LrShortAllowTruck" ShowSpinButtons="false" /> *@
+                                                <DxSpinEdit Value="@model.LrShortAllowTruck"
+                                                            ValueChanged="@((float v) => OnSupplierShortAllowWtChanged(v))"
+                                                            ValueExpression="() => model.LrShortAllowTruck"
+                                                             ShowSpinButtons="false" />
+                                        </div>
+                                        <div class="field-group">
+                                            <label>Net Short </label>
+                                                <DxSpinEdit @bind-Value="model.LrShortAmtTruck" ShowSpinButtons="false" ReadOnly="true" />
+                                        </div>
+                                        <div class="field-group">
+                                            <label>Ded. Rate </label>
+                                           @*  <DxSpinEdit @bind-Value="model.LrShortRateTruck" ShowSpinButtons="false" /> *@
+                                                <DxSpinEdit Value="@model.LrShortRateTruck"
+                                                            ValueChanged="@((double v) => OnsupplierShortDedrateChanged(v))"
+                                                            ValueExpression="() => model.LrShortRateTruck"
+                                                             ShowSpinButtons="false" />
+                                        </div>
+                                        <div class="field-group">
+                                            <label>Short. Amt </label>
+                                                <DxSpinEdit @bind-Value="model.LrShortNetTruck" ShowSpinButtons="false" ReadOnly="true" />
+                                        </div>
+                                        </div>
+
+                                        <div class="lr-card-header mb-2"><h2>Reporting & Detention Details</h2></div>
+                                        <div class="field-grid">
+                                            <div class="field-group">
+                                                <label>Report Date(L) </label>
+                                                <DxDateEdit @bind-Date="model.LrReportDate" Format="dd-MM-yyyy" />
+                                            </div>
+                                            <div class="field-group">
+                                                <label>Load Date </label>
+                                                <DxDateEdit @bind-Date="model.LrloadDate" Format="dd-MM-yyyy" />
+                                            </div>
+                                            <div class="field-group">
+                                                <label>POD Rec. Date </label>
+                                                <DxDateEdit @bind-Date="model.LrPodDate" Format="dd-MM-yyyy" />
+                                            </div>
+                                            <div class="field-group">
+                                                <label>Day (Party) </label>
+                                             
+                                                <DxSpinEdit Value="@model.LrDetentionDayBill"
+                                                            ValueChanged="@((double v) => OnPartyDetdayChanged(v))"
+                                                            ValueExpression="() => model.LrDetentionDayBill"
+                                                            ShowSpinButtons="false" />
+                                            </div>
+                                            <div class="field-group">
+                                                <label>Rate (Party) </label>
+                                              
+                                                <DxSpinEdit Value="@model.LrDetentionRateBill"
+                                                            ValueChanged="@((double v) => OnPartyDetrateChanged(v))"
+                                                            ValueExpression="() => model.LrDetentionRateBill"
+                                                            ShowSpinButtons="false" />
+                                            </div>
+                                            <div class="field-group">
+                                                <label>Amount</label>
+                                                <DxSpinEdit @bind-Value="model.LrDetentionAmtBill" ShowSpinButtons="false" />
+                                            </div>
+
+
+                                            <div class="field-group">
+                                                <label>Report Date(U) </label>
+                                                <DxDateEdit @bind-Date="model.LrReportTime" Format="dd-MM-yyyy" />
+                                            </div>
+                                            <div class="field-group">
+                                                <label>Unload Date </label>
+                                                <DxDateEdit @bind-Date="model.LrUnloadDate" Format="dd-MM-yyyy" />
+                                            </div>
+                                            <div class="field-group">
+                                                <label>POD Sub. Date </label>
+                                                <DxDateEdit @bind-Date="model.LrPodSubmitted" Format="dd-MM-yyyy" />
+                                            </div>
+                                            <div class="field-group">
+                                                <label>Day (Supplier) </label>
+                                                <DxSpinEdit Value="@model.LrDetentionDayTruck"
+                                                            ValueChanged="@((double v) => OnSupplierDetdayChanged(v))"
+                                                            ValueExpression="() => model.LrDetentionDayTruck"
+                                                            ShowSpinButtons="false" />
+                                            </div>
+                                            <div class="field-group">
+                                                <label>Rate (Supplier) </label>
+                                                <DxSpinEdit Value="@model.LrDetentionRateTruck"
+                                                            ValueChanged="@((double v) => OnSupplierDetrateChanged(v))"
+                                                            ValueExpression="() => model.LrDetentionRateTruck"
+                                                            ShowSpinButtons="false" />
+                                            </div>
+                                            <div class="field-group">
+                                                <label>Amount </label>
+                                                <DxSpinEdit @bind-Value="model.LrDetentionAmtTruck" ShowSpinButtons="false" />
+                                            </div>
+
+                                            </div>
+
+
+
+                                            </div>
+                                      
+
+
+
+
+
+                   
+                </div>
+                            </DxTabPage>
+
+
+                        </DxTabs>
+                    </div>
+                </div>
+
+              
+            </EditForm>
+        </div>
+    }
+
+    <!-- ══ FOOTER ══ -->
+    <div class="lr-footer">
+        @* <div class="lr-footer-meta">
+            @if (IsEditMode) { <span>Editing: </span> }
+            LR No: <strong>@(string.IsNullOrWhiteSpace(model.LrNoStr) ? "—" : model.LrNoStr)</strong>
+            &nbsp;|&nbsp;
+            Date: <strong>@(model.LrDate.HasValue ? model.LrDate.Value.ToString("dd/MM/yyyy") : "—")</strong>
+        </div> *@
+        
+        <button type="button" class="btn-back" style="margin-right:8px;" @onclick="GoBack">Cancel</button>
+        <button type="button" class="btn-save" @onclick="Save">✓ @(IsEditMode ? "Update LR" : "Save LR")</button>
+
+    </div>
+
+</div>
+
+<FileUploadpopup IsVisible="@IsUploadPopupVisible"
+                 OnFilesSelected="HandleSelectedFiles"
+                 @ref="uploadPopup"
+                 IsVisibleChanged="@(v => IsUploadPopupVisible = v)"
+                 DefaultCategory="@SelectedCategory"
+                 DefaultSubCategory="@SelectedSubCategory"
+                 DefaultReferenceId="@SelectedReferenceId" />
+
+<ConfirmationDialog/>
+
+<GridLayoutpPopup @ref="ProductLayoutMgr"         VoucherType="LrProduct"         Columns="@ProductGridColumns"         OnLayoutChanged="@(cols => HandleLayoutChanged(cols, ref ProductGridColumns))" />
+<GridLayoutpPopup @ref="AdvanceLayoutMgr"         VoucherType="LrAdvance"         Columns="@AdvanceGridColumns"         OnLayoutChanged="@(cols => HandleLayoutChanged(cols, ref AdvanceGridColumns))" />
+<GridLayoutpPopup @ref="DieselLayoutMgr"          VoucherType="LrDiesel"          Columns="@DieselGridColumns"          OnLayoutChanged="@(cols => HandleLayoutChanged(cols, ref DieselGridColumns))" />
+<GridLayoutpPopup @ref="ChargesLayoutMgr"         VoucherType="LrCharges"         Columns="@ChargesGridColumns"         OnLayoutChanged="@(cols => HandleLayoutChanged(cols, ref ChargesGridColumns))" />
+<GridLayoutpPopup @ref="ExpenseLayoutMgr"         VoucherType="LrExpense"         Columns="@ExpenseGridColumns"         OnLayoutChanged="@(cols => HandleLayoutChanged(cols, ref ExpenseGridColumns))" />
+<GridLayoutpPopup @ref="AdvanceReceivedLayoutMgr" VoucherType="LrAdvanceReceived" Columns="@AdvanceReceivedGridColumns" OnLayoutChanged="@(cols => HandleLayoutChanged(cols, ref AdvanceReceivedGridColumns))" />
+<GridLayoutpPopup @ref="CoreFieldsLayoutMgr"      VoucherType="LrCoreFields"      Columns="@CoreFieldColumns"           OnLayoutChanged="@(cols => HandleCoreFieldLayoutChanged(cols))" />
+
+@code {
+    // ══ Commission sync flags ════════════════════════════════════════════
+    private bool _isBillCommPctSource = false;
+    private bool _isBillCommAmtSource = false;
+    private bool _isTruckCommPctSource = false;
+    private bool _isTruckCommAmtSource = false;
+
+    private bool shortallowperVisible = true;
+
+    private void OnPartyDetdayChanged(double value)
+    {
+        model.LrDetentionDayBill = value;
+        model.LrDetentionAmtBill = model.LrDetentionDayBill * model.LrDetentionRateBill;
+        RecalcAll();
+
+
+    }
+    private void OnPartyDetrateChanged(double value)
+    {
+        model.LrDetentionRateBill = value;
+        model.LrDetentionAmtBill = model.LrDetentionDayBill * model.LrDetentionRateBill;
+        RecalcAll();
+
+
+    }
+    private void OnSupplierDetdayChanged(double value)
+    {
+        model.LrDetentionDayTruck = value;
+        model.LrDetentionAmtTruck = model.LrDetentionDayTruck * model.LrDetentionRateTruck;
+        RecalcAll();
+
+
+    }
+    private void OnSupplierDetrateChanged(double value)
+    {
+        model.LrDetentionRateTruck = value;
+        model.LrDetentionAmtTruck = model.LrDetentionDayTruck * model.LrDetentionRateTruck;
+        RecalcAll();
+
+
+    }
+    private void OnShortTypeChanged(string ShortType)
+    {
+        model.LrShortAllowType = ShortType;
+
+        shortallowperVisible = ShortType == "%";
+
+        // Reset values when switching types
+        model.LrShortPerBill = 0;
+        model.LrShortPerTruck = 0;
+        model.LrShortAllowBill = 0;
+        model.LrShortAllowTruck = 0;
+
+        RecalcShortage();
+    }
+    private void OnPartyShortDedrateChanged(double shortrate)
+    {
+        model.LrShortRateBill = shortrate;
+        RecalcAll();
+
+
+    }
+    private void OnsupplierShortDedrateChanged(double shortrate)
+    {
+        model.LrShortRateTruck = shortrate;
+        RecalcAll();
+
+    }
+    private void OnSupplierShortADedrateChanged(double Allowper)
+    {
+        model.LrShortPerBill = Allowper;
+        RecalcAll();
+
+    }
+    private void OnPartyShortAllowPerChanged(double Allowper)
+    {
+        model.LrShortPerBill=Allowper;
+        RecalcAll();
+
+    }
+    private void OnPartyShortAllowWtChanged(double AllowWt)
+    { 
+        model.LrShortAllowBill=AllowWt;
+        RecalcAll();
+    }
+    private void OnSupplierShortAllowPerChanged(float Allowper)
+    {
+        model.LrShortPerTruck = Allowper;
+        RecalcAll();
+    }
+    private void OnSupplierShortAllowWtChanged(float AllowWt)
+    {
+        model.LrShortAllowTruck = AllowWt;
+        RecalcAll();
+
+    }
+    // ══ Weight Change Handlers ════════════════════════════════════════════
+
+    private void OnGrossWtChanged(double? grossWt)
+    {
+        model.LrGrossWt = grossWt;
+        if (grossWt.HasValue && grossWt.Value > 0)
+            model.LrLoadWt = Math.Max(0, grossWt.Value - (model.LrTareWt ?? 0));
+        RecalcAll();
+    }
+
+    private void OnTareWtChanged(double? tareWt)
+    {
+        model.LrTareWt = tareWt;
+        if (model.LrGrossWt.HasValue && model.LrGrossWt.Value > 0)
+            model.LrLoadWt = Math.Max(0, model.LrGrossWt.Value - (tareWt ?? 0));
+        RecalcAll();
+    }
+
+    private void OnloadWtChanged(double loadWt)
+    {
+        model.LrLoadWt = loadWt;
+        RecalcAll();
+    }
+
+    private void OnUnloadWtChanged(double unloadWt)
+    {
+        model.LrUnloadWt = unloadWt;
+        RecalcAll();
+    }
+
+    // ══ Billing Type Handlers ════════════════════════════════════════════
+
+    private void OnBillTypeChanged(string billType)
+    {
+        model.LrBillTypeBill = billType;
+        RecalcAll();
+        StateHasChanged();
+    }
+
+    private void OnPayTypeChanged(string payType)
+    {
+        model.LrBillTypeTruck = payType;
+        RecalcAll();
+        StateHasChanged();
+    }
+
+    // ══ Rate Change Handlers ════════════════════════════════════════════
+
+    private void OnBillRateChanged(double rate)
+    {
+        model.LrRateBill = rate;
+        RecalcAll();
+    }
+    private void OnBillChargeWtChanged(double value)
+    {
+        model.LrChargeQty = value;
+        RecalcAll();
+    }
+    private void OnTruckRateChanged(double rate)
+    {
+        model.LrBillRateTruck = rate;
+        RecalcAll();
+    }
+
+    // ══ Commission: Customer ════════════════════════════════════════════
+
+    private void OnBillCommPctChanged(float pct)
+    {
+        _isBillCommPctSource = true;
+        _isBillCommAmtSource = false;
+        model.LrCommPerBill = (float)(pct);
+
+        if (model.LrGrossFreightBill != 0)
+            model.LrCommAmtBill = (float)(Math.Round(model.LrGrossFreightBill * pct / 100.0, 2));
+        else
+            model.LrCommAmtBill = 0;
+
+        RecalcAll();
+        _isBillCommPctSource = false;
+    }
+
+    private void OnBillCommAmtChanged(float amt)
+    {
+        _isBillCommAmtSource = true;
+        _isBillCommPctSource = false;
+        model.LrCommAmtBill = (float)(amt) ;
+
+        if ( model.LrGrossFreightBill != 0)
+            model.LrCommPerBill = (float)(Math.Round(amt / model.LrGrossFreightBill * 100.0, 4));
+        else
+            model.LrCommPerBill = 0f;
+
+        RecalcCustomerNet();
+        _isBillCommAmtSource = false;
+    }
+
+    // ══ Commission: Supplier ════════════════════════════════════════════
+
+    private void OnTruckCommPctChanged(float pct)
+    {
+        _isTruckCommPctSource = true;
+        _isTruckCommAmtSource = false;
+        model.LrCommPerTruck = pct;
+
+        if (model.LrGrossFreightTruck != 0)
+            model.LrCommAmtTruck = (float)(Math.Round(model.LrGrossFreightTruck * pct / 100.0, 2));
+        else
+            model.LrCommAmtTruck = 0;
+
+        RecalcSupplierNet();
+        _isTruckCommPctSource = false;
+    }
+
+    private void OnTruckCommAmtChanged(float amt)
+    {
+        _isTruckCommAmtSource = true;
+        _isTruckCommPctSource = false;
+        model.LrCommAmtTruck = (float)(amt);
+
+        if ( model.LrGrossFreightTruck != 0)
+            model.LrCommPerTruck = (float)(Math.Round(amt / model.LrGrossFreightTruck * 100.0, 4));
+        else
+            model.LrCommPerTruck = 0f;
+
+        RecalcSupplierNet();
+        _isTruckCommAmtSource = false;
+    }
+
+    // ══ Freight Calculation Core ════════════════════════════════════════
+
+    private double CalcGrossFreight(double rate, string? billType, double loadWt, double unloadWt, double chargeWt)
+    {
+        return billType switch
+        {
+            "Fixed Rate" => rate,
+            "Rate X Weight" => rate * loadWt,
+            "Rate X KM" => rate,
+            "Rate X UnloadWt" => rate * unloadWt,
+            "Rate X ChargeWt" => rate * chargeWt,
+            _ => rate * loadWt
+        };
+    }
+
+    private void RecalcCustomerFreight()
+    {
+        model.LrGrossFreightBill = CalcGrossFreight(
+            model.LrRateBill,
+            model.LrBillTypeBill,
+            model.LrLoadWt,
+            model.LrUnloadWt,
+            model.LrChargeQty);
+
+        // Recompute commission with existing % (rate-change recalc)
+        if ( model.LrCommPerBill > 0)
+        {
+            model.LrCommAmtBill = (float)(Math.Round(model.LrGrossFreightBill * model.LrCommPerBill / 100.0, 2));
+        }
+        else if (model.LrCommAmtBill > 0 && model.LrGrossFreightBill > 0)
+        {
+            model.LrCommPerBill = (float)(Math.Round(model.LrCommAmtBill / model.LrGrossFreightBill * 100.0, 4));
+        }
+
+        RecalcCustomerNet();
+    }
+
+    private void RecalcSupplierFreight()
+    {
+        model.LrGrossFreightTruck = CalcGrossFreight(
+            model.LrBillRateTruck,
+            model.LrBillTypeTruck,
+            model.LrLoadWt,
+            model.LrUnloadWt,
+            model.LrChargeQty);
+
+        if ( model.LrCommPerTruck > 0)
+        {
+            model.LrCommAmtTruck = (float)(Math.Round(model.LrGrossFreightTruck * model.LrCommPerTruck / 100.0, 2));
+        }
+        else if (model.LrCommAmtTruck > 0 && model.LrGrossFreightTruck > 0)
+        {
+            model.LrCommPerTruck = (float)(Math.Round(model.LrCommAmtTruck / model.LrGrossFreightTruck * 100.0, 4));
+        }
+
+        RecalcSupplierNet();
+    }
+
+    private void RecalcCustomerNet()
+    {
+        model.LrNetFreightBill =
+       model.LrGrossFreightBill
+       - model.LrCommAmtBill
+       - model.LrShortNetBill+model.LrDetentionAmtBill;
+
+        StateHasChanged();
+    }
+
+    private void RecalcSupplierNet()
+    {
+        model.LrNetFreightTruck =
+        model.LrGrossFreightTruck
+        - model.LrCommAmtTruck
+        - model.LrShortNetTruck +model.LrDetentionAmtTruck;
+
+        StateHasChanged();
+    }
+
+    // ══ Shortage Calculation ════════════════════════════════════════════
+
+    private void RecalcShortage()
+    {
+        // // Short Wt in kg (weights are in MT → *1000)
+        // double loadKg = model.LrLoadWt * 1000.0;
+        // double unloadKg = model.LrUnloadWt * 1000.0;
+        // model.LrShortWt =(loadKg - unloadKg);
+        // if( model.LrShortWt >0){
+        //     // Party (Bill)
+        //     double allowBill = loadKg * ((model.LrShortPerBill) / 100.0);
+        //     model.LrShortAllowBill = allowBill;
+        //     model.LrShortAmtBill = Math.Max(0, model.LrShortWt - allowBill);   // net short kg
+        //     model.LrShortNetBill = (float)(Math.Round(model.LrShortAmtBill * (model.LrShortRateBill) ));
+
+        //     // Supplier (Truck)
+        //     double allowTruck = loadKg * ((model.LrShortPerTruck ) / 100.0);
+        //     model.LrShortAllowTruck = (float)(allowTruck);
+        //     model.LrShortAmtTruck = Math.Max(0, model.LrShortWt - allowTruck); // net short kg
+        //     model.LrShortNetTruck = (float)(Math.Round(model.LrShortAmtTruck * (model.LrShortRateTruck)) );
+        // }
+        // else
+        // {
+        //     // Party (Bill)
+        //     model.LrShortAllowBill=0;
+        //      model.LrShortAmtBill=0;
+        //     model.LrShortNetBill = 0;
+
+        //     // Supplier (Truck)
+        //      model.LrShortAllowTruck=0;
+        //       model.LrShortAmtTruck=0;
+        //     model.LrShortNetTruck = 0;
+        // }
+
+        // Convert MT to KG
+        double loadKg = (model.LrLoadWt ) * 1000.0;
+        double unloadKg = (model.LrUnloadWt ) * 1000.0;
+
+        // Short weight (never negative)
+        model.LrShortWt = Math.Max(0, loadKg - unloadKg);
+
+        // ===================== PARTY (BILL) =====================
+        double allowBillKg;
+
+        if (model.LrShortAllowType == "%")
+        {
+            allowBillKg = loadKg * (model.LrShortPerBill / 100.0);
+            model.LrShortAllowBill = Math.Round(allowBillKg, 2);
+        }
+        else // Fixed
+        {
+            allowBillKg = model.LrShortAllowBill;
+        }
+
+        model.LrShortAmtBill = Math.Max(0, model.LrShortWt - allowBillKg);
+        model.LrShortNetBill = (float)Math.Round(
+            model.LrShortAmtBill * model.LrShortRateBill, 2);
+
+        // ===================== SUPPLIER (TRUCK) =====================
+        double allowTruckKg;
+
+        if (model.LrShortAllowType == "%")
+        {
+            allowTruckKg = loadKg * (model.LrShortPerTruck / 100.0);
+            model.LrShortAllowTruck = (float)Math.Round(allowTruckKg, 2);
+        }
+        else // Fixed
+        {
+            allowTruckKg = model.LrShortAllowTruck;
+        }
+
+        model.LrShortAmtTruck = Math.Max(0, model.LrShortWt - allowTruckKg);
+        model.LrShortNetTruck = (float)Math.Round(
+            model.LrShortAmtTruck * model.LrShortRateTruck, 2);
+
+        // Recalculate final net freight after shortage
+        RecalcCustomerNet();
+        RecalcSupplierNet();
+    }
+
+    // ══ Master Recalc (call on any weight/type change) ════════════════════
+
+    private void RecalcAll()
+    {
+        RecalcCustomerFreight();
+        RecalcSupplierFreight();
+        RecalcShortage();
+        StateHasChanged();
+    }
+
+
+    public class TransactionDto
+    {
+        public int Id { get; set; }
+        public string VoucherNo { get; set; }
+        public string Description { get; set; }
+        public DateTime Date { get; set; }
+        public decimal Amount { get; set; }
+    }
+    private List<TransactionDto> CustomerAdjustments = new();
+    private List<TransactionDto> CustomerPayments = new();
+    private List<TransactionDto> SupplierAdjustments = new();
+    private List<TransactionDto> SupplierPayments = new();
+    public class PaymentDto
+    {
+        public Guid Id { get; set; } = Guid.NewGuid();
+
+        // Voucher/Reference number
+        public string? VoucherNo { get; set; }
+
+        // Payment description or remarks
+        public string? Description { get; set; }
+
+        // Payment date
+        public DateTime Date { get; set; } = DateTime.Now;
+
+        // Account reference (optional)
+        public int? AccountId { get; set; }
+
+        // Payment amount
+        public decimal Amount { get; set; }
+
+        // Optional payment mode (Cash/Bank/UPI, etc.)
+        public string? PaymentMode { get; set; }
+    }
+    // Collections
+
+    private List<PaymentDto> DriverPayments { get; set; } = new();
+
+
+    // Event Handlers
+    private void OpenSupplierAdjustment()
+    {
+        Console.WriteLine("Supplier Adjustment Clicked");
+    }
+    private void OpenSupplierPayment()
+    {
+        Console.WriteLine("Supplier Adjustment Clicked");
+    }
+    private void OpenCustomerAdjustment()
+    {
+        Console.WriteLine("Supplier Adjustment Clicked");
+    }
+    private void OpenCustomerPayment()
+    {
+        Console.WriteLine("Supplier Adjustment Clicked");
+    }
+    private void OnAdjustmentClick()
+    {
+        Console.WriteLine("Supplier Adjustment Clicked");
+    }
+
+    private void OnPaymentClick()
+    {
+        Console.WriteLine("Supplier Payment Clicked");
+    }
+
+    private void OnDriverPaymentClick()
+    {
+        Console.WriteLine("Driver Payment Clicked");
+    }
+
+    private void OnExpenseClick()
+    {
+        Console.WriteLine("Expense Clicked");
+    }
+
+    // Delete Payment
+    private void DeletePayment(PaymentDto payment)
+    {
+
+    }
+
+
+
+
+
+
+    // private void CalculateValue()
+    // { 
+    //     model.LrShortWt = ((model.LrLoadWt ) - (model.LrUnloadWt)) * 1000;
+    //     if( model.LrShortWt>0)
+    //     {
+
+    //         model.LrShortAmtBill = model.LrShortWt;
+    //         model.LrShortAmtTruck = model.LrShortWt;
+    //     }
+    //     OnTypeChanged(model.LrBillTypeBill);
+    // }
+    // Triggered when Gross Weight is changed
+
+
+    // private void OnTypeChanged(string billType)
+    // {
+
+
+    //     // Example: Apply business logic based on billing type
+    //     switch (billType)
+    //     {
+    //         case "Fixed Rate":
+    //             model.LrGrossFreightBill = model.LrRateBill;
+    //             model.LrGrossFreightTruck = model.LrBillRateTruck;
+    //             break;
+
+    //         case "Rate X Weight":
+    //             model.LrGrossFreightBill = model.LrRateBill * model.LrLoadWt;
+    //             model.LrGrossFreightTruck = model.LrBillRateTruck * model.LrLoadWt;
+    //             break;
+
+    //         case "Rate X KM":
+    //             model.LrGrossFreightBill = model.LrRateBill;
+    //             model.LrGrossFreightTruck = model.LrBillRateTruck;
+    //             break;
+
+    //         case "Rate X UnloadWt":
+    //             model.LrGrossFreightBill = model.LrRateBill * model.LrUnloadWt;
+    //             model.LrGrossFreightTruck = model.LrBillRateTruck * model.LrUnloadWt;
+    //             break;
+    //         case "Rate X ChargeWt":
+    //             model.LrGrossFreightBill = model.LrRateBill * model.LrChargeQty;
+    //             model.LrGrossFreightTruck = model.LrBillRateTruck * model.LrChargeQty;
+    //             break;
+    //     }
+    //     model.LrNetFreightBill= model.LrGrossFreightBill ;
+    //      model.LrNetFreightTruck = model.LrGrossFreightBill ;
+    // }
+
+    // ══ Core-fields panel ════════════════════════════════════════════
+    private GridLayoutpPopup? CoreFieldsLayoutMgr;
+    private List<GridColumnLayout> CoreFieldColumns = new();
+    private bool _isSavingFields = false;
+
+    private static readonly string[] CoreFieldKeys =
+    {
+        "LrNo","LrDate","Vehicle","Supplier","BillingParty",
+        "Consignor","Consignee","FromStation","ToLocation",
+        "PickupLoc","BackLocation","Driver",
+        "Container1","Container2","RefNo","PaymentMode","TripNo"
+    };
+
+    private async Task LoadCoreFieldLayoutAsync()
+    {
+        try
+        {
+            var saved = await GridLayoutService.GetLayoutAsync("LrCoreFields");
+            if (saved != null && saved.Any())
+                foreach (var col in saved)
+                    if (Visible.ContainsKey(col.FieldName))
+                        Visible[col.FieldName] = col.Visible;
+        }
+        catch { }
+    }
+
+    private void OnFieldVisibilityChanged(string key, bool value) { Visible[key] = value; StateHasChanged(); }
+
+    private List<GridColumnLayout> BuildCoreFieldColumns() =>
+        CoreFieldKeys.Select((key, i) => new GridColumnLayout
+        {
+            FieldName    = key,
+            Caption      = Labels.TryGetValue(key, out var lbl) ? lbl : key,
+            Visible      = Visible.TryGetValue(key, out var vis) && vis,
+            Width        = 100,
+            DisplayIndex = i
+        }).ToList();
+
+    private async Task SaveFieldLayout()
+    {
+        _isSavingFields = true; StateHasChanged();
+        try
+        {
+            var ok = await GridLayoutService.SaveLayoutAsync("LrCoreFields", BuildCoreFieldColumns());
+            ToastService.Success(ok ? "Field visibility saved." : "Save failed.");
+        }
+        catch (Exception ex) { ToastService.Error($"Save error: {ex.Message}"); }
+        finally { _isSavingFields = false; showPanel = false; StateHasChanged(); }
+    }
+
+    private void CloseFieldPanel() => showPanel = false;
+
+    private void HandleCoreFieldLayoutChanged(List<GridColumnLayout> cols)
+    {
+        CoreFieldColumns = cols;
+        foreach (var col in cols)
+            if (Visible.ContainsKey(col.FieldName))
+                Visible[col.FieldName] = col.Visible;
+        StateHasChanged();
+    }
+
+    private void SelectAll()  { Visible.Keys.ToList().ForEach(k => Visible[k] = true);  StateHasChanged(); }
+    private void SelectNone() { Visible.Keys.ToList().ForEach(k => Visible[k] = false); StateHasChanged(); }
+
+    // ══ Grid Layout Managers ═════════════════════════════════════════
+    private GridLayoutpPopup? ProductLayoutMgr;
+    private GridLayoutpPopup? AdvanceLayoutMgr;
+    private GridLayoutpPopup? DieselLayoutMgr;
+    private GridLayoutpPopup? ChargesLayoutMgr;
+    private GridLayoutpPopup? ExpenseLayoutMgr;
+    private GridLayoutpPopup? AdvanceReceivedLayoutMgr;
+
+    private List<GridColumnLayout> ProductGridColumns         = new();
+    private List<GridColumnLayout> AdvanceGridColumns         = new();
+    private List<GridColumnLayout> DieselGridColumns          = new();
+    private List<GridColumnLayout> ChargesGridColumns         = new();
+    private List<GridColumnLayout> ExpenseGridColumns         = new();
+    private List<GridColumnLayout> AdvanceReceivedGridColumns = new();
+
+    private void HandleLayoutChanged(List<GridColumnLayout> updatedLayout, ref List<GridColumnLayout> target)
+    { target = updatedLayout; StateHasChanged(); }
+
+    private void InitializeAllGridColumns()
+    {
+        ProductGridColumns = new List<GridColumnLayout>
+        {
+            new() { FieldName="Actions",        Caption="Actions",    Visible=true, Width=80,  DisplayIndex=0  },
+            new() { FieldName="SrNo",           Caption="Sr No",      Visible=true, Width=60,  DisplayIndex=1  },
+            new() { FieldName="ProductId",      Caption="Product",    Visible=true, Width=280, DisplayIndex=2  },
+            new() { FieldName="LrBillTypeBill", Caption="Bill Type",  Visible=true, Width=180, DisplayIndex=3  },
+            new() { FieldName="NtUnit",         Caption="Unit",       Visible=true, Width=90,  DisplayIndex=4  },
+            new() { FieldName="TotalBags",      Caption="Total Bags", Visible=true, Width=100, DisplayIndex=5  },
+            new() { FieldName="GrossWt",        Caption="Gross Wt",   Visible=true, Width=100, DisplayIndex=6  },
+            new() { FieldName="TareWt",         Caption="Tare Wt",    Visible=true, Width=90,  DisplayIndex=7  },
+            new() { FieldName="NetWt",          Caption="Net Wt",     Visible=true, Width=90,  DisplayIndex=8  },
+            new() { FieldName="UnLoadWt",       Caption="UnLoad Wt",  Visible=true, Width=100, DisplayIndex=9  },
+            new() { FieldName="ChargeQty",      Caption="Charge Wt",  Visible=true, Width=100, DisplayIndex=10 },
+            new() { FieldName="RateBill",       Caption="Rate",       Visible=true, Width=90,  DisplayIndex=11 },
+            new() { FieldName="GrossFreight",   Caption="Freight",    Visible=true, Width=100, DisplayIndex=12 },
+        };
+
+        var journalBase = new Func<List<GridColumnLayout>>(() => new List<GridColumnLayout>
+        {
+            new() { FieldName="Actions",     Caption="Actions", Visible=true, Width=80,  DisplayIndex=0 },
+            new() { FieldName="Sno",         Caption="Sr No",   Visible=true, Width=70,  DisplayIndex=1 },
+            new() { FieldName="JournalDate", Caption="Date",    Visible=true, Width=130, DisplayIndex=2 },
+            new() { FieldName="AccountId",   Caption="Account", Visible=true, Width=310, DisplayIndex=3 },
+            new() { FieldName="Amount",      Caption="Amount",  Visible=true, Width=150, DisplayIndex=4 },
+            new() { FieldName="Remarks",     Caption="Remarks", Visible=true, Width=483, DisplayIndex=5 },
+        });
+
+        AdvanceGridColumns = journalBase();
+        ChargesGridColumns = journalBase();
+        ExpenseGridColumns = journalBase();
+
+        DieselGridColumns = new List<GridColumnLayout>
+        {
+            new() { FieldName="Actions",     Caption="Actions",     Visible=true, Width=80,  DisplayIndex=0 },
+            new() { FieldName="Sno",         Caption="Sr No",       Visible=true, Width=70,  DisplayIndex=1 },
+            new() { FieldName="JournalDate", Caption="Date",        Visible=true, Width=130, DisplayIndex=2 },
+            new() { FieldName="PumpBillId",  Caption="Petrol Pump", Visible=true, Width=380, DisplayIndex=3 },
+            new() { FieldName="UreaRate",    Caption="Rate",        Visible=true, Width=170, DisplayIndex=4 },
+            new() { FieldName="UreaQty",     Caption="Ltr",         Visible=true, Width=170, DisplayIndex=5 },
+            new() { FieldName="UreaAmount",  Caption="Amount",      Visible=true, Width=223, DisplayIndex=6 },
+        };
+
+        AdvanceReceivedGridColumns = new List<GridColumnLayout>
+        {
+            new() { FieldName="Actions",     Caption="Actions",      Visible=true, Width=80,  DisplayIndex=0 },
+            new() { FieldName="Sno",         Caption="Sr No",        Visible=true, Width=70,  DisplayIndex=1 },
+            new() { FieldName="JournalDate", Caption="Date",         Visible=true, Width=130, DisplayIndex=2 },
+            new() { FieldName="AccountId",   Caption="Account",      Visible=true, Width=310, DisplayIndex=3 },
+            new() { FieldName="Amount",      Caption="Amount",       Visible=true, Width=120, DisplayIndex=4 },
+            new() { FieldName="UreaQty",     Caption="Qty (Diesel)", Visible=true, Width=120, DisplayIndex=5 },
+            new() { FieldName="Remarks",     Caption="Remarks",      Visible=true, Width=393, DisplayIndex=6 },
+        };
+    }
+
+    // ══ COLUMN VISIBILITY ════════════════════════════════════════════
+    private Dictionary<string, bool> Visible = new()
+    {
+        ["LrNo"]=true, ["LrDate"]=true, ["Vehicle"]=true,
+        ["Supplier"]=true, ["BillingParty"]=true, ["Consignor"]=true,
+        ["Consignee"]=true, ["FromStation"]=true, ["ToLocation"]=true,
+        ["PickupLoc"]=true, ["BackLocation"]=true, ["Driver"]=true,
+        ["Container1"]=true, ["Container2"]=true, ["RefNo"]=true,
+        ["PaymentMode"]=true, ["TripNo"]=true,
+    };
+
+    private bool showPanel = false;
+
+    private Dictionary<string, string> Labels = new()
+    {
+        ["LrNo"]="LR No", ["LrDate"]="LR Date", ["Vehicle"]="Vehicle",
+        ["Supplier"]="Supplier", ["BillingParty"]="Billing Party",
+        ["Consignor"]="From Party / Consignor", ["Consignee"]="To Party / Consignee",
+        ["FromStation"]="From (Station)", ["ToLocation"]="To Location",
+        ["PickupLoc"]="Pickup Location", ["BackLocation"]="Back Location",
+        ["Driver"]="Driver", ["Container1"]="Container No", ["Container2"]="Container No 2",
+        ["RefNo"]="Reference No", ["PaymentMode"]="Payment Mode", ["TripNo"]="Trip No",
+    };
+
+    // ══ Route & State ════════════════════════════════════════════════
+    [Parameter] public int? LrId { get; set; }
+    private bool IsEditMode => LrId.HasValue && LrId.Value > 0;
+    private bool IsLoading = false;
+
+
+
+    // ══ Model & Lists ════════════════════════════════════════════════
+    private Lr model = new();
+    private List<Notify>   notifylist           = new();
+    private List<Account>  accountpartylist      = new();
+    private List<Account>  accountlist           = new();
+    private List<Account>  accountSupplierlist   = new();
+    private List<Account>  DriverList            = new();
+    private List<Location> LocationList          = new();
+    private List<Location> StationLocationList   = new();
+    private List<PayType>  paytypeList           = new();
+    private List<Cargo>    ProductList           = new();
+    private List<Account>  PumpList              = new();
+    private List<Account>  ChargesList           = new();
+    private List<Account>  ExpenseAccountList    = new();
+    private List<Account>  BankCashList          = new();
+    private List<Vehicle>  vehiclelist           = new();
+
+
+    public class BillTypeVM
+    {
+        public string Name { get; set; } = "";
+    }
+
+    private List<BillTypeVM> BillTypeList = new()
+{
+    new() { Name = "Fixed Rate" },
+    new() { Name = "Rate X Weight" },
+    new() { Name = "Rate X KM" },
+    new() { Name = "Rate X UnloadWt" },
+    new() { Name = "Rate X ChargeWt" }
+};
+
+    public class SelectItem
+    {
+        public string Text { get; set; } = "";
+        public string Value { get; set; } = "";
+    }
+
+    private readonly List<SelectItem> PaymethodList = new()
+{
+    new() { Text = "To be Billed", Value = "To be Billed" },
+    new() { Text = "To Pay", Value = "To Pay" },
+    new() { Text = "Paid", Value = "Paid" }
+};
+    public class Shorttype
+    {
+        public string Name { get; set; } = "";
+    }
+    private List<Shorttype> ShortTypeList = new()
+{
+    new() { Name = "%" },
+    new() { Name = "Fixed" }
+
+};
+    // ══ Init ═════════════════════════════════════════════════════════
+    protected override async Task OnInitializedAsync()
+    {
+        InitializeAllGridColumns();
+
+        await LoadCoreFieldLayoutAsync();
+
+        var notifyTask   = NotifyService.GetAllAsync();
+        var locationTask = LocationService.GetAllAsync();
+        var accountTask  = AccountService.GetAllAsync();
+        var payTypeTask  = PayTypeService.GetAllAsync();
+        var cargoTask    = CargoService.GetAllAsync();
+        var vehicleTask  = VehicleService.GetAllAsync();
+        await Task.WhenAll(notifyTask, locationTask, accountTask, payTypeTask, cargoTask, vehicleTask);
+
+        notifylist          = notifyTask.Result;
+        paytypeList         = payTypeTask.Result;
+        ProductList         = cargoTask.Result;
+        LocationList        = locationTask.Result;
+        StationLocationList = LocationList.Where(x => x.LocationType == "STATION").ToList();
+        accountlist         = accountTask.Result;
+        accountSupplierlist = accountlist.Where(x => x.AccountTypeId == 14).ToList();
+        accountpartylist    = accountlist.Where(x => x.AccountTypeId == 18).ToList();
+        DriverList          = accountlist.Where(x => x.AccountTypeId == 16).ToList();
+        PumpList            = accountlist.Where(x => x.AccountTypeId == 12).ToList();
+        ChargesList         = accountlist.Where(x => x.AccountTypeId == 20).ToList();
+        ExpenseAccountList  = accountlist.Where(x => x.AccountTypeId == 19).ToList();
+        BankCashList        = accountlist.Where(x => x.AccountTypeId == 10 || x.AccountTypeId == 11).ToList();
+        vehiclelist         = vehicleTask.Result;
+
+        model.LrBillTypeBill = "Rate X Weight";
+        model.LrBillTypeTruck = "Rate X Weight";
+        model.LrPaymentType = "To be Billed";
+        model.LrShortAllowType = "%";
+        if (IsEditMode) await LoadLrForEdit(LrId!.Value);
+    }
+
+    // ══ Load for Edit ════════════════════════════════════════════════
+    private async Task LoadLrForEdit(int lrId)
+    {
+        IsLoading = true; StateHasChanged();
+        try
+        {
+            var dto = await LrApiService.GetEntryAsync(lrId);
+            if (dto == null) return;
+
+            model = dto.Main ?? new Lr();
+
+
+            await LoadDocumentsAsync();
+        }
+        catch (Exception ex) { ToastService.Error($"Failed to load LR: {ex.Message}"); }
+        finally { IsLoading = false; StateHasChanged(); }
+    }
+
+
+    private void OnVehicleChanged(int? vehicleId)
+    {
+        model.LrVehicleId = vehicleId;
+        if (vehicleId == null) return;
+        var vehicle = vehiclelist.FirstOrDefault(x => x.VehicleId == vehicleId);
+        if (vehicle != null)
+        {
+            model.LrDriverId = vehicle.VehicleDriverId;
+            model.LrSupplierAccountId = vehicle.VehicleAccountId;
+        }
+    }
+
+    private void GoBack() => NavManager.NavigateTo("/lrlist");
+
+    private void OnConsignorChanged(int? notifyId)
+    {
+        model.LrConsignorNotifyId = notifyId;
+        ApplyNotify(notifyId, a => model.LrConsignorNotifyAddress = a, g => model.LrConsignorNotifyGst = g, s => model.LrConsignorNotifyState = s);
+    }
+
+    private void OnConsigneeChanged(int? notifyId)
+    {
+        model.LrConsigneeNotifyId = notifyId;
+        ApplyNotify(notifyId, a => model.LrConsigneeNotifyAddress = a, g => model.LrConsigneeNotifyGst = g, s => model.LrConsigneeNotifyState = s);
+    }
+
+    private void ApplyNotify(int? notifyId, Action<string> setAddress, Action<string?> setGst, Action<string?> setState)
+    {
+        var n = notifylist.FirstOrDefault(x => x.NotifyId == notifyId);
+        setAddress(n is null ? string.Empty : $"{n.NotifyAddress1} {n.NotifyAddress2} {n.NotifyAddress3}".Trim());
+        setGst(n?.GstNo);
+        setState(n?.NotifyState);
+    }
+
+
+
+
+
+    // ══ Documents ════════════════════════════════════════════════════
+    private bool IsUploadPopupVisible;
+    private string? SelectedCategory, SelectedSubCategory, SelectedReferenceId;
+    private FileUploadpopup? uploadPopup;
+
+    public class PendingUploadFile { public string FileName{get;set;}=""; public byte[] Content{get;set;}=Array.Empty<byte>(); }
+    private List<PendingUploadFile> PendingFiles = new();
+    private List<UploadedFileInfo>  UploadedDocs = new();
+
+    private void OpenUploadPopup()
+    {
+        SelectedCategory="LR"; SelectedSubCategory=model.LrNoStr;
+        SelectedReferenceId=model.LrId.ToString(); IsUploadPopupVisible=true;
+    }
+
+    private async Task HandleSelectedFiles(List<IBrowserFile> files)
+    {
+        PendingFiles.Clear();
+        foreach (var file in files)
+        {
+            using var ms = new MemoryStream();
+            await file.OpenReadStream(10*1024*1024).CopyToAsync(ms);
+            PendingFiles.Add(new PendingUploadFile { FileName=file.Name, Content=ms.ToArray() });
+        }
+        ToastService.Success($"{PendingFiles.Count} file(s) ready to upload.");
+    }
+
+    private async Task LoadDocumentsAsync()
+    {
+        if (string.IsNullOrEmpty(model.LrNoStr)) return;
+        var docs = await FileUploadService.GetDocumentsAsync("LR", model.LrId.ToString());
+        UploadedDocs = docs.Select(d => new UploadedFileInfo
+        {
+            DocumentId=d.DocumentId, FileName=d.OriginalFileName,
+            FileSize=d.FileSizeBytes, Url=d.BlobUrl, Category=d.Category,
+        }).ToList();
+        StateHasChanged();
+    }
+
+    private async Task DeleteDoc(UploadedFileInfo file)
+    {
+        bool ok = await JS.InvokeAsync<bool>("confirm", $"Delete {file.FileName}?");
+        if (!ok) return;
+        if (await FileUploadService.DeleteDocumentAsync(file.DocumentId))
+            await LoadDocumentsAsync();
+    }
+
+    private async Task PreviewDoc(UploadedFileInfo file)
+    {
+        if (uploadPopup != null) await uploadPopup.OpenPreview(file);
+    }
+
+    // ══ Save ═════════════════════════════════════════════════════════
+    private async Task Save()
+    {
+        try
+        {
+            model.LrYearId = YearStatechangeService.SelectedYearId;
+            var savedLr = await LrApiService.SaveAsync(model, null, null);
+            if (savedLr == null) { ToastService.Error("Failed to save LR."); return; }
+
+            model.LrId = savedLr.LrId;
+
+            if (PendingFiles.Any())
+            {
+                foreach (var file in PendingFiles)
+                    await FileUploadService.UploadFileAsync(file.Content, file.FileName, "LR", model.LrNoStr??"", model.LrId.ToString());
+                PendingFiles.Clear();
+            }
+
+            await LoadDocumentsAsync();
+            ToastService.Success(IsEditMode ? "LR updated successfully." : "LR saved successfully.");
+            AuditLogService.NotifyAuditChanged();
+
+            if (!IsEditMode)
+                NavManager.NavigateTo($"/lrentry/{model.LrId}", replace: true);
+        }
+        catch (Exception ex) { ToastService.Error($"Save failed: {ex.Message}"); }
+    }
+
+    
+
+}
