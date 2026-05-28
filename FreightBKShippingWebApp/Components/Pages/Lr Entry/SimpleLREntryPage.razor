@@ -944,11 +944,8 @@
                     <div class="lr-card-body">
                         <div class="field-grid-header">
                             
-                            @if (Visible["LrNo"] || Visible["LrDate"])
-                            {
-                                
-                                    @if (Visible["LrNo"])
-                                    {
+                           
+                                   
                                         
                                                
                                         <div class="field-inline">
@@ -957,9 +954,8 @@
 
                                     </div>
                                   
-                                    }
-                                    @if (Visible["LrDate"])
-                                    {
+                                  
+                                  
 
 
                                     <div class="field-inline">
@@ -968,8 +964,8 @@
 
                                            
                                         </div>
-                                    }
-                          }
+                                   
+                         
                           
                             <div class="field-inline">
                                                                     <label>Vehicle NO </label>
@@ -982,8 +978,7 @@
                                             SearchMode="ListSearchMode.AutoSearch"
                                             SearchFilterCondition="ListSearchFilterCondition.Contains" />
                                   </div>
-                            @if (Visible["PaymentMode"] || Visible["TripNo"])
-                            {
+                           
                                 
                                         @if (Visible["PaymentMode"])
                                         {
@@ -1015,7 +1010,7 @@
                                           
                                         }
                                  
-                            }
+                            
                            </div>
                        
                     </div>
@@ -1090,7 +1085,10 @@
                                                                                 SearchFilterCondition="ListSearchFilterCondition.Contains" />
                                                                 </div> *@
 
-                                                                
+                                                                @if (Visible["Consignor"])
+                                        
+                            {
+                               
                                                                 <!-- Consignor -->
                                                                 <div class="field-group">
                                                                     <label>Consignor</label>
@@ -1102,21 +1100,22 @@
                                                                                 SearchMode="ListSearchMode.AutoSearch"
                                                                                 SearchFilterCondition="ListSearchFilterCondition.Contains" />
                                                                 </div>
+                                                                }
+                                                                @if (Visible["Consignee"])
+                                                                {
+                                                                    <!-- Consignee -->
+                                                                    <div class="field-group">
+                                                                        <label>Consignee</label>
+                                                                        <DxComboBox Data="@notifylist" TData="Notify" TValue="int?"
+                                                                        TextFieldName="NotifyName" ValueFieldName="NotifyId"
+                                                                        @bind-Value="model.LrConsigneeNotifyId"
+                                                                        NullText="Select consignee"
+                                                                        AllowUserInput="true"
+                                                                        SearchMode="ListSearchMode.AutoSearch"
+                                                                        SearchFilterCondition="ListSearchFilterCondition.Contains" />
+                                                                    </div>
 
-                                                                <!-- Consignee -->
-                                                                <div class="field-group">
-                                                                    <label>Consignee</label>
-                                                                    <DxComboBox Data="@notifylist" TData="Notify" TValue="int?"
-                                                                                TextFieldName="NotifyName" ValueFieldName="NotifyId"
-                                                                                @bind-Value="model.LrConsigneeNotifyId"
-                                                                                NullText="Select consignee"
-                                                                                AllowUserInput="true"
-                                                                                SearchMode="ListSearchMode.AutoSearch"
-                                                                                SearchFilterCondition="ListSearchFilterCondition.Contains" />
-                                                                </div>
-
-                                                               
-
+                                                                }
                                                                 <!-- Locations -->
                                                                 <div class="field-group">
                                                                     <label>From Location</label>
@@ -1133,15 +1132,18 @@
                                                                                 @bind-Value="model.LrToLocationId"
                                                                                 NullText="Select Location" />
                                                                 </div>
+                                                                @if (Visible["BackLocation"])
+                                                                {
 
-                                                                <div class="field-group">
-                                                                    <label>Back Location</label>
-                                                                    <DxComboBox Data="@LocationList" TData="Location" TValue="int?"
-                                                                                TextFieldName="LocationName" ValueFieldName="LocationId"
-                                                                                @bind-Value="model.LrBackLocationId"
-                                                                                NullText="Select Location" />
-                                                                </div>
-                                                                 <!-- Product -->
+                                                                    <div class="field-group">
+                                                                        <label>Back Location</label>
+                                                                        <DxComboBox Data="@LocationList" TData="Location" TValue="int?"
+                                                                        TextFieldName="LocationName" ValueFieldName="LocationId"
+                                                                        @bind-Value="model.LrBackLocationId"
+                                                                        NullText="Select Location" />
+                                                                    </div>
+                                                                }
+                                                                <!-- Product -->
                                                                 <div class="field-group">
                                                                     <label>Product</label>
 
@@ -1153,17 +1155,21 @@
                                                                                 SearchMode="ListSearchMode.AutoSearch"
                                                                                 SearchFilterCondition="ListSearchFilterCondition.Contains" />
                                                                 </div>
-
+                                                                @if (Visible["Conatiner1"])
+                                                                     {
                                                                 <div class="field-group">
                                                                     <label>Conatiner 1</label>
                                                                     <DxTextBox @bind-Text="model.LrContainer1" />
                                                                 </div>
+                                                                     }
+                                                                     @if (Visible["Conatiner2"])
+{
                                                                  <div class="field-group">
                                                                     <label>Conatiner 2</label>
                                                                     <DxTextBox @bind-Text="model.LrContainer2" />
-                                                                </div>
-
-                                                             @*    <div class="field-group">
+                                                                    </div>
+                                                                }
+                                                                @*    <div class="field-group">
                                                                     <label>Unload Wt</label>
 
                                                                   <DxSpinEdit Value="@model.LrUnloadWt"
@@ -1183,22 +1189,26 @@
                                                         </div>
                                                         <div class="lr-card-body-Add">
                                                             <div class="field-grid-additional">
-
-                                                                <div class="field-group">
-                                                                    <label>Gross Wt</label>
-                                                                    <DxSpinEdit  Value="@model.LrGrossWt"
-                                                                                ValueChanged="@((double? val) => OnGrossWtChanged(val))"
-                                                                                ValueExpression="() => model.LrGrossWt"
-                                                                                ShowSpinButtons="false" />
-                                                                </div>
-
-                                                                <div class="field-group">
-                                                                    <label>Tare Wt</label>
-                                                                    <DxSpinEdit Value="@model.LrTareWt"
-                                                                                ValueChanged="@((double? v) => OnTareWtChanged(v))"
-                                                                                ValueExpression="() => model.LrTareWt"
-                                                                                ShowSpinButtons="false" />
-                                                                </div>
+                                                                @if (Visible["GrossWt"])
+                                                                {
+                                                                    <div class="field-group">
+                                                                        <label>Gross Wt</label>
+                                                                        <DxSpinEdit  Value="@model.LrGrossWt"
+                                                                        ValueChanged="@((double? val) => OnGrossWtChanged(val))"
+                                                                        ValueExpression="() => model.LrGrossWt"
+                                                                        ShowSpinButtons="false" />
+                                                                    </div>
+                                                                }
+                                                                @if (Visible["TareWt"])
+                                                                {
+                                                                    <div class="field-group">
+                                                                        <label>Tare Wt</label>
+                                                                        <DxSpinEdit Value="@model.LrTareWt"
+                                                                        ValueChanged="@((double? v) => OnTareWtChanged(v))"
+                                                                        ValueExpression="() => model.LrTareWt"
+                                                                        ShowSpinButtons="false" />
+                                                                    </div>
+                                                                }
                                                                 <div class="field-group">
                                                                     <label>Load Wt</label>
 
@@ -1215,72 +1225,111 @@
                                                                                 ValueExpression="() => model.LrUnloadWt"
                                                                                 ShowSpinButtons="false" />
                                                                 </div>
+                                                                 @if (Visible["TareWt"])
+                                                                {
                                                                 <div class="field-group">
                                                                     <label>Invoice No</label>
                                                                     <DxTextBox @bind-Text="model.LrInvoiceNo" />
                                                                 </div>
-
+                                                                }
+                                                                 @if (Visible["TareWt"])
+                                                                {
                                                                 <div class="field-group">
                                                                     <label>Invoice Date</label>
                                                                     <DxDateEdit @bind-Date="model.LrInvoiceDate" Format="dd-MM-yyyy" />
                                                                 </div>
-
+                                                                }
+                                                                 @if (Visible["TareWt"])
+                                                                {
                                                                 <div class="field-group">
                                                                     <label>Invoice Value</label>
                                                                     <DxSpinEdit @bind-Value="model.LrInvoiceValue" ShowSpinButtons="false" />
                                                                 </div>
-
+                                                                }
+                                                                @if (Visible["TareWt"])
+                                                                {
                                                                 <div class="field-group">
                                                                     <label>E-Way Bill No</label>
                                                                     <DxTextBox @bind-Text="model.LrEwayBillNo" />
                                                                 </div>
-
+                                                                }
+                                                                 @if (Visible["TareWt"])
+                                                                {
                                                                 <div class="field-group">
                                                                     <label>E-Way Bill Date</label>
                                                                     <DxDateEdit @bind-Date="model.LrEwayBillExpDt" Format="dd-MM-yyyy" />
                                                                 </div>
-
-                                                                <div class="field-group">
+                                                                }
+                                                                 @if (Visible["TareWt"])
+                                                                {
+                                                                 <div class="field-group">
                                                                     <label>GP/BE No</label>
                                                                     <DxTextBox @bind-Text="model.LrGroupNo" />
                                                                 </div>
-                                                                
+                                                                }
+                                                                 @if (Visible["TareWt"])
+                                                                {
                                                                 <div class="field-group">
                                                                     <label>Bags/Articles</label>
                                                                     <DxSpinEdit @bind-Value="model.LrTotalBags" ShowSpinButtons="false" />
                                                                 </div>
+                                                                }
+                                                                @if (Visible["TareWt"])
+                                                                {
                                                                <div class="field-group">
                                                                     <label>Custom 1</label>
                                                                     <DxTextBox @bind-Text="model.LrCustom1" />
                                                                 </div>
+                                                                }
+                                                                @if (Visible["TareWt"])
+                                                                {
                                                                 <div class="field-group">
                                                                     <label>Custom 2</label>
                                                                     <DxTextBox @bind-Text="model.LrCustom2" />
                                                                 </div>
+                                                                }
+                                                                @if (Visible["TareWt"])
+                                                                {
                                                                 <div class="field-group">
                                                                     <label>Custom 3</label>
                                                                     <DxTextBox @bind-Text="model.LrCustom3" />
                                                                 </div>
+                                                                }
+                                                                @if (Visible["TareWt"])
+                                                                {
                                                                 <div class="field-group">
                                                                     <label>Custom 4</label>
                                                                     <DxTextBox @bind-Text="model.LrCustom4" />
                                                                 </div>
+                                                                }
+                                                                @if (Visible["TareWt"])
+                                                                {
                                                                 <div class="field-group">
                                                                     <label>Custom 5</label>
                                                                     <DxTextBox @bind-Text="model.LrCustom5" />
                                                                 </div>
+                                                                }
+                                                                @if (Visible["TareWt"])
+                                                                {
                                                                 <div class="field-group">
                                                                     <label>Custom 6</label>
                                                                     <DxTextBox @bind-Text="model.LrCustom6" />
                                                                 </div>
+                                                                }
+                                                                @if (Visible["TareWt"])
+                                                                {
                                                                 <div class="field-group">
                                                                     <label>Custom 7</label>
                                                                     <DxTextBox @bind-Text="model.LrCustom7" />
                                                                 </div>
+                                                                }
+                                                                @if (Visible["TareWt"])
+                                                                {
                                                                 <div class="field-group">
                                                                     <label>Custom 8</label>
                                                                     <DxTextBox @bind-Text="model.LrCustom8" />
                                                                 </div>
+                                                                }
                                                             </div>
                                                         </div>
                                                     </div>

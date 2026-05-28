@@ -941,40 +941,40 @@
             return;
         }
 
-        var PaymentList = SelectedLrs.Cast<LrListVM>().ToList();
+        var LRList = SelectedLrs.Cast<LrListVM>().ToList();
         LoadingService.Show("Building merged PDF...");
 
         try
         {
-            var paymentByReportId = ReportDataList;
+            var LrByReportId = ReportDataList;
             var allReports = new List<DevExpress.XtraReports.UI.XtraReport>();
 
-            foreach (var group in paymentByReportId)
+            foreach (var group in LrByReportId)
             {
                 var reportId = group.ReportDataId;
-                var groupPayment = PaymentList.ToList();
+                var groupLr = LRList.ToList();
                 var layoutBytes = await ReportDataService.GetLayoutBytesAsync(reportId);
 
                 if (layoutBytes == null || layoutBytes.Length == 0)
                 {
-                    var billNos = string.Join(", ", groupPayment.Select(q => q.LrNoStr));
-                    ToastService.Error($"Failed to load report layout for Report ID: {reportId}, Payment No: {billNos}");
+                    var LrNos = string.Join(", ", groupLr.Select(q => q.LrNoStr));
+                    ToastService.Error($"Failed to load report layout for Report ID: {reportId}, Payment No: {LrNos}");
                     continue;
                 }
 
                 var dtoList = new List<LrPrintDto>();
-                foreach (var payment in groupPayment)
+                foreach (var Lr in groupLr)
                 {
-                    var dto = await LrService.GetPrintableLRAsync(payment.LrId);
+                    var dto = await LrService.GetPrintableLRAsync(Lr.LrId);
                     dtoList.Add(dto);
                 }
 
-                var dtoDict = groupPayment.Select((payment, i) => new { payment, dto = dtoList[i] })
-                    .ToDictionary(x => x.payment, x => x.dto);
+                var dtoDict = groupLr.Select((LR, i) => new { LR, dto = dtoList[i] })
+                    .ToDictionary(x => x.LR, x => x.dto);
 
                 await ReportService.CreateMergedReportAsync(
-                    groupPayment,
-                    payment => dtoDict.ContainsKey(payment) ? dtoDict[payment] : null,
+                    groupLr,
+                    LR => dtoDict.ContainsKey(LR) ? dtoDict[LR] : null,
                     layoutBytes);
 
                 if (ReportService.MergedReport != null)
@@ -1011,9 +1011,9 @@
 
             pdfStream.Position = 0;
 
-            string fileName = PaymentList.Count == 1
-                ? $"{PaymentList.First().LrNoStr?.Replace("/", "_") ?? "Payment"}.pdf"
-                : $"Payments_{PaymentList.First().LrNoStr?.Replace("/", "_")}_to_{PaymentList.Last().LrNoStr?.Replace("/", "_")}.pdf";
+            string fileName = LRList.Count == 1
+                ? $"{LRList.First().LrNoStr?.Replace("/", "_") ?? "LR"}.pdf"
+                : $"LR{LRList.First().LrNoStr?.Replace("/", "_")}_to_{LRList.Last().LrNoStr?.Replace("/", "_")}.pdf";
 
             using var streamRef = new Microsoft.JSInterop.DotNetStreamReference(pdfStream);
             await JS.InvokeVoidAsync("downloadFileFromStream", fileName, streamRef);
@@ -1055,7 +1055,7 @@
     {
         if (SelectedLrs == null || SelectedLrs.Count == 0)
         {
-            ToastService.Warning("Select at least one Payment.");
+            ToastService.Warning("Select at least one LR.");
             return;
         }
 
@@ -1065,7 +1065,7 @@
             return;
         }
 
-        var paymentList = SelectedLrs.Cast<LrListVM>().ToList();
+        var LRList = SelectedLrs.Cast<LrListVM>().ToList();
         LoadingService.Show("Building merged report...");
 
         try
@@ -1081,21 +1081,21 @@
 
             // Prepare DTOs for all selected bills
             var dtoList = new List<LrPrintDto>();
-            foreach (var payment in paymentList)
+            foreach (var lr in LRList)
             {
-                var dto = await LrService.GetPrintableLRAsync(payment.LrId);
+                var dto = await LrService.GetPrintableLRAsync(lr.LrId);
                 dtoList.Add(dto);
             }
 
-            var dtoDict = paymentList.Select((payment, i) => new { payment, dto = dtoList[i] })
-                                  .ToDictionary(x => x.payment, x => x.dto);
+            var dtoDict = LRList.Select((lr, i) => new { lr, dto = dtoList[i] })
+                                  .ToDictionary(x => x.lr, x => x.dto);
 
             // Create the merged report
             try
             {
                 await ReportService.CreateMergedReportAsync(
-                    paymentList,
-                    payment => dtoDict.ContainsKey(payment) ? dtoDict[payment] : null,
+                    LRList,
+                    lr => dtoDict.ContainsKey(lr) ? dtoDict[lr] : null,
                     layoutBytes);
             }
             catch (InvalidOperationException ex) when (ex.Message.Contains("CodeDOM"))

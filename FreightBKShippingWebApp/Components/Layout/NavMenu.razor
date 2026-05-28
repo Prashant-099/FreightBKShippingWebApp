@@ -80,7 +80,7 @@
         }
 
         <!-- -- OPERATIONS ---------------------- -->
-        @if (ShowGroup("Operations", shipItems) || ShowGroup("Transport", transportItems))
+        @if (ShowGroup("Operations", shipItems))
         {
             <div class="sb-label">Operations</div>
 
@@ -114,7 +114,7 @@
                 </div>
             }
 
-            @if (ShowGroup("Transport", transportItems))
+           @*  @if (ShowGroup("Transport", transportItems))
             {
                 <div class="sb-group">
                     <button class="sb-group-btn" @onclick="@(() => Toggle(ref _transport))">
@@ -136,7 +136,7 @@
                         </div>
                     }
                 </div>
-            }
+            } *@
         }
 
         <!-- -- ACCOUNTING ---------------------- -->
@@ -222,10 +222,11 @@
 
     </nav>
 
-    <!-- Footer -->
-    <div class="sb-footer">
-        <i class="bi bi-headset"></i>&nbsp;Support: 9409309616
-    </div>
+    <!-- Footer --> 
+    <NavLink class="sb-footer" href="/tickets"
+        ActiveClass="sb-item-active" @onclick="NavClicked">
+        <i class="bi bi-chat-square-text"></i>&nbsp;Support: 9409309616
+    </NavLink>
 
 </div>
 
@@ -273,7 +274,7 @@
         new("Unit",          "/Unit",         "bi bi-rulers"),
         new("Rate",          "/ratemaster",   "bi bi-currency-exchange"),
         new("Status",        "/status",       "bi bi-flag"),
-        new("Vehicle",       "/vehicle",      "bi bi-truck-front"),
+        
     };
 
     private List<M> shipItems = new()
@@ -287,12 +288,14 @@
         new("Quotation", "/quotation", "bi bi-file-earmark-text"),
     };
 
-    private List<M> transportItems = new()
-    {
-        new("Party Bill", "/partybill", "bi bi-box-arrow-in-down"),
-        new("Lr Entry",   "/lrentry",   "bi bi-box-arrow-in-down"),
-        new("tickets",   "/tickets",   "bi bi-box-arrow-in-down"),
-    };
+    //TRANSPORTATION MODELS
+
+    // private List<M> transportItems = new()
+    // {
+    //     new("Party Bill", "/partybill", "bi bi-box-arrow-in-down"),
+    //     new("Lr Entry",   "/lrentry",   "bi bi-box-arrow-in-down"),
+    //     new("tickets",   "/tickets",   "bi bi-box-arrow-in-down"),
+    // };
 
     private List<M> voucherItems = new()
     {
