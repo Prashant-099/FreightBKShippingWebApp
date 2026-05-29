@@ -142,13 +142,14 @@ namespace FreightBKShippingWebApp.Services
 
 
             int nextNo = detail.VoucherDetailLastNo + 1;
-
+            string formattedNo = nextNo.ToString()
+    .PadLeft(detail.VoucherDetailZeroFill + nextNo.ToString().Length, '0');
             // update last no
             // config.VoucherConfig_LastVoucherNo = nextNo;
 
             // return pieces
             return (detail.VoucherDetailPrefix ?? string.Empty,
-                   nextNo.ToString(),
+                   formattedNo,
                    detail.VoucherDetailSufix ?? string.Empty);
         }
 

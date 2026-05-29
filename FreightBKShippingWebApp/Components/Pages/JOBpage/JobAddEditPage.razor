@@ -355,14 +355,24 @@ MinWidth="200"
                                         <DxDateEdit NullText="Select Date" @bind-Date="EditModel.JobHblDate" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" Format="dd-MM-yyyy"  CssClass="editor-smooth" style="flex: 1;" />
                                     </div>
                                 </DxFormLayoutItem>
-
-                                <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="BE No" ColSpanMd="12">
-                                    <div style="display: flex; gap: 10px;">
+                                @if (EditModel.JobType == "IMPORT")
+                                {
+                                    <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="BE No" ColSpanMd="12">
+                                        <div style="display: flex; gap: 10px;">
                                         <DxTextBox @bind-Text="EditModel.JobBeNo" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" CssClass="editor-smooth" style="flex: 1;" />
                                         <DxDateEdit NullText="Select Date" @bind-Date="EditModel.JobBeDate" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" Format="dd-MM-yyyy" CssClass="editor-smooth" style="flex: 1;" />
                                     </div>
                                 </DxFormLayoutItem>
-
+                                }
+    @if (EditModel.JobType == "EXPORT")
+                                {
+                                    <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="SB No" ColSpanMd="12">
+                                        <div style="display: flex; gap: 10px;">
+                                        <DxTextBox @bind-Text="EditModel.JobSbNo" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" CssClass="editor-smooth" style="flex: 1;" />
+                                        <DxDateEdit NullText="Select Date" @bind-Date="EditModel.JobSbDate" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" Format="dd-MM-yyyy" CssClass="editor-smooth" style="flex: 1;" />
+                                    </div>
+                                </DxFormLayoutItem>
+                                }
                                 <DxFormLayoutItem CaptionCssClass="caption-bold" Caption="ShipperInv No" ColSpanMd="12">
                                     <div style="display: flex; gap: 10px;">
                                         <DxTextBox @bind-Text="EditModel.JobShipperInvNo" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" CssClass="editor-smooth" style="flex: 1;" />
@@ -2102,7 +2112,7 @@ MinWidth="200"
                     {
                         JobBranchId = BranchContext.BranchId, 
                         JobDate = DateTime.Now,
-                JobType = model.JobType
+                JobType = JobType
                     };
             UploadedDocs.Clear();
             await LoadVoucherAndGenerateJobNo(BranchContext.BranchId);
