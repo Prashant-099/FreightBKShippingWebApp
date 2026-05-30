@@ -1,0 +1,70 @@
+﻿@page "/report-designer"
+
+@using DevExpress.Blazor.Reporting
+@using DevExpress.DataAccess.Json
+@using System.Text
+@using Devexpress.Blazor
+@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Models
+@using FreightBKShippingWebApp.Services
+@using Microsoft.JSInterop
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+@inject ReportService ReportService
+@inject LoadingService LoadingService
+
+<div class="challan-page-container">
+     <div class="scrollable-form-content">
+        @if (selectedReportData != null)
+        {
+            <DxReportDesigner @key="reportDesignerKey"
+                      ReportName="@ReportUrl"
+                              Width="100%" Height="100vh" @ref="reportDesigner" />
+        }
+        else
+        {
+            <p class="text-muted text-center mt-5">Please select a report format to continue.</p>
+        }
+    </div>
+</div>
+
+
+@code {
+    private DxReportDesigner? reportDesigner;
+    private List<ReportData> reportDataList = new();
+    private bool showFormatPopup = false;
+    private int selectedReportDataId;
+    private ReportData? selectedReportData;
+    private string reportDesignerKey = Guid.NewGuid().ToString(); // Unique key for component refresh
+
+    //
+    [Parameter] public int reportId { get; set; }
+
+    private string ReportUrl;
+
+    protected override void OnInitialized()
+    {
+      
+        ReportUrl = reportId.ToString();
+        LoadingService.Show(); // ✅ Trigger global loader
+        LoadingService.OnChange += StateHasChanged;
+    }
+  
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await Task.Delay(500); // Simulate load
+            LoadingService.Hide(); // ✅ Hide global loader
+        }
+    }
+
+    public void Dispose()
+    {
+        LoadingService.OnChange -= StateHasChanged;
+    }
+
+   
+ 
+}

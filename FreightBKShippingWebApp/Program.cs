@@ -1,17 +1,20 @@
+using DevExpress.Blazor.Reporting;
 using DevExpress.Drawing.Internal;
+using DevExpress.XtraReports.Web.Extensions;
 using FreightBKShipping.Client.Services;
 using FreightBKShippingWebApp;
 using FreightBKShippingWebApp.Authentication;
 using FreightBKShippingWebApp.Components;
 using FreightBKShippingWebApp.Extensions;
+using FreightBKShippingWebApp.ReportDesignServices;
 using FreightBKShippingWebApp.Services;
 using FreightBKShippingWebApp.Services.PdfReaderAndHelperService;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.ResponseCompression;
-using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.ResponseCompression;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -72,7 +75,8 @@ builder.Services.AddDevExpressBlazor(options =>
 });
 
 builder.Services.AddDevExpressServerSideBlazorReportViewer();
-
+builder.Services.AddDevExpressBlazorReporting();
+builder.Services.AddScoped<ReportStorageWebExtension, CustomReportStorageWebExtension>();
 // ==========================================================
 // 4?? AUTHENTICATION
 // ==========================================================
@@ -261,6 +265,11 @@ builder.Services.AddScoped<AuthTokenService>();
 builder.Services.AddScoped<IBranchContext, BranchContext>();
 builder.Services.AddScoped<ITokenProvider, TokenProvider>();
 builder.Services.AddScoped<IGenericReportManager, GenericReportManager>();
+
+// Report  Design Service 
+builder.Services.AddScoped<DataStateService>();
+builder.Services.AddScoped<ReportContextService>();
+
 
 // ==========================================================
 // ?? BUILD APP

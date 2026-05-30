@@ -1,0 +1,725 @@
+﻿    @page "/report-editor"
+
+    @inject IHttpClientFactory HttpClientFactory
+    @inject ReportDataService ReportService
+    @using System.Text
+    @using System.Text.Json
+@using DevExpress.Blazor
+@using DevExpress.Blazor.Reporting
+@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Models
+@using FreightBKShippingWebApp.ReportDesignServices
+@using FreightBKShippingWebApp.Services
+@using FreightBKShippingWebApp.ReportDesign
+    @inject NavigationManager NavigationManager
+    @inject LoadingService LoadingService
+    @inject DataStateService DataStateService
+    @inject ReportContextService ReportContext
+<br />
+<div class="report-designer-container">
+    <!-- Header Section -->
+    <div class="header-section">
+        <div class="header-content">
+            <div class="header-left">
+                <i class="bi bi-file-earmark-text-fill header-icon"></i>
+                <div>
+                    <h4 class="header-title">Report Designer</h4>
+                    <p class="header-subtitle">Create and customize your reports</p>
+                </div>
+            </div>
+            <div class="header-right">
+                <DxButton Click="@RedirectToDesigner" 
+                          RenderStyle="ButtonRenderStyle.Secondary"
+                          IconCssClass="bi bi-box-arrow-up-right"
+                          CssClass="btn-header">
+                    Full Screen
+                </DxButton>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Card -->
+    <div class="content-card">
+        <!-- Format Selection Section -->
+        <div class="section-block">
+            <div class="section-header">
+                <i class="bi bi-grid-3x3-gap-fill section-icon"></i>
+                <h5 class="section-title">Report Configuration</h5>
+            </div>
+            
+            <DxFormLayout Data="reportData1" CssClass="modern-form">
+                <DxFormLayoutGroup ColSpanMd="12">
+                    <!-- Format Selector -->
+                    <DxFormLayoutItem Caption="Select Format" ColSpanMd="12" CssClass="form-item-featured">
+                        <Template>
+                            <label class="form-label-modern">
+                                <i class="bi bi-layout-text-window-reverse"></i> Select Format
+                            </label>
+                            <DxComboBox TData="ReportData" 
+                                        TValue="string"
+                                        Data="@reportDataList"
+                                        Value="@reportData1.FormatName"
+                                        ValueFieldName="FormatName"
+                                        TextFieldName="FormatName"
+                                        ValueChanged="@OnFormatChanged"
+                                        CssClass="modern-combo"
+                                        NullText="Choose a report format...">
+                                <ItemTemplate Context="item">
+                                    <div class="combo-item">
+                                        <i class="bi bi-file-earmark"></i>
+                                        <span>@item.FormatName</span>
+                                    </div>
+                                </ItemTemplate>
+                            </DxComboBox>
+                        </Template>
+                    </DxFormLayoutItem>
+                </DxFormLayoutGroup>
+
+                <!-- Two Column Layout for Details -->
+                <DxFormLayoutGroup ColSpanMd="6">
+                    <DxFormLayoutItem Caption="Format Name" ColSpanMd="12">
+                        <Template>
+                            <label class="form-label-modern">
+                                <i class="bi bi-tag"></i> Format Name
+                            </label>
+                            <DxTextBox Text="@reportData1.FormatName"
+                                       TextChanged="@(val => OnFieldChanged(nameof(reportData1.FormatName), val))"
+                                       CssClass="modern-input" />
+                        </Template>
+                    </DxFormLayoutItem>
+
+                    <DxFormLayoutItem Caption="Document Type" ColSpanMd="12">
+                        <Template>
+                            <label class="form-label-modern">
+                                <i class="bi bi-file-text"></i> Document Type
+                            </label>
+                            <DxTextBox Text="@reportData1.DocType"
+                                       TextChanged="@(val => OnFieldChanged(nameof(reportData1.DocType), val))"
+                                       CssClass="modern-input" />
+                        </Template>
+                    </DxFormLayoutItem>
+
+                    <DxFormLayoutItem Caption="Copy Format" ColSpanMd="12">
+                        <Template>
+                            <label class="form-label-modern">
+                                <i class="bi bi-files"></i> Copy Format
+                            </label>
+                            <DxTextBox Text="@reportData1.CopyFormat"
+                                       TextChanged="@(val => OnFieldChanged(nameof(reportData1.CopyFormat), val))"
+                                       CssClass="modern-input" />
+                        </Template>
+                    </DxFormLayoutItem>
+                </DxFormLayoutGroup>
+
+                <DxFormLayoutGroup ColSpanMd="6">
+                    <DxFormLayoutItem Caption="Next Format" ColSpanMd="12">
+                        <Template>
+                            <label class="form-label-modern">
+                                <i class="bi bi-arrow-right-circle"></i> Next Format
+                            </label>
+                            <DxTextBox Text="@reportData1.NextFormat"
+                                       TextChanged="@(val => OnFieldChanged(nameof(reportData1.NextFormat), val))"
+                                       CssClass="modern-input" />
+                        </Template>
+                    </DxFormLayoutItem>
+
+                    <DxFormLayoutItem Caption="Voucher ID" ColSpanMd="12">
+                        <Template>
+                            <label class="form-label-modern">
+                                <i class="bi bi-hash"></i> Voucher ID
+                            </label>
+                            <DxSpinEdit Value="@reportData1.VchId"
+                                        ValueChanged="@((int? val) => OnFieldChanged(nameof(reportData1.VchId), val))"
+                                        CssClass="modern-input" />
+                        </Template>
+                    </DxFormLayoutItem>
+
+                    <DxFormLayoutItem Caption="Company ID" ColSpanMd="12">
+                        <Template>
+                            <label class="form-label-modern">
+                                <i class="bi bi-building"></i> Company ID
+                            </label>
+                            <DxSpinEdit Value="@reportData1.CompanyId"
+                                        ValueChanged="@((int? val) => OnFieldChanged(nameof(reportData1.CompanyId), val))"
+                                        CssClass="modern-input" />
+                        </Template>
+                    </DxFormLayoutItem>
+                </DxFormLayoutGroup>
+            </DxFormLayout>
+        </div>
+
+        <!-- Action Buttons Section -->
+        <div class="action-section">
+            <div class="action-group">
+                <DxButton Click="@ClearForm" 
+                          RenderStyle="ButtonRenderStyle.Secondary"
+                          IconCssClass="bi bi-eraser"
+                          CssClass="btn-action btn-clear">
+                    <DxHint Text="Clear all form fields and close report designer" />
+                    Clear Form
+                </DxButton>
+
+                <DxButton Click="@LoadExistingReport"
+                          RenderStyle="ButtonRenderStyle.Info"
+                          IconCssClass="bi bi-folder-open"
+                          CssClass="btn-action btn-load">
+                    <DxHint Text="Load an existing report" />
+                    Load Existing
+                </DxButton>
+
+                <DxButton Click="@OpenNewReport" 
+                          Enabled="IsNewReportEnabled"
+                          RenderStyle="ButtonRenderStyle.Success"
+                          IconCssClass="bi bi-plus-circle"
+                          CssClass="btn-action btn-new">
+                    <DxHint Text="Create new report when ready" />
+                    Create New Report
+                </DxButton>
+            </div>
+        </div>
+    </div>
+
+    <!-- Designer Section -->
+    @if (ShowDesigner)
+    {
+        <div class="designer-card">
+            <div class="designer-header">
+                <div class="designer-header-left">
+                    <i class="bi bi-palette-fill"></i>
+                    <span>Design Canvas</span>
+                </div>
+                <div class="designer-header-right">
+                    <span class="status-badge">
+                        <i class="bi bi-circle-fill status-active"></i> Active
+                    </span>
+                </div>
+            </div>
+            <div class="designer-wrapper">
+                <DxReportDesigner ReportName="@ReportUrl" Width="100%" Height="100%" />
+            </div>
+        </div>
+    }
+</div>
+
+<style>
+    /* Main Container */
+    .report-designer-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    /* Header Section */
+    .header-section {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 16px;
+        padding: 24px 32px;
+        margin-bottom: 24px;
+        box-shadow: 0 8px 24px rgba(102, 126, 234, 0.2);
+    }
+
+    .header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+
+    .header-left {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .header-icon {
+        font-size: 32px;
+        color: white;
+        background: rgba(255, 255, 255, 0.2);
+        padding: 12px;
+        border-radius: 12px;
+        backdrop-filter: blur(10px);
+    }
+
+    .header-title {
+        color: white;
+        font-size: 24px;
+        font-weight: 600;
+        margin: 0;
+        letter-spacing: -0.5px;
+    }
+
+    .header-subtitle {
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 14px;
+        margin: 4px 0 0 0;
+    }
+
+    .btn-header {
+        background: rgba(255, 255, 255, 0.2) !important;
+        color: white !important;
+        border: 1px solid rgba(255, 255, 255, 0.3) !important;
+        backdrop-filter: blur(10px);
+        padding: 10px 20px !important;
+        border-radius: 10px !important;
+        font-weight: 500 !important;
+        transition: all 0.3s ease !important;
+    }
+
+    .btn-header:hover {
+        background: rgba(255, 255, 255, 0.3) !important;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    /* Content Card */
+    .content-card {
+        background: white;
+        border-radius: 16px;
+        padding: 32px;
+        box-shadow: 0 2px 16px rgba(0, 0, 0, 0.08);
+        margin-bottom: 24px;
+    }
+
+    /* Section Block */
+    .section-block {
+        margin-bottom: 24px;
+    }
+
+    .section-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 24px;
+        padding-bottom: 16px;
+        border-bottom: 2px solid #f0f0f0;
+    }
+
+    .section-icon {
+        font-size: 24px;
+        color: #667eea;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .section-title {
+        font-size: 20px;
+        font-weight: 600;
+        color: #2d3748;
+        margin: 0;
+    }
+
+    /* Modern Form */
+    .modern-form {
+        gap: 20px;
+    }
+
+    .form-label-modern {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        color: #4a5568;
+        margin-bottom: 8px;
+    }
+
+    .form-label-modern i {
+        color: #667eea;
+        font-size: 16px;
+    }
+
+    .form-item-featured {
+        background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+        padding: 20px;
+        border-radius: 12px;
+        border: 2px solid #e2e8f0;
+        margin-bottom: 16px;
+    }
+
+    .modern-input, .modern-combo {
+        border-radius: 10px !important;
+        border: 2px solid #e2e8f0 !important;
+        transition: all 0.3s ease !important;
+    }
+
+    .modern-input:focus, .modern-combo:focus {
+        border-color: #667eea !important;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
+    }
+
+    .combo-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 0;
+    }
+
+    .combo-item i {
+        color: #667eea;
+        font-size: 16px;
+    }
+
+    /* Action Section */
+    .action-section {
+        margin-top: 32px;
+        padding-top: 24px;
+        border-top: 2px solid #f0f0f0;
+    }
+
+    .action-group {
+        display: flex;
+        justify-content: center;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+
+    .btn-action {
+        padding: 12px 28px !important;
+        border-radius: 12px !important;
+        font-weight: 600 !important;
+        font-size: 15px !important;
+        transition: all 0.3s ease !important;
+        border: none !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+    }
+
+    .btn-action:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15) !important;
+    }
+
+    .btn-clear {
+        background: linear-gradient(135deg, #718096 0%, #4a5568 100%) !important;
+        color: white !important;
+    }
+
+    .btn-load {
+        background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%) !important;
+        color: white !important;
+    }
+
+    .btn-new {
+        background: linear-gradient(135deg, #48bb78 0%, #38a169 100%) !important;
+        color: white !important;
+    }
+
+    /* Designer Card */
+    .designer-card {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+    }
+
+    .designer-header {
+        background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
+        padding: 16px 24px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .designer-header-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: white;
+        font-weight: 600;
+        font-size: 16px;
+    }
+
+    .designer-header-left i {
+        font-size: 20px;
+        color: #667eea;
+    }
+
+    .status-badge {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(72, 187, 120, 0.2);
+        padding: 6px 16px;
+        border-radius: 20px;
+        color: #68d391;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .status-active {
+        font-size: 8px;
+        animation: pulse 2s infinite;
+    }
+
+    @@keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+
+    .designer-wrapper {
+        height: 750px;
+        background: #f7fafc;
+        padding: 16px;
+        overflow: auto;
+    }
+
+    /* Responsive Design */
+    @@media (max-width: 768px) {
+        .report-designer-container {
+            padding: 12px;
+        }
+
+        .header-section {
+            padding: 20px;
+        }
+
+        .header-title {
+            font-size: 20px;
+        }
+
+        .content-card {
+            padding: 20px;
+        }
+
+        .action-group {
+            flex-direction: column;
+        }
+
+        .btn-action {
+            width: 100%;
+        }
+
+        .designer-wrapper {
+            height: 500px;
+        }
+    }
+
+    /* Scrollbar Styling */
+    .designer-wrapper::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+    }
+
+    .designer-wrapper::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+
+    .designer-wrapper::-webkit-scrollbar-thumb {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 10px;
+    }
+
+    .designer-wrapper::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+    }
+</style>
+@code {
+    void OnFieldChanged(int? val)
+    {
+        reportData1.VchId = val;
+        BuildReportUrl();
+    }
+
+
+    private ReportData reportData1 = new ReportData();
+    private IEnumerable<ReportData> reportDataList { get; set; }
+    private string ReportUrl = "NEwRePort";
+    private bool ShowDesigner = false;
+
+    private HttpClient HttpClient => HttpClientFactory.CreateClient();
+
+    protected override async Task OnInitializedAsync()
+    {
+        DataStateService.OnChange += RefreshReportpage;
+        await RefreshReportpage();
+    }
+
+    private async Task RefreshReportpage()
+    {
+        LoadingService.Show();
+        reportDataList = await ReportService.GetAllAsync();
+        ClearForm();
+        LoadingService.Hide();
+    }
+
+    void RedirectToDesigner()
+    {
+        if (reportData1.ReportDataId > 0)
+        {
+            LoadingService.Show();
+            ReportContext.CurrentReportData = reportData1;
+            var url = $"/report-designer/{reportData1.ReportDataId}";
+            NavigationManager.NavigateTo(url);
+            LoadingService.Hide();
+        }
+    }
+
+    void OpenNewReport()
+    {
+        // Naya object banao aur form data copy karo
+        var newReport = new ReportData
+        {
+            ReportDataId = 0, // New hai, so ID = 0
+            FormatName = reportData1.FormatName ?? $"NewReport_{DateTime.Now:yyyyMMdd_HHmmss}",
+            DocType = reportData1.DocType,
+            CopyFormat = reportData1.CopyFormat,
+            NextFormat = reportData1.NextFormat,
+            VchId = reportData1.VchId,
+            CompanyId = reportData1.CompanyId,
+            Status = reportData1.Status,
+            LayoutData = "" // Blank XML for new report
+        };
+
+        // Context me daal do
+        ReportContext.CurrentReportData = newReport;
+
+        // Designer ko bhejne ke liye Base64 JSON banao
+        var json = JsonSerializer.Serialize(newReport);
+        var base64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(json));
+
+        ReportUrl = base64;
+        ShowDesigner = true;
+    }
+
+    void ClearForm()
+    {
+        reportData1 = new ReportData(); // Reset all form fields
+        ShowDesigner = false; // Set this to control the visibility of your Report Designer
+    }
+
+    async Task LoadExistingReport()
+    {
+        if (reportData1.ReportDataId <= 0)  
+        {
+            await ShowMessage("❗ Please enter a valid Report ID to load.");
+            return;
+        }
+
+        LoadingService.Show();
+        try
+        {
+            var cts = new CancellationTokenSource(5000); // 5s timeout
+            var reportData = await HttpClient.GetFromJsonAsync<ReportData>($"api/ReportData/{reportData1.ReportDataId}", cts.Token);
+            if (reportData != null)
+            {
+                reportData1 = reportData;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"⚠️ Temporary network / server error: {ex.Message}");
+        }
+        finally
+        {
+            LoadingService.Hide(); // spinner hide even on exception
+        }
+
+        ReportContext.CurrentReportData = reportData1;
+        BuildReportUrl();
+        ShowDesigner = true;
+    }
+
+    ///---------------------------------------------------
+    private async Task OnFormatChanged(string newValue)
+    {
+        LoadingService.Show();
+        if (string.IsNullOrWhiteSpace(newValue))
+        {
+            await ShowMessage("⚠️ Please select a valid format.");
+            return;
+        }
+        var selected = reportDataList.FirstOrDefault(x => x.FormatName == newValue);
+        if (selected == null)
+        {
+            await ShowMessage("⚠️ Format not found.");
+            return;
+
+        }
+        
+        reportData1 = selected;
+
+        BuildReportUrl();
+
+        ShowDesigner = true;
+        LoadingService.Hide();
+        StateHasChanged();
+    }
+
+    void OnFieldChanged(string fieldName, object? value)
+    {
+        if (value == null) return;
+
+        var prop = typeof(ReportData).GetProperty(fieldName);
+        if (prop == null) return;
+
+        var targetType = Nullable.GetUnderlyingType(prop.PropertyType) ?? prop.PropertyType;
+
+        // 🧠 Special Handling for numeric conversion
+        if (targetType == typeof(int) || targetType == typeof(int?))
+        {
+            if (int.TryParse(value.ToString(), out var intVal))
+            {
+                prop.SetValue(reportData1, intVal);
+            }
+        }
+        else
+        {
+            // ✅ For string and other simple types
+            var convertedValue = Convert.ChangeType(value, targetType);
+            prop.SetValue(reportData1, convertedValue);
+        }
+
+        BuildReportUrl();
+    }
+
+    ///---------------------------------------------------
+    // private async Task OnFormatChanged(Microsoft.AspNetCore.Components.ChangeEventArgs e)
+    // {
+    //     var selectedFormat = e.Value?.ToString();
+    //     if (string.IsNullOrWhiteSpace(selectedFormat))
+    //     {
+    //         await ShowMessage("⚠️ Please select a valid format.");
+    //         return;
+    //     }
+
+    //     var selected = reportDataList.FirstOrDefault(x => x.FormatName == selectedFormat);
+    //     if (selected == null)
+    //     {
+    //         await ShowMessage("⚠️ Format not found.");
+    //         return;
+    //     }
+
+    //     reportData1 = selected;
+    //     BuildReportUrl();
+    //         ShowDesigner = true;
+
+    //         StateHasChanged();
+    // }
+
+        void OnInputChanged(Microsoft.AspNetCore.Components.ChangeEventArgs e) => StateHasChanged();
+
+        void BuildReportUrl()
+        {
+        var json = JsonSerializer.Serialize(reportData1);
+        ReportUrl = Convert.ToBase64String(Encoding.UTF8.GetBytes(json));
+        // ✅ Send only ID as string to DxReportDesigner
+        // ReportUrl = reportData1.ReportDataId.ToString();
+        }
+
+          private bool IsNewReportEnabled =>
+                // !string.IsNullOrWhiteSpace(reportData1.ReportDataFormatName) &&
+                !string.IsNullOrWhiteSpace(reportData1.CopyFormat) &&
+                !string.IsNullOrWhiteSpace(reportData1.NextFormat) &&
+                !string.IsNullOrWhiteSpace(reportData1.DocType) &&
+                reportData1.VchId > 0;
+
+        Task ShowMessage(string msg)
+        {
+            Console.WriteLine(msg); // replace with toast/modal
+            return Task.CompletedTask;
+        }
+}
