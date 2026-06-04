@@ -437,7 +437,7 @@
 
 
                 await Task.WhenAll(Voucher, Report);
-                ReportDataList = (Report.Result).Where(r => r.DocType.Equals("Quotation", StringComparison.OrdinalIgnoreCase)).ToList();
+                ReportDataList = (Report.Result).Where(r => !string.IsNullOrEmpty(r?.DocType) && r.DocType.Equals("Quotation", StringComparison.OrdinalIgnoreCase)).ToList();
 
                 VoucherList = Voucher.Result;
                 // 👉 Only for context menu

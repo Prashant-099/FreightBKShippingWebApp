@@ -288,7 +288,7 @@
         InitializeColumns();
         await CheckRole();
         await LoadReceipts();
-        ReportDataList = (await ReportDataService.GetAllAsync()).Where(r => r.DocType.Equals("ReceiptPayment", StringComparison.OrdinalIgnoreCase)).ToList();
+        ReportDataList = (await ReportDataService.GetAllAsync()).Where(r => !string.IsNullOrEmpty(r?.DocType) && r.DocType.Equals("ReceiptPayment", StringComparison.OrdinalIgnoreCase)).ToList();
 
     }
 

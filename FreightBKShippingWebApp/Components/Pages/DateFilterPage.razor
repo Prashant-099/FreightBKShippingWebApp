@@ -54,7 +54,7 @@
          ShowFooter="true">
 
     <BodyContentTemplate Context="bdydt">
-        <EditForm EditContext="@editContext" OnValidSubmit="HandleValidSubmit" Context="ctxeditform" id="dateFilterForm">
+        <EditForm EditContext="@editContext" OnValidSubmit="HandleValidSubmit" Context="ctxeditform" >
             <DataAnnotationsValidator />
            
             <!-- Quick Filter Buttons -->
@@ -171,7 +171,7 @@
     <FooterContentTemplate Context="ftrdt">
         <div class="mt-3 text-end">
             <DxButton Text="Clear" RenderStyle="ButtonRenderStyle.Secondary" Click="ClearFilter" />
-            <DxButton Text="Apply" RenderStyle="ButtonRenderStyle.Primary" Click="HandleValidSubmit" SubmitFormOnClick="true" Form="dateFilterForm" />
+            <DxButton Text="Apply" RenderStyle="ButtonRenderStyle.Primary" Click="HandleValidSubmit"  />
            @*  <DxButton Text="Cancel" RenderStyle="ButtonRenderStyle.Secondary" Click="Hide" /> *@
         </div>
     </FooterContentTemplate>
@@ -264,6 +264,7 @@
                 ErrorMessage = "From Date cannot be greater than To Date";
                 return;
             }
+           
         }
 
         // Invoke callback

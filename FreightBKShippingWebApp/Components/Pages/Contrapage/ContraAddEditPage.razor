@@ -98,6 +98,7 @@
 
                 <!-- From Account (Cash/Bank) — stored in JournalAccountId -->
                 <DxFormLayoutItem Caption="From (Cash / Bank)" ColSpanMd="4">
+                    <div>
                     <DxComboBox TData="Account" TValue="int"
                                 Data="@CashBankAccountList"
                                 TextFieldName="AccountName"
@@ -111,10 +112,15 @@
                                 SearchMode="ListSearchMode.AutoSearch"
                                 ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
                     <ValidationMessage For="@(() => EditModel.JournalAccountId)" />
+                        <div class="mt-1 text-danger fw-bold">
+            Balance : @FromCashBankBalanceText
+        </div>
+    </div>
                 </DxFormLayoutItem>
 
                 <!-- To Account (Cash/Bank) — stored in JournalPartyId -->
                 <DxFormLayoutItem Caption="To (Cash / Bank)" ColSpanMd="4">
+                    <div>
                     <DxComboBox TData="Account" TValue="int"
                                 Data="@ToAccountList"
                                 TextFieldName="AccountName"
@@ -128,6 +134,10 @@
                                 SearchMode="ListSearchMode.AutoSearch"
                                 ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
                     <ValidationMessage For="@(() => EditModel.JournalPartyId)" />
+                        <div class="mt-1 text-success fw-bold">
+            Balance : @ToCashBankBalanceText
+        </div>
+    </div>
                 </DxFormLayoutItem>
 
                 <!-- Amount -->
@@ -213,7 +223,25 @@
 @code {
     [Parameter] public EventCallback OnSaved { get; set; }
 
-    private bool Visible { get; set; }
+    private bool _visible;
+    private bool Visible
+    {
+        get => _visible;
+        set
+        {
+            if (_visible == value) return;
+
+            _visible = value;
+
+            // Popup Closed
+            if (!value)
+            {
+                ResetPopupData();
+            }
+
+            StateHasChanged();
+        }
+    }
     private string Title { get; set; } = "Contra Entry";
     private Journal EditModel { get; set; } = new();
 
@@ -288,6 +316,19 @@
 
             // Rebuild "To" list excluding the From account
             RefreshToAccountList();
+
+            if (EditModel.JournalPartyId > 0)
+            {
+                await LoadFromCashBankBalance(
+                    EditModel.JournalPartyId);
+            }
+
+            // ✅ ADD THIS
+            if (EditModel.JournalAccountId > 0)
+            {
+                await LoadToCashBankBalance(
+                    EditModel.JournalAccountId);
+            }
         }
         else
         {
@@ -331,7 +372,7 @@
         }
     }
 
-    private void OnFromAccountChanged(int accountId)
+    private async Task OnFromAccountChanged(int accountId)
     {
         EditModel.JournalAccountId = accountId;
         FromAccountName = CashBankAccountList.FirstOrDefault(a => a.AccountId == accountId)?.AccountName;
@@ -345,15 +386,21 @@
 
         RefreshToAccountList();
         ValidateSameAccount();
+        EditModel.JournalAccountId = accountId;
+
+        await LoadFromCashBankBalance(accountId);
         StateHasChanged();
     }
 
-    private void OnToAccountChanged(int accountId)
+    private async Task OnToAccountChanged(int accountId)
     {
         EditModel.JournalPartyId = accountId;
         ToAccountName = CashBankAccountList.FirstOrDefault(a => a.AccountId == accountId)?.AccountName;
         ValidateSameAccount();
+        
+        await LoadToCashBankBalance(accountId);
         StateHasChanged();
+
     }
 
     private void OnAmountChanged(double val)
@@ -456,8 +503,207 @@
     private void Hide()
     {
         Visible = false;
+        // SameAccountError = false;
+        // FromAccountName = null;
+        // ToAccountName = null;
+        ResetPopupData();
+    }
+
+    private void ResetPopupData()
+    {
+        FromCashBankBalance = 0;
+        ToCashBankBalance = 0;
         SameAccountError = false;
         FromAccountName = null;
         ToAccountName = null;
+       
+
+        EditModel = new Journal();
+
+       
     }
+    private double FromCashBankBalance = 0;
+private double ToCashBankBalance = 0;
+
+    private string FromCashBankBalanceText =>
+    FromCashBankBalance >= 0
+        ? $"₹ {FromCashBankBalance:N2} Dr"
+        : $"₹ {Math.Abs(FromCashBankBalance):N2} Cr";
+
+    private string ToCashBankBalanceText =>
+ToCashBankBalance >= 0
+    ? $"₹ {ToCashBankBalance:N2} Dr"
+    : $"₹ {Math.Abs(ToCashBankBalance):N2} Cr";
+
+   
+    private async Task LoadFromCashBankBalance(int accountId)
+    {
+        try
+        {
+            var journals = await JournalService.GetAllAsync();
+
+            var account = CashBankAccountList
+               .FirstOrDefault(a => a.AccountId == accountId);
+
+            // Opening Balance
+            double opening = 0;
+
+            if (account != null)
+            {
+                // AccountOpening is float? — handle null and convert safely
+                float openingFloat = account.AccountOpening ?? 0f;
+                opening = account.AccountBalanceType == "Dr"
+                    ? openingFloat
+                    : -openingFloat;
+            }
+
+            double receiptAmount = journals
+                .Where(x =>
+                    x.JournalAccountId == accountId &&
+                    x.JournalMasterType.Equals("RECEIPT",
+        StringComparison.OrdinalIgnoreCase))
+                .Sum(x => x.JournalTotal);
+
+            double paymentAmount = journals
+                .Where(x =>
+                    x.JournalAccountId == accountId &&
+                    x.JournalMasterType.Equals("PAYMENT",
+        StringComparison.OrdinalIgnoreCase))
+                .Sum(x => x.JournalTotal);
+
+
+
+            // CONTRA IN (+)
+            double contraIn = journals
+                .Where(x =>
+                    x.JournalPartyId == accountId &&
+                    x.JournalMasterType.Equals(
+                        "CONTRA",
+                        StringComparison.OrdinalIgnoreCase))
+                .Sum(x => x.JournalTotal);
+
+            // CONTRA OUT (-)
+            double contraOut = journals
+                .Where(x =>
+                    x.JournalAccountId == accountId &&
+                    x.JournalMasterType.Equals(
+                        "CONTRA",
+                        StringComparison.OrdinalIgnoreCase))
+                .Sum(x => x.JournalTotal);
+            var allBillRefs = journals
+    .Where(j => j.BillRefDetails != null)
+    .SelectMany(j => j.BillRefDetails)
+    .ToList();
+
+            double journalDebit = allBillRefs
+                .Where(x =>
+                    x.BillRefAccountId == accountId &&
+                    x.BillRefVchType == "DR")
+                .Sum(x => x.BillRefVchAmount);
+
+            double journalCredit = allBillRefs
+                .Where(x =>
+                    x.BillRefAccountId == accountId &&
+                    x.BillRefVchType == "CR")
+                .Sum(x => x.BillRefVchAmount);
+
+            FromCashBankBalance = opening - receiptAmount + paymentAmount + contraIn - contraOut + journalDebit
+        - journalCredit;
+
+
+            StateHasChanged();
+        }
+        catch
+        {
+            FromCashBankBalance = 0;
+        }
+    }
+
+
+    //for To Cash/Bank balance
+   
+    private async Task LoadToCashBankBalance(int accountId)
+    {
+        try
+        {
+            var journals = await JournalService.GetAllAsync();
+
+            var account = CashBankAccountList
+               .FirstOrDefault(a => a.AccountId == accountId);
+
+            // Opening Balance
+            double opening = 0;
+
+            if (account != null)
+            {
+                // AccountOpening is float? — handle null and convert safely
+                float openingFloat = account.AccountOpening ?? 0f;
+                opening = account.AccountBalanceType == "Dr"
+                    ? openingFloat
+                    : -openingFloat;
+            }
+
+            double receiptAmount = journals
+                .Where(x =>
+                    x.JournalAccountId == accountId &&
+                    x.JournalMasterType.Equals("RECEIPT",
+        StringComparison.OrdinalIgnoreCase))
+                .Sum(x => x.JournalTotal);
+
+            double paymentAmount = journals
+                .Where(x =>
+                    x.JournalAccountId == accountId &&
+                    x.JournalMasterType.Equals("PAYMENT",
+        StringComparison.OrdinalIgnoreCase))
+                .Sum(x => x.JournalTotal);
+
+
+
+            // CONTRA IN (+)
+            double contraIn = journals
+                .Where(x =>
+                    x.JournalPartyId == accountId &&
+                    x.JournalMasterType.Equals(
+                        "CONTRA",
+                        StringComparison.OrdinalIgnoreCase))
+                .Sum(x => x.JournalTotal);
+
+            // CONTRA OUT (-)
+            double contraOut = journals
+                .Where(x =>
+                    x.JournalAccountId == accountId &&
+                    x.JournalMasterType.Equals(
+                        "CONTRA",
+                        StringComparison.OrdinalIgnoreCase))
+                .Sum(x => x.JournalTotal);
+            var allBillRefs = journals
+    .Where(j => j.BillRefDetails != null)
+    .SelectMany(j => j.BillRefDetails)
+    .ToList();
+
+            double journalDebit = allBillRefs
+                .Where(x =>
+                    x.BillRefAccountId == accountId &&
+                    x.BillRefVchType == "DR")
+                .Sum(x => x.BillRefVchAmount);
+
+            double journalCredit = allBillRefs
+                .Where(x =>
+                    x.BillRefAccountId == accountId &&
+                    x.BillRefVchType == "CR")
+                .Sum(x => x.BillRefVchAmount);
+
+            ToCashBankBalance = opening - receiptAmount + paymentAmount + contraIn - contraOut + journalDebit
+        - journalCredit;
+
+
+            StateHasChanged();
+        }
+        catch
+        {
+            ToCashBankBalance = 0;
+        }
+    }
+
+
 }

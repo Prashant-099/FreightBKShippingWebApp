@@ -237,5 +237,40 @@ namespace FreightBKShippingWebApp.Services
         }
 
 
+        public async Task<ReportData?> GetByIdAsync(int id)
+        {
+            try
+            {
+                return await _apiClient.GetFromJsonAsync<ReportData>(
+                    $"api/ReportData/{id}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Error loading report: {ex.Message}");
+                return null;
+            }
+        }
+        public async Task<int> CopyReportAsync(int reportId, string reportName)
+        {
+            try
+            {
+                var dto = new CopyReportDto
+                {
+                    ReportId = reportId,
+                    FormatName = reportName
+                };
+
+                var result = await _apiClient.PostAsync<int, CopyReportDto>(
+                    "api/ReportData/copy",
+                    dto);
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Error copying report: {ex.Message}");
+                return 0;
+            }
+        }
     }
 }

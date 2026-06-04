@@ -109,6 +109,7 @@
                 </DxFormLayoutItem>
 
                 <DxFormLayoutItem Caption="Customer Name" ColSpanMd="5">
+                    <div>
                     <DxComboBox TData="Account" TValue="int"
                                 Data="@CustomerList"
                                 TextFieldName="AccountName"
@@ -121,9 +122,15 @@
                                 ValueExpression="@(() => EditModel.JournalPartyId)"
                                 SearchMode="ListSearchMode.AutoSearch"
                                 ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+       
+            <div class="mt-1 text-danger fw-bold">
+                Outstanding :  @CustomerOutstandingText
+            </div>
+           </div>
                 </DxFormLayoutItem>
 
                 <DxFormLayoutItem Caption="Cash/Bank" ColSpanMd="4">
+                      <div>
                     <DxComboBox TData="Account" TValue="int"
                                 Data="@BankAccountList"
                                 TextFieldName="AccountName"
@@ -131,9 +138,15 @@
                                 ValueFieldName="AccountId"
                                 AllowUserInput="true"
                                 NullText="-- Select Bank/Cash --"
-                                @bind-Value="EditModel.JournalAccountId"
+                                Value="@EditModel.JournalAccountId"
+                                ValueChanged="@((int accid) => OnCashBankChanged(accid))"
+                                ValueExpression="@(() => EditModel.JournalAccountId)"
                                 SearchMode="ListSearchMode.AutoSearch"
                                 ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                                <div class="mt-1 text-primary fw-bold">
+            Balance : @CashBankBalanceText
+        </div>
+    </div>
                 </DxFormLayoutItem>
 
                 <DxFormLayoutItem Caption="Received Amount" ColSpanMd="3">
@@ -405,7 +418,26 @@
     [Parameter] public EventCallback OnSaved { get; set; }
     [Parameter] public int specificBillId  { get; set; }
 
-    private bool Visible { get; set; }
+   private bool _visible;
+private bool Visible
+{
+    get => _visible;
+    set
+    {
+        if (_visible == value) return;
+        
+        _visible = value;
+        
+        // Popup Closed
+        if (!value)
+        {
+            ResetPopupData();
+        }
+        
+        StateHasChanged();
+    }
+}
+
     private string Title { get; set; } = "Receipt Entry";
     private Journal EditModel { get; set; } = new();
     private IGrid ReceiptGrid { get; set; }
@@ -626,6 +658,18 @@ ShortageAccount = AccountList
             EditModel = JsonSerializer.Deserialize<Journal>(json) ?? new Journal();
             Title = "Edit Receipt";
             await LoadJournalDetails();
+            if (EditModel.JournalPartyId > 0)
+    {
+        await LoadCustomerOutstanding(
+            EditModel.JournalPartyId);
+    }
+
+    // ✅ ADD THIS
+    if (EditModel.JournalAccountId > 0)
+    {
+        await LoadCashBankBalance(
+            EditModel.JournalAccountId);
+    }
         }
         else
         {
@@ -640,6 +684,7 @@ ShortageAccount = AccountList
             }
             else{ShowBillSettlementGrid = false;}
             Title = "Add Receipt";
+           
 
         }
 
@@ -679,6 +724,8 @@ ShortageAccount = AccountList
     private async Task OnPartyChanged(int partyId, int? specificBillId = null)
     {
         EditModel.JournalPartyId = partyId;
+        await LoadCustomerOutstanding(partyId);
+
         SelectedCustomer = CustomerList.FirstOrDefault(a => a.AccountId == partyId);
         ShowBillSettlementGrid = SelectedCustomer?.AccountMethod?.Equals("BILL TO BILL", StringComparison.OrdinalIgnoreCase) == true;
 
@@ -1291,9 +1338,13 @@ EditModel.ShortageAccountId = EditModel.JournalTotalShort > 0 ? ShortageAccount?
 
     private void Hide()
     {
-        Visible = false;
-        PendingBills.Clear();
-        _allReceiptsCache = null;
+ //        Visible = false;
+ //        PendingBills.Clear();
+ //        _allReceiptsCache = null;
+ //         CustomerOutstanding = 0;
+ // CashBankBalance = 0;
+ Visible = false;
+    ResetPopupData();
     }
 
     public class BillSettlement
@@ -1311,4 +1362,226 @@ EditModel.ShortageAccountId = EditModel.JournalTotalShort > 0 ? ShortageAccount?
         public double BalanceAmount { get; set; }
         public bool IsSelected { get; set; }
     }
+
+
+
+    private double CustomerOutstanding = 0;
+private double CashBankBalance = 0;
+
+private string CustomerOutstandingText =>
+    CustomerOutstanding >= 0
+        ? $"₹ {CustomerOutstanding:N2} Dr"
+        : $"₹ {Math.Abs(CustomerOutstanding):N2} Cr";
+
+private string CashBankBalanceText =>
+    CashBankBalance >= 0
+        ? $"₹ {CashBankBalance:N2} Dr"
+        : $"₹ {Math.Abs(CashBankBalance):N2} Cr";
+
+   private async Task LoadCustomerOutstanding(int partyId)
+{
+    try
+    {
+        var allBills = await BillService.GetAllAsync();
+        var allJournals = await JournalService.GetAllAsync();
+       
+
+        var account = AccountList
+            .FirstOrDefault(a => a.AccountId == partyId);
+
+        // Opening Balance
+        double opening = 0;
+
+        if (account != null)
+        {
+             float openingFloat = account.AccountOpening ?? 0f;
+            opening = account.AccountBalanceType == "Dr"
+                ? openingFloat
+                : -openingFloat;
+        }
+
+        // 1. Total Bill Due
+        // double totalBillDue = allBills
+        //     .Where(b =>
+        //         b.BillPartyId == partyId &&
+        //         b.BillStatus)
+        //     .Sum(b => b.Bill_due_amt);
+
+        double salesDue = allBills
+    .Where(b =>
+        b.BillPartyId == partyId &&
+        b.BillStatus &&
+        b.BillType == "Sales")
+    .Sum(b => b.Bill_due_amt);
+
+double purchaseDue = allBills
+    .Where(b =>
+        b.BillPartyId == partyId &&
+        b.BillStatus &&
+        b.BillType == "Purchase")
+    .Sum(b => b.Bill_due_amt);
+
+        // 2. On Account Receipt
+        double onAccountReceipt = allJournals
+            .Where(j =>
+                j.JournalPartyId == partyId &&
+               j.JournalMasterType.Equals("RECEIPT",
+    StringComparison.OrdinalIgnoreCase)&&
+                j.JournalOnAccount > 0)
+            .Sum(j => j.JournalTotal);
+
+        // 3. On Account Payment
+        double onAccountPayment = allJournals
+            .Where(j =>
+                j.JournalPartyId == partyId &&
+                j.JournalMasterType.Equals("PAYMENT",
+    StringComparison.OrdinalIgnoreCase)&&
+                j.JournalOnAccount > 0)
+            .Sum(j => j.JournalTotal);
+
+//  journal entry
+          var allBillRefs = allJournals
+    .Where(j => j.BillRefDetails != null)
+    .SelectMany(j => j.BillRefDetails)
+    .ToList();
+
+double journalDebit = allBillRefs
+    .Where(x =>
+        x.BillRefAccountId == partyId &&
+        x.BillRefVchType == "DR")
+    .Sum(x => x.BillRefVchAmount);
+
+double journalCredit = allBillRefs
+    .Where(x =>
+        x.BillRefAccountId == partyId &&
+        x.BillRefVchType == "CR")
+    .Sum(x => x.BillRefVchAmount);
+
+        CustomerOutstanding = opening
+    + salesDue
+    - purchaseDue
+    - onAccountReceipt
+    + onAccountPayment + journalDebit
+    - journalCredit;
+
+        
+
+        StateHasChanged();
+    }
+    catch
+    {
+        CustomerOutstanding = 0;
+    }
+}
+private async Task OnCashBankChanged(int accountId)
+{
+    EditModel.JournalAccountId = accountId;
+
+    await LoadCashBankBalance(accountId);
+}
+private async Task LoadCashBankBalance(int accountId)
+{
+    try
+    {
+        var journals = await JournalService.GetAllAsync();
+
+         var account = AccountList
+            .FirstOrDefault(a => a.AccountId == accountId);
+
+        // Opening Balance
+        double opening = 0;
+
+        if (account != null)
+        {
+           // AccountOpening is float? — handle null and convert safely
+            float openingFloat = account.AccountOpening ?? 0f;
+            opening = account.AccountBalanceType == "Dr"
+                ? openingFloat
+                : -openingFloat;
+        }
+
+        double receiptAmount = journals
+            .Where(x =>
+                x.JournalAccountId == accountId &&
+                x.JournalMasterType.Equals("RECEIPT",
+    StringComparison.OrdinalIgnoreCase))
+            .Sum(x => x.JournalTotal);
+
+        double paymentAmount = journals
+            .Where(x =>
+                x.JournalAccountId == accountId &&
+                x.JournalMasterType.Equals("PAYMENT",
+    StringComparison.OrdinalIgnoreCase))
+            .Sum(x => x.JournalTotal);
+
+
+
+            // CONTRA IN (+)
+        double contraIn = journals
+            .Where(x =>
+                x.JournalPartyId == accountId &&
+                x.JournalMasterType.Equals(
+                    "CONTRA",
+                    StringComparison.OrdinalIgnoreCase))
+            .Sum(x => x.JournalTotal);
+
+        // CONTRA OUT (-)
+        double contraOut = journals
+            .Where(x =>
+                x.JournalAccountId == accountId &&
+                x.JournalMasterType.Equals(
+                    "CONTRA",
+                    StringComparison.OrdinalIgnoreCase))
+            .Sum(x => x.JournalTotal);
+            var allBillRefs = journals
+    .Where(j => j.BillRefDetails != null)
+    .SelectMany(j => j.BillRefDetails)
+    .ToList();
+
+double journalDebit = allBillRefs
+    .Where(x =>
+        x.BillRefAccountId == accountId &&
+        x.BillRefVchType == "DR")
+    .Sum(x => x.BillRefVchAmount);
+
+double journalCredit = allBillRefs
+    .Where(x =>
+        x.BillRefAccountId == accountId &&
+        x.BillRefVchType == "CR")
+    .Sum(x => x.BillRefVchAmount);
+
+        CashBankBalance = opening -receiptAmount +paymentAmount+contraIn -contraOut+ journalDebit
+    - journalCredit;
+
+
+        StateHasChanged();
+    }
+    catch
+    {
+        CashBankBalance = 0;
+    }
+}
+// private async Task OnPopupVisibleChanged(bool value)
+// {
+//     Visible = value;
+
+//     // Popup Closed
+//     if (!value)
+//     {
+//         ResetPopupData();
+//     }
+
+//     await InvokeAsync(StateHasChanged);
+// }
+private void ResetPopupData()
+{
+    CustomerOutstanding = 0;
+    CashBankBalance = 0;
+
+    PendingBills.Clear();
+
+    EditModel = new Journal();
+
+    _allReceiptsCache = null;
+}
 }

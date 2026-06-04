@@ -14,15 +14,18 @@ public class CustomReportStorageWebExtension : ReportStorageWebExtension
     private readonly ILogger<CustomReportStorageWebExtension> _logger;
     private readonly Dictionary<string, string> _layoutCache = new();
     private readonly SemaphoreSlim _cacheLock = new(1, 1);
-
+    private readonly ToasteService _ToasteService;
+  
     public CustomReportStorageWebExtension(
         ReportContextService context,
         ReportDataService reportDataService,
-        ILogger<CustomReportStorageWebExtension> logger)
+        ILogger<CustomReportStorageWebExtension> logger, ToasteService ToasteService)
     {
         _context = context;
         _reportDataService = reportDataService;
         _logger = logger;
+        _ToasteService = ToasteService;
+       
     }
 
     public override bool CanSetData(string url) => true;
@@ -173,8 +176,20 @@ public class CustomReportStorageWebExtension : ReportStorageWebExtension
                 else
                 {
                     // New report
+                    //using var ms = new MemoryStream();
+                    //new XtraReport().SaveLayoutToXml(ms);
+                    //return ms.ToArray();
+
+                    // ✅ NEW / COPIED REPORT
+                    if (!string.IsNullOrWhiteSpace(metadata.LayoutData))
+                    {
+                        return Encoding.UTF8.GetBytes(metadata.LayoutData);
+                    }
+
+                    // Blank report fallback
                     using var ms = new MemoryStream();
                     new XtraReport().SaveLayoutToXml(ms);
+
                     return ms.ToArray();
                 }
             }
@@ -205,6 +220,51 @@ public class CustomReportStorageWebExtension : ReportStorageWebExtension
             _logger.LogError(ex, "SetOrCreateData failed");
             throw;
         }
+        //var key = url.TrimStart('/');
+
+        //ReportData? metadata = null;
+
+        //try
+        //{
+        //    metadata = JsonSerializer.Deserialize<ReportData>(
+        //        Encoding.UTF8.GetString(Convert.FromBase64String(key)));
+        //}
+        //catch
+        //{
+        //}
+
+        //using var ms = new MemoryStream();
+        //report.SaveLayoutToXml(ms);
+
+        //var layoutXml = Encoding.UTF8.GetString(ms.ToArray());
+
+        //if (metadata == null)
+        //    throw new Exception("Metadata missing");
+
+        //metadata.LayoutData = layoutXml;
+
+        //if (metadata.ReportDataId > 0)
+        //{
+        //    var success = _reportDataService
+        //        .UpdateAsync(metadata)
+        //        .GetAwaiter()
+        //        .GetResult();
+
+        //    if (!success)
+        //        throw new Exception("Update failed");
+        //}
+        //else
+        //{
+        //    var newId = _reportDataService
+        //        .CreateAsync(metadata)
+        //        .GetAwaiter()
+        //        .GetResult();
+
+        //    if (!newId.HasValue)
+        //        throw new Exception("Create failed");
+
+        //    metadata.ReportDataId = newId.Value;
+        //}
     }
 
     private async Task SetOrCreateDataInternalAsync(XtraReport report, string url)
@@ -241,26 +301,37 @@ public class CustomReportStorageWebExtension : ReportStorageWebExtension
 
         // Determine whether to create or update
         bool success;
-        if (metadata.ReportDataId > 0 || reportId > 0)
+      
+        if (metadata.ReportDataId > 0 )
         {
             // Existing → Update
             metadata.ReportDataId = metadata.ReportDataId > 0 ? metadata.ReportDataId : reportId;
             success = await _reportDataService.UpdateAsync(metadata);
             if (!success)
+            {
                 throw new Exception("Update failed");
+            }
+            else
+            {
+                _ToasteService.Success("Update Succesfully");
 
-            _layoutCache[metadata.ReportDataId.ToString()] = layoutXml;
+            }
+
+                _layoutCache[metadata.ReportDataId.ToString()] = layoutXml;
         }
         else
         {
             // New → Create
             var newId = await _reportDataService.CreateAsync(metadata);
             if (!newId.HasValue)
+            {
                 throw new Exception("Create failed");
-
-            metadata.ReportDataId = newId.Value;
+            }
+            else { _ToasteService.Success("Create Succesfully"); }
+                metadata.ReportDataId = newId.Value;
             _layoutCache[newId.Value.ToString()] = layoutXml;
         }
+       
     }
     // Save report layout
     //public override void SetData(XtraReport report, string url)
@@ -283,7 +354,7 @@ public class CustomReportStorageWebExtension : ReportStorageWebExtension
 
     //    // Try to extract ID from metadata
     //    var metadata = TryDecodeMetadata(key);
-    //    if (metadata?.ReportDataId > 0)
+    //    if (metadata?.ReportDataId > 0)BuildReportUrl
     //    {
     //        key = metadata.ReportDataId.ToString();
     //    }

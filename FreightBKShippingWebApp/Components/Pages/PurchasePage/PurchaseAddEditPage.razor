@@ -1787,7 +1787,7 @@ private async void ReloadJobs()
 
             // Assign results
             RateMasterList = rateTask.Result;
-            ReportDataList = (reportTask.Result).Where(r => r.DocType.Equals("Bill", StringComparison.OrdinalIgnoreCase)).ToList();
+            ReportDataList = (reportTask.Result).Where(r => !string.IsNullOrEmpty(r?.DocType) && r.DocType.Equals("bill", StringComparison.OrdinalIgnoreCase)).ToList();
             ServiceList = serviceTask.Result;
             CurrList = currTask.Result;
             UnitList = unitTask.Result;

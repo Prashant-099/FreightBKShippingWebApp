@@ -230,7 +230,7 @@
         InitializeColumns();
         await CheckRole();
         await LoadJournals();
-        ReportDataList = (await ReportDataService.GetAllAsync()).Where(r => r.DocType.Equals("Journal", StringComparison.OrdinalIgnoreCase)).ToList();
+        ReportDataList = (await ReportDataService.GetAllAsync()).Where(r => !string.IsNullOrEmpty(r?.DocType) && r.DocType.Equals("Journal", StringComparison.OrdinalIgnoreCase)).ToList();
 
     }
 

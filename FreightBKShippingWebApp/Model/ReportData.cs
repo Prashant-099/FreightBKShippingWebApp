@@ -51,7 +51,7 @@ namespace FreightBKShippingWebApp.Model
         public DateTime? Updated { get; set; }
 
         [Column("reportdata_code")]
-        public DateTime? ReportCode { get; set; }
+        public string? ReportCode { get; set; }
 
     }
 
@@ -67,5 +67,11 @@ namespace FreightBKShippingWebApp.Model
         public string? NextFormat { get; set; }
         public int CompanyId { get; set; }
         public byte? Status { get; set; }
+    }
+    public class CopyReportDto
+    {
+        public int ReportId { get; set; }
+
+        public string FormatName { get; set; } = "";
     }
 }

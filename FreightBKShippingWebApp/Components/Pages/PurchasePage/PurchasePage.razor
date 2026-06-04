@@ -440,7 +440,7 @@ DefaultFileName="@PendingFileName"
        
         await CheckUserRole();
         await LoadBillsAsync();
-      ReportDataList = (await ReportDataService.GetAllAsync()).Where(r => r.DocType.Equals("Bill", StringComparison.OrdinalIgnoreCase)).ToList();
+        ReportDataList = (await ReportDataService.GetAllAsync()).Where(r => !string.IsNullOrEmpty(r?.DocType) && r.DocType.Equals("bill", StringComparison.OrdinalIgnoreCase)).ToList();
 
 
     }

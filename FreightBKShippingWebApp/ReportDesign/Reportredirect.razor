@@ -1,0 +1,53 @@
+﻿@page "/report-designer/{reportId:int}"
+@inject NavigationManager NavManager
+@inject LoadingService LoadingService
+@inject ReportContextService ReportContext
+@using System.Text
+@using System.Text.Json
+@using DevExpress.Blazor.Reporting
+@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Models
+@using FreightBKShippingWebApp.ReportDesignServices
+@using FreightBKShippingWebApp.Services
+
+<DxReportDesigner @key="ReportUrl" ReportName="@ReportUrl" Width="100%" Height="100vh" AllowMDI="true" />
+
+@code {
+    [Parameter] public int reportId { get; set; }
+    private string ReportUrl;
+
+    protected override void OnInitialized()
+    {
+        LoadingService.Show();
+
+        // 🧠 Try to get report data from shared context
+        var current = ReportContext.CurrentReportData;
+
+        if (current != null)
+        {
+            // ✅ Encode it in Base64 JSON (designer expects this)
+            var json = JsonSerializer.Serialize(current);
+            ReportUrl = Convert.ToBase64String(Encoding.UTF8.GetBytes(json));
+        }
+        else
+        {
+            // ⚠️ Fallback if context lost (like after browser refresh)
+            var fallback = new ReportData
+                {
+                    ReportDataId = reportId,
+                    FormatName = "Untitled",
+                    LayoutData = ""
+                };
+
+            var json = JsonSerializer.Serialize(fallback);
+            ReportUrl = Convert.ToBase64String(Encoding.UTF8.GetBytes(json));
+        }
+
+        LoadingService.Hide();
+    }
+
+    public void Dispose()
+    {
+        LoadingService.OnChange -= StateHasChanged;
+    }
+}

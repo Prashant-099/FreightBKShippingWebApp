@@ -235,7 +235,7 @@
         InitializeColumns();
         await CheckRole();
         await LoadContras();
-        ReportDataList = (await ReportDataService.GetAllAsync()).Where(r => r.DocType.Equals("Contra", StringComparison.OrdinalIgnoreCase)).ToList();
+        ReportDataList = (await ReportDataService.GetAllAsync()).Where(r => !string.IsNullOrEmpty(r?.DocType) && r.DocType.Equals("Contra", StringComparison.OrdinalIgnoreCase)).ToList();
     }
 
     private async Task LoadContras()

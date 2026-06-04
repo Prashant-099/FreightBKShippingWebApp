@@ -6,25 +6,23 @@
 @using Devexpress.Blazor
 @using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Models
+@using FreightBKShippingWebApp.ReportDesignServices
 @using FreightBKShippingWebApp.Services
 @using Microsoft.JSInterop
+@using System.Text.Json
 @inject IJSRuntime JS
 @inject NavigationManager Nav
 @inject ReportService ReportService
 @inject LoadingService LoadingService
 
+@inject ReportContextService ReportContext
 <div class="challan-page-container">
      <div class="scrollable-form-content">
-        @if (selectedReportData != null)
-        {
-            <DxReportDesigner @key="reportDesignerKey"
+        
+            <DxReportDesigner @key="ReportUrl" 
                       ReportName="@ReportUrl"
                               Width="100%" Height="100vh" @ref="reportDesigner" />
-        }
-        else
-        {
-            <p class="text-muted text-center mt-5">Please select a report format to continue.</p>
-        }
+       
     </div>
 </div>
 
@@ -44,9 +42,27 @@
 
     protected override void OnInitialized()
     {
-      
-        ReportUrl = reportId.ToString();
-        LoadingService.Show(); // ✅ Trigger global loader
+        // Register the component's InvokeAsync so LoadingService can marshal to the UI thread
+        LoadingService.SetInvoker(InvokeAsync);
+
+        // ReportUrl = reportId.ToString();
+        // LoadingService.Show(); // ✅ Trigger global loader
+        // LoadingService.OnChange += StateHasChanged;
+        var current = ReportContext.CurrentReportData;
+
+        if (current != null)
+        {
+            var json = JsonSerializer.Serialize(current);
+
+            ReportUrl = Convert.ToBase64String(
+                Encoding.UTF8.GetBytes(json));
+        }
+        else
+        {
+            ReportUrl = reportId.ToString();
+        }
+
+        LoadingService.Show();
         LoadingService.OnChange += StateHasChanged;
     }
   

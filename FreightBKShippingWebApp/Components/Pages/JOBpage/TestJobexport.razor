@@ -461,7 +461,7 @@
             await LoadJobsAsync();
            
            
-            ReportDataList = (await ReportDataService.GetAllAsync()).Where(r => r.DocType.Equals("Job", StringComparison.OrdinalIgnoreCase)).ToList();
+            ReportDataList = (await ReportDataService.GetAllAsync()).Where(r => !string.IsNullOrEmpty(r?.DocType) && r.DocType.Equals("Job", StringComparison.OrdinalIgnoreCase)).ToList();
             var voucherTask = await VoucherService.GetAllAsync(); // ya jo bhi tumhara method hai
 
             VoucherList = voucherTask.Where(v =>
