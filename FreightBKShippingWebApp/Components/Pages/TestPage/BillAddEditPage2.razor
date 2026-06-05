@@ -829,11 +829,13 @@
                                                 </DxGridDataColumn>
 
                                     <DxGridDataColumn FieldName="BillDetailCurrencyId" Caption="Curr." Visible="@(layoutManager?.GetColumnVisibility("BillDetailCurrencyId") ?? true)"
-                                                      Width="@(layoutManager?.GetColumnWidth("BillDetailCurrencyId") ?? "90px")">
+                                                      Width="@(layoutManager?.GetColumnWidth("BillDetailCurrencyId") ?? "90px")" >
                                                     <EditSettings>
                                                         <DxComboBoxSettings Data="@CurrList"
                                                         TextFieldName="CurrencySymbol"
-                                                        ValueFieldName="CurrencyId" />
+                                                                ValueFieldName="CurrencyId" SearchMode="ListSearchMode.AutoSearch"
+                                                                SearchFilterCondition="ListSearchFilterCondition.StartsWith"
+                                                                ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
                                                     </EditSettings>
                                                 </DxGridDataColumn>
                                     <DxGridDataColumn FieldName="BillDetailExtraChrg" Caption="Extra" Visible="@(layoutManager?.GetColumnVisibility("BillDetailExtraChrg") ?? true)"

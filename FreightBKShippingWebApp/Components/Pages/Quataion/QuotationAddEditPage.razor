@@ -441,7 +441,8 @@
                                                         ValueFieldName="ServiceId"
                                                         NullText="Select a Service"
                                                         AllowUserInput="true"
-                                                        SearchFilterCondition="ListSearchFilterCondition.Contains"
+                                                        SearchMode="ListSearchMode.AutoSearch"
+                                                        SearchFilterCondition="ListSearchFilterCondition.StartsWith"
                                                         ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
                                                         ValueChanged="@(newServiceId => OnServiceSelected(newServiceId, service))" />
                                         </CellEditTemplate>
@@ -525,7 +526,9 @@
                                         <EditSettings>
                                             <DxComboBoxSettings Data="@CurrList"
                                                                 TextFieldName="CurrencySymbol"
-                                                                ValueFieldName="CurrencyId" />
+                                                                ValueFieldName="CurrencyId"  SearchMode="ListSearchMode.AutoSearch"
+                                                                SearchFilterCondition="ListSearchFilterCondition.StartsWith"
+                                                                ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
                                         </EditSettings>
                                     </DxGridDataColumn>
                                     <DxGridDataColumn FieldName="BillDetailExtraChrg" Caption="Extra" Visible="@(layoutManager?.GetColumnVisibility("BillDetailExtraChrg") ?? true)"
