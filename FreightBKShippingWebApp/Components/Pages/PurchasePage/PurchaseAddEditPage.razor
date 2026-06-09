@@ -1607,7 +1607,10 @@ width:fit-content;
                     BillDetailUnit = detail.BillDetailUnit,
                     BillDetailUnitId = detail.BillDetailUnitId,
                     BillDetailRemarks = detail.BillDetailRemarks,
-                    BillDetailRate = detail.BillDetailActualRate,
+                    BillDetailRate =
+    detail != null && detail.BillDetailActualRate > 0
+        ? detail.BillDetailActualRate
+        : detail.BillDetailRate,
                     BillDetailQty = detail.BillDetailQty,
                     BillDetailExchRate = detail.BillDetailExchRate,
                     BillDetailCurrencyId = detail.BillDetailCurrencyId,
@@ -1662,6 +1665,7 @@ width:fit-content;
     // Dropdown lists (same as before)
     private List<Bill> bill = [];
     private List<Voucher> VoucherList = new();
+    private List<Account> AllAccountList = new();
     private List<Account> AccountList = new();
     private List<State> stateList = new();
     private List<Location> locationList = new();
@@ -1702,19 +1706,19 @@ width:fit-content;
         //await LoadCriticalDataAsync();
 
         // ✅ Load other data in background (non-blocking)
-      //  _ = LoadBackgroundDataAsync();
+        //  _ = LoadBackgroundDataAsync();
     }
 
     public void Dispose()
-{
+    {
         AuditLogService.OnJobChanged -= ReloadJobs;
-}
-private async void ReloadJobs()
-{
-    JobList = await JobService.GetAllAsync();
-    FilteredJobList = JobList.Where(j => j.JobYearId == YearStatechangeService.SelectedYearId.ToString()).ToList();
-    await InvokeAsync(StateHasChanged);
-}
+    }
+    private async void ReloadJobs()
+    {
+        JobList = await JobService.GetAllAsync();
+        FilteredJobList = JobList.Where(j => j.JobYearId == YearStatechangeService.SelectedYearId.ToString()).ToList();
+        await InvokeAsync(StateHasChanged);
+    }
     /// <summary>
     /// STAGE 1: Load ONLY data needed to display the form immediately
     /// This runs FIRST and FAST (2-4 API calls max)
@@ -1746,6 +1750,7 @@ private async void ReloadJobs()
         ))
     .ToList();
             var allAccounts = accountTask.Result;
+            AllAccountList = allAccounts;
             AccountList = allAccounts.Where(a => a.AccountTypeId == 14 || a.AccountTypeId == 18).ToList();
             BankList = allAccounts.Where(a => a.AccountTypeId == 10).ToList();
 
@@ -1998,6 +2003,12 @@ private async void ReloadJobs()
             billList = currentYearBills
                 .Where(b => salesVoucherIds.Contains(b.BillVoucherId) && b.Bill_due_amt>0)
                 .ToList();
+            if (EditModel.BillId > 0)
+            {
+                billList = currentYearBills
+                .Where(b => salesVoucherIds.Contains(b.BillVoucherId))
+                .ToList();
+            }
         }
         else if (voucher.VoucherGroup?.Equals("PURCHASE", StringComparison.OrdinalIgnoreCase) == true)
         {
@@ -2986,16 +2997,113 @@ private async void ReloadJobs()
                
                 else
                 {
-                    if (vouchergroup.VoucherGroup == "SALES")
+                    if (string.Equals(vouchergroup.VoucherGroup, "SALES",
+    StringComparison.OrdinalIgnoreCase))
                     {
+                        if (selectedGstslab.GstSlabSalesAccountId <= 0)
+                        {
+                            ToastService.Error("Sales Account not mapped in GST Slab");
+                            return;
+                        }
+
+                        // IGST
+                        if (selectedGstslab.GstSlabIgstAccountId <= 0)
+                        {
+                            ToastService.Error("IGST Account not mapped in GST Slab");
+                            return;
+                        }
+
+                        // CGST
+                        if (selectedGstslab.GstSlabCgstAccountId <= 0)
+                        {
+                            ToastService.Error("CGST Account not mapped in GST Slab");
+                            return;
+                        }
+
+                        // SGST
+                        if (selectedGstslab.GstSlabSgstAccountId <= 0)
+                        {
+                            ToastService.Error("SGST Account not mapped in GST Slab");
+                            return;
+                        }
                         item.BillDetailAccountId = selectedGstslab.GstSlabSalesAccountId;
                         item.BillDetailIgstAcId = selectedGstslab.GstSlabIgstAccountId;
                         item.BillDetailCgstAcId = selectedGstslab.GstSlabCgstAccountId;
                         item.BillDetailSgstAcId = selectedGstslab.GstSlabSgstAccountId;
+
                     }
-                    else if (vouchergroup.VoucherGroup == "PURCHASE")
+                    else if (string.Equals(vouchergroup.VoucherGroup, "PURCHASE",
+   StringComparison.OrdinalIgnoreCase))
                     {
+                        // Purchase Account
+                        if (selectedGstslab.GstSlabPurchaseAccountId <= 0)
+                        {
+                            ToastService.Error("Purchase Account not mapped in GST Slab");
+                            return;
+                        }
+
+                        // IGST
+                        if (selectedGstslab.GstSlabPigstAccountId <= 0)
+                        {
+                            ToastService.Error("Purchase IGST Account not mapped in GST Slab");
+                            return;
+                        }
+
+                        // CGST
+                        if (selectedGstslab.GstSlabPcgstAccountId <= 0)
+                        {
+                            ToastService.Error("Purchase CGST Account not mapped in GST Slab");
+                            return;
+                        }
+
+                        // SGST
+                        if (selectedGstslab.GstSlabPsgstAccountId <= 0)
+                        {
+                            ToastService.Error("Purchase SGST Account not mapped in GST Slab");
+                            return;
+                        }
                         item.BillDetailAccountId = selectedGstslab.GstSlabPurchaseAccountId;
+                        item.BillDetailIgstAcId = selectedGstslab.GstSlabPigstAccountId;
+                        item.BillDetailCgstAcId = selectedGstslab.GstSlabPcgstAccountId;
+                        item.BillDetailSgstAcId = selectedGstslab.GstSlabPsgstAccountId;
+                    }
+                    else if (string.Equals(vouchergroup.VoucherGroup, "DEBIT NOTE",
+     StringComparison.OrdinalIgnoreCase))
+                    {
+
+                        var purchaseReturnAccount = AllAccountList
+                                .FirstOrDefault(x =>
+                                    x.AccountName != null &&
+                                    x.AccountName.Contains(
+                                        "Purchase Return",
+                                        StringComparison.OrdinalIgnoreCase));
+
+                        if (purchaseReturnAccount == null)
+                        {
+                            ToastService.Error("Purchase Return Account not found");
+                            return;
+                        }
+
+                        if (selectedGstslab.GstSlabIgstAccountId <= 0)
+                        {
+                            ToastService.Error("IGST Account not mapped in GST Slab");
+                            return;
+                        }
+
+                        if (selectedGstslab.GstSlabCgstAccountId <= 0)
+                        {
+                            ToastService.Error("CGST Account not mapped in GST Slab");
+                            return;
+                        }
+
+                        if (selectedGstslab.GstSlabSgstAccountId <= 0)
+                        {
+                            ToastService.Error("SGST Account not mapped in GST Slab");
+                            return;
+                        }
+                        // Purchase Return
+                        item.BillDetailAccountId = purchaseReturnAccount.AccountId;
+
                         item.BillDetailIgstAcId = selectedGstslab.GstSlabPigstAccountId;
                         item.BillDetailCgstAcId = selectedGstslab.GstSlabPcgstAccountId;
                         item.BillDetailSgstAcId = selectedGstslab.GstSlabPsgstAccountId;
@@ -3348,6 +3456,104 @@ private async void ReloadJobs()
         LoadingService.Show();
         try
         {
+
+            if (string.Equals(EditModel.BillType, "DEBIT NOTE", StringComparison.OrdinalIgnoreCase))
+            {
+                if (EditModel.BillAgainstBillId > 0)
+                {
+                    var salesBill = billList
+                        .FirstOrDefault(b => b.BillId == EditModel.BillAgainstBillId);
+
+                    if (salesBill == null)
+                        return;
+
+                    decimal salesAmount = Convert.ToDecimal(salesBill.BillNetAmount);
+                    decimal currentEditAmount = Convert.ToDecimal(EditModel.BillNetAmount);
+
+                    decimal otherCreditNotesTotal = billList
+                        .Where(b =>
+                            b.BillAgainstBillId == salesBill.BillId &&
+                            b.BillType?.Equals("DEBIT NOTE", StringComparison.OrdinalIgnoreCase) == true &&
+                            b.BillId != EditModel.BillId)
+                        .Sum(b => Convert.ToDecimal(b.BillNetAmount));
+
+                    decimal maxAllowedCreditNote =
+                        salesAmount - otherCreditNotesTotal;
+
+                    if (currentEditAmount > maxAllowedCreditNote)
+                    {
+                        ToastService.Error(
+                            $"DEBIT Note cannot exceed available amount ({maxAllowedCreditNote:N2})"
+                        );
+                        return;
+                    }
+
+                }
+            }
+
+            if (EditModel.BillJobNo == null)
+            {
+
+                ToastService.Error(
+                        "Please Select the Job No."
+                    );
+                return;
+            }
+            if (EditModel.BillPartyId <= 0)
+            {
+
+                ToastService.Error(
+                        "Please Select the Party."
+                    );
+                return;
+            }
+            if (EditModel.BillJobType == null)
+            {
+
+                ToastService.Error(
+                        "Please Select the Job Type."
+                    );
+                return;
+            }
+
+            if (EditModel.BillIsRoundOff &&
+   Math.Abs(EditModel.BillRoundAmt) > 0)
+            {
+                var roundOffAccount = AllAccountList
+        .FirstOrDefault(x =>
+            x.AccountName != null &&
+            x.AccountName.Contains(
+                "round off",
+                StringComparison.OrdinalIgnoreCase));
+
+                if (roundOffAccount == null)
+                {
+                    ToastService.Error(
+                        "Round Off Account not found");
+
+                    return;
+                }
+
+                EditModel.BillRoundOffId =
+        roundOffAccount.AccountId;
+            }
+            else
+            {
+                EditModel.BillRoundOffId = 0;
+            }
+            var purchaseReturnAccount = AllAccountList
+                    .FirstOrDefault(x =>
+                        x.AccountName != null &&
+                        x.AccountName.Contains(
+                            "Purchase Return",
+                            StringComparison.OrdinalIgnoreCase));
+
+            if (purchaseReturnAccount == null)
+            {
+                ToastService.Error("Purchase Return Account not found");
+                return;
+            }
+
             // --- STEP 1: Apply Unsaved Changes ---
             foreach (var unsavedChange in UnsavedChanges)
             {
@@ -3523,6 +3729,44 @@ private async void ReloadJobs()
                 ToastService.Error(
                         "Please Select the Job Type."
                     );
+                return;
+            }
+
+             if (EditModel.BillIsRoundOff &&
+    Math.Abs(EditModel.BillRoundAmt) > 0)
+{
+                var roundOffAccount = AllAccountList
+        .FirstOrDefault(x =>
+            x.AccountName != null &&
+            x.AccountName.Contains(
+                "round off",
+                StringComparison.OrdinalIgnoreCase));
+
+    if (roundOffAccount == null)
+    {
+        ToastService.Error(
+            "Round Off Account not found");
+
+        return;
+    }
+
+                EditModel.BillRoundOffId =
+        roundOffAccount.AccountId;
+}
+else
+{
+    EditModel.BillRoundOffId = 0;
+}
+            var purchaseReturnAccount = AllAccountList
+                    .FirstOrDefault(x =>
+                        x.AccountName != null &&
+                        x.AccountName.Contains(
+                            "Purchase Return",
+                            StringComparison.OrdinalIgnoreCase));
+
+            if (purchaseReturnAccount == null)
+            {
+                ToastService.Error("Purchase Return Account not found");
                 return;
             }
             // --- STEP 1: Apply Unsaved Changes ---

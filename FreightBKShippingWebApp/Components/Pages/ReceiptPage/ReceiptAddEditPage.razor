@@ -282,7 +282,14 @@
 
                             <DxGridDataColumn FieldName="BalanceAmount" Caption="Balance" ReadOnly="true" DisplayFormat="N2" 
                                               Width="@(layoutManager?.GetColumnWidth("BalanceAmount") ?? "120px")"
-                                              Visible="@(layoutManager?.GetColumnVisibility("BalanceAmount") ?? true)" />
+                                              Visible="@(layoutManager?.GetColumnVisibility("BalanceAmount") ?? true)" >
+                                              <CellDisplayTemplate Context="ctx">
+        @{
+            var item = (BillSettlement)ctx.DataItem;
+        }
+        @item.BalanceAmount.ToString("N2")
+    </CellDisplayTemplate>
+</DxGridDataColumn>
                         </Columns>
 
                         <TotalSummary>
@@ -418,35 +425,35 @@
     [Parameter] public EventCallback OnSaved { get; set; }
     [Parameter] public int specificBillId  { get; set; }
 
-   private bool _visible;
-private bool Visible
-{
-    get => _visible;
-    set
+    private bool _visible;
+    private bool Visible
     {
-        if (_visible == value) return;
-        
-        _visible = value;
-        
-        // Popup Closed
-        if (!value)
+        get => _visible;
+        set
         {
-            ResetPopupData();
+            if (_visible == value) return;
+
+            _visible = value;
+
+            // Popup Closed
+            if (!value)
+            {
+                ResetPopupData();
+            }
+
+            StateHasChanged();
         }
-        
-        StateHasChanged();
     }
-}
 
     private string Title { get; set; } = "Receipt Entry";
     private Journal EditModel { get; set; } = new();
     private IGrid ReceiptGrid { get; set; }
 
     private List<Voucher> VoucherList = new();
-     private List<Account> AccountList = new();
-     private Account? TdsAccount;
-private Account? DiscountAccount;
-private Account? ShortageAccount;
+    private List<Account> AccountList = new();
+    private Account? TdsAccount;
+    private Account? DiscountAccount;
+    private Account? ShortageAccount;
     private List<Account> CustomerList = new();
     private List<Account> BankAccountList = new();
     private List<BillSettlement> PendingBills = new();
@@ -612,23 +619,23 @@ private Account? ShortageAccount;
                 .Where(v => v.VoucherGroup?.Equals("RECEIPT", StringComparison.OrdinalIgnoreCase) == true)
                 .ToList();
 
-             AccountList = accountTask.Result;
+            AccountList = accountTask.Result;
 
             CustomerList = AccountList.Where(a => a.AccountTypeId == 18).ToList();
-            BankAccountList = AccountList.Where(a => a.AccountTypeId == 10||a.AccountTypeId ==11).ToList();
+            BankAccountList = AccountList.Where(a => a.AccountTypeId == 10 || a.AccountTypeId == 11).ToList();
 
-             TdsAccount = AccountList
-    .Where(a => a.AccountGroupId == 3 && a.AccountName.ToLower().Contains("tds") )
-    .FirstOrDefault();
+            
+            TdsAccount = AccountList
+       .Where(a =>  a.AccountName.Contains("tds", StringComparison.OrdinalIgnoreCase))
+       .FirstOrDefault();
 
-DiscountAccount = AccountList
-    .Where(a => a.AccountGroupId == 26 && a.AccountName.ToLower().Contains("discount"))
-    .FirstOrDefault();
+            DiscountAccount = AccountList
+                .Where(a =>  a.AccountName.Contains("discount", StringComparison.OrdinalIgnoreCase))
+                .FirstOrDefault();
 
-ShortageAccount = AccountList
-    .Where(a => a.AccountGroupId == 26 && a.AccountName.ToLower().Contains("shortage"))
-    .FirstOrDefault();
-
+            ShortageAccount = AccountList
+                .Where(a =>a.AccountName.Contains("shortage", StringComparison.OrdinalIgnoreCase))
+                .FirstOrDefault();
         }
         catch (Exception ex)
         {
@@ -1002,8 +1009,10 @@ ShortageAccount = AccountList
         var remaining = GetRemainingAmount(actualBill, b => b.SettledAmount);
         actualBill.SettledAmount = Math.Min(Math.Min(newValue, actualBill.DueAmount), remaining);
         settlement.SettledAmount = actualBill.SettledAmount;
+         
         //AutoSelect(settlement);
         UpdateBillBalance(actualBill);
+         settlement.BalanceAmount = actualBill.BalanceAmount; 
         CalculateTotals();
         if (ReceiptGrid != null)
         {
@@ -1030,8 +1039,10 @@ ShortageAccount = AccountList
     actualBill.DiscountAmount = Math.Min(Math.Max(newValue, 0), maxDiscount);
         // actualBill.DiscountAmount = Math.Min(newValue, remaining);
         settlement.DiscountAmount = actualBill.DiscountAmount;
+          
         //AutoSelect(settlement);
         UpdateBillBalance(actualBill);
+        settlement.BalanceAmount = actualBill.BalanceAmount; 
         CalculateTotals();
         if (ReceiptGrid != null)
         {
@@ -1050,8 +1061,10 @@ ShortageAccount = AccountList
         var remaining = GetRemainingAmount(actualBill, b => b.TdsAmount) ;
         actualBill.TdsAmount = Math.Min(newValue, remaining);
         settlement.TdsAmount = actualBill.TdsAmount;
+         
         // AutoSelect(settlement);
         UpdateBillBalance(actualBill);
+         settlement.BalanceAmount = actualBill.BalanceAmount; 
         CalculateTotals();
         if (ReceiptGrid != null)
         {
@@ -1070,8 +1083,10 @@ ShortageAccount = AccountList
         var remaining = GetRemainingAmount(actualBill, b => b.ShortageAmount);
         actualBill.ShortageAmount = Math.Min(newValue, remaining);
         settlement.ShortageAmount = actualBill.ShortageAmount;
+         
         //AutoSelect(settlement);
         UpdateBillBalance(actualBill);
+         settlement.BalanceAmount = actualBill.BalanceAmount; 
         CalculateTotals();
         if (ReceiptGrid != null)
         {
@@ -1144,9 +1159,18 @@ ShortageAccount = AccountList
 
               // EditModel.JournalTotal = (float)(totalSettled);
              // double total = (float)(totalSettled + totalDiscount + totalTds + totalShortage);
-            EditModel.JournalTotal = totalSettled + EditModel.JournalTotalDiscount + EditModel.JournalTotalTds + EditModel.JournalTotalShort;
+              EditModel.JournalOnAccount =
+        (float)Math.Max(
+            EditModel.JournalAmount
+            - totalSettled
+            - totalDiscount
+            - totalTds
+            - totalShortage,
+            0
+        );
+            EditModel.JournalTotal = totalSettled + EditModel.JournalTotalDiscount + EditModel.JournalTotalTds + EditModel.JournalTotalShort+ EditModel.JournalOnAccount ;
             // EditModel.JournalOnAccount = (float)(EditModel.JournalAmount - total);
-            EditModel.JournalOnAccount = (float)(EditModel.JournalAmount -  EditModel.JournalTotal);
+            // EditModel.JournalOnAccount = (float)(EditModel.JournalAmount -  EditModel.JournalTotal);
         }
         else
         {
@@ -1177,12 +1201,14 @@ ShortageAccount = AccountList
                 {
                     var alreadySettled = await GetAlreadySettledAmount(settlementBill.BillId);
 
-                    var currentReceiptTotal =
+                    var thisReceiptTotal  =
                         refDetail.BillRefVchAmount +
                         refDetail.BillRefVchDis +
                         refDetail.BillRefVchTds +
                         refDetail.BillRefVchShort;
 
+                        double dueAtTimeOfThisReceipt =     settlementBill.Bill_due_amt + thisReceiptTotal;
+                         double BalanceamtfThisReceipt =     dueAtTimeOfThisReceipt - thisReceiptTotal;
                   //  var due = Math.Max(settlementBill.BillNetAmount - alreadySettled, 0);
 
                     PendingBills.Add(new BillSettlement
@@ -1192,21 +1218,21 @@ ShortageAccount = AccountList
                         BillDate = settlementBill.BillDate,
                         VoucherType = settlementBill.Vouchname ?? "Sales",
                         BillTotal = settlementBill.BillNetAmount,
-                        DueAmount = settlementBill.Bill_due_amt,
+                        DueAmount = dueAtTimeOfThisReceipt,
                         SettledAmount = refDetail.BillRefVchAmount,
                         DiscountAmount = refDetail.BillRefVchDis,
                         TdsAmount = refDetail.BillRefVchTds,
                         ShortageAmount = refDetail.BillRefVchShort,
-                        BalanceAmount = refDetail.BillRefVchBalance,
+                        BalanceAmount = BalanceamtfThisReceipt,
                         IsSelected = true
                     });
                 }
             }
 
-            foreach (var bill in PendingBills)
-            {
-                UpdateBillBalance(bill);
-            }
+            // foreach (var bill in PendingBills)
+            // {
+            //     UpdateBillBalance(bill);
+            // }
            
             CalculateTotals();
             StateHasChanged();
@@ -1297,7 +1323,7 @@ EditModel.ShortageAccountId = EditModel.JournalTotalShort > 0 ? ShortageAccount?
                 }
                 else
                 {
-                 ToastService.Success( JournalService.LastError?? "Failed To Create Receipt!");
+                 ToastService.Error( JournalService.LastError?? "Failed To Create Receipt!");
                 return;
                 }
                

@@ -281,7 +281,14 @@
 
                             <DxGridDataColumn FieldName="BalanceAmount" Caption="Balance" ReadOnly="true" DisplayFormat="N2" 
                                               Width="@(layoutManager?.GetColumnWidth("BalanceAmount") ?? "120px")"
-                                              Visible="@(layoutManager?.GetColumnVisibility("BalanceAmount") ?? true)" />
+                                              Visible="@(layoutManager?.GetColumnVisibility("BalanceAmount") ?? true)" >
+                                              <CellDisplayTemplate Context="ctx">
+        @{
+            var item = (BillSettlement)ctx.DataItem;
+        }
+        @item.BalanceAmount.ToString("N2")
+    </CellDisplayTemplate>
+</DxGridDataColumn>
                         </Columns>
 
                         <TotalSummary>
@@ -616,16 +623,27 @@ private Account? ShortageAccount;
             BankAccountList = AccountList.Where(a => a.AccountTypeId == 10 || a.AccountTypeId == 11).ToList();
 
              TdsAccount = AccountList
-    .Where(a => a.AccountGroupId == 3)
+    .Where(a =>  a.AccountName.Contains("tds", StringComparison.OrdinalIgnoreCase))
     .FirstOrDefault();
-
+    if (TdsAccount == null)
+{
+    throw new Exception("TDS Account not found.");
+}
 DiscountAccount = AccountList
-    .Where(a => a.AccountGroupId == 26 && a.AccountName.ToLower().Contains("discount"))
+    .Where(a => a.AccountName.Contains("discount", StringComparison.OrdinalIgnoreCase))
     .FirstOrDefault();
-
+    if (DiscountAccount == null)
+{
+    throw new Exception("Discount Account not found.");
+}
 ShortageAccount = AccountList
-    .Where(a => a.AccountGroupId == 26 && a.AccountName.ToLower().Contains("shortage"))
+    .Where(a =>  a.AccountName.Contains("shortage", StringComparison.OrdinalIgnoreCase))
     .FirstOrDefault();
+    if (ShortageAccount == null)
+{
+    throw new Exception("Shortage Account not found.");
+}
+
 
         }
         catch (Exception ex)
@@ -1002,6 +1020,7 @@ var purchaseVoucherIds = allVouchers
         settlement.SettledAmount = actualBill.SettledAmount;
         //AutoSelect(settlement);
         UpdateBillBalance(actualBill);
+          settlement.BalanceAmount = actualBill.BalanceAmount; 
         CalculateTotals();
         if (ReceiptGrid != null)
         {
@@ -1030,6 +1049,7 @@ var purchaseVoucherIds = allVouchers
         settlement.DiscountAmount = actualBill.DiscountAmount;
         //AutoSelect(settlement);
         UpdateBillBalance(actualBill);
+          settlement.BalanceAmount = actualBill.BalanceAmount; 
         CalculateTotals();
         if (ReceiptGrid != null)
         {
@@ -1050,6 +1070,7 @@ var purchaseVoucherIds = allVouchers
         settlement.TdsAmount = actualBill.TdsAmount;
         // AutoSelect(settlement);
         UpdateBillBalance(actualBill);
+          settlement.BalanceAmount = actualBill.BalanceAmount; 
         CalculateTotals();
         if (ReceiptGrid != null)
         {
@@ -1070,6 +1091,7 @@ var purchaseVoucherIds = allVouchers
         settlement.ShortageAmount = actualBill.ShortageAmount;
         //AutoSelect(settlement);
         UpdateBillBalance(actualBill);
+          settlement.BalanceAmount = actualBill.BalanceAmount; 
         CalculateTotals();
         if (ReceiptGrid != null)
         {
@@ -1143,9 +1165,19 @@ var purchaseVoucherIds = allVouchers
 
              // EditModel.JournalTotal = (float)(totalSettled);
              // double total = (float)(totalSettled + totalDiscount + totalTds + totalShortage);
-            EditModel.JournalTotal = totalSettled + EditModel.JournalTotalDiscount + EditModel.JournalTotalTds + EditModel.JournalTotalShort;
+              EditModel.JournalOnAccount =
+        (float)Math.Max(
+            EditModel.JournalAmount
+            - totalSettled
+            - totalDiscount
+            - totalTds
+            - totalShortage,
+            0
+        );
+          
+            EditModel.JournalTotal = totalSettled + EditModel.JournalTotalDiscount + EditModel.JournalTotalTds + EditModel.JournalTotalShort+EditModel.JournalOnAccount;
             // EditModel.JournalOnAccount = (float)(EditModel.JournalAmount - total);
-            EditModel.JournalOnAccount = (float)(EditModel.JournalAmount -  EditModel.JournalTotal);
+            // EditModel.JournalOnAccount = (float)(EditModel.JournalAmount -  EditModel.JournalTotal);
         }
         else
         {
@@ -1176,11 +1208,14 @@ var purchaseVoucherIds = allVouchers
                 {
                     var alreadySettled = await GetAlreadySettledAmount(settlementBill.BillId);
 
-                    var currentReceiptTotal =
+                    var thisPaymentTotal  =
                         refDetail.BillRefVchAmount +
                         refDetail.BillRefVchDis +
                         refDetail.BillRefVchTds +
                         refDetail.BillRefVchShort;
+
+                        double dueAtTimeOfThisPayment =     settlementBill.Bill_due_amt + thisPaymentTotal;
+                         double BalanceamtfThisPayment =     dueAtTimeOfThisPayment - thisPaymentTotal;
 
                    // var due = Math.Max(settlementBill.BillNetAmount - alreadySettled, 0);
 
@@ -1191,7 +1226,7 @@ var purchaseVoucherIds = allVouchers
                         BillDate = settlementBill.BillDate,
                         VoucherType = settlementBill.Vouchname ?? "Sales",
                         BillTotal = settlementBill.BillNetAmount,
-                        DueAmount = settlementBill.Bill_due_amt,
+                        DueAmount = dueAtTimeOfThisPayment,
                         SettledAmount = refDetail.BillRefVchAmount,
                         DiscountAmount = refDetail.BillRefVchDis,
                         TdsAmount = refDetail.BillRefVchTds,
@@ -1298,7 +1333,7 @@ EditModel.ShortageAccountId = EditModel.JournalTotalShort > 0 ? ShortageAccount?
                 }
                 else
                 {
-                 ToastService.Success( JournalService.LastError?? "Failed To Create Payment!");
+                 ToastService.Error( JournalService.LastError?? "Failed To Create Payment!");
                 return;
                 }
             }
@@ -1326,7 +1361,7 @@ EditModel.ShortageAccountId = EditModel.JournalTotalShort > 0 ? ShortageAccount?
         }
         catch (Exception ex)
         {
-            ToastService.Error($"Error saving receipt: {ex.Message}");
+            ToastService.Error($"Error saving Payement: {ex.Message}");
         }
         finally
         {

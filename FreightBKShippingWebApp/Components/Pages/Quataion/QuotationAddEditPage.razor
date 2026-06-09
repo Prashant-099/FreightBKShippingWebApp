@@ -850,6 +850,7 @@
 
     // Data lists
     private List<Voucher> VoucherList = new();
+    private List<Account> AllAccountList = new();
     private List<Account> AccountList = new();
     private List<State> stateList = new();
     private List<Service> ServiceList = new();
@@ -903,6 +904,7 @@
             CompanyList = companyTask.Result;
 
             var allAccounts = accountTask.Result;
+            AllAccountList = allAccounts;
             AccountList = allAccounts.Where(a => a.AccountTypeId == 14 || a.AccountTypeId == 18).ToList();
             BankList = allAccounts.Where(a => a.AccountTypeId == 10).ToList();
 
@@ -1693,6 +1695,41 @@
 
     private async Task CopyDetails()
     {
+        if (EditModel.BillPartyId <= 0)
+        {
+
+            ToastService.Error(
+                    "Please Select the Party."
+                );
+            return;
+        }
+
+        if (EditModel.BillIsRoundOff &&
+Math.Abs(EditModel.BillRoundAmt) > 0)
+        {
+            var roundOffAccount = AllAccountList
+    .FirstOrDefault(x =>
+        x.AccountName != null &&
+        x.AccountName.Contains(
+            "round off",
+            StringComparison.OrdinalIgnoreCase));
+
+            if (roundOffAccount == null)
+            {
+                ToastService.Error(
+                    "Round Off Account not found");
+
+                return;
+            }
+
+            EditModel.BillRoundOffId =
+    roundOffAccount.AccountId;
+        }
+        else
+        {
+            EditModel.BillRoundOffId = 0;
+        }
+
         LoadingService.Show();
         try
         {
@@ -1774,6 +1811,33 @@
                 );
             return;
         }
+
+        if (EditModel.BillIsRoundOff &&
+Math.Abs(EditModel.BillRoundAmt) > 0)
+        {
+            var roundOffAccount = AllAccountList
+    .FirstOrDefault(x =>
+        x.AccountName != null &&
+        x.AccountName.Contains(
+            "round off",
+            StringComparison.OrdinalIgnoreCase));
+
+            if (roundOffAccount == null)
+            {
+                ToastService.Error(
+                    "Round Off Account not found");
+
+                return;
+            }
+
+            EditModel.BillRoundOffId =
+    roundOffAccount.AccountId;
+        }
+        else
+        {
+            EditModel.BillRoundOffId = 0;
+        }
+
         LoadingService.Show();
         try
         {
