@@ -2037,10 +2037,10 @@ width:fit-content;
         // ✅ Show loading only if critical data not loaded
         if (!isCriticalDataLoaded)
         {
-           
+
             _ = LoadBackgroundDataAsync();
             await LoadCriticalDataAsync();
-         
+
         }
         EditModel = bill ?? new Bill();
         // Create EditContext when showing the form
@@ -2204,10 +2204,10 @@ width:fit-content;
             //   }
             //   EditModel.BillVoucherId = purchaseVoucherId;
             await OnJobDetailsChanged(EditModel?.BillJobNo??"");
-         await    OnvoucherChanged(EditModel,EditModel.BillVoucherId);
+            await    OnvoucherChanged(EditModel,EditModel.BillVoucherId);
 
 
-          await   OnBillAgainstChanged(EditModel.BillQuatationId);
+            await   OnBillAgainstChanged(EditModel.BillQuatationId);
 
 
             // nextSNo = 1;
@@ -2217,7 +2217,7 @@ width:fit-content;
                 Quotationvisible = true;
 
             }
-           
+
             Title = "Add Purchase Bill";
             //InitializeInvoiceDetails();
             IsPartyLocked = false;
@@ -2481,7 +2481,7 @@ width:fit-content;
 
     private void OnJobTypeChanged(string selectedType)
     {
-       
+
         JobType = selectedType;
         EditModel.BillJobType = selectedType;
         FilteredJobList = JobList
@@ -2528,45 +2528,45 @@ width:fit-content;
 
 
 
-            var finYearId = YearStatechangeService.SelectedYearId;
-            try
-            {
-                var result = await YearStatechangeService.GeneratebillNoAsync(voucherId, finYearId , model.BillBranchId);
+        var finYearId = YearStatechangeService.SelectedYearId;
+        try
+        {
+            var result = await YearStatechangeService.GeneratebillNoAsync(voucherId, finYearId , model.BillBranchId);
 
-                model.BillPrefix = result.prefix;
-                model.BillNo = result.prefix + result.number + result.suffix;
-                model.BillPostfix = result.suffix;
-                model.BillVchNo = int.Parse(result.number);
-                StateHasChanged();
-            }
-            catch (Exception ex)
-            {
-                ToastService.Error("Error: " + ex.Message);
-            }
-            //  if (voucher.VoucherGroup?.Equals("DEBIT NOTE", StringComparison.OrdinalIgnoreCase) == true)
-            // {
-            //     IsCreditnote = true;
-            //     var salesVoucherIds = VoucherList
-            //         .Where(v => v.VoucherGroup?.Equals("PURCHASE", StringComparison.OrdinalIgnoreCase) == true)
-            //         .Select(v => v.VoucherId)
-            //         .ToList();
+            model.BillPrefix = result.prefix;
+            model.BillNo = result.prefix + result.number + result.suffix;
+            model.BillPostfix = result.suffix;
+            model.BillVchNo = int.Parse(result.number);
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error("Error: " + ex.Message);
+        }
+        //  if (voucher.VoucherGroup?.Equals("DEBIT NOTE", StringComparison.OrdinalIgnoreCase) == true)
+        // {
+        //     IsCreditnote = true;
+        //     var salesVoucherIds = VoucherList
+        //         .Where(v => v.VoucherGroup?.Equals("PURCHASE", StringComparison.OrdinalIgnoreCase) == true)
+        //         .Select(v => v.VoucherId)
+        //         .ToList();
 
-            //     billList = (await BillService.GetAllAsync())
-            //         .Where(b =>
-            //             b.BillYearId == YearStatechangeService.SelectedYearId &&
-            //             salesVoucherIds.Contains(b.BillVoucherId))
-            //         .ToList();
-            // }
-            // else
-            // {
+        //     billList = (await BillService.GetAllAsync())
+        //         .Where(b =>
+        //             b.BillYearId == YearStatechangeService.SelectedYearId &&
+        //             salesVoucherIds.Contains(b.BillVoucherId))
+        //         .ToList();
+        // }
+        // else
+        // {
 
-            //     IsCreditnote = false;
-            // }
+        //     IsCreditnote = false;
+        // }
         if (voucher != null)
         {
             await LoadBillListBasedOnVoucherType(voucher);
         }
-       // }
+        // }
     }
 
     private void Hide()
@@ -2574,7 +2574,8 @@ width:fit-content;
         Visible = false;
         BillDetails.Clear();
         UnsavedChanges.Clear();
-      
+        ResetToastMessages();
+
 
     }
 
@@ -2956,7 +2957,7 @@ width:fit-content;
                 var vouchergroup = VoucherList.FirstOrDefault(v => v.VoucherId == EditModel.BillVoucherId);
                 if (vouchergroup == null)
                 {
-                   
+
                     return;
                 }
                 if (item.BillDetailRate == 0 || item.BillDetailRate == null || item.BillDetailRate == default(double))
@@ -2994,36 +2995,36 @@ width:fit-content;
 
                     }
                 }
-               
+
                 else
                 {
                     if (string.Equals(vouchergroup.VoucherGroup, "SALES",
     StringComparison.OrdinalIgnoreCase))
                     {
-                        if (selectedGstslab.GstSlabSalesAccountId <= 0)
+                        if (!selectedGstslab.GstSlabSalesAccountId.HasValue || selectedGstslab.GstSlabSalesAccountId <= 0)
                         {
-                            ToastService.Error("Sales Account not mapped in GST Slab");
+                            ShowErrorOnce($"Sales Account not mapped in GST Slab {billdetailsabid.GstSlabName}");
                             return;
                         }
 
                         // IGST
-                        if (selectedGstslab.GstSlabIgstAccountId <= 0)
+                        if (!selectedGstslab.GstSlabIgstAccountId.HasValue ||selectedGstslab.GstSlabIgstAccountId <= 0)
                         {
-                            ToastService.Error("IGST Account not mapped in GST Slab");
+                            ShowErrorOnce($"IGST Account not mapped in GST Slab {billdetailsabid.GstSlabName}");
                             return;
                         }
 
                         // CGST
-                        if (selectedGstslab.GstSlabCgstAccountId <= 0)
+                        if (!selectedGstslab.GstSlabCgstAccountId.HasValue ||selectedGstslab.GstSlabCgstAccountId <= 0)
                         {
-                            ToastService.Error("CGST Account not mapped in GST Slab");
+                            ShowErrorOnce($"CGST Account not mapped in GST Slab {billdetailsabid.GstSlabName}");
                             return;
                         }
 
                         // SGST
-                        if (selectedGstslab.GstSlabSgstAccountId <= 0)
+                        if (!selectedGstslab.GstSlabSgstAccountId.HasValue || selectedGstslab.GstSlabSgstAccountId <= 0)
                         {
-                            ToastService.Error("SGST Account not mapped in GST Slab");
+                            ShowErrorOnce($"SGST Account not mapped in GST Slab {billdetailsabid.GstSlabName}");
                             return;
                         }
                         item.BillDetailAccountId = selectedGstslab.GstSlabSalesAccountId;
@@ -3036,30 +3037,30 @@ width:fit-content;
    StringComparison.OrdinalIgnoreCase))
                     {
                         // Purchase Account
-                        if (selectedGstslab.GstSlabPurchaseAccountId <= 0)
+                        if (!selectedGstslab.GstSlabPurchaseAccountId.HasValue || selectedGstslab.GstSlabPurchaseAccountId <= 0)
                         {
-                            ToastService.Error("Purchase Account not mapped in GST Slab");
+                            ShowErrorOnce($"Purchase Account not mapped in GST Slab {billdetailsabid.GstSlabName}");
                             return;
                         }
 
                         // IGST
-                        if (selectedGstslab.GstSlabPigstAccountId <= 0)
+                        if (!selectedGstslab.GstSlabPigstAccountId.HasValue || selectedGstslab.GstSlabPigstAccountId <= 0)
                         {
-                            ToastService.Error("Purchase IGST Account not mapped in GST Slab");
+                            ShowErrorOnce($" IGST Account not mapped in GST Slab {billdetailsabid.GstSlabName}");
                             return;
                         }
 
                         // CGST
-                        if (selectedGstslab.GstSlabPcgstAccountId <= 0)
+                        if (!selectedGstslab.GstSlabPcgstAccountId.HasValue || selectedGstslab.GstSlabPcgstAccountId <= 0)
                         {
-                            ToastService.Error("Purchase CGST Account not mapped in GST Slab");
+                            ShowErrorOnce($" CGST Account not mapped in GST Slab {billdetailsabid.GstSlabName}");
                             return;
                         }
 
                         // SGST
-                        if (selectedGstslab.GstSlabPsgstAccountId <= 0)
+                        if (!selectedGstslab.GstSlabPsgstAccountId.HasValue || selectedGstslab.GstSlabPsgstAccountId <= 0)
                         {
-                            ToastService.Error("Purchase SGST Account not mapped in GST Slab");
+                            ShowErrorOnce($" SGST Account not mapped in GST Slab {billdetailsabid.GstSlabName}");
                             return;
                         }
                         item.BillDetailAccountId = selectedGstslab.GstSlabPurchaseAccountId;
@@ -3080,25 +3081,25 @@ width:fit-content;
 
                         if (purchaseReturnAccount == null)
                         {
-                            ToastService.Error("Purchase Return Account not found");
+                            ShowErrorOnce("Purchase Return Account not found");
                             return;
                         }
 
-                        if (selectedGstslab.GstSlabIgstAccountId <= 0)
+                        if (!selectedGstslab.GstSlabIgstAccountId.HasValue ||selectedGstslab.GstSlabIgstAccountId <= 0)
                         {
-                            ToastService.Error("IGST Account not mapped in GST Slab");
+                            ShowErrorOnce($"IGST Account not mapped in GST Slab {billdetailsabid.GstSlabName}");
                             return;
                         }
 
-                        if (selectedGstslab.GstSlabCgstAccountId <= 0)
+                        if (!selectedGstslab.GstSlabCgstAccountId.HasValue ||selectedGstslab.GstSlabCgstAccountId <= 0)
                         {
-                            ToastService.Error("CGST Account not mapped in GST Slab");
+                            ShowErrorOnce($"CGST Account not mapped in GST Slab {billdetailsabid.GstSlabName}");
                             return;
                         }
 
-                        if (selectedGstslab.GstSlabSgstAccountId <= 0)
+                        if (!selectedGstslab.GstSlabSgstAccountId.HasValue || selectedGstslab.GstSlabSgstAccountId <= 0)
                         {
-                            ToastService.Error("SGST Account not mapped in GST Slab");
+                            ShowErrorOnce($"SGST Account not mapped in GST Slab {billdetailsabid.GstSlabName}");
                             return;
                         }
                         // Purchase Return
@@ -3122,7 +3123,7 @@ width:fit-content;
                 // ✅ Apply IGST or CGST+SGST based on Place of Supply vs Company State
                 if (selectedCompany != null && selectedpos != null)
                 {
-                   
+
                     // Convert string StateId → int for safe comparison
                     var companyState = StateList?
       .FirstOrDefault(s =>
@@ -3275,7 +3276,7 @@ width:fit-content;
             .Where(d => !UnsavedChanges.ContainsKey(d) || UnsavedChanges[d].Type != DataChangeType.Delete)
             .Sum(d => d.BillDetailTotal);
 
-            
+
 
         // if (EditModel.BillIsRoundOff)
         // {
@@ -3453,6 +3454,7 @@ width:fit-content;
     //FOR COPY  NEW ENTRY
     private async Task CopyDetails()
     {
+        ResetToastMessages();
         LoadingService.Show();
         try
         {
@@ -3585,12 +3587,12 @@ width:fit-content;
                 .OrderBy(d => d.BillDetailSno)
                 .ToList();
 
-                // ✅ Reindex sequentially
-        int sequentialSno = 1;
-        foreach (var detail in activeDetails)
-        {
-            detail.BillDetailSno = sequentialSno++;
-        }
+            // ✅ Reindex sequentially
+            int sequentialSno = 1;
+            foreach (var detail in activeDetails)
+            {
+                detail.BillDetailSno = sequentialSno++;
+            }
             // --- STEP 3: Recalculate Bill Totals ---
             //EditModel.BillNetAmount = (float)activeDetails.Sum(d => d.BillDetailTotal);
             EditModel.BillAmount = activeDetails.Sum(d => d.BillDetailAmount);
@@ -3603,9 +3605,9 @@ width:fit-content;
             EditModel.BillNo = EditModel.BillNo;
 
             //after copy null the e-invoice details
-             EditModel.BillIrnNo = "";
-              EditModel.BillAckNo = "";
-               EditModel.BillAckDate = "";
+            EditModel.BillIrnNo = "";
+            EditModel.BillAckNo = "";
+            EditModel.BillAckDate = "";
             if (string.Equals(EditModel.BillType, "PURCHASE", StringComparison.OrdinalIgnoreCase))
             {
                 EditModel.BillDrCr = "Cr";
@@ -3669,6 +3671,7 @@ width:fit-content;
 
     private async Task HandleValidSubmit(bool isprint= false)
     {
+        ResetToastMessages();
         LoadingService.Show();
         try
         {
@@ -3939,5 +3942,25 @@ else
         {
             LoadingService.Hide();
         }
+    }
+
+    //for updaterow  toast mssg show once times
+    private readonly HashSet<string> _shownToastMessages = new();
+
+    private void ShowErrorOnce(string message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+            return;
+
+        if (_shownToastMessages.Add(message))
+        {
+            ToastService.Error(message);
+            return;
+        }
+    }
+
+    private void ResetToastMessages()
+    {
+        _shownToastMessages.Clear();
     }
 }

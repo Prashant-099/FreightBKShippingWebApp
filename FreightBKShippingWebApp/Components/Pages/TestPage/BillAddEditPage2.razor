@@ -2580,6 +2580,7 @@
         Visible = false;
         BillDetails.Clear();
         UnsavedChanges.Clear();
+        ResetToastMessages();
     }
 
     private async Task New_Click()
@@ -3002,31 +3003,31 @@
                 {
                     if (string.Equals(vouchergroup.VoucherGroup, "SALES",
     StringComparison.OrdinalIgnoreCase))
-    {
-                        if (selectedGstslab.GstSlabSalesAccountId <= 0)
+                    {
+                        if (!selectedGstslab.GstSlabSalesAccountId.HasValue || selectedGstslab.GstSlabSalesAccountId <= 0)
                         {
-                            ToastService.Error("Sales Account not mapped in GST Slab");
+                            ShowErrorOnce($"Sales Account not mapped in GST Slab {billdetailsabid.GstSlabName}");
                             return;
                         }
 
                         // IGST
-                        if (selectedGstslab.GstSlabIgstAccountId <= 0)
+                        if (!selectedGstslab.GstSlabIgstAccountId.HasValue || selectedGstslab.GstSlabIgstAccountId <= 0)
                         {
-                            ToastService.Error("IGST Account not mapped in GST Slab");
+                            ShowErrorOnce($"IGST Account not mapped in GST Slab {billdetailsabid.GstSlabName}");
                             return;
                         }
 
                         // CGST
-                        if (selectedGstslab.GstSlabCgstAccountId <= 0)
+                        if (!selectedGstslab.GstSlabCgstAccountId.HasValue || selectedGstslab.GstSlabCgstAccountId <= 0)
                         {
-                            ToastService.Error("CGST Account not mapped in GST Slab");
+                            ShowErrorOnce($"CGST Account not mapped in GST Slab {billdetailsabid.GstSlabName}");
                             return;
                         }
 
                         // SGST
-                        if (selectedGstslab.GstSlabSgstAccountId <= 0)
+                        if (!selectedGstslab.GstSlabSgstAccountId.HasValue || selectedGstslab.GstSlabSgstAccountId <= 0)
                         {
-                            ToastService.Error("SGST Account not mapped in GST Slab");
+                            ShowErrorOnce($"SGST Account not mapped in GST Slab {billdetailsabid.GstSlabName}");
                             return;
                         }
                         item.BillDetailAccountId = selectedGstslab.GstSlabSalesAccountId;
@@ -3039,30 +3040,30 @@
    StringComparison.OrdinalIgnoreCase))
                     {
                         // Purchase Account
-                        if (selectedGstslab.GstSlabPurchaseAccountId <= 0)
+                        if (!selectedGstslab.GstSlabPurchaseAccountId.HasValue ||selectedGstslab.GstSlabPurchaseAccountId <= 0)
                         {
-                            ToastService.Error("Purchase Account not mapped in GST Slab");
+                            ShowErrorOnce($"Purchase Account not mapped in GST Slab {billdetailsabid.GstSlabName}");
                             return;
                         }
 
                         // IGST
-                        if (selectedGstslab.GstSlabPigstAccountId <= 0)
+                        if (!selectedGstslab.GstSlabPigstAccountId.HasValue || selectedGstslab.GstSlabPigstAccountId <= 0)
                         {
-                            ToastService.Error("Purchase IGST Account not mapped in GST Slab");
+                            ShowErrorOnce($" IGST Account not mapped in GST Slab {billdetailsabid.GstSlabName}");
                             return;
                         }
 
                         // CGST
-                        if (selectedGstslab.GstSlabPcgstAccountId <= 0)
+                        if (!selectedGstslab.GstSlabPcgstAccountId.HasValue ||selectedGstslab.GstSlabPcgstAccountId <= 0)
                         {
-                            ToastService.Error("Purchase CGST Account not mapped in GST Slab");
+                            ShowErrorOnce($" CGST Account not mapped in GST Slab {billdetailsabid.GstSlabName}");
                             return;
                         }
 
                         // SGST
-                        if (selectedGstslab.GstSlabPsgstAccountId <= 0)
+                        if (!selectedGstslab.GstSlabPsgstAccountId.HasValue || selectedGstslab.GstSlabPsgstAccountId <= 0)
                         {
-                            ToastService.Error("Purchase SGST Account not mapped in GST Slab");
+                            ShowErrorOnce($" SGST Account not mapped in GST Slab {billdetailsabid.GstSlabName}");
                             return;
                         }
                         item.BillDetailAccountId = selectedGstslab.GstSlabPurchaseAccountId;
@@ -3070,7 +3071,7 @@
                         item.BillDetailCgstAcId = selectedGstslab.GstSlabPcgstAccountId;
                         item.BillDetailSgstAcId = selectedGstslab.GstSlabPsgstAccountId;
                     }
-                    
+
 
                     else if (string.Equals(vouchergroup.VoucherGroup, "Credit Note",
     StringComparison.OrdinalIgnoreCase))
@@ -3087,21 +3088,21 @@
                             return;
                         }
 
-                        if (selectedGstslab.GstSlabPigstAccountId <= 0)
+                        if (!selectedGstslab.GstSlabPigstAccountId.HasValue || selectedGstslab.GstSlabPigstAccountId <= 0)
                         {
-                            ToastService.Error("Purchase IGST Account not mapped in GST Slab");
+                            ShowErrorOnce($" IGST Account not mapped in GST Slab {billdetailsabid.GstSlabName}");
                             return;
                         }
 
-                        if (selectedGstslab.GstSlabPcgstAccountId <= 0)
+                        if (!selectedGstslab.GstSlabPcgstAccountId.HasValue ||selectedGstslab.GstSlabPcgstAccountId <= 0)
                         {
-                            ToastService.Error("Purchase CGST Account not mapped in GST Slab");
+                            ToastService.Error($" CGST Account not mapped in GST Slab {billdetailsabid.GstSlabName}");
                             return;
                         }
 
-                        if (selectedGstslab.GstSlabPsgstAccountId <= 0)
+                        if (!selectedGstslab.GstSlabPsgstAccountId.HasValue || selectedGstslab.GstSlabPsgstAccountId <= 0)
                         {
-                            ToastService.Error("Purchase SGST Account not mapped in GST Slab");
+                            ToastService.Error($" SGST Account not mapped in GST Slab {billdetailsabid.GstSlabName}");
                             return;
                         }
 
@@ -3410,6 +3411,7 @@
     //FOR COPY  NEW ENTRY
     private async Task CopyDetails()
     {
+        ResetToastMessages();
         LoadingService.Show();
         try
         {
@@ -3476,7 +3478,7 @@
             }
             if (EditModel.BillIsRoundOff &&
     Math.Abs(EditModel.BillRoundAmt) > 0)
-{
+            {
                 var roundOffAccount = AllAccountList
         .FirstOrDefault(x =>
             x.AccountName != null &&
@@ -3484,21 +3486,21 @@
                 "round off",
                 StringComparison.OrdinalIgnoreCase));
 
-    if (roundOffAccount == null)
-    {
-        ToastService.Error(
-            "Round Off Account not found");
+                if (roundOffAccount == null)
+                {
+                    ToastService.Error(
+                        "Round Off Account not found");
 
-        return;
-    }
+                    return;
+                }
 
                 EditModel.BillRoundOffId =
         roundOffAccount.AccountId;
-}
-else
-{
-    EditModel.BillRoundOffId = 0;
-}
+            }
+            else
+            {
+                EditModel.BillRoundOffId = 0;
+            }
             var salesReturnAccount = AllAccountList
                  .FirstOrDefault(x =>
                      x.AccountName != null &&
@@ -3593,7 +3595,11 @@ else
             }
             else
             {
-                ToastService.Error("Failed to create Bill!");
+                ToastService.Error(
+         string.IsNullOrWhiteSpace(BillService.LastError)
+             ? "Failed to create Bill!"
+             : BillService.LastError
+     );
                 return;
             }
 
@@ -3632,6 +3638,7 @@ else
 
     private async Task HandleValidSubmit(bool isprint= false)
     {
+        ResetToastMessages();
         LoadingService.Show();
         try
         {
@@ -3916,5 +3923,24 @@ else
         {
             LoadingService.Hide();
         }
+    }
+    //for updaterow  toast mssg show once times
+    private readonly HashSet<string> _shownToastMessages = new();
+
+    private void ShowErrorOnce(string message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+            return;
+
+        if (_shownToastMessages.Add(message))
+        {
+            ToastService.Error(message);
+            return;
+        }
+    }
+
+    private void ResetToastMessages()
+    {
+        _shownToastMessages.Clear();
     }
 }

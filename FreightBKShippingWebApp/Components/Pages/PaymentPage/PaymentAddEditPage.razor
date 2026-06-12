@@ -14,6 +14,7 @@
 @inject IBranchContext BranchContext
 @inject BranchService BranchService
 @inject AuditLogService AuditLogService
+@inject LedgerService LedgerService
 <style>
     .receipt-grid-wrapper {
         width: 100%;
@@ -1412,90 +1413,107 @@ private string CashBankBalanceText =>
 {
     try
     {
-        var allBills = await BillService.GetAllAsync();
-        var allJournals = await JournalService.GetAllAsync();
+//         var allBills = await BillService.GetAllAsync();
+//         var allJournals = await JournalService.GetAllAsync();
        
 
-        var account = AccountList
-            .FirstOrDefault(a => a.AccountId == partyId);
+//         var account = AccountList
+//             .FirstOrDefault(a => a.AccountId == partyId);
 
-        // Opening Balance
-        double opening = 0;
+//         // Opening Balance
+//         double opening = 0;
 
-        if (account != null)
-        {
-             float openingFloat = account.AccountOpening ?? 0f;
-            opening = account.AccountBalanceType == "Dr"
-                ? openingFloat
-                : -openingFloat;
-        }
+//         if (account != null)
+//         {
+//              float openingFloat = account.AccountOpening ?? 0f;
+//             opening = account.AccountBalanceType == "Dr"
+//                 ? openingFloat
+//                 : -openingFloat;
+//         }
 
-        // 1. Total Bill Due
-        // double totalBillDue = allBills
-        //     .Where(b =>
-        //         b.BillPartyId == partyId &&
-        //         b.BillStatus)
-        //     .Sum(b => b.Bill_due_amt);
+//         // 1. Total Bill Due
+//         // double totalBillDue = allBills
+//         //     .Where(b =>
+//         //         b.BillPartyId == partyId &&
+//         //         b.BillStatus)
+//         //     .Sum(b => b.Bill_due_amt);
 
-        double salesDue = allBills
-    .Where(b =>
-        b.BillPartyId == partyId &&
-        b.BillStatus &&
-        b.BillType == "Sales")
-    .Sum(b => b.Bill_due_amt);
+//         double salesDue = allBills
+//     .Where(b =>
+//         b.BillPartyId == partyId &&
+//         b.BillStatus &&
+//         b.BillType == "Sales")
+//     .Sum(b => b.Bill_due_amt);
 
-double purchaseDue = allBills
-    .Where(b =>
-        b.BillPartyId == partyId &&
-        b.BillStatus &&
-        b.BillType == "Purchase")
-    .Sum(b => b.Bill_due_amt);
+// double purchaseDue = allBills
+//     .Where(b =>
+//         b.BillPartyId == partyId &&
+//         b.BillStatus &&
+//         b.BillType == "Purchase")
+//     .Sum(b => b.Bill_due_amt);
 
-        // 2. On Account Receipt
-        double onAccountReceipt = allJournals
-            .Where(j =>
-                j.JournalPartyId == partyId &&
-               j.JournalMasterType.Equals("RECEIPT",
-    StringComparison.OrdinalIgnoreCase)&&
-                j.JournalOnAccount > 0)
-            .Sum(j => j.JournalTotal);
+//         // 2. On Account Receipt
+//         double onAccountReceipt = allJournals
+//             .Where(j =>
+//                 j.JournalPartyId == partyId &&
+//                j.JournalMasterType.Equals("RECEIPT",
+//     StringComparison.OrdinalIgnoreCase)&&
+//                 j.JournalOnAccount > 0)
+//             .Sum(j => j.JournalTotal);
 
-        // 3. On Account Payment
-        double onAccountPayment = allJournals
-            .Where(j =>
-                j.JournalPartyId == partyId &&
-                j.JournalMasterType.Equals("PAYMENT",
-    StringComparison.OrdinalIgnoreCase)&&
-                j.JournalOnAccount > 0)
-            .Sum(j => j.JournalTotal);
+//         // 3. On Account Payment
+//         double onAccountPayment = allJournals
+//             .Where(j =>
+//                 j.JournalPartyId == partyId &&
+//                 j.JournalMasterType.Equals("PAYMENT",
+//     StringComparison.OrdinalIgnoreCase)&&
+//                 j.JournalOnAccount > 0)
+//             .Sum(j => j.JournalTotal);
 
-//  journal entry
-          var allBillRefs = allJournals
-    .Where(j => j.BillRefDetails != null)
-    .SelectMany(j => j.BillRefDetails)
-    .ToList();
+// //  journal entry
+//           var allBillRefs = allJournals
+//     .Where(j => j.BillRefDetails != null)
+//     .SelectMany(j => j.BillRefDetails)
+//     .ToList();
 
-double journalDebit = allBillRefs
-    .Where(x =>
-        x.BillRefAccountId == partyId &&
-        x.BillRefVchType == "DR")
-    .Sum(x => x.BillRefVchAmount);
+// double journalDebit = allBillRefs
+//     .Where(x =>
+//         x.BillRefAccountId == partyId &&
+//         x.BillRefVchType == "DR")
+//     .Sum(x => x.BillRefVchAmount);
 
-double journalCredit = allBillRefs
-    .Where(x =>
-        x.BillRefAccountId == partyId &&
-        x.BillRefVchType == "CR")
-    .Sum(x => x.BillRefVchAmount);
+// double journalCredit = allBillRefs
+//     .Where(x =>
+//         x.BillRefAccountId == partyId &&
+//         x.BillRefVchType == "CR")
+//     .Sum(x => x.BillRefVchAmount);
 
-        CustomerOutstanding = opening
-    + salesDue
-    - purchaseDue
-    - onAccountReceipt
-    + onAccountPayment + journalDebit
-    - journalCredit;
+//         CustomerOutstanding = opening
+//     + salesDue
+//     - purchaseDue
+//     - onAccountReceipt
+//     + onAccountPayment + journalDebit
+//     - journalCredit;
 
         
+ var customerledger = await LedgerService.GetLedgerAsync(partyId,null, null);
+decimal totalDebit = customerledger.Sum(x => (decimal)x.Debit);
 
+        decimal totalCredit = customerledger.Sum(x => (decimal)x.Credit);
+         decimal opening = 0;
+         var party = AccountList.FirstOrDefault(a => a.AccountId == partyId);
+        if (party != null)
+        {
+            opening = (decimal)(party?.AccountOpening??0);
+            if (party.AccountBalanceType == "Cr")
+                opening = -opening;
+        }
+        decimal closing =
+            opening
+            + totalDebit
+            - totalCredit;
+
+        CustomerOutstanding = (double)closing;
         StateHasChanged();
     }
     catch
@@ -1513,75 +1531,94 @@ private async Task LoadCashBankBalance(int accountId)
 {
     try
     {
-        var journals = await JournalService.GetAllAsync();
+//         var journals = await JournalService.GetAllAsync();
 
-         var account = AccountList
-            .FirstOrDefault(a => a.AccountId == accountId);
+//          var account = AccountList
+//             .FirstOrDefault(a => a.AccountId == accountId);
 
-        // Opening Balance
-        double opening = 0;
+//         // Opening Balance
+//         double opening = 0;
 
+//         if (account != null)
+//         {
+//            // AccountOpening is float? — handle null and convert safely
+//             float openingFloat = account.AccountOpening ?? 0f;
+//             opening = account.AccountBalanceType == "Dr"
+//                 ? openingFloat
+//                 : -openingFloat;
+//         }
+
+//         double receiptAmount = journals
+//             .Where(x =>
+//                 x.JournalAccountId == accountId &&
+//                 x.JournalMasterType.Equals("RECEIPT",
+//     StringComparison.OrdinalIgnoreCase))
+//             .Sum(x => x.JournalTotal);
+
+//         double paymentAmount = journals
+//             .Where(x =>
+//                 x.JournalAccountId == accountId &&
+//                 x.JournalMasterType.Equals("PAYMENT",
+//     StringComparison.OrdinalIgnoreCase))
+//             .Sum(x => x.JournalTotal);
+
+
+
+//             // CONTRA IN (+)
+//         double contraIn = journals
+//             .Where(x =>
+//                 x.JournalPartyId == accountId &&
+//                 x.JournalMasterType.Equals(
+//                     "CONTRA",
+//                     StringComparison.OrdinalIgnoreCase))
+//             .Sum(x => x.JournalTotal);
+
+//         // CONTRA OUT (-)
+//         double contraOut = journals
+//             .Where(x =>
+//                 x.JournalAccountId == accountId &&
+//                 x.JournalMasterType.Equals(
+//                     "CONTRA",
+//                     StringComparison.OrdinalIgnoreCase))
+//             .Sum(x => x.JournalTotal);
+//             var allBillRefs = journals
+//     .Where(j => j.BillRefDetails != null)
+//     .SelectMany(j => j.BillRefDetails)
+//     .ToList();
+
+// double journalDebit = allBillRefs
+//     .Where(x =>
+//         x.BillRefAccountId == accountId &&
+//         x.BillRefVchType == "DR")
+//     .Sum(x => x.BillRefVchAmount);
+
+// double journalCredit = allBillRefs
+//     .Where(x =>
+//         x.BillRefAccountId == accountId &&
+//         x.BillRefVchType == "CR")
+//     .Sum(x => x.BillRefVchAmount);
+
+//         CashBankBalance = opening -receiptAmount +paymentAmount+contraIn -contraOut+ journalDebit
+//     - journalCredit;
+
+var cashbankledger = await LedgerService.GetLedgerAsync(accountId,null, null);
+decimal totalDebit = cashbankledger.Sum(x => (decimal)x.Debit);
+
+        decimal totalCredit = cashbankledger.Sum(x => (decimal)x.Credit);
+         decimal opening = 0;
+         var account = AccountList.FirstOrDefault(a => a.AccountId == accountId);
         if (account != null)
         {
-           // AccountOpening is float? — handle null and convert safely
-            float openingFloat = account.AccountOpening ?? 0f;
-            opening = account.AccountBalanceType == "Dr"
-                ? openingFloat
-                : -openingFloat;
+            opening = (decimal)(account?.AccountOpening??0);
+            if (account.AccountBalanceType == "Cr")
+                opening = -opening;
         }
+        decimal closing =
+            opening
+            + totalDebit
+            - totalCredit;
 
-        double receiptAmount = journals
-            .Where(x =>
-                x.JournalAccountId == accountId &&
-                x.JournalMasterType.Equals("RECEIPT",
-    StringComparison.OrdinalIgnoreCase))
-            .Sum(x => x.JournalTotal);
-
-        double paymentAmount = journals
-            .Where(x =>
-                x.JournalAccountId == accountId &&
-                x.JournalMasterType.Equals("PAYMENT",
-    StringComparison.OrdinalIgnoreCase))
-            .Sum(x => x.JournalTotal);
-
-
-
-            // CONTRA IN (+)
-        double contraIn = journals
-            .Where(x =>
-                x.JournalPartyId == accountId &&
-                x.JournalMasterType.Equals(
-                    "CONTRA",
-                    StringComparison.OrdinalIgnoreCase))
-            .Sum(x => x.JournalTotal);
-
-        // CONTRA OUT (-)
-        double contraOut = journals
-            .Where(x =>
-                x.JournalAccountId == accountId &&
-                x.JournalMasterType.Equals(
-                    "CONTRA",
-                    StringComparison.OrdinalIgnoreCase))
-            .Sum(x => x.JournalTotal);
-            var allBillRefs = journals
-    .Where(j => j.BillRefDetails != null)
-    .SelectMany(j => j.BillRefDetails)
-    .ToList();
-
-double journalDebit = allBillRefs
-    .Where(x =>
-        x.BillRefAccountId == accountId &&
-        x.BillRefVchType == "DR")
-    .Sum(x => x.BillRefVchAmount);
-
-double journalCredit = allBillRefs
-    .Where(x =>
-        x.BillRefAccountId == accountId &&
-        x.BillRefVchType == "CR")
-    .Sum(x => x.BillRefVchAmount);
-
-        CashBankBalance = opening -receiptAmount +paymentAmount+contraIn -contraOut+ journalDebit
-    - journalCredit;
+        CashBankBalance = (double)closing;
 
 
         StateHasChanged();
