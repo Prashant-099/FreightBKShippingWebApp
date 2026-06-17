@@ -46,6 +46,20 @@ namespace FreightBKShippingWebApp.Model
 
         //not mapped in DB
         public string BranchName { get; set; }
-    }
+
+        [NotMapped]
+        public DateTime IndiaTime
+        {
+            get
+            {
+                var indiaTimeZone = TimeZoneInfo.FindSystemTimeZoneById("India Standard Time");
+
+                return TimeZoneInfo.ConvertTimeFromUtc(
+                    DateTime,
+                    indiaTimeZone
+                );
+            }
+            }
+        }
 }
 

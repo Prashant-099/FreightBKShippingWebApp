@@ -120,6 +120,10 @@ namespace FreightBKShippingWebApp.Models
         [Column("DiscountAccountId")]
         public int? DiscountAccountId { get; set; } = 0;
 
+        [Column("journal_branch_id")]
+        public int? JournalBranchId { get; set; }
+
+
         // ✅ Navigation Properties
         [ForeignKey("JournalPartyId")]
         public virtual Account? Party { get; set; }

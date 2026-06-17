@@ -347,7 +347,7 @@
     private async Task OnVoucherChanged(int voucherId)
     {
         EditModel.JournalVoucherId = voucherId;
-
+        EditModel.JournalBranchId = BranchContext.BranchId;
         if (EditModel.JournalId == 0)
         {
             try
@@ -355,7 +355,7 @@
                 var result = await YearStatechangeService.GeneratebillNoAsync(
                     voucherId,
                     YearStatechangeService.SelectedYearId,
-                    BranchContext.BranchId
+                    EditModel.JournalBranchId
                 );
 
                 EditModel.JournalNoStr = result.prefix + result.number + result.suffix;

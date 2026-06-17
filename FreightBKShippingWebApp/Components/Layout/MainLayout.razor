@@ -67,6 +67,18 @@
                             &nbsp;&nbsp;&nbsp;
                             <i class="bi bi-headset"></i> 9409309616
                             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                            @if (FssaiExpiryDate.HasValue &&
+                                             (FssaiExpiryDate.Value.Date - DateTime.Today).Days <= 4 &&
+                                             (FssaiExpiryDate.Value.Date - DateTime.Today).Days >= 0)
+                            {
+                                <span class="fssai-expiry-danger">
+                                    &nbsp;&nbsp;&nbsp;
+                                    <i class="bi bi-exclamation-triangle-fill"></i>
+                                    Software Expiry :
+                                    @FssaiExpiryDate.Value.ToString("dd-MMM-yyyy")
+                                </span>
+                            }
+
                         </span>
                     </div>
                 </div>
@@ -302,6 +314,7 @@
 
         var companies = await CompanyService.GetAllAsync();
         CompanyName = companies.FirstOrDefault()?.Name ?? "Unknown";
+        FssaiExpiryDate = companies.FirstOrDefault()?.FssExpiry;
         if (_isAdmin)
             await LoadRecentActivities();
         await YearStatechangeService.LoadYearsAsync();
@@ -386,7 +399,7 @@
                 Title = l.TableName ?? "",
                 Description = l.Remarks ?? "",
                 Status = l.Operations ?? "update",
-                Time = l.DateTime
+                Time = l.IndiaTime
             }).ToList();
         }
         catch { _recentActivities = new(); }
@@ -397,4 +410,14 @@
         _bellOpen = false;   // ← ye line add karo
         _profileOpen = !_profileOpen;
     }
+
+    private DateTime? FssaiExpiryDate;
+
+    private int DaysLeft =>
+        FssaiExpiryDate.HasValue
+            ? (FssaiExpiryDate.Value.Date - DateTime.Today).Days
+            : 999;
+
+    private string FssaiExpiryClass =>
+        DaysLeft <= 4 ? "fssai-expiry-danger" : "";
 }
