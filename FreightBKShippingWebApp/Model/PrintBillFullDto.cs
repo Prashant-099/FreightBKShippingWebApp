@@ -77,6 +77,8 @@
         public string? company_email { get; set; }
         public string? company_panno { get; set; }
         public string? company_website { get; set; }
+        public byte[]? company_logo { get; set; }
+
         //banks details
         public string? bankname { get; set; }
         public string? bank_branch { get; set; }

@@ -150,6 +150,81 @@ public class CustomReportStorageWebExtension : ReportStorageWebExtension
         }
     }
 
+    //private async Task<byte[]> GetDataInternalAsync(string url)
+    //{
+
+    //    var key = url.TrimStart('/');
+
+    //    _logger.LogInformation("GetData called. Key length={Len}", key.Length);
+
+    //    // 1. In-memory cache
+    //    if (_layoutCache.TryGetValue(key, out string? xml))
+    //    {
+    //        _logger.LogDebug("Cache hit for: {Key}", key);
+    //        return Encoding.UTF8.GetBytes(xml);
+    //    }
+
+    //    // 2. Try base64 JSON decode — SEPARATE try/catch from API call
+    //    ReportData? metadata = null;
+    //    try
+    //    {
+    //        metadata = JsonSerializer.Deserialize<ReportData>(
+    //            Encoding.UTF8.GetString(Convert.FromBase64String(key)));
+
+    //        // 3. Handle decoded metadata
+    //        if (metadata != null)
+    //        {
+    //            if (metadata.ReportDataId > 0)
+    //            {
+    //                _logger.LogInformation("Fetching layout for ReportId={Id}", metadata.ReportDataId);
+
+    //                var bytes = await _reportDataService.GetLayoutBytesAsync(metadata.ReportDataId);
+
+    //                _logger.LogInformation("Layout bytes received: {Len}", bytes?.Length ?? 0);
+
+    //                if (bytes != null)
+    //                {
+    //                    _layoutCache[metadata.ReportDataId.ToString()] = Encoding.UTF8.GetString(bytes);
+    //                    return bytes;
+    //                }
+
+    //                throw new Exception($"No layout found for ID: {metadata.ReportDataId}");
+    //            }
+    //            else
+    //            {
+    //                // New or copied report
+    //                if (!string.IsNullOrWhiteSpace(metadata.LayoutData))
+    //                {
+    //                    _logger.LogInformation("Returning LayoutData from metadata (new/copied report)");
+    //                    return Encoding.UTF8.GetBytes(metadata.LayoutData);
+    //                }
+
+    //                // Blank report fallback
+    //                _logger.LogInformation("Returning blank XtraReport");
+    //                using var blankMs = new MemoryStream();
+    //                new XtraReport().SaveLayoutToXml(blankMs);
+    //                return blankMs.ToArray();
+    //            }
+    //        }
+    //    }
+    //    catch
+    //    {
+    //        // Not base64 JSON — that's fine, fall through to numeric ID below
+    //        // 4. Fallback: plain numeric ID (from /report-designer/{id} route)
+    //        if (int.TryParse(key, out int reportId))
+    //        {
+    //            _logger.LogInformation("Numeric ID fallback for: {Id}", reportId);
+    //            var bytes = await _reportDataService.GetLayoutBytesAsync(reportId);
+    //            if (bytes != null)
+    //            {
+    //                _layoutCache[reportId.ToString()] = Encoding.UTF8.GetString(bytes);
+    //                return bytes;
+    //            }
+    //        }
+    //    }
+
+    //    throw new Exception($"Report not found: {url}");
+    //}
     private async Task<byte[]> GetDataInternalAsync(string url)
     {
         var key = url.TrimStart('/');
@@ -166,32 +241,31 @@ public class CustomReportStorageWebExtension : ReportStorageWebExtension
             var metadata = JsonSerializer.Deserialize<ReportData>(
                 Encoding.UTF8.GetString(Convert.FromBase64String(key)));
 
-            if (metadata != null)
+            // Existing report
+            if (metadata.ReportDataId > 0)
             {
-                if (metadata.ReportDataId > 0)
+                // Agar LayoutData JSON me aa gaya hai to wahi use karo
+                if (!string.IsNullOrWhiteSpace(metadata.LayoutData))
                 {
-                    var bytes = await _reportDataService.GetLayoutBytesAsync(metadata.ReportDataId);
-                    if (bytes != null) return bytes;
+                    return Encoding.UTF8.GetBytes(metadata.LayoutData);
                 }
-                else
+
+                var bytes = await _reportDataService.GetLayoutBytesAsync(metadata.ReportDataId);
+                if (bytes != null)
+                    return bytes;
+            }
+            else
+            {
+                // ⭐ Copy Report
+                if (!string.IsNullOrWhiteSpace(metadata.LayoutData))
                 {
-                    // New report
-                    //using var ms = new MemoryStream();
-                    //new XtraReport().SaveLayoutToXml(ms);
-                    //return ms.ToArray();
-
-                    // ✅ NEW / COPIED REPORT
-                    if (!string.IsNullOrWhiteSpace(metadata.LayoutData))
-                    {
-                        return Encoding.UTF8.GetBytes(metadata.LayoutData);
-                    }
-
-                    // Blank report fallback
-                    using var ms = new MemoryStream();
-                    new XtraReport().SaveLayoutToXml(ms);
-
-                    return ms.ToArray();
+                    return Encoding.UTF8.GetBytes(metadata.LayoutData);
                 }
+
+                // True New Report
+                using var ms = new MemoryStream();
+                new XtraReport().SaveLayoutToXml(ms);
+                return ms.ToArray();
             }
         }
         catch
@@ -302,7 +376,7 @@ public class CustomReportStorageWebExtension : ReportStorageWebExtension
         // Determine whether to create or update
         bool success;
       
-        if (metadata.ReportDataId > 0 )
+        if (metadata.ReportDataId > 0 || reportId > 0)
         {
             // Existing → Update
             metadata.ReportDataId = metadata.ReportDataId > 0 ? metadata.ReportDataId : reportId;

@@ -51,7 +51,7 @@ namespace FreightBKShippingWebApp.Services
         // ===============================
         // CREATE
         // ===============================
-        public async Task<int?> CreateAsync(Company company)
+        public async Task<(bool Success, int? CompanyId, string? Error)> CreateAsync(Company company)
         {
             try
             {
@@ -59,39 +59,38 @@ namespace FreightBKShippingWebApp.Services
                     .PostAsync<IdResponseDto, Company>(
                         "api/Company", company);
 
-                return result?.CompanyId;
+                return (true, result.CompanyId, null);
             }
             catch (Exception ex)
             { 
                 Console.WriteLine($"❌ Error creating company: {ex.Message}");
-                return null;
+                return (false, null, ex.Message);
             }
         }
 
         // ===============================
         // UPDATE (Company User)
         // ===============================
-        public async Task<int?> UpdateAsync(Company company)
+        public async Task<(bool Success, int? CompanyId, string? Error)> UpdateAsync(Company company)
         {
             try
             {
                 var result = await _api
                     .PutAsync<IdResponseDto, Company>(
                         $"api/Company/{company.CompanyId}", company);
-
-                return result?.CompanyId;
+                return (true, result.CompanyId, null);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Error updating company: {ex.Message}");
-                return null;
+                return (false, null, ex.Message);
             }
         }
 
         // ===============================
         // UPDATE (Super Admin)
         // ===============================
-        public async Task<int?> UpdateByAdminAsync(Company company)
+        public async Task<(bool Success, int? CompanyId, string? Error)> UpdateByAdminAsync(Company company)
         {
             try
             {
@@ -99,13 +98,12 @@ namespace FreightBKShippingWebApp.Services
                     .PutAsync<IdResponseDto, Company>(
                         $"api/Company/{company.CompanyId}/admin",
                         company);
-
-                return result?.CompanyId;
+                return (true, result.CompanyId, null);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Error updating company (admin): {ex.Message}");
-                return null;
+                return (false, null, ex.Message);
             }
         }
 

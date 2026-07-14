@@ -11,7 +11,65 @@
 @inject CountryService CountryService
 @inject AuditLogService AuditLogService
 @inject IJSRuntime JSRuntime
+<style>
+   .company-header-section {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+    width: 100%;
+}
 
+.company-fields {
+    flex: 1;
+    min-width: 0;
+}
+
+.company-logo {
+    width: 220px;
+    text-align: center;
+}
+
+.logo-preview {
+    width: 200px;
+    height: 90px;
+    border: 1px solid #d9d9d9;
+    border-radius: 8px;
+    background: #fafafa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    margin-bottom: 10px;
+}
+
+.logo-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.logo-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+@@media (max-width: 768px) {
+    .company-header-section {
+        flex-direction: column;
+    }
+
+    .company-logo {
+        width: 100%;
+    }
+
+    .logo-preview {
+        width: 100%;
+        max-width: 220px;
+        margin: auto;
+    }
+}
+</style>
 <DxPopup @bind-Visible="Visible"
          ShowCloseButton="true"
          HeaderText="@Title"
@@ -32,17 +90,57 @@
                 <!-- BASIC INFO -->
                 <DxFormLayoutGroup Caption="Basic Information">
 
-                    <DxFormLayoutItem Caption="Company Name" ColSpanMd="12">
-                        <DxTextBox @bind-Text="EditModel.Name"
-                                   @oninput="AutoFillPrintName"
-                                   ShowValidationIcon="true"
-                                   ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                    <!-- LEFT COLUMN -->
+                    <DxFormLayoutItem ColSpanMd="12" Caption="">
+                        <div class="company-header-section">
+
+                            <!-- Left Side -->
+                            <div class="company-fields">
+
+                                <div class="mb-3">
+                                    <label class="form-label">Company Name</label>
+                                    <DxTextBox @bind-Text="EditModel.Name"
+                                               @oninput="AutoFillPrintName"
+                                               ShowValidationIcon="true" />
+                                </div>
+
+                                <div>
+                                    <label class="form-label">Print Name</label>
+                                    <DxTextBox @bind-Text="EditModel.PrintName" />
+                                </div>
+
+                            </div>
+
+                            <!-- Right Side -->
+                            <div class="company-logo">
+
+                                @* <label class="form-label">Company Logo</label> *@
+
+                                <div class="logo-preview">
+                                    @if (EditModel.Logo != null)
+                                    {
+                                        <img src="@GetLogoPreview()" />
+                                    }
+                                    else
+                                    {
+                                        <span>No image data</span>
+                                    }
+                                </div>
+
+                                <div class="logo-actions">
+                                    <InputFile OnChange="UploadLogo"
+                                               accept=".png,.jpg,.jpeg,.webp" />
+
+                                    <DxButton Text="Remove"
+                                              RenderStyle="ButtonRenderStyle.Danger"
+                                              Click="RemoveLogo" />
+                                </div>
+
+                            </div>
+
+                        </div>
                     </DxFormLayoutItem>
 
-                    <DxFormLayoutItem Caption="Print Name" ColSpanMd="12">
-                        <DxTextBox @bind-Text="EditModel.PrintName"
-                                   ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
-                    </DxFormLayoutItem>
 
                     <DxFormLayoutItem Caption="Address" ColSpanMd="12">
                         <DxMemo @bind-Text="EditModel.Address1"
@@ -83,8 +181,9 @@
                                     SearchMode="ListSearchMode.AutoSearch"
                                     SearchFilterCondition="ListSearchFilterCondition.Contains" />
                     </DxFormLayoutItem>
-
                 </DxFormLayoutGroup>
+
+               
 
                 <!-- CONTACT INFO -->
                 <DxFormLayoutGroup Caption="Contact Information">
@@ -287,19 +386,25 @@
         LoadingService.Show();
         try
         {
-            int? resultId;
+            if (EditModel.Logo is { Length: > 0 } logo && logo.Length > MaxLogoBytes)
+    {
+        ToastService.Error(
+            $"❌ Logo ({logo.Length / 1024} KB) exceeds the {MaxLogoBytes / 1024} KB limit. Please re-upload.");
+        return;
+    }
 
+            // int? resultId;
             if (EditModel.CompanyId == null || EditModel.CompanyId == 0)
             {
-                resultId = await CompanyService.CreateAsync(EditModel);
+                var result = await CompanyService.CreateAsync(EditModel);
 
-                if (resultId == null)
+                if (!result.Success)
                 {
-                    ToastService.Error("Company failed to create!");
+                    ToastService.Error(result.Error ?? "Company failed to create!");
                     return;
                 }
 
-                EditModel.CompanyId = resultId;
+                EditModel.CompanyId = result.CompanyId; 
                 AuditLogService.NotifyAuditChanged();
                 ToastService.Success("Company created successfully!");
             }
@@ -307,18 +412,24 @@
             {
                 if (IsSuperAdmin)
                 {
-                    resultId = await CompanyService.UpdateByAdminAsync(EditModel);
+                  var  result = await CompanyService.UpdateByAdminAsync(EditModel);
+                    if (!result.Success)
+                    {
+                        ToastService.Error("Company failed to update!");
+                        return;
+                    }
                 }
                 else
                 {
-                    resultId = await CompanyService.UpdateAsync(EditModel);
+                  var  result = await CompanyService.UpdateAsync(EditModel);
+                    if (!result.Success)
+                    {
+                        ToastService.Error("Company failed to update!");
+                        return;
+                    }
                 }
-
-                if (resultId == null)
-                {
-                    ToastService.Error("Company failed to update!");
-                    return;
-                }
+                
+                
                 AuditLogService.NotifyAuditChanged();
                 ToastService.Success("Company updated successfully!");
             }
@@ -336,5 +447,123 @@
             LoadingService.Hide();
         }
     }
+    // ── Limits (must match DB column capacity) ──────────────────────────────────
+    private const long MaxLogoBytes = 500 * 1024;   // 500 KB — safe for MEDIUMBLOB
+    private const int MaxWidthPixels = 1000;          // px — optional JS check
+    private const int MaxHeightPixels = 500;           // px — optional JS check
 
+    private static readonly HashSet<string> AllowedExtensions =
+        new(StringComparer.OrdinalIgnoreCase) { ".jpg", ".jpeg", ".png" };
+
+    private static readonly HashSet<string> AllowedMimeTypes =
+        new(StringComparer.OrdinalIgnoreCase) { "image/jpeg", "image/jpg", "image/png" };
+
+    // ── Upload with full validation ─────────────────────────────────────────────
+    private async Task UploadLogo(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file is null)
+        {
+            ToastService.Warning("No file selected.");
+            return;
+        }
+
+        // ── 1. Extension check ──────────────────────────────────────────────────
+        var ext = Path.GetExtension(file.Name);
+        if (!AllowedExtensions.Contains(ext))
+        {
+            ToastService.Error($"❌ '{ext}' is not allowed. Please upload JPG or PNG only.");
+            return;
+        }
+
+        // ── 2. MIME type check ──────────────────────────────────────────────────
+        if (!AllowedMimeTypes.Contains(file.ContentType))
+        {
+            ToastService.Error($"❌ Invalid file type '{file.ContentType}'. Only JPG/PNG accepted.");
+            return;
+        }
+
+        // ── 3. File size check (BEFORE reading stream) ──────────────────────────
+        if (file.Size > MaxLogoBytes)
+        {
+            var actualKb = file.Size / 1024.0;
+            var limitKb = MaxLogoBytes / 1024.0;
+            ToastService.Error(
+                $"❌ Logo is too large ({actualKb:F0} KB). Maximum allowed size is {limitKb:F0} KB.");
+            return;
+        }
+
+        if (file.Size == 0)
+        {
+            ToastService.Error("❌ Selected file is empty.");
+            return;
+        }
+
+        // ── 4. Read stream ──────────────────────────────────────────────────────
+        byte[] bytes;
+        try
+        {
+            using var ms = new MemoryStream();
+            await file.OpenReadStream(MaxLogoBytes).CopyToAsync(ms);
+            bytes = ms.ToArray();
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"❌ Failed to read file: {ex.Message}");
+            return;
+        }
+
+        // ── 5. Magic byte check (rejects renamed .exe → .png tricks) ───────────
+        if (!IsValidImageBytes(bytes))
+        {
+            ToastService.Error("❌ File content is not a valid JPG or PNG image.");
+            return;
+        }
+
+        // ── 6. Final size guard against DB column limit ─────────────────────────
+        //    MEDIUMBLOB = 16,777,215 bytes. Belt-and-suspenders check.
+        if (bytes.Length > MaxLogoBytes)
+        {
+            ToastService.Error(
+                $"❌ Processed image ({bytes.Length / 1024} KB) exceeds the {MaxLogoBytes / 1024} KB limit.");
+            return;
+        }
+
+        // ── All validations passed ──────────────────────────────────────────────
+        EditModel.Logo = bytes;
+        ToastService.Success($"✅ Logo uploaded ({bytes.Length / 1024} KB).");
+        StateHasChanged();
+    }
+
+    // ── Remove ──────────────────────────────────────────────────────────────────
+    private void RemoveLogo()
+    {
+        EditModel.Logo = null;
+        ToastService.Info("Logo removed.");
+        StateHasChanged();
+    }
+
+    // ── Preview ─────────────────────────────────────────────────────────────────
+    private string GetLogoPreview()
+    {
+        if (EditModel.Logo is not { Length: > 4 }) return string.Empty;
+        var mime = DetectMimeType(EditModel.Logo);
+        return $"data:{mime};base64,{Convert.ToBase64String(EditModel.Logo)}";
+    }
+
+    // ── Helpers ─────────────────────────────────────────────────────────────────
+    private static bool IsValidImageBytes(byte[] b)
+    {
+        if (b.Length < 4) return false;
+        bool isJpeg = b[0] == 0xFF && b[1] == 0xD8 && b[2] == 0xFF;
+        bool isPng = b[0] == 0x89 && b[1] == 0x50 && b[2] == 0x4E && b[3] == 0x47;
+        return isJpeg || isPng;
+    }
+
+    private static string DetectMimeType(byte[] b)
+    {
+        if (b[0] == 0xFF && b[1] == 0xD8) return "image/jpeg";
+        if (b[0] == 0x89 && b[1] == 0x50) return "image/png";
+        return "image/png";
+    }
 }

@@ -1,4 +1,5 @@
 using DevExpress.Blazor.Reporting;
+using DevExpress.AspNetCore.Reporting;
 using DevExpress.Drawing.Internal;
 using DevExpress.XtraReports.Web.Extensions;
 using FreightBKShipping.Client.Services;
@@ -74,9 +75,7 @@ builder.Services.AddDevExpressBlazor(options =>
     options.SizeMode = DevExpress.Blazor.SizeMode.Medium;
 });
 
-builder.Services.AddDevExpressServerSideBlazorReportViewer();
-builder.Services.AddDevExpressBlazorReporting();
-builder.Services.AddScoped<ReportStorageWebExtension, CustomReportStorageWebExtension>();
+
 // ==========================================================
 // 4?? AUTHENTICATION
 // ==========================================================
@@ -94,7 +93,21 @@ builder.Services.AddAuthentication(options =>
     options.Cookie.SameSite = SameSiteMode.Strict;
 });
 builder.Services.AddCascadingAuthenticationState();
+builder.Services.AddDevExpressServerSideBlazorReportViewer();
+builder.Services.AddDevExpressBlazorReporting();
+builder.Services.AddScoped<ReportStorageWebExtension, CustomReportStorageWebExtension>();
+builder.Services.ConfigureReportingServices(configurator =>
+{
+    configurator.ConfigureReportDesigner(designerConfigurator =>
+    {
+        designerConfigurator.RegisterDataSourceWizardConfigFileConnectionStringsProvider();
+    });
 
+    configurator.ConfigureWebDocumentViewer(viewerConfigurator =>
+    {
+        viewerConfigurator.UseCachedReportSourceBuilder();
+    });
+});
 //builder.Services.ConfigureApplicationCookie(options =>
 //{
 //    options.Cookie.HttpOnly = true;
@@ -268,8 +281,14 @@ builder.Services.AddScoped<IGenericReportManager, GenericReportManager>();
 
 // Report  Design Service 
 builder.Services.AddScoped<DataStateService>();
-builder.Services.AddScoped<ReportContextService>();
+builder.Services.AddSingleton<ReportContextService>();
 
+
+////for details error show on server inspect 
+//builder.Services.AddServerSideBlazor(options =>
+//{
+//    options.DetailedErrors = true; // Enables detailed exception messages in the console
+//});
 
 // ==========================================================
 // ?? BUILD APP

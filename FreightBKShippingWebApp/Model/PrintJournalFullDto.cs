@@ -34,6 +34,7 @@
         public string? CompanyWebsite { get; set; }
         public string? CompanyState { get; set; }
         public string? CompanyPanno { get; set; }
+        public byte[]? Companylogo { get; set; }
 
 
         // Bank Info

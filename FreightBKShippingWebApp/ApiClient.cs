@@ -26,7 +26,9 @@ namespace FreightBKShippingWebApp
             DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         };
+        private static readonly SemaphoreSlim RefreshSemaphore = new(1, 1);
 
+       
         private void SafeNavigate(string url, bool forceLoad = false)
         {
             if (_isDisposed) return;
@@ -67,7 +69,7 @@ namespace FreightBKShippingWebApp
 
         public void Dispose() => _isDisposed = true;
 
-        public async Task SetAuthorizeHeader()
+        public async Task<bool> SetAuthorizeHeader()
         {
             if (!httpClient.DefaultRequestHeaders.AcceptEncoding.Any())
             {
@@ -84,7 +86,7 @@ namespace FreightBKShippingWebApp
                 if (sessionState == null || string.IsNullOrEmpty(sessionState.Token))
                 {
                     await SafeLogoutAndNavigate("/login", false);
-                    return;
+                    return false;
                 }
 
                 var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
@@ -93,21 +95,39 @@ namespace FreightBKShippingWebApp
                 {
                     Console.WriteLine("🔴 Refresh token expired, logging out");
                     await SafeLogoutAndNavigate("/login", true);
-                    return;
+                    return false;
                 }
 
                 if (sessionState.tokenExp <= now)
                 {
                     Console.WriteLine("🔄 Access token expired, attempting refresh");
                     await RefreshAccessToken(sessionState);
-                    return;
+                    var updated = await localStorage.GetAsync<LoginResponseModel>("sessionState");
+                    var newSession = updated.Success ? updated.Value : null;
+                    if (newSession == null || string.IsNullOrEmpty(newSession.Token))
+                        return false;
+
+                    httpClient.DefaultRequestHeaders.Authorization =
+                        new AuthenticationHeaderValue("Bearer", newSession.Token);
+
+                    AddCultureHeader();
+                    return true;
                 }
 
                 if (sessionState.tokenExp - now < 300)
                 {
                     Console.WriteLine($"⚠️ Access token expiring soon ({(sessionState.tokenExp - now) / 60:F1} min), refreshing...");
                     await RefreshAccessToken(sessionState);
-                    return;
+                    var updated = await localStorage.GetAsync<LoginResponseModel>("sessionState");
+                    var newSession = updated.Success ? updated.Value : null;
+                    if (newSession == null || string.IsNullOrEmpty(newSession.Token))
+                        return false;
+
+                    httpClient.DefaultRequestHeaders.Authorization =
+                        new AuthenticationHeaderValue("Bearer", newSession.Token);
+
+                    AddCultureHeader();
+                    return true;
                 }
 
                 httpClient.DefaultRequestHeaders.Authorization =
@@ -120,6 +140,7 @@ namespace FreightBKShippingWebApp
                 }
 
                 AddCultureHeader();
+                return true;
             }
             catch (Exception ex) when (
                 ex.Message.Contains("circuit") ||
@@ -127,11 +148,13 @@ namespace FreightBKShippingWebApp
                 ex.Message.Contains("JavaScript interop"))
             {
                 Console.WriteLine($"⚠️ SetAuthorizeHeader skipped - circuit disposed: {ex.Message}");
+                return false;
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Error in SetAuthorizeHeader: {ex.Message}");
                 SafeNavigate("/login");
+                return false;
             }
         }
 
@@ -496,15 +519,168 @@ namespace FreightBKShippingWebApp
 
         public async Task<byte[]?> SafeGetBytesAsync(string path)
         {
-            await SetAuthorizeHeader();
+            //    await SetAuthorizeHeader();
+            //    try
+            //    {
+            //        using var response = await httpClient.GetAsync(path, HttpCompletionOption.ResponseHeadersRead);
+            //        if (!response.IsSuccessStatusCode) { Console.WriteLine($"❌ HTTP {(int)response.StatusCode}: {response.ReasonPhrase}"); return null; }
+            //        return await response.Content.ReadAsByteArrayAsync();
+            //    }
+            //    catch (Exception ex) { Console.WriteLine($"❌ Error in SafeGetBytesAsync: {ex.Message}"); return null; }
+            return await ExecuteWithRetry(async () =>
+            {
+                var authorized = await SetAuthorizeHeader();
+                if (!authorized) return null;
+
+                try
+                {
+                    using var response = await httpClient.GetAsync(path, HttpCompletionOption.ResponseHeadersRead);
+
+                    if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                    {
+                        throw new UnauthorizedAccessException("Token expired");
+                    }
+
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        Console.WriteLine($"❌ HTTP {(int)response.StatusCode}: {response.ReasonPhrase}");
+                        return null;
+                    }
+
+                    return await response.Content.ReadAsByteArrayAsync();
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    throw; // Re-throw for retry mechanism
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"❌ Error in SafeGetBytesAsync: {ex.Message}");
+                    return null;
+                }
+            });
+        }
+        private async Task<T> ExecuteWithRetry<T>(Func<Task<T>> operation, int maxRetries = 1)
+        {
+            for (int attempt = 0; attempt <= maxRetries; attempt++)
+            {
+                try
+                {
+                    return await operation();
+                }
+                catch (UnauthorizedAccessException) when (attempt < maxRetries)
+                {
+                    Console.WriteLine($"🔄 401 Unauthorized on attempt {attempt + 1}, refreshing...");
+
+                    // Get current session for refresh token
+                    var result = await localStorage.GetAsync<LoginResponseModel>("sessionState");
+                    if (result.Success && result.Value != null && !string.IsNullOrEmpty(result.Value.RefreshToken))
+                    {
+                        var refreshed = await RefreshTokenAsync(result.Value.RefreshToken);
+
+                        if (!refreshed)
+                        {
+                            Console.WriteLine("❌ Refresh failed, logging out");
+                            await ((CustomAuthStateProvider)authStateProvider).MarkUserAsLoggedOut();
+                            navigationManager.NavigateTo("/login", forceLoad: true);
+                            return default(T);
+                        }
+
+                        Console.WriteLine("✅ Token refreshed, retrying request...");
+                        // Continue to retry
+                    }
+                    else
+                    {
+                        Console.WriteLine("⚠️ No valid session for refresh");
+                        await ((CustomAuthStateProvider)authStateProvider).MarkUserAsLoggedOut();
+                        navigationManager.NavigateTo("/login", forceLoad: true);
+                        return default(T);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"❌ Operation failed: {ex.Message}");
+                    throw;
+                }
+            }
+
+            return default(T);
+        }
+        private async Task<bool> RefreshTokenAsync(string refreshToken)
+        {
+            if (_isRefreshing)
+            {
+                Console.WriteLine("⏳ Already refreshing, waiting...");
+                await RefreshSemaphore.WaitAsync();
+                RefreshSemaphore.Release();
+
+                var result = await localStorage.GetAsync<LoginResponseModel>("sessionState");
+                if (result.Success && result.Value != null && !string.IsNullOrEmpty(result.Value.Token))
+                {
+                    var now = DateTime.UtcNow;
+                    var tokenExp = DateTimeOffset.FromUnixTimeSeconds(result.Value.tokenExp).UtcDateTime;
+                    if (tokenExp > now)
+                    {
+                        httpClient.DefaultRequestHeaders.Authorization =
+                            new AuthenticationHeaderValue("Bearer", result.Value.Token);
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            await RefreshSemaphore.WaitAsync();
             try
             {
-                using var response = await httpClient.GetAsync(path, HttpCompletionOption.ResponseHeadersRead);
-                if (!response.IsSuccessStatusCode) { Console.WriteLine($"❌ HTTP {(int)response.StatusCode}: {response.ReasonPhrase}"); return null; }
-                return await response.Content.ReadAsByteArrayAsync();
+                _isRefreshing = true;
+                Console.WriteLine("🔄 Starting token refresh...");
+
+                httpClient.DefaultRequestHeaders.Authorization = null;
+
+                var requestBody = new RefreshTokenRequest
+                {
+                    RefreshToken = refreshToken
+                };
+
+                var response = await httpClient.PostAsJsonAsync("api/Auth/refresh-token", requestBody, _jsonOptions);
+                var content = await response.Content.ReadAsStringAsync();
+
+                Console.WriteLine($"📥 Refresh Response ({response.StatusCode}): {content}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var newSession = System.Text.Json.JsonSerializer.Deserialize<LoginResponseModel>(content, _jsonOptions);
+
+                    if (newSession != null && !string.IsNullOrEmpty(newSession.Token))
+                    {
+                        Console.WriteLine("✅ Token refresh successful");
+
+                        await localStorage.SetAsync("sessionState", newSession);
+                        await ((CustomAuthStateProvider)authStateProvider).MarkUserAsAuthenticated(newSession);
+
+                        httpClient.DefaultRequestHeaders.Authorization =
+                            new AuthenticationHeaderValue("Bearer", newSession.Token);
+
+                        return true;
+                    }
+                }
+
+                Console.WriteLine($"❌ Token refresh failed");
+                return false;
             }
-            catch (Exception ex) { Console.WriteLine($"❌ Error in SafeGetBytesAsync: {ex.Message}"); return null; }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Token refresh exception: {ex.Message}");
+                return false;
+            }
+            finally
+            {
+                _isRefreshing = false;
+                RefreshSemaphore.Release();
+            }
         }
+
+
 
         public async Task<string?> GetRawStringAsync(string path)
         {

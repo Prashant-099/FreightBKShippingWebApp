@@ -1,37 +1,30 @@
-﻿    @page "/report-editor"
+﻿    @page "/Testreport-editor"
 
-    @inject IHttpClientFactory HttpClientFactory
-    @inject ReportDataService ReportService
-    @using System.Text
-    @using System.Text.Json
+@inject IHttpClientFactory HttpClientFactory
+@inject ReportDataService ReportService
+@using System.Text
+@using System.Text.Json
 @using DevExpress.Blazor
 @using DevExpress.Blazor.Reporting
 @using FreightBKShippingWebApp.Components.Pages
 @using FreightBKShippingWebApp.Model
 @using FreightBKShippingWebApp.Models
 @using FreightBKShippingWebApp.ReportDesignServices
-@using FreightBKShippingWebApp.Services   
+@using FreightBKShippingWebApp.Services
 @using FreightBKShippingWebApp.ReportDesign
-    @inject NavigationManager NavigationManager
-    @inject LoadingService LoadingService
-    @inject DataStateService DataStateService
-    @inject ReportContextService ReportContext
+@inject NavigationManager NavigationManager
+@inject LoadingService LoadingService
+@inject DataStateService DataStateService
+@inject ReportContextService ReportContext
 @inject ConfirmationDialogService ConfirmDialogService
 @inject ToasteService ToastService
-
 <br />
-
-<div style="background:yellow;padding:10px;font-size:16px;">
-    ReportId: @reportData1.ReportDataId <br />
-    ReportUrl Length: @(ReportUrl?.Length ?? 0) <br />
-    Context Null: @(ReportContext.CurrentReportData == null)
-</div>
 <div class="report-designer-container">
     <!-- Header Section -->
     <div class="header-section">
         <div class="header-content">
             <div class="header-left">
-                <i class="bi bi-grid-3x3-gap-fill section-icon-text-fill header-icon"></i>
+                <i class="bi bi-file-earmark-text-fill header-icon"></i>
                 <div>
                     <h4 class="header-title">Report Designer</h4>
                     <p class="header-subtitle">Create and customize your reports</p>
@@ -52,10 +45,13 @@
     <div class="content-card">
         <!-- Format Selection Section -->
         <div class="section-block">
-            
+            <div class="section-header">
+                <i class="bi bi-grid-3x3-gap-fill section-icon"></i>
+                <h5 class="section-title">Report Configuration</h5>
+            </div>
             
             <DxFormLayout Data="reportData1" CssClass="modern-form">
-               @*  <DxFormLayoutGroup ColSpanMd="12">
+                <DxFormLayoutGroup ColSpanMd="12">
                     <!-- Format Selector -->
                     <DxFormLayoutItem Caption="Select Format" ColSpanMd="12" CssClass="form-item-featured">
                         <Template>
@@ -80,66 +76,33 @@
                             </DxComboBox>
                         </Template>
                     </DxFormLayoutItem>
-                </DxFormLayoutGroup> *@
+                </DxFormLayoutGroup>
 
                 <!-- Two Column Layout for Details -->
-                <DxFormLayoutGroup Decoration="FormLayoutGroupDecoration.None" ColSpanMd="6">
-                    <DxFormLayoutItem Caption="Document Type" ColSpanMd="12">
-                        <Template>
-                            <label class="form-label-modern">
-                                <i class="bi bi-file-text"></i> Document Type
-                            </label>
-                            <DxComboBox Data="@doctype"
-                                        Value="@reportData1.DocType"
-                                        ValueChanged="@(async (string v) => await OnDocTypeChanged(v))"
-                                        NullText="Select Doctype..."
-                                        AllowUserInput="true" 
-                                        ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
-                                        SearchMode="ListSearchMode.AutoSearch"
-                                        SearchFilterCondition="ListSearchFilterCondition.Contains" />
-                        </Template>
-                    </DxFormLayoutItem>
-
-                    <DxFormLayoutItem Caption="Select Format" ColSpanMd="12" >
-                        <Template>
-                            <label class="form-label-modern">
-                                <i class="bi bi-layout-text-window-reverse"></i> Select Format
-                            </label>
-                            <DxComboBox TData="ReportData"
-                                        TValue="string"
-                                        Data="@FilteredReportDatalist"
-                                        Value="@reportData1.FormatName"
-                                        ValueFieldName="FormatName"
-                                        TextFieldName="FormatName"
-                                        ValueChanged="@OnFormatChanged"
-                                        CssClass="modern-combo"
-                                        NullText="Choose a report format...">
-                                <ItemTemplate Context="item">
-                                    <div class="combo-item">
-                                        <i class="bi bi-file-earmark"></i>
-                                        <span>@item.FormatName</span>
-                                    </div>
-                                </ItemTemplate>
-                            </DxComboBox>
-                        </Template>
-                    </DxFormLayoutItem>
-
-
-
+                <DxFormLayoutGroup ColSpanMd="6">
                     <DxFormLayoutItem Caption="Format Name" ColSpanMd="12">
                         <Template>
                             <label class="form-label-modern">
                                 <i class="bi bi-tag"></i> Format Name
                             </label>
-                            <DxTextBox Text="@reportData1.NextFormat"
-                                       TextChanged="@(val => reportData1.NextFormat = val)"
+                            <DxTextBox Text="@reportData1.FormatName"
+                                       TextChanged="@(val => OnFieldChanged(nameof(reportData1.FormatName), val))"
                                        CssClass="modern-input" />
                         </Template>
                     </DxFormLayoutItem>
 
-                   
+                    <DxFormLayoutItem Caption="Document Type" ColSpanMd="12">
+                        <Template>
+                            <label class="form-label-modern">
+                                <i class="bi bi-file-text"></i> Document Type
+                            </label>
+                            <DxTextBox Text="@reportData1.DocType"
+                                       TextChanged="@(val => OnFieldChanged(nameof(reportData1.DocType), val))"
+                                       CssClass="modern-input" />
+                        </Template>
+                    </DxFormLayoutItem>
 
-                    @* <DxFormLayoutItem Caption="Copy Format" ColSpanMd="12">
+                    <DxFormLayoutItem Caption="Copy Format" ColSpanMd="12">
                         <Template>
                             <label class="form-label-modern">
                                 <i class="bi bi-files"></i> Copy Format
@@ -148,10 +111,10 @@
                                        TextChanged="@(val => OnFieldChanged(nameof(reportData1.CopyFormat), val))"
                                        CssClass="modern-input" />
                         </Template>
-                    </DxFormLayoutItem> *@
+                    </DxFormLayoutItem>
                 </DxFormLayoutGroup>
 
-               @*  <DxFormLayoutGroup ColSpanMd="6">
+                <DxFormLayoutGroup ColSpanMd="6">
                     <DxFormLayoutItem Caption="Next Format" ColSpanMd="12">
                         <Template>
                             <label class="form-label-modern">
@@ -163,8 +126,28 @@
                         </Template>
                     </DxFormLayoutItem>
 
-                  
-                </DxFormLayoutGroup> *@
+                    <DxFormLayoutItem Caption="Voucher ID" ColSpanMd="12">
+                        <Template>
+                            <label class="form-label-modern">
+                                <i class="bi bi-hash"></i> Voucher ID
+                            </label>
+                            <DxSpinEdit Value="@reportData1.VchId"
+                                        ValueChanged="@((int? val) => OnFieldChanged(nameof(reportData1.VchId), val))"
+                                        CssClass="modern-input" />
+                        </Template>
+                    </DxFormLayoutItem>
+
+                    <DxFormLayoutItem Caption="Company ID" ColSpanMd="12">
+                        <Template>
+                            <label class="form-label-modern">
+                                <i class="bi bi-building"></i> Company ID
+                            </label>
+                            <DxSpinEdit Value="@reportData1.CompanyId"
+                                        ValueChanged="@((int? val) => OnFieldChanged(nameof(reportData1.CompanyId), val))"
+                                        CssClass="modern-input" />
+                        </Template>
+                    </DxFormLayoutItem>
+                </DxFormLayoutGroup>
             </DxFormLayout>
         </div>
 
@@ -174,44 +157,33 @@
                 <DxButton Click="@ClearForm" 
                           RenderStyle="ButtonRenderStyle.Secondary"
                           IconCssClass="bi bi-eraser"
-                          CssClass="btn-action btn-clear"
-                          Text=" Clear Form">
-                                   </DxButton>
+                          CssClass="btn-action btn-clear">
+                    <DxHint Text="Clear all form fields and close report designer" />
+                    Clear Form
+                </DxButton>
 
                 <DxButton Click="@LoadExistingReport"
                           RenderStyle="ButtonRenderStyle.Info"
-                          IconCssClass="bi bi-arrow-clockwise"
-                          CssClass="btn-action btn-load"
-                          Text="Load Existing">
-                                </DxButton>
-                <DxButton Click="@CopyExistingReport"
-                          RenderStyle="ButtonRenderStyle.Primary"
-                          IconCssClass="bi bi-files"
-                          CssClass="btn-action btn-load"
-                          Text="Copy Existing">
-                    
+                          IconCssClass="bi bi-folder-open"
+                          CssClass="btn-action btn-load">
+                    <DxHint Text="Load an existing report" />
+                    Load Existing
                 </DxButton>
+
                 <DxButton Click="@OpenNewReport" 
+                          Enabled="IsNewReportEnabled"
                           RenderStyle="ButtonRenderStyle.Success"
                           IconCssClass="bi bi-plus-circle"
-                          CssClass="btn-action btn-new"
-                          Text="Create New Report">
-                    
-                </DxButton>
-               
-                <DxButton Click="@DeleteReport"
-                          RenderStyle="ButtonRenderStyle.Warning"
-                          CssClass="btn-action btn-Del"
-                          IconCssClass="bi bi-trash"
-                          Text="Delete Report">
-                   
+                          CssClass="btn-action btn-new">
+                    <DxHint Text="Create new report when ready" />
+                    Create New Report
                 </DxButton>
             </div>
         </div>
     </div>
 
     <!-- Designer Section -->
-    @if (ShowDesigner && !string.IsNullOrEmpty(ReportUrl))
+    @if (ShowDesigner)
     {
         <div class="designer-card">
             <div class="designer-header">
@@ -226,12 +198,12 @@
                 </div>
             </div>
             <div class="designer-wrapper">
-                <DxReportDesigner  ReportName="@ReportUrl" Width="100%" Height="100%" />
+                <DxReportDesigner ReportName="@ReportUrl" Width="100%" Height="100%" />
             </div>
         </div>
     }
 </div>
-<ConfirmationDialog />
+
 <style>
     /* Main Container */
     .report-designer-container {
@@ -245,9 +217,9 @@
     .header-section {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         border-radius: 16px;
-        padding: 14px 14px;
+        padding: 24px 32px;
         margin-bottom: 24px;
-        .header-icon box-shadow: 0 8px 24px rgba(102, 126, 234, 0.2);
+        box-shadow: 0 8px 24px rgba(102, 126, 234, 0.2);
     }
 
     .header-content {
@@ -323,7 +295,8 @@
         align-items: center;
         gap: 12px;
         margin-bottom: 24px;
-        /*  padding-bottom: 16px; */ .header-section border-bottom: 2px solid #f0f0f0;
+        padding-bottom: 16px;
+        border-bottom: 2px solid #f0f0f0;
     }
 
     .section-icon {
@@ -437,10 +410,6 @@
         color: white !important;
     }
 
-    .btn-Del {
-        background: linear-gradient(135deg, #f31b48 0%, #f31b48 100%) !important;
-        color: white !important;
-    }
     /* Designer Card */
     .designer-card {
         background: white;
@@ -552,92 +521,6 @@
     }
 </style>
 @code {
-    private string SelectedCopyFormat = "";
-    private bool IsCopyMode = false;
-
-    private List<string> doctype = new() { "bill", "Job", "Quotation", "ReceiptPayment", "Journal", "Contra", "LR", "Transport Invoice", "ENVELOPE", "SALARY" };
-
-    async Task CopyExistingReport()
-    {
-        try
-        {
-            if (reportData1.ReportDataId <= 0)
-            {
-                ToastService.Warning("Select Formate first.");
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(reportData1.NextFormat))
-            {
-                ToastService.Warning("Enter new Formate Name.");
-                return;
-            }
-
-            LoadingService.Show();
-
-            var newId = await ReportService.CopyReportAsync(
-     reportData1.ReportDataId,
-            reportData1.NextFormat
-       );
-            ToastService.Success("Report copied successfully.");
-            NavigationManager.NavigateTo($"/report-designer/{newId}", true);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine(ex.Message);
-            ToastService.Error("Copy failed.");
-        }
-        finally
-        {
-            LoadingService.Hide();
-        }
-    }
-    async Task DeleteReport()
-    {
-        try
-        {
-            if (reportData1.ReportDataId <= 0)
-            {
-                ToastService.Warning("Select Formate first.");
-                return;
-            }
-
-            var confirm = await ConfirmDialogService.ShowAsync(
-        $"Are you sure you want to delete {reportData1.FormatName}?");
-            if (!confirm)
-                return;
-
-            LoadingService.Show();
-
-            var success = await ReportService.DeleteAsync(reportData1.ReportDataId);
-
-            if (success)
-            {
-                ToastService.Success("Report deleted successfully.");
-
-                // remove from local lists
-                reportDataList.RemoveAll(x => x.ReportDataId == reportData1.ReportDataId);
-                FilteredReportDatalist.RemoveAll(x => x.ReportDataId == reportData1.ReportDataId);
-
-                await ClearForm();
-
-                StateHasChanged();
-            }
-            else
-            {
-                ToastService.Error("Delete failed.");
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine(ex.Message);
-            ToastService.Error("Error deleting report.");
-        }
-        finally
-        {
-            LoadingService.Hide();
-        }
-    }
     void OnFieldChanged(int? val)
     {
         reportData1.VchId = val;
@@ -646,48 +529,28 @@
 
 
     private ReportData reportData1 = new ReportData();
-    private List<ReportData> reportDataList { get; set; }
-    private List<ReportData> FilteredReportDatalist = new();
-    private string ReportUrl = "";
+    private IEnumerable<ReportData> reportDataList { get; set; }
+    private string ReportUrl = "NEwRePort";
     private bool ShowDesigner = false;
 
     private HttpClient HttpClient => HttpClientFactory.CreateClient();
 
     protected override async Task OnInitializedAsync()
     {
-        // Register the component's InvokeAsync so LoadingService can marshal to the UI thread
-        LoadingService.SetInvoker(InvokeAsync);
-
         DataStateService.OnChange += RefreshReportpage;
         await RefreshReportpage();
-        FilteredReportDatalist = new();
     }
 
     private async Task RefreshReportpage()
     {
         LoadingService.Show();
         reportDataList = await ReportService.GetAllAsync();
-        await ClearForm();
+        ClearForm();
         LoadingService.Hide();
     }
-    async Task OnDocTypeChanged(string value)
-    {
-        reportData1.DocType = value;
 
-        // Clear selected format
-        reportData1.FormatName = null;
-
-        // Filter reports
-        FilteredReportDatalist = reportDataList
-            .Where(x => x.DocType != null &&
-                        x.DocType.Equals(value, StringComparison.OrdinalIgnoreCase))
-            .ToList();
-
-        await InvokeAsync(StateHasChanged);
-    }
     void RedirectToDesigner()
     {
-
         if (reportData1.ReportDataId > 0)
         {
             LoadingService.Show();
@@ -700,29 +563,17 @@
 
     void OpenNewReport()
     {
-        if (string.IsNullOrWhiteSpace(reportData1.DocType))
-        {
-            ToastService.Warning("Please Select the Document Type.");
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(reportData1.NextFormat))
-        {
-            ToastService.Warning("Enter new Formate Name.");
-            return;
-        }
-        LoadingService.Show();
         // Naya object banao aur form data copy karo
         var newReport = new ReportData
         {
             ReportDataId = 0, // New hai, so ID = 0
-            FormatName = reportData1.NextFormat ?? $"NewReport_{DateTime.Now:yyyyMMdd_HHmmss}",
+            FormatName = reportData1.FormatName ?? $"NewReport_{DateTime.Now:yyyyMMdd_HHmmss}",
             DocType = reportData1.DocType,
             CopyFormat = reportData1.CopyFormat,
-            NextFormat = "",
+            NextFormat = reportData1.NextFormat,
             VchId = reportData1.VchId,
             CompanyId = reportData1.CompanyId,
-            Status = 1,
+            Status = reportData1.Status,
             LayoutData = "" // Blank XML for new report
         };
 
@@ -735,13 +586,11 @@
 
         ReportUrl = base64;
         ShowDesigner = true;
-         LoadingService.Hide();
     }
 
-    async Task ClearForm()
+    void ClearForm()
     {
         reportData1 = new ReportData(); // Reset all form fields
-        ReportUrl = ""; // Clear the report URL
         ShowDesigner = false; // Set this to control the visibility of your Report Designer
     }
 
@@ -749,7 +598,7 @@
     {
         if (reportData1.ReportDataId <= 0)  
         {
-            ToastService.Warning("Please select a Formate.");
+            await ShowMessage("❗ Please enter a valid Report ID to load.");
             return;
         }
 
@@ -757,21 +606,10 @@
         try
         {
             var cts = new CancellationTokenSource(5000); // 5s timeout
-            // var reportData = await HttpClient.GetFromJsonAsync<ReportData>($"api/ReportData/{reportData1.ReportDataId}", cts.Token);
-            var reportData = await ReportService.GetByIdAsync(reportData1.ReportDataId);
-            if (reportData == null)
-            {
-                ToastService.Error("Report data not found.");
-                return;
-            }
+            var reportData = await HttpClient.GetFromJsonAsync<ReportData>($"api/ReportData/{reportData1.ReportDataId}", cts.Token);
             if (reportData != null)
             {
                 reportData1 = reportData;
-            }
-            // ✅ Confirm LayoutData is present
-            if (string.IsNullOrWhiteSpace(reportData1.LayoutData))
-            {
-                ToastService.Warning("Report has no layout data saved yet.");
             }
         }
         catch (Exception ex)
@@ -794,17 +632,17 @@
         LoadingService.Show();
         if (string.IsNullOrWhiteSpace(newValue))
         {
-            ToastService.Warning("⚠️ Please select a valid format.");
+            await ShowMessage("⚠️ Please select a valid format.");
             return;
         }
         var selected = reportDataList.FirstOrDefault(x => x.FormatName == newValue);
         if (selected == null)
         {
-            ToastService.Error("⚠️ Format not found.");
+            await ShowMessage("⚠️ Format not found.");
             return;
 
         }
-
+        
         reportData1 = selected;
 
         BuildReportUrl();
@@ -865,39 +703,26 @@
     //         StateHasChanged();
     // }
 
-    void OnInputChanged(Microsoft.AspNetCore.Components.ChangeEventArgs e) => StateHasChanged();
+        void OnInputChanged(Microsoft.AspNetCore.Components.ChangeEventArgs e) => StateHasChanged();
 
-    void BuildReportUrl()
-    {
+        void BuildReportUrl()
+        {
         var json = JsonSerializer.Serialize(reportData1);
-//         var json = JsonSerializer.Serialize(new ReportData
-// {
-//     ReportDataId = reportData1.ReportDataId,
-//     FormatName = reportData1.FormatName,
-//     DocType = reportData1.DocType,
-//     CopyFormat = reportData1.CopyFormat,
-//     NextFormat = reportData1.NextFormat,
-//     VchId = reportData1.VchId,
-//     CompanyId = reportData1.CompanyId,
-//     Status = reportData1.Status,
-//     LayoutData = reportData1.LayoutData
-// });
-
         ReportUrl = Convert.ToBase64String(Encoding.UTF8.GetBytes(json));
         // ✅ Send only ID as string to DxReportDesigner
         // ReportUrl = reportData1.ReportDataId.ToString();
-    }
+        }
 
-    // private bool IsNewReportEnabled =>
-    //       // !string.IsNullOrWhiteSpace(reportData1.ReportDataFormatName) &&
-    //       // !string.IsNullOrWhiteSpace(reportData1.CopyFormat) &&
-    //       !string.IsNullOrWhiteSpace(reportData1.NextFormat) &&
-    //       !string.IsNullOrWhiteSpace(reportData1.DocType);
-    //         // reportData1.VchId > 0;
+          private bool IsNewReportEnabled =>
+                // !string.IsNullOrWhiteSpace(reportData1.ReportDataFormatName) &&
+                !string.IsNullOrWhiteSpace(reportData1.CopyFormat) &&
+                !string.IsNullOrWhiteSpace(reportData1.NextFormat) &&
+                !string.IsNullOrWhiteSpace(reportData1.DocType) &&
+                reportData1.VchId > 0;
 
-        // Task ShowMessage(string msg)
-        // {
-        //     Console.WriteLine(msg); // replace with toast/modal
-        //     return Task.CompletedTask;
-        // }
+        Task ShowMessage(string msg)
+        {
+            Console.WriteLine(msg); // replace with toast/modal
+            return Task.CompletedTask;
+        }
 }

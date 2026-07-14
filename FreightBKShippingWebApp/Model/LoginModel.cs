@@ -9,4 +9,9 @@ namespace FreightBKShippingWebApp.Model
         public string UserPassword { get; set; }
         public bool RememberMe { get; set; } = false;
     }
+    public class RefreshTokenRequest
+    {
+        // ✅ CRITICAL: Must match API parameter name exactly
+        public string RefreshToken { get; set; }
+    }
 }

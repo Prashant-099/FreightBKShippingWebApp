@@ -15,7 +15,13 @@
 @inject IJSRuntime JS
 @inject AuditLogService AuditLogService
 
-
+<style>
+    .fssai-expiry-danger {
+        color: red;
+        font-weight: bold;
+        animation: blink 1s infinite;
+    }
+</style>
 @if (IsShowContent)
 {
     <CascadingValue Value="this">
@@ -399,7 +405,7 @@
                 Title = l.TableName ?? "",
                 Description = l.Remarks ?? "",
                 Status = l.Operations ?? "update",
-                Time = l.IndiaTime
+                Time = l.DateTime
             }).ToList();
         }
         catch { _recentActivities = new(); }

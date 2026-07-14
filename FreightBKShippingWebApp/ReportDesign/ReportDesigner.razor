@@ -18,9 +18,9 @@
 @inject ReportContextService ReportContext
 <div class="challan-page-container">
      <div class="scrollable-form-content">
-        
-            <DxReportDesigner @key="ReportUrl" 
-                      ReportName="@ReportUrl"
+
+        <DxReportDesigner @key="reportDesignerKey"
+                          ReportName="@ReportUrl"
                               Width="100%" Height="100vh" @ref="reportDesigner" />
        
     </div>
@@ -33,6 +33,7 @@
     private bool showFormatPopup = false;
     private int selectedReportDataId;
     private ReportData? selectedReportData;
+
     private string reportDesignerKey = Guid.NewGuid().ToString(); // Unique key for component refresh
 
     //
@@ -42,28 +43,28 @@
 
     protected override void OnInitialized()
     {
-        // Register the component's InvokeAsync so LoadingService can marshal to the UI thread
-        LoadingService.SetInvoker(InvokeAsync);
+        // // Register the component's InvokeAsync so LoadingService can marshal to the UI thread
+        // LoadingService.SetInvoker(InvokeAsync);
 
-        // ReportUrl = reportId.ToString();
-        // LoadingService.Show(); // ✅ Trigger global loader
-        // LoadingService.OnChange += StateHasChanged;
-        var current = ReportContext.CurrentReportData;
-
-        if (current != null)
-        {
-            var json = JsonSerializer.Serialize(current);
-
-            ReportUrl = Convert.ToBase64String(
-                Encoding.UTF8.GetBytes(json));
-        }
-        else
-        {
-            ReportUrl = reportId.ToString();
-        }
-
-        LoadingService.Show();
+       ReportUrl = reportId.ToString();
+        LoadingService.Show(); // ✅ Trigger global loader
         LoadingService.OnChange += StateHasChanged;
+        // var current = ReportContext.CurrentReportData;
+       
+        // if (current != null && current.ReportDataId > 0)
+        // {
+        //     var json = JsonSerializer.Serialize(current);
+
+        //     ReportUrl = Convert.ToBase64String(
+        //         Encoding.UTF8.GetBytes(json));
+        // }
+        // else
+        // {
+        //     ReportUrl = reportId.ToString();
+        // }
+
+        // LoadingService.Show();
+        // LoadingService.OnChange += StateHasChanged;
     }
   
 
