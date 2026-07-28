@@ -171,8 +171,8 @@
         {
             if (EditModel.LocationId == 0)
             {
-                var result = await LocationService.CreateAsync(EditModel);
-                if (result)
+                int result = await LocationService.CreateAsync(EditModel);
+                if (result>0)
                 {
                     ToastService.Success("Location created successfully!");
                     AuditLogService.NotifyAuditChanged();

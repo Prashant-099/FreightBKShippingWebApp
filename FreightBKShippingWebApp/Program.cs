@@ -17,6 +17,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.ResponseCompression;
 using System.Threading.RateLimiting;
+using OfficeOpenXml;
 
 var builder = WebApplication.CreateBuilder(args);
 var secureCookiePolicy = builder.Environment.IsDevelopment()
@@ -283,6 +284,9 @@ builder.Services.AddScoped<IGenericReportManager, GenericReportManager>();
 builder.Services.AddScoped<DataStateService>();
 builder.Services.AddSingleton<ReportContextService>();
 
+//excel se data import ke liye 
+ExcelPackage.License.SetNonCommercialPersonal("Prashant");
+builder.Services.AddScoped<ExcelImportService>();
 
 ////for details error show on server inspect 
 //builder.Services.AddServerSideBlazor(options =>

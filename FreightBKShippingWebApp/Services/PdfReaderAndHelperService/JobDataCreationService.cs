@@ -54,9 +54,9 @@ public class JobDataCreationService
                 return existing.LocationId;
 
             var newLoc = new Location { LocationName = name.Trim(), LocationType = "PORT"  };
-            bool created = await _locationService.CreateAsync(newLoc);
+            int created = await _locationService.CreateAsync(newLoc);
 
-            if (created)
+            if (created>0)
             {
                 var refreshed = await _locationService.GetAllAsync();
                 return refreshed.FirstOrDefault(x =>
@@ -130,9 +130,9 @@ public class JobDataCreationService
                 newLoc.LocationName,
                 newLoc.LocationCode);
 
-            bool created = await _locationService.CreateAsync(newLoc);
+            int created = await _locationService.CreateAsync(newLoc);
 
-            if (created)
+            if (created>0)
             {
                 return (await _locationService.GetAllAsync())
                     .FirstOrDefault(x => x.LocationCode == stateCode)

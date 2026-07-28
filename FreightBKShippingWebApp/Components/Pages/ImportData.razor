@@ -1,0 +1,2146 @@
+﻿@page "/importData"
+@using DevExpress.Blazor
+@using FreightBKShippingWebApp.Model
+@using FreightBKShippingWebApp.Models
+@using OfficeOpenXml
+@using System.Dynamic
+@inject ExcelImportService ExcelService
+@inject JobService JobService
+@inject AccountService AccountService
+@inject LocationService LocationService
+@inject CargoService CargoService
+@inject VesselService VesselService
+@inject NotifyService NotifyService
+@inject CurrencyService CurrencyService
+@inject BranchService BranchService
+@inject IBranchContext BranchContext
+@inject YearStatechangeService YearStatechangeService
+@inject ToasteService ToastService
+@inject StatusService StatusService
+@inject CountryService CountryService
+@inject BillService BillService
+@inject ServiceService ServiceService      
+@inject StateService StateService          
+@inject VoucherService VoucherService
+@inject HsnSacService HsnSacService
+@inject GstSlabService GstSlabService
+@inject UnitService UnitService
+@inject JournalService JournalService
+@inject LedgerService LedgerService
+
+<div class="d-flex align-items-center p-2 border-bottom">
+
+    <label class="me-2 fw-bold">Import Type</label>
+
+    <DxComboBox Data="@ImportTypes"
+                ValueFieldName="Name"
+                TextFieldName="Name"
+                Width="220px"
+                @bind-Value="SelectedImportType" />
+
+    <InputFile OnChange="OnFileSelected" accept=".xlsx" />
+
+    @if (!string.IsNullOrEmpty(FileName))
+    {
+        <p>@FileName</p>
+    }
+
+    <DxButton Text="Import"
+              IconCssClass="bi bi-upload"
+              CssClass="ms-2"
+              Click="ImportExcel" />
+
+    <DxCheckBox @bind-Checked="AllowDuplicate"
+                CssClass="ms-auto">
+        Allow Duplicate Entry
+    </DxCheckBox>
+
+</div>
+
+<DxGrid Data="@PreviewData"
+        Height="550px"
+        ShowFilterRow="true"
+        ShowSearchBox="true">
+
+    <Columns>
+
+        <DxGridDataColumn FieldName="RowNo" Width="70" />
+
+        <DxGridDataColumn FieldName="Status" Width="120" />
+
+        <DxGridDataColumn FieldName="Message" Width="280" />
+
+        @foreach (var col in ExcelColumns)
+        {
+            <DxGridDataColumn FieldName="@col" Caption="@col" />
+        }
+
+    </Columns>
+
+</DxGrid>
+
+<div class="d-flex justify-content-end mt-2">
+
+    <DxButton Text="Save"
+              IconCssClass="bi bi-save"
+              Click="Save" />
+
+    <DxButton Text="Close"
+              CssClass="ms-2"
+              IconCssClass="bi bi-x-circle"
+              Click="Close" />
+
+</div>
+@code {
+
+    // -----------------------------------------------------------------
+    // Import type selector
+    // -----------------------------------------------------------------
+    List<ImportTypeModel> ImportTypes = new()
+    {
+        new() { Id = 1, Name = "EXPORT" },
+        new() { Id = 2, Name = "IMPORT" },
+        new() { Id = 3, Name = "Bill" },
+         new() { Id = 4, Name = "Receipt" },
+         new() { Id = 5, Name = "Payment" },
+           new() { Id = 6, Name = "Contra" }
+    };
+
+    public class ImportTypeModel
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = "";
+    }
+
+    ImportTypeModel? SelectedImportType;
+
+    bool AllowDuplicate = false;
+
+    List<ExpandoObject> PreviewData = new();
+    // async Task ImportExcel()
+    // {
+    //     switch (SelectedImportType.Id)
+    //     {
+    //         case 1:
+    //             await ImportExportJob();
+    //             break;
+
+    //         case 2:
+    //             await ImportImportJob();
+    //             break;
+
+    //         case 3:
+    //             await ImportBill();
+    //             break;
+    //     }
+    // }
+    // -----------------------------------------------------------------
+    // Required columns (must match headers in Job_Import_Template.xlsx)
+    // -----------------------------------------------------------------
+    static readonly string[] RequiredColumns =
+    {
+         "BRANCH",
+        "JOB_NO",
+         "JOB_DATE",
+        "PARTY",
+
+    };
+
+    // Y/N text helper
+    static bool ParseYesNo(string value) =>
+        !string.IsNullOrWhiteSpace(value) &&
+        (value.Trim().Equals("Y", StringComparison.OrdinalIgnoreCase) ||
+         value.Trim().Equals("YES", StringComparison.OrdinalIgnoreCase) ||
+         value.Trim() == "1");
+
+    // -----------------------------------------------------------------
+    // File selection
+    // -----------------------------------------------------------------
+    IBrowserFile? SelectedFile;
+    string FileName = "";
+    List<string> ExcelColumns = new();
+
+    async Task OnFileSelected(InputFileChangeEventArgs e)
+    {
+        SelectedFile = e.File;
+        FileName = SelectedFile.Name;
+    }
+
+    async Task ImportExcel()
+    {
+        if (SelectedImportType == null)
+        {
+            ToastService.Warning("Please select Import Type");
+            return;
+        }
+
+        try
+        {
+            if (SelectedImportType.Id == 3) // Bill
+                await ReadBillExcel();
+            else if (SelectedImportType.Id == 4)     // ✅ Receipt
+                await ReadReceiptExcel();
+            else if (SelectedImportType.Id == 5)     // ✅ payment
+                await ReadPaymentExcel();
+            else if (SelectedImportType.Id == 6)     // ✅ payment
+                await ReadContraExcel();
+            else                            // Export / Import Job
+                await ReadExcel();
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error("Import failed: " + ex.Message);
+        }
+
+        StateHasChanged();
+    }
+
+    // -----------------------------------------------------------------
+    // Core: read the uploaded workbook, build Job objects, validate
+    // -----------------------------------------------------------------
+    async Task ReadExcel()
+    {
+        if (SelectedFile == null)
+            return;
+
+        await LoadMasters();
+        PreviewData.Clear();
+
+        using var stream = SelectedFile.OpenReadStream(20 * 1024 * 1024);
+        using var ms = new MemoryStream();
+        await stream.CopyToAsync(ms);
+        ms.Position = 0;
+
+        using var package = new ExcelPackage(ms);
+        var ws = package.Workbook.Worksheets.First();
+
+        if (ws.Dimension == null)
+            return;
+
+        // -----------------------------------
+        // Read Header (row 2 in the template - row 1 holds helper notes)
+        // -----------------------------------
+        // int headerRow = DetectHeaderRow(ws);
+        var map = ExcelService.ReadHeader(ws);
+        ExcelColumns = map.Columns.Keys.ToList();
+
+        foreach (var col in RequiredColumns)
+        {
+            if (!map.Has(col))
+                throw new Exception($"Excel Column Missing: {col}");
+        }
+
+        int totalRows = ws.Dimension.End.Row;
+
+        for (int row = 2; row <= totalRows; row++)
+        {
+            if (ExcelService.IsBlankRow(ws, row))
+                continue;
+
+            List<string> errors = new();
+
+            string jobNo = ExcelService.GetText(ws, map, row, "JOB_NO");
+            string jobType = SelectedImportType.Name;
+            string exporterImporter = ExcelService.GetText(ws, map, row, "PARTY");
+            string Highseas = ExcelService.GetText(ws, map, row, "HIGHSEAS");
+            string pol = ExcelService.GetText(ws, map, row, "POL");
+            string pod = ExcelService.GetText(ws, map, row, "POD");
+
+            if (string.IsNullOrWhiteSpace(jobNo))
+                errors.Add("Job No Missing");
+
+            if (string.IsNullOrWhiteSpace(exporterImporter))
+                errors.Add("Party Missing");
+
+
+
+            //-----------------------------------
+            // Master lookups
+            //-----------------------------------
+            int? partyId = FindAccountId(exporterImporter);
+            if (partyId == null)
+                errors.Add($"Exporter/Importer '{exporterImporter}' not found. Please create Account master.");
+
+
+            int? HighseasId = null;
+
+            if (!string.IsNullOrWhiteSpace(Highseas))
+            {
+                HighseasId = FindAccountId(Highseas);
+
+                if (HighseasId == null)
+                    errors.Add($"Highseas '{Highseas}' not found. Please create Account master.");
+            }
+
+            // POL
+            int? polId = null;
+            if (!string.IsNullOrWhiteSpace(pol))
+            {
+                polId = FindLocationId(pol);
+
+                if (polId == null)
+                    errors.Add($"POL '{pol}' not found. Please create Location master.");
+            }
+
+            // POD
+            int? podId = null;
+            if (!string.IsNullOrWhiteSpace(pod))
+            {
+                podId = FindLocationId(pod);
+
+                if (podId == null)
+                    errors.Add($"POD '{pod}' not found. Please create Location master.");
+            }
+
+            // JOB STATUS
+            string jobstatus = ExcelService.GetText(ws, map, row, "JOB_STATUS");
+            int? jobstatusId = null;
+            if (!string.IsNullOrWhiteSpace(jobstatus))
+            {
+                jobstatusId = FindJobStatusId(jobstatus);
+
+                if (jobstatusId == null)
+                    errors.Add($"JOB STATUS '{jobstatus}' not found. Please create STATUS master.");
+            }
+
+            // CONSIGNEE
+            string consigneeName = ExcelService.GetText(ws, map, row, "CONSIGNEE");
+            int? consigneeId = null;
+            if (!string.IsNullOrWhiteSpace(consigneeName))
+            {
+                consigneeId = FindNotifyId(consigneeName, "CONSIGNEE");
+
+                if (consigneeId == null)
+                    errors.Add($"Consignee '{consigneeName}' not found. Please create MISC master.");
+            }
+
+            // CONSIGNOR
+            string supplierName = ExcelService.GetText(ws, map, row, "CONSIGNOR");
+            int? supplierId = null;
+            if (!string.IsNullOrWhiteSpace(supplierName))
+            {
+                supplierId = FindNotifyId(supplierName, "CONSIGNOR");
+
+                if (supplierId == null)
+                    errors.Add($"Supplier/Consignor '{supplierName}' not found. Please create MISC master.");
+            }
+
+            // SHIPPER
+            string shipperName = ExcelService.GetText(ws, map, row, "SHIPPER");
+            int? shipperId = null;
+            if (!string.IsNullOrWhiteSpace(shipperName))
+            {
+                shipperId = FindNotifyId(shipperName, "SHIPPER");
+
+                if (shipperId == null)
+                    errors.Add($"Shipper '{shipperName}' not found. Please create MISC master.");
+            }
+
+            // LINE
+            string lineName = ExcelService.GetText(ws, map, row, "LINE");
+            int? lineId = null;
+            if (!string.IsNullOrWhiteSpace(lineName))
+            {
+                lineId = FindNotifyId(lineName, "LINE");
+
+                if (lineId == null)
+                    errors.Add($"Line '{lineName}' not found. Please create MISC master.");
+            }
+
+            // CHA
+            string chaName = ExcelService.GetText(ws, map, row, "CHA");
+            int? chaId = null;
+            if (!string.IsNullOrWhiteSpace(chaName))
+            {
+                chaId = FindNotifyId(chaName, "CHA");
+
+                if (chaId == null)
+                    errors.Add($"CHA '{chaName}' not found. Please create MISC master.");
+            }
+
+            // VESSEL
+            string vesselName = ExcelService.GetText(ws, map, row, "VESSEL");
+            int? vesselId = null;
+            if (!string.IsNullOrWhiteSpace(vesselName))
+            {
+                vesselId = FindVesselId(vesselName);
+
+                if (vesselId == null)
+                    errors.Add($"Vessel '{vesselName}' not found.");
+            }
+
+            // CARGO
+            string cargoName = ExcelService.GetText(ws, map, row, "CARGO");
+            int? cargoId = null;
+            if (!string.IsNullOrWhiteSpace(cargoName))
+            {
+                cargoId = FindCargoId(cargoName);
+
+                if (cargoId == null)
+                    errors.Add($"Cargo '{cargoName}' not found.");
+            }
+
+            // COUNTRY
+            string countryName = ExcelService.GetText(ws, map, row, "COUNTRY_ORIGIN");
+            int? countryId = null;
+            if (!string.IsNullOrWhiteSpace(countryName))
+            {
+                countryId = FindCountryId(countryName);
+
+                if (countryId == null)
+                    errors.Add($"Country '{countryName}' not found.");
+            }
+
+            // CURRENCY
+            string currencyName = ExcelService.GetText(ws, map, row, "CURRENCY");
+            int? currencyId = null;
+            if (!string.IsNullOrWhiteSpace(currencyName))
+            {
+                currencyId = FindCurrencyId(currencyName);
+
+                if (currencyId == null)
+                    errors.Add($"Currency '{currencyName}' not found.");
+            }
+            string branchName = ExcelService.GetText(ws, map, row, "BRANCH");
+            int? branchId = FindBranchId(branchName);
+            if (!string.IsNullOrWhiteSpace(branchName))
+            {
+                if (branchId == null)
+                    errors.Add($"Branch '{branchName}' not found.");
+            }
+
+
+            //-----------------------------------
+            // Duplicate check
+            //-----------------------------------
+            bool exists = await JobService.ExistsAsync(jobNo, branchId, jobType, YearStatechangeService.SelectedYearId.ToString());
+            if (exists && !AllowDuplicate)
+                errors.Add("Job No Already Exists");
+
+            //-----------------------------------
+            // Build Job entity
+            //-----------------------------------
+            var job = new Job
+            {
+                JobBranchId = branchId,
+                JobNo = jobNo,
+                JobDate = ExcelService.GetDate(ws, map, row, "JOB_DATE") ?? DateTime.Today,
+                JobType = jobType,
+                JobShipmentType = ExcelService.GetText(ws, map, row, "SHIPMENT_TYPE"),
+                JobSubType = ExcelService.GetText(ws, map, row, "JOB_SUB_TYPE"),
+                IsClearing = ParseYesNo(ExcelService.GetText(ws, map, row, "IS_CLEARING")),
+                IsForwarding = ParseYesNo(ExcelService.GetText(ws, map, row, "IS_FORWARD")),
+                IsTransportaion = ParseYesNo(ExcelService.GetText(ws, map, row, "IS_TRANSPORT")),
+                IsMiscService = ParseYesNo(ExcelService.GetText(ws, map, row, "IS_MISC.")),
+                JobPartyId = partyId,
+                JobPartyAddress = Accounts.FirstOrDefault(x => x.AccountId == partyId)?.AccountAddress1,
+                JobHighSeas1 = HighseasId,
+                JobHighseas1Address = Accounts.FirstOrDefault(x => x.AccountId == HighseasId)?.AccountAddress1,
+                JobAgent = ExcelService.GetText(ws, map, row, "AGENT"),
+                JobAgentAddress = ExcelService.GetText(ws, map, row, "AGENT_ADDRESS"),
+                JobCargoId = cargoId,
+                JobGoodsDesc = Cargos.FirstOrDefault(x => x.CargoId == cargoId)?.CargoRemarks,
+                JobHsnCode = Cargos.FirstOrDefault(x => x.CargoId == cargoId)?.cargohsnname,
+                JobBrand = ExcelService.GetText(ws, map, row, "CARGO_BRAND"),
+                JobVesselId = vesselId,
+                JobLineId = lineId,
+                JobDefCurrId = currencyId,
+                JobExchRate = ExcelService.GetDouble(ws, map, row, "EXCH_RATE"),
+                JobStatus = jobstatusId,
+                JobRemarks = ExcelService.GetText(ws, map, row, "REMARKS"),
+                JobSbNo = ExcelService.GetText(ws, map, row, "SB_NO"),
+                JobSbDate = ExcelService.GetDate(ws, map, row, "SB_DATE"),
+                JobBlNo = ExcelService.GetText(ws, map, row, "BL_NO"),
+                JobBlDate = ExcelService.GetDate(ws, map, row, "BL_DATE"),
+                JobHblNo = ExcelService.GetText(ws, map, row, "HBL_NO"),
+                JobHblDate = ExcelService.GetDate(ws, map, row, "HBL_DATE"),
+                JobBeNo = ExcelService.GetText(ws, map, row, "BE_NO"),
+                JobBeDate = ExcelService.GetDate(ws, map, row, "BE_DATE"),
+                JobShipperInvNo = ExcelService.GetText(ws, map, row, "SHIPPER_INV_NO"),
+                JobShipperInvDate = ExcelService.GetDate(ws, map, row, "SHIPPER_INV_DATE"),
+                JobGrossWt = ExcelService.GetDouble(ws, map, row, "GROSS_WT"),
+                JobGrossUnit = ExcelService.GetText(ws, map, row, "GROSS_UNIT"),
+                JobNetWt = ExcelService.GetDouble(ws, map, row, "NET_WT"),
+                JobNetUnit = ExcelService.GetText(ws, map, row, "NET_UNIT"),
+                JobQty = ExcelService.GetDouble(ws, map, row, "QTY"),
+                JobQtyUnit = ExcelService.GetText(ws, map, row, "QTY_UNIT"),
+                JobCbm = (float?)ExcelService.GetDouble(ws, map, row, "CBM"),
+                JobPolId = polId,
+                JobPodId = podId,
+                JobPlaceOfReceipt = ExcelService.GetText(ws, map, row, "PLACE_OF_RECEIPT"),
+                JobPlaceOfDelivery = ExcelService.GetText(ws, map, row, "PLACE_OF_DELIVERY"),
+                JobCountryOrigin = countryName,
+                JobCertiOrigin = ExcelService.GetText(ws, map, row, "CERTI_ORIGIN"),
+                JobConsigneeId = consigneeId,
+                JobConsigneeAddress = Notifies.FirstOrDefault(x => x.NotifyId == consigneeId)?.NotifyAddress1,
+                JobSupplierId = supplierId,
+                JobShipperId = shipperId,
+                JobChaId = chaId,
+                JobBookingNo = ExcelService.GetText(ws, map, row, "BOOKING_NO"),
+
+
+                //Extra details
+                JobEta = ExcelService.GetDate(ws, map, row, "ETA"),
+                JobEtd = ExcelService.GetDate(ws, map, row, "ETD"),
+                JobIcd = ExcelService.GetText(ws, map, row, "ICD"),
+                JobCfs = ExcelService.GetText(ws, map, row, "CFS"),
+                JobDoNo = ExcelService.GetText(ws, map, row, "DO_NO"),
+                JobDoDate = ExcelService.GetDate(ws, map, row, "DO_DATE"),
+                 JobDoPer = (float?)ExcelService.GetDouble(ws, map, row, "DO_PERCENT"),
+                JobDoType = ExcelService.GetText(ws, map, row, "DO_TYPE"),
+                JobDoValid = ExcelService.GetDate(ws, map, row, "DO_VALID"),
+                JobTerminal = ExcelService.GetText(ws, map, row, "TERMINAL"),
+                JobIgmNo = ExcelService.GetText(ws, map, row, "IGM_NO"),
+                JobIgmDate = ExcelService.GetDate(ws, map, row, "IGM_DATE"),
+                JobMarks = ExcelService.GetText(ws, map, row, "MARKS_NUMBERS"),
+                JobEmptyYard = ExcelService.GetText(ws, map, row, "EMPTY_YARD"),
+                JobForwarder = ExcelService.GetText(ws, map, row, "FORWARD"),
+                Surveyor = ExcelService.GetText(ws, map, row, "SURVEYOR"),
+                SurveyorAddress = ExcelService.GetText(ws, map, row, "SURVEYOR_ADDRESS"),
+                JobFreeDays = (int?)ExcelService.GetDouble(ws, map, row, "FREE_DAYS"),
+                JobVolume = ExcelService.GetText(ws, map, row, "VOLUME"),
+                JobOutOfChargeDate = ExcelService.GetDate(ws, map, row, "OUT_OF_CHARGE_DATE"),
+                JobGoodsDesc1 = ExcelService.GetText(ws, map, row, "REMARK2"),
+                JobCust1 = ExcelService.GetText(ws, map, row, "CUSTOM_1"),
+                JobCust2 = ExcelService.GetText(ws, map, row, "CUSTOM_2"),
+                JobCust3 = ExcelService.GetText(ws, map, row, "CUSTOM_3"),
+                JobCust4 = ExcelService.GetText(ws, map, row, "CUSTOM_4"),
+                JobCust5 = ExcelService.GetText(ws, map, row, "CUSTOM_5"),
+                JobCust6 = ExcelService.GetText(ws, map, row, "CUSTOM_6"),
+                JobCust7 = ExcelService.GetText(ws, map, row, "CUSTOM_7"),
+                JobCust8 = ExcelService.GetText(ws, map, row, "CUSTOM_8"),
+                JobCust9 = ExcelService.GetText(ws, map, row, "CUSTOM_9"),
+
+                //CONTAINERS DETAILS
+                JobContainer20Ft = ExcelService.GetText(ws, map, row, "CONTAINER_20FT"),
+                JobContainer40Ft = ExcelService.GetText(ws, map, row, "CONTAINER_40FT"),
+                Job40Ft = ExcelService.GetText(ws, map, row, "_40FT"),
+                Job20Ft = ExcelService.GetText(ws, map, row, "_20FT"),
+                JobContainerType = ExcelService.GetText(ws, map, row, "CONTAINER_TYPE"),
+
+                JobYearId = YearStatechangeService.SelectedYearId.ToString(),
+                JobCreated = DateTime.Now,
+                JobUpdated = DateTime.Now,
+                JobActive = true
+            };
+
+            string status = errors.Any() ? "Error" : "Ready";
+            string message = string.Join(", ", errors);
+
+            //-----------------------------------
+            // Preview row
+            //-----------------------------------
+            dynamic obj = new ExpandoObject();
+            var dict = (IDictionary<string, object?>)obj;
+
+            dict["RowNo"] = row;
+            dict["Status"] = status;
+            dict["Message"] = message;
+
+            foreach (var col in ExcelColumns)
+            {
+                dict[col] = ExcelService.GetText(ws, map, row, col);
+            }
+            dict["Data"] = job;
+
+            PreviewData.Add(obj);
+        }
+    }
+
+    // Row 1 of the template is helper notes, row 2 is the real header.
+    // If a plain single-header file is uploaded instead, fall back to row 1.
+    // int DetectHeaderRow(ExcelWorksheet ws)
+    // {
+    //     var row2Map = ExcelService.ReadHeader(ws, 2);
+    //     if (row2Map.Has("Job_No") || row2Map.Has("Job_Type"))
+    //         return 2;
+
+    //     return 1;
+    // }
+
+    // -----------------------------------------------------------------
+    // Save
+    // -----------------------------------------------------------------
+    async Task Save()
+    {
+        if (SelectedImportType?.Id == 3)
+        {
+            await SaveBills();
+            return;
+        }
+        if (SelectedImportType?.Id == 4)          
+        {
+            await SaveReceipts();
+            return;
+        }
+        if (SelectedImportType?.Id == 5)
+        {
+            await SavePayment();
+            return;
+        }
+        if (SelectedImportType?.Id == 6)
+        {
+            await SaveContra();
+            return;
+        }
+        // ✅ Same error guard for jobs
+    bool hasError = PreviewData
+        .Select(x => (IDictionary<string, object?>)x)
+        .Any(d => d.TryGetValue("Status", out var status) &&
+                  status?.ToString() == "Error");
+
+    if (hasError)
+    {
+        ToastService.Error("Errors present. Please fix all errors before saving. No data was imported.");
+        return;
+    }
+
+
+
+        var jobs = PreviewData
+            .Select(x => (IDictionary<string, object?>)x)
+            .Where(d =>
+                d.TryGetValue("Status", out var status) &&
+                status?.ToString() == "Ready" &&
+                d.TryGetValue("Data", out var data) &&
+                data is Job)
+            .Select(d => (Job)d["Data"]!)
+            .ToList();
+
+        if (!jobs.Any())
+        {
+            ToastService.Error("PLEASE IMPORT CORRECT DATA");
+            return;
+        }
+
+        var result = await JobService.BulkCreateAsync(jobs);
+
+        foreach (var row in PreviewData)
+        {
+            var d = (IDictionary<string, object?>)row;
+
+            if (d.TryGetValue("Status", out var status) && status?.ToString() == "Ready")
+            {
+                d["Status"] = result.Success ? "Saved" : "Error";
+                d["Message"] = result.Success ? "Imported" : result.Error;
+            }
+        }
+
+        if (result.Success)
+            ToastService.Success($"{jobs.Count} job(s) imported successfully.");
+        else
+            ToastService.Error(result.Error ?? "Bulk import failed.");
+
+        StateHasChanged();
+    }
+    async Task SaveBills()
+    {
+
+
+        // ✅ Pehle check karo — koi bhi row error status me to hai kya
+    bool hasError = PreviewData
+        .Select(x => (IDictionary<string, object?>)x)
+        .Any(d => d.TryGetValue("Status", out var status) &&
+                  status?.ToString() == "Error");
+
+    if (hasError)
+    {
+        ToastService.Error("Errors present. Please fix all errors before saving. No data was imported.");
+        return;   // API call hi nahi hogi
+    }
+
+
+
+
+        var bills = PreviewData
+            .Select(x => (IDictionary<string, object?>)x)
+            .Where(d =>
+                d.TryGetValue("Status", out var status) &&
+                status?.ToString() == "Ready" &&
+                d.TryGetValue("Data", out var data) &&
+                data is Bill)
+            .Select(d => (Bill)d["Data"]!)
+            .ToList();
+
+        if (!bills.Any())
+        {
+            ToastService.Error("PLEASE IMPORT CORRECT DATA");
+            return;
+        }
+
+        foreach (var b in bills)
+        {
+            b.BillYearId = YearStatechangeService.SelectedYearId;
+        }
+
+        var result = await BillService.BulkCreateAsync(bills);
+
+        if (result == null)
+        {
+            ToastService.Error(BillService.LastError ?? "Bulk import failed.");
+            return;
+        }
+
+        // Har result item ko uske Voucher No se match karke us group ki
+        // saari excel rows update karo (ek Voucher No = ek group)
+        foreach (var item in result.Items)
+        {
+            foreach (var row in PreviewData)
+            {
+                var rd = (IDictionary<string, object?>)row;
+                if (rd.TryGetValue("Voucher No", out var vno) && vno?.ToString() == item.BillNoInput)
+                {
+                    rd["Status"] = item.Success ? "Saved" : "Error";
+                    rd["Message"] = item.Success ? $"Imported (Bill Id {item.BillId})" : item.Error;
+                }
+            }
+        }
+
+        if (result.FailCount == 0)
+            ToastService.Success($"{result.SuccessCount} bill(s) imported successfully.");
+        else
+            ToastService.Warning($"{result.SuccessCount} imported, {result.FailCount} failed. Check Message column.");
+
+        StateHasChanged();
+    }  
+    void Close()
+    {
+        PreviewData.Clear();
+        SelectedFile = null;
+        FileName = "";
+        ExcelColumns.Clear();
+    }
+
+    // -----------------------------------------------------------------
+    // Master data caches + lookups
+    // -----------------------------------------------------------------
+    List<Account> Accounts = new();
+    List<Location> Locations = new();
+    List<Cargo> Cargos = new();
+    List<Vessel> Vessels = new();
+    List<Notify> Notifies = new();
+    List<Currency> Currencies = new();
+    List<Branch> Branches = new();
+    List<Status> statuslist = new();
+    List<Country> Countrylist = new();
+
+    Dictionary<string, int> AccountMap = new();
+    Dictionary<string, int> LocationMap = new();
+    Dictionary<string, int> CargoMap = new();
+    Dictionary<string, int> VesselMap = new();
+    Dictionary<string, int> CurrencyMap = new();
+    Dictionary<string, int> BranchMap = new();
+    Dictionary<string, int> JobStatusMap = new();
+    Dictionary<string, int> CountryMap = new();
+
+    // Notify master is keyed by (Type, Name) because the same name could
+    // theoretically exist under different notify types (Shipper/Line/etc).
+    Dictionary<(string Type, string Name), int> NotifyMap = new();
+
+    async Task LoadMasters()
+    {
+        var accounts = await AccountService.GetAllAsync();
+        Accounts = accounts;
+        AccountMap = accounts
+            .Where(x => !string.IsNullOrWhiteSpace(x.AccountName))
+            .GroupBy(x => x.AccountName.Trim().ToUpper())
+            .ToDictionary(g => g.Key, g => g.First().AccountId);
+
+        var statuslist = await StatusService.GetAllAsync();
+        JobStatusMap = statuslist
+            .Where(x => !string.IsNullOrWhiteSpace(x.StatusName))
+            .GroupBy(x => x.StatusName.Trim().ToUpper())
+            .ToDictionary(g => g.Key, g => g.First().StatusId);
+
+        var countrylist = await CountryService.GetAllAsync();
+        Countrylist = countrylist;
+        CountryMap = countrylist
+            .Where(x => !string.IsNullOrWhiteSpace(x.CountryName))
+            .GroupBy(x => x.CountryName.Trim().ToUpper())
+            .ToDictionary(g => g.Key, g => g.First().CountryId);
+
+        var locations = await LocationService.GetAllAsync();
+        Locations = locations;
+        LocationMap = locations
+            .Where(x => !string.IsNullOrWhiteSpace(x.LocationName))
+            .GroupBy(x => x.LocationName.Trim().ToUpper())
+            .ToDictionary(g => g.Key, g => g.First().LocationId);
+
+        var cargos = await CargoService.GetAllAsync();
+        Cargos = cargos;
+        CargoMap = cargos
+            .Where(x => !string.IsNullOrWhiteSpace(x.CargoName))
+            .GroupBy(x => x.CargoName.Trim().ToUpper())
+            .ToDictionary(g => g.Key, g => g.First().CargoId);
+
+        var vessels = await VesselService.GetAllAsync();
+        Vessels = vessels;
+        VesselMap = vessels
+            .Where(x => !string.IsNullOrWhiteSpace(x.VesselName))
+            .GroupBy(x => x.VesselName.Trim().ToUpper())
+            .ToDictionary(g => g.Key, g => g.First().VesselId);
+
+        var notifies = await NotifyService.GetAllAsync();
+        Notifies = notifies;
+        NotifyMap = notifies
+            .Where(x => !string.IsNullOrWhiteSpace(x.NotifyName) && !string.IsNullOrWhiteSpace(x.NotifyType))
+            .GroupBy(x => (x.NotifyType.Trim().ToUpper(), x.NotifyName.Trim().ToUpper()))
+            .ToDictionary(g => g.Key, g => g.First().NotifyId);
+
+        var currencies = await CurrencyService.GetAllAsync();
+        Currencies = currencies;
+        CurrencyMap = currencies
+            .Where(x => !string.IsNullOrWhiteSpace(x.CurrencyName))
+            .GroupBy(x => x.CurrencyName.Trim().ToUpper())
+            .ToDictionary(g => g.Key, g => g.First().CurrencyId);
+
+        var branches = await BranchService.GetBranchesForCurrentUserAsync();
+        Branches = branches;
+        BranchMap = branches
+            .Where(x => !string.IsNullOrWhiteSpace(x.BranchName))
+            .GroupBy(x => x.BranchName.Trim().ToUpper())
+            .ToDictionary(g => g.Key, g => g.First().BranchId);
+    }
+
+    int? FindAccountId(string name) =>
+        !string.IsNullOrWhiteSpace(name) && AccountMap.TryGetValue(name.Trim().ToUpper(), out var id) ? id : null;
+
+    int? FindCountryId(string name) =>
+    !string.IsNullOrWhiteSpace(name) && CountryMap.TryGetValue(name.Trim().ToUpper(), out var id) ? id : null;
+
+    int? FindJobStatusId(string name) =>
+    !string.IsNullOrWhiteSpace(name) && JobStatusMap.TryGetValue(name.Trim().ToUpper(), out var id) ? id : null;
+
+    int? FindLocationId(string name) =>
+        !string.IsNullOrWhiteSpace(name) && LocationMap.TryGetValue(name.Trim().ToUpper(), out var id) ? id : null;
+
+    int? FindCargoId(string name) =>
+        !string.IsNullOrWhiteSpace(name) && CargoMap.TryGetValue(name.Trim().ToUpper(), out var id) ? id : null;
+
+    int? FindVesselId(string name) =>
+        !string.IsNullOrWhiteSpace(name) && VesselMap.TryGetValue(name.Trim().ToUpper(), out var id) ? id : null;
+
+    int? FindCurrencyId(string name) =>
+        !string.IsNullOrWhiteSpace(name) && CurrencyMap.TryGetValue(name.Trim().ToUpper(), out var id) ? id : null;
+
+    int? FindBranchId(string name) =>
+        !string.IsNullOrWhiteSpace(name) && BranchMap.TryGetValue(name.Trim().ToUpper(), out var id) ? id : null;
+
+    int? FindNotifyId(string name, string notifyType) =>
+        !string.IsNullOrWhiteSpace(name) &&
+        NotifyMap.TryGetValue((notifyType.Trim().ToUpper(), name.Trim().ToUpper()), out var id)
+            ? id
+            : null;
+
+
+
+
+    static readonly string[] RequiredBillColumns =
+{
+    "Voucher Date",
+    "Voucher No",
+    "Voucher Type",
+    "Buyer/Supplier",
+    "Item",
+    "Amount"
+};
+
+    // Voucher Type text (from Excel) -> Voucher Group mapping,
+    // kyunki excel me "TAX INVOICE" aata hai but voucher master me
+    // group "SALES" hota hai. Zaroorat ho to values yahin adjust karo.
+
+    // static readonly Dictionary<string, string> VoucherTypeGroupMap =
+    //     new(StringComparer.OrdinalIgnoreCase)
+    // {
+    // { "TAX INVOICE", "SALES" },
+    // { "SALES INVOICE", "SALES" },
+    // { "SALES", "SALES" },
+    // { "PURCHASE", "PURCHASE" },
+    // { "PURCHASE INVOICE", "PURCHASE" },
+    // { "CREDIT NOTE", "CREDIT NOTE" },
+    // { "DEBIT NOTE", "DEBIT NOTE" },
+    // };
+
+    // -----------------------------------------------------------------
+    // Bill-specific master caches
+    // -----------------------------------------------------------------
+    List<FreightBKShippingWebApp.Model.Service> ServicesList = new();
+    List<FreightBKShippingWebApp.Model.State> StatesList = new();
+    List<FreightBKShippingWebApp.Model.Voucher> VouchersList = new();
+    List<Job> Jobs = new();
+    List<HsnSac> HsnList = new();
+    List<GstSlab> GstslabList = new();
+    List<Unit> UnitList = new();
+
+    Dictionary<(string JobType, string JobNo), Job> JobMap = new();
+    Dictionary<string, int> ServiceMap = new();
+    Dictionary<string, int> StateMap = new();
+    Dictionary<(int BranchId, string Name), int> VoucherMap = new();     // VoucherName -> Id
+    Dictionary<(int BranchId, string Group), int> VoucherGroupMap = new(); // VoucherGroup -> Id (first match per branch)
+
+    async Task LoadBillMasters()
+    {
+        // Reuse existing Account map (already loaded by LoadMasters for party + gst ledger accounts)
+        var services = await ServiceService.GetAllAsync();
+        ServicesList = services;
+        ServiceMap = services
+            .Where(x => !string.IsNullOrWhiteSpace(x.ServiceName))
+            .GroupBy(x => x.ServiceName.Trim().ToUpper())
+            .ToDictionary(g => g.Key, g => g.First().ServiceId);
+
+
+        HsnList = await HsnSacService.GetAllAsync();
+        GstslabList = await GstSlabService.GetAllAsync();
+        UnitList = await UnitService.GetAllAsync();
+
+
+        var states = await StateService.GetStatesAsync();
+        StatesList = states;
+        StateMap = states
+            .Where(x => !string.IsNullOrWhiteSpace(x.StateName))
+            .GroupBy(x => x.StateName.Trim().ToUpper())
+            .ToDictionary(g => g.Key, g => g.First().StateId);
+
+        var vouchers = await VoucherService.GetAllAsync();
+        VouchersList = vouchers;
+        VoucherMap = vouchers
+    .Where(x => !string.IsNullOrWhiteSpace(x.VoucherName) && x.VoucherBranchId > 0)
+    .GroupBy(x => (x.VoucherBranchId.Value, x.VoucherName.Trim().ToUpper()))
+    .ToDictionary(g => g.Key, g => g.First().VoucherId);
+
+        // one voucher per group, restricted to the branch currently importing into
+        VoucherGroupMap = vouchers
+    .Where(x => !string.IsNullOrWhiteSpace(x.VoucherGroup) && x.VoucherBranchId > 0)
+    .GroupBy(x => (x.VoucherBranchId.Value, x.VoucherGroup.Trim().ToUpper()))
+    .ToDictionary(g => g.Key, g => g.First().VoucherId);
+
+        var jobs = await JobService.GetAllAsync();
+        Jobs = jobs;
+        JobMap = jobs
+            .Where(x => !string.IsNullOrWhiteSpace(x.JobNo))
+            .GroupBy(x => (
+                x.JobType.Trim().ToUpper(),
+                x.JobNo.Trim().ToUpper()))
+            .ToDictionary(g => g.Key, g => g.First());
+
+    }
+    Job? FindJob(string jobType, string jobNo)
+    {
+        if (string.IsNullOrWhiteSpace(jobType) ||
+            string.IsNullOrWhiteSpace(jobNo))
+            return null;
+
+        JobMap.TryGetValue(
+            (jobType.Trim().ToUpper(), jobNo.Trim().ToUpper()),
+            out var job);
+
+        return job;
+    }
+
+    int? FindServiceId(string name) =>
+        !string.IsNullOrWhiteSpace(name) && ServiceMap.TryGetValue(name.Trim().ToUpper(), out var id) ? id : null;
+
+    int? FindStateId(string name) =>
+        !string.IsNullOrWhiteSpace(name) && StateMap.TryGetValue(name.Trim().ToUpper(), out var id) ? id : null;
+
+    int? FindVoucherId(string voucherType, int? branchId)
+    {
+        if (branchId == null || string.IsNullOrWhiteSpace(voucherType))
+            return null;
+
+        var key = voucherType.Trim().ToUpper();
+
+        if (VoucherMap.TryGetValue((branchId.Value, key), out var directId))
+            return directId;
+
+        if (VoucherGroupMap.TryGetValue((branchId.Value, key), out var groupId))
+            return groupId;
+
+        return null;
+    }
+
+
+    private (int? saleAcc, int? igstAcc, int? cgstAcc, int? sgstAcc, int? hsnId, string slabName, List<string> errs)
+    ResolveGstForService(int serviceId, string voucherGroup)
+    {
+        var errs = new List<string>();
+        var service = ServicesList.FirstOrDefault(s => s.ServiceId == serviceId);
+        if (service == null) { errs.Add("Service master not found"); return (null,null,null,null,null,null,errs); }
+
+        var hsn = HsnList.FirstOrDefault(h => h.HsnName == service.HsnName);
+        if (hsn == null) { errs.Add($"HSN not found for service '{service.ServiceName}'"); return (null,null,null,null,null,null,errs); }
+
+        var slab = GstslabList.FirstOrDefault(g => g.GstSlabId == hsn.HsnGstSlabId);
+        if (slab == null) { errs.Add($"GST Slab not mapped for HSN '{hsn.HsnName}'"); return (null,null,null,null,hsn.HsnId,null,errs); }
+
+        int? saleAcc = null, igstAcc = null, cgstAcc = null, sgstAcc = null;
+        var grp = voucherGroup?.Trim().ToUpperInvariant();
+
+        if (grp == "SALES")
+        {
+            saleAcc = slab.GstSlabSalesAccountId; igstAcc = slab.GstSlabIgstAccountId;
+            cgstAcc = slab.GstSlabCgstAccountId; sgstAcc = slab.GstSlabSgstAccountId;
+        }
+        else if (grp == "PURCHASE")
+        {
+            saleAcc = slab.GstSlabPurchaseAccountId; igstAcc = slab.GstSlabPigstAccountId;
+            cgstAcc = slab.GstSlabPcgstAccountId; sgstAcc = slab.GstSlabPsgstAccountId;
+        }
+        else if (grp == "CREDIT NOTE")
+        {
+            var salesReturnAcc = Accounts.FirstOrDefault(x =>
+                x.AccountName != null && x.AccountName.Contains("Sales Return", StringComparison.OrdinalIgnoreCase));
+            if (salesReturnAcc == null) errs.Add("Sales Return Account not found");
+            else saleAcc = salesReturnAcc.AccountId;
+            igstAcc = slab.GstSlabPigstAccountId; cgstAcc = slab.GstSlabPcgstAccountId; sgstAcc = slab.GstSlabPsgstAccountId;
+        }
+
+        return (saleAcc, igstAcc, cgstAcc, sgstAcc, hsn.HsnId, slab.GstSlabName, errs);
+    }
+
+    async Task ReadBillExcel()
+    {
+        if (SelectedFile == null)
+            return;
+
+        await LoadMasters();      // for Account map (party + gst ledger a/c lookups)
+        await LoadBillMasters();  // for Service / State / Voucher maps
+        PreviewData.Clear();
+
+        using var stream = SelectedFile.OpenReadStream(20 * 1024 * 1024);
+        using var ms = new MemoryStream();
+        await stream.CopyToAsync(ms);
+        ms.Position = 0;
+
+        using var package = new ExcelPackage(ms);
+        var ws = package.Workbook.Worksheets.First();
+
+        if (ws.Dimension == null)
+            return;
+
+        var map = ExcelService.ReadHeader(ws);
+        ExcelColumns = map.Columns.Keys.ToList();
+
+        foreach (var col in RequiredBillColumns)
+        {
+            if (!map.Has(col))
+                throw new Exception($"Excel Column Missing: {col}");
+        }
+
+        int totalRows = ws.Dimension.End.Row;
+
+        // collect non-blank data rows, in original order
+        var rowNumbers = new List<int>();
+        for (int row = 2; row <= totalRows; row++)
+        {
+            if (!ExcelService.IsBlankRow(ws, row))
+                rowNumbers.Add(row);
+        }
+
+        // group by Voucher No, preserving first-seen order
+        var groups = rowNumbers
+            .GroupBy(r => ExcelService.GetText(ws, map, r, "Voucher No"))
+            .ToList();
+
+        foreach (var grp in groups)
+        {
+            var rowsInGroup = grp.ToList();
+            int firstRow = rowsInGroup.First();
+            int lastRow = rowsInGroup.Last();
+
+            var billErrors = new List<string>();
+            var rowMessages = rowsInGroup.ToDictionary(r => r, r => new List<string>());
+
+            // ---------------- Header-level fields (from first row of group) ----------------
+            string voucherNo = grp.Key;
+            string branch = ExcelService.GetText(ws, map, firstRow, "Branch");
+            string voucherType = ExcelService.GetText(ws, map, firstRow, "Voucher Type");
+            string partyName = ExcelService.GetText(ws, map, firstRow, "Buyer/Supplier");
+            string ShippartyName = ExcelService.GetText(ws, map, firstRow, "ShipParty");
+            string posName = ExcelService.GetText(ws, map, firstRow, "Place of Supply");
+            string partyGstin = ExcelService.GetText(ws, map, firstRow, "Party GSTIN");
+            string partyAddress = ExcelService.GetText(ws, map, firstRow, "Party Address");
+            string partyState = ExcelService.GetText(ws, map, firstRow, "Party State");
+
+            if (string.IsNullOrWhiteSpace(voucherNo))
+                billErrors.Add("Voucher No Missing");
+
+            int? branchId = FindBranchId(branch);
+            if (branchId == null)
+                billErrors.Add($"branch '{branch}' not found. Please create branch master.");
+
+            int? partyId = FindAccountId(partyName);
+            if (partyId == null)
+                billErrors.Add($"Party '{partyName}' not found. Please create Account master.");
+
+            int? ShippartyId = FindAccountId(ShippartyName);
+            if (ShippartyId == null)
+                billErrors.Add($"ShipParty '{ShippartyName}' not found. Please create Account master.");
+
+
+
+            int? voucherId = FindVoucherId(voucherType, branchId);
+            if (voucherId == null)
+                billErrors.Add($"Voucher Type '{voucherType}' not found in branch '{branch}'. Please create Voucher master for this branch.");
+
+            int? posId = null;
+            if (!string.IsNullOrWhiteSpace(posName))
+            {
+                posId = FindStateId(posName);
+                if (posId == null)
+                    billErrors.Add($"Place of Supply '{posName}' not found. Please create State master.");
+            }
+
+            int? partyStateId = FindStateId(partyState);
+
+            bool exists = await BillService.ExistsAsync(voucherNo, branchId, voucherId, YearStatechangeService.SelectedYearId);
+
+            if (exists && !AllowDuplicate)
+                billErrors.Add("Bill No Already Exists");
+
+            // ---------------- Line-item level ----------------
+            var details = new List<BillDetail>();
+            double basicTotal = 0, sgstTotal = 0, cgstTotal = 0, igstTotal = 0;
+            string blNo = "", jobNo = "";
+            int sno = 1;
+
+            foreach (var r in rowsInGroup)
+            {
+                var rErrors = rowMessages[r];
+
+                string itemName = ExcelService.GetText(ws, map, r, "Item");
+                string hsn = ExcelService.GetText(ws, map, r, "HSN");
+                string unit = ExcelService.GetText(ws, map, r, "Unit");
+                string currency = ExcelService.GetText(ws, map, r, "Currency");
+                double? qty = ExcelService.GetDouble(ws, map, r, "Qty");
+                double? rate = ExcelService.GetDouble(ws, map, r, "Rate");
+                double? amount = ExcelService.GetDouble(ws, map, r, "Amount");
+
+                string sgstAc = ExcelService.GetText(ws, map, r, "SGST_AC");
+                double? sgstPer = ExcelService.GetDouble(ws, map, r, "SGST(%)");
+                double? sgstAmt = ExcelService.GetDouble(ws, map, r, "SGST");
+
+                string cgstAc = ExcelService.GetText(ws, map, r, "CGST_AC");
+                double? cgstPer = ExcelService.GetDouble(ws, map, r, "CGST(%)");
+                double? cgstAmt = ExcelService.GetDouble(ws, map, r, "CGST");
+
+                string igstAc = ExcelService.GetText(ws, map, r, "IGST_AC");
+                double? igstPer = ExcelService.GetDouble(ws, map, r, "IGST(%)");
+                double? igstAmt = ExcelService.GetDouble(ws, map, r, "IGST");
+
+                string remarks = ExcelService.GetText(ws, map, r, "Remarks");
+                string billDetailRemarks = ExcelService.GetText(ws, map, r, "BillDetailRemarks");
+                // string rowBlNo = ExcelService.GetText(ws, map, r, "BLNo");
+                string rowJobNo = ExcelService.GetText(ws, map, r, "Job No");
+                // if (!string.IsNullOrWhiteSpace(rowBlNo)) blNo = rowBlNo;
+                if (!string.IsNullOrWhiteSpace(rowJobNo)) jobNo = rowJobNo;
+
+                if (string.IsNullOrWhiteSpace(itemName))
+                    rErrors.Add("Item Missing");
+
+                int? serviceId = FindServiceId(itemName);
+                if (serviceId == null)
+                    rErrors.Add($"Item '{itemName}' not found. Please create Service master.");
+
+                int? sgstAcId = !string.IsNullOrWhiteSpace(sgstAc) ? FindAccountId(sgstAc) : null;
+                if (!string.IsNullOrWhiteSpace(sgstAc) && sgstAcId == null) rErrors.Add($"SGST A/C '{sgstAc}' not found.");
+
+                int? cgstAcId = !string.IsNullOrWhiteSpace(cgstAc) ? FindAccountId(cgstAc) : null;
+                if (!string.IsNullOrWhiteSpace(cgstAc) && cgstAcId == null) rErrors.Add($"CGST A/C '{cgstAc}' not found.");
+
+                int? igstAcId = !string.IsNullOrWhiteSpace(igstAc) ? FindAccountId(igstAc) : null;
+                if (!string.IsNullOrWhiteSpace(igstAc) && igstAcId == null) rErrors.Add($"IGST A/C '{igstAc}' not found.");
+
+                int? billDetailAccId = null, hsnId = null;
+                string slabName = null;
+                float gstPer = (float)((sgstPer ?? 0) + (cgstPer ?? 0) + (igstPer ?? 0));
+                if (serviceId.HasValue)
+                {
+                    var voucherGroupForLine = VouchersList.FirstOrDefault(v => v.VoucherId == voucherId)?.VoucherGroup ?? voucherType;
+                    var (saleAcc, igstAcc2, cgstAcc2, sgstAcc2, hsnId2, slabNm, gstErrs) =
+                        ResolveGstForService(serviceId.Value, voucherGroupForLine);
+
+                    rErrors.AddRange(gstErrs);
+                    billDetailAccId = saleAcc;
+                    hsnId = hsnId2;
+                    slabName = slabNm ?? $"GST@{gstPer}%";
+
+                    // Excel account columns win if present, otherwise fall back to slab resolution
+                    sgstAcId ??= sgstAcc2;
+                    cgstAcId ??= cgstAcc2;
+                    igstAcId ??= igstAcc2;
+                }
+
+                var unitMaster = UnitList.FirstOrDefault(u =>
+                    !string.IsNullOrWhiteSpace(unit) && u.UnitName?.Trim().ToUpper() == unit.Trim().ToUpper());
+
+                var lineTotal = (amount ?? 0) + (sgstAmt ?? 0) + (cgstAmt ?? 0) + (igstAmt ?? 0);
+
+                int? currencyId = null;
+
+                if (!string.IsNullOrWhiteSpace(currency))
+                {
+                    currencyId = FindCurrencyId(currency);
+
+                    if (currencyId == null)
+                        rErrors.Add($"Currency '{currency}' not found. Please create Currency master.");
+                }
+                details.Add(new BillDetail
+                {
+                    BillDetailProductId = serviceId ?? 0,
+                    BillDetailHsnCode = hsn,
+                    BillDetailHsnId = hsnId ?? 0,
+                    BillDetailUnit = unit,
+                    BillDetailQty = qty ?? 0,
+                    BillDetailBillQty = qty ?? 0,
+                    BillDetailRate = rate,
+                    BillDetailActualRate = rate ?? 0,
+                    BillDetailAmount = amount ?? 0,
+                    BillDetailTaxableAmt = amount ?? 0,
+                    BillDetailExchRate = 1,
+                    BillDetailExchAmount = amount ?? 0,
+                    @* BillDetailDisAmt1 = 0,
+                    BillDetailDisPer1 = 0,
+                    BillDetailGstDisPer = 0,
+                    BillDetailGstDisAmt=0,
+                    BillDetailDisTotal = 0, *@
+                    BillDetailSgstAcId = sgstAcId,
+                    BillDetailSgstPer = (float)(sgstPer ?? 0),
+                    BillDetailSgst = sgstAmt ?? 0,
+                    BillDetailCgstAcId = cgstAcId,
+                    BillDetailCgstPer = (float)(cgstPer ?? 0),
+                    BillDetailCgst = cgstAmt ?? 0,
+                    BillDetailIgstAcId = igstAcId,
+                    BillDetailIgstPer = (float)(igstPer ?? 0),
+                    BillDetailIgst = igstAmt ?? 0,
+                   @*  BillDetailAddCessAcId = 0,   
+                    BillDetailAddCessPer = 0,
+                    BillDetailCessAcId = 0,
+                    BillDetailCessAmt = 0,
+                    BillDetailCessPer = 0,
+                    BillPAddCessAmt = 0, 
+                     BillDetailRoundOff = 0, *@
+                    BillDetailTotal = lineTotal,
+                   @*  BillDetailUnitCost =  0, *@
+                    BillDetailRemarks =billDetailRemarks,
+                    BillDetailSno = sno,
+                   @*  BillDetailBatchNo = null,
+                    BillDetailExpiryDt = null,
+                    BillDetailSerial1 = null,
+                    BillDetailSerial2 = null, *@
+                    BillDetailAccountId = billDetailAccId,
+                    BillDetailStatus = true,
+                   @*  BillDetailCreated = DateTime.Now,
+                     BillDetailUpdated = DateTime.Now, *@
+    BillDetailUnitId = unitMaster?.UnitId ?? 0,
+                    BillDetailExchUnit = currency,
+                    BillDetailExtraChrg = 0,
+                    //BillDetailVehicleId = 0,
+                    BillDetailGstPer = gstPer,
+                    BillDetailSlabId = slabName,
+                    BillDetailCurrencyId = currencyId ?? 0,
+
+
+
+
+
+                });
+
+                sno++;
+                basicTotal += amount ?? 0;
+                sgstTotal += sgstAmt ?? 0;
+                cgstTotal += cgstAmt ?? 0;
+                igstTotal += igstAmt ?? 0;
+            }
+
+            double grandTotal = basicTotal + sgstTotal + cgstTotal + igstTotal;
+            Job? selectedJob = FindJob(ExcelService.GetText(ws, map, firstRow, "BillJobType"),jobNo); 
+            if (!string.IsNullOrWhiteSpace(jobNo) && selectedJob == null)
+            {
+                billErrors.Add($"Job '{jobNo}' not found.");
+            }
+
+            bool groupHasError = billErrors.Any() || rowMessages.Values.Any(x => x.Any());
+
+            // Amount in words — BillAddEditPage jaisa hi logic
+            static string AmountInWords(decimal number)
+            {
+                if (number == 0) return "Zero Rupees Only";
+
+                string[] u = { "Zero","One","Two","Three","Four","Five","Six","Seven","Eight","Nine","Ten",
+                       "Eleven","Twelve","Thirteen","Fourteen","Fifteen","Sixteen","Seventeen","Eighteen","Nineteen" };
+                string[] t = { "Zero", "Ten", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety" };
+
+                string Conv(long n) =>
+                    n == 0 ? "" :
+                    n < 20 ? u[n] :
+                    n < 100 ? t[n / 10] + (n % 10 > 0 ? " " + u[n % 10] : "") :
+                    n < 1000 ? u[n / 100] + " Hundred" + (n % 100 > 0 ? " and " + Conv(n % 100) : "") :
+                    n < 100000 ? Conv(n / 1000) + " Thousand" + (n % 1000 > 0 ? " " + Conv(n % 1000) : "") :
+                    n < 10000000 ? Conv(n / 100000) + " Lakh" + (n % 100000 > 0 ? " " + Conv(n % 100000) : "")
+                                 : Conv(n / 10000000) + " Crore" + (n % 10000000 > 0 ? " " + Conv(n % 10000000) : "");
+
+                long ip = (long)Math.Floor(number);
+                int dp = (int)Math.Round((number - ip) * 100);
+
+                var w = Conv(ip) + " Rupees";
+                if (dp > 0) w += " and " + Conv(dp) + " Paise";
+                return w + " Only";
+            }
+
+            const string ROUNDOFF_ACCOUNT_NAME = "ROUND OFF";
+            int roundOffAcId = FindAccountId(ROUNDOFF_ACCOUNT_NAME) ?? 0;
+            double roundoffAmt = ExcelService.GetDouble(ws, map, firstRow, "Roundoff") ?? 0;
+            Bill? bill = null;
+            if (!groupHasError)
+            {
+                bill = new Bill
+                {
+
+                     BillVoucherId = voucherId ?? 0,
+                     BillNo = voucherNo,
+                    BillDate = ExcelService.GetDate(ws, map, firstRow, "Voucher Date") ?? DateTime.Today,
+                    BillDueDate = ExcelService.GetDate(ws, map, firstRow, "BillDueDate") ?? DateTime.Today,
+                    BillJobNo = jobNo,
+                    BillJobType = ExcelService.GetText(ws, map, firstRow, "BillJobType"),
+                    BillSupplyType = "B2B",
+                    BillPlaceOfSupply = posId ?? 0,
+                    BillBranchId = branchId ?? 0,
+                    BillPartyId = partyId ?? 0,
+                    BillIsRcm = false,
+                    BillRemarks = ExcelService.GetText(ws, map, firstRow, "Remarks"),
+                    BillRoundAmt = roundoffAmt,
+                    BillIsRoundOff = roundoffAmt > 0,
+                    BillShipPartyId = ShippartyId ?? 0,
+                    BillStateId = partyStateId ?? 0,
+                    BillGstNo = partyGstin,
+                    BillAddress1 = partyAddress,
+                    BillAddress2 = null,
+                    BillAddress3 = null,
+                    BillContactNo = Accounts.FirstOrDefault(x => x.AccountId == ShippartyId)?.AccountMobile,
+                    BillPincode = Accounts.FirstOrDefault(x => x.AccountId == ShippartyId)?.AccountPincode,
+                    BillCity = Accounts.FirstOrDefault(x => x.AccountId == ShippartyId)?.AccountCity,
+                    BillRemarksDefault = selectedJob?.JobGoodsDesc,
+                    BillContainerNo = $"{selectedJob?.JobContainer20Ft} , {selectedJob?.JobContainer40Ft}",
+
+
+                    BillYearId = YearStatechangeService.SelectedYearId,
+                    BillTime = DateTime.Now.ToString("hh:mm tt"),
+                    // partyname = Accounts.FirstOrDefault(x => x.AccountId == partyId)?.AccountName,
+                    BillType = VouchersList.FirstOrDefault(v => v.VoucherId == voucherId)?.VoucherGroup ?? voucherType,
+                    BillAmount = basicTotal,
+                    BillSgst = sgstTotal,
+                    BillCgst = cgstTotal,
+                    BillIgst = igstTotal,
+                    BillTaxableAmt = basicTotal,
+                    BillBy  = null,
+
+                    BillNonTaxable = (float)details.Where(d => d.BillDetailGstPer == 0).Sum(d => d.BillDetailTaxableAmt),
+                   BillGstIdFreight=0,
+                    BillGstIdCharge = 0,
+                    BillGstAmtFreight = 0,
+                   BillGstAmtCharge=0,
+                    BillTotalUsd = details.Sum(d => d.BillDetailAmount),
+                    BillTotal = grandTotal + roundoffAmt,
+
+                    BillDrCr = string.Equals( VouchersList.FirstOrDefault(v => v.VoucherId == voucherId)?.VoucherGroup,"SALES", StringComparison.OrdinalIgnoreCase)  ||  string.Equals( VouchersList.FirstOrDefault(v => v.VoucherId == voucherId)?.VoucherGroup,
+        "DEBIT NOTE", StringComparison.OrdinalIgnoreCase)  ? "Dr"  : "Cr",
+
+                    BillIsFreeze = false,
+                    BillIsCancel = false,
+                    BillTaxIncluded = false,
+                    BillAmountInWord = AmountInWords((decimal)(grandTotal + roundoffAmt)),
+                    BillPolId = selectedJob?.JobPolId??0,
+                    BillPodId = selectedJob?.JobPodId ?? 0,
+                    BillVesselId = selectedJob?.JobVesselId ?? 0,
+                    BillLineId = selectedJob?.JobLineId ?? 0,
+                    BillCargoId = selectedJob?.JobCargoId ?? 0,
+                    BillConsigneeId = selectedJob?.JobConsigneeId ?? 0,
+                    BillShipperId = selectedJob?.JobShipperId ?? 0,
+                    BillSbNo = selectedJob?.JobSbNo??null,
+                    BillSbDate = selectedJob?.JobSbDate ?? null,
+                    BillBlNo = selectedJob?.JobBlNo ?? null,
+                    BillBlDate = selectedJob?.JobBlDate ?? null,
+                    BillShipperInvNo = selectedJob?.JobShipperInvNo ?? null,
+                    BillShipperInvDate = selectedJob?.JobShipperInvDate ?? null,
+                    BillGrossWt = selectedJob?.JobGrossWt ?? 0,
+                    BillNetWt = selectedJob?.JobNetWt ?? 0,
+                    BillQty = selectedJob?.JobQty ?? 0,
+                    BillExchRate = selectedJob?.JobExchRate ?? 0,
+                    Bill20Ft = selectedJob?.Job20Ft ?? null,
+                    Bill40Ft = selectedJob?.Job40Ft ?? null,
+                    BillCust1 = ExcelService.GetText(ws, map, firstRow, "BillCust1"),
+                    BillCust2 = ExcelService.GetText(ws, map, firstRow, "BillCust2"),
+                    BillCust3 = ExcelService.GetText(ws, map, firstRow, "BillCust3"),
+                    BillCust4 = ExcelService.GetText(ws, map, firstRow, "BillCust4"),
+                    BillCust5 = ExcelService.GetText(ws, map, firstRow, "BillCust5"),
+                    BillCust6 = ExcelService.GetText(ws, map, firstRow, "BillCust6"),
+                    BillCust7 = ExcelService.GetText(ws, map, firstRow, "BillCust7"),   
+                    BillCust8 = ExcelService.GetText(ws, map, firstRow, "BillCust8"),
+                    BillCust9 = ExcelService.GetText(ws, map, firstRow, "BillCust9"),
+                     BillCust10 = ExcelService.GetText(ws, map, firstRow, "BillCust10"),
+                    BillStatus = true,
+                    BillCreated = DateTime.Now,
+                    BillUpdated = DateTime.Now,
+                    // BillUuid = Guid.NewGuid().ToString(),
+                    BillPrefix  =null,
+                    BillPostfix = null,
+                    BillDefaultCurrencyId = selectedJob?.JobDefCurrId ?? 0,
+                    BillGroup = "SERVICE",
+                    BillBankId = VouchersList.FirstOrDefault(v => v.VoucherId == voucherId)?.VoucherBank1 ?? 0,
+                    BillDateFrom=null,
+                    BillDateTo = null,
+                    BillReportId = VouchersList.FirstOrDefault(v => v.VoucherId == voucherId)?.VoucherReportId ?? 0,
+                    BillCbmQty = selectedJob?.JobCbm ?? 0,
+                    BillConsignor = null,
+                    BillTaxableAmt2 = 0,
+                    BillGstType = null,
+                    BillJobId = selectedJob?.JobId ?? 0,
+                    BillCdnReason = null,
+                    BillLockedBy = null,
+                    BillApprovedBy = 0,
+                    BillDrcrAccId = 0,
+                    BillAdvance=0,
+                    BillNetAmount = (grandTotal + roundoffAmt),
+                    BillTdsAmt = 0,
+                    BillTdsPer = 0,
+                    BillHblNo = selectedJob?.JobHblNo ?? null,
+                    BillTcsAmt = 0,
+                    BillTcsPer = 0,
+                    Bill_due_amt = grandTotal + roundoffAmt,
+                    BillQuatationId = 0,
+                    BillQuatationNo =null,  
+                    BillRoundOffId = roundoffAmt != 0 ? roundOffAcId : 0,
+                  BillVchNo=0,
+                    BillIrnNo = null,
+                    BillAckDate = null,
+                     BillAckNo = null,
+
+                       BillDiscount1=0,
+                        BillDisPer1=0,
+
+                    // posname = StatesList.FirstOrDefault(s => s.StateId == posId)?.StateName,
+
+
+
+
+                    BillDetails = details
+                };
+            }
+
+            // ---------------- Preview rows for every excel row in this group ----------------
+            foreach (var r in rowsInGroup)
+            {
+                var allErrors = new List<string>(billErrors);
+                allErrors.AddRange(rowMessages[r]);
+
+                dynamic obj = new ExpandoObject();
+                var dict = (IDictionary<string, object?>)obj;
+
+                dict["RowNo"] = r;
+                dict["Status"] = allErrors.Any() ? "Error" : "Ready";
+                dict["Message"] = string.Join(", ", allErrors);
+
+                foreach (var col in ExcelColumns)
+                    dict[col] = ExcelService.GetText(ws, map, r, col);
+
+                // attach the assembled Bill (with all its details) ONLY on the last
+                // row of this voucher group, so Save() creates it exactly once
+                if (!groupHasError && r == lastRow)
+                    dict["Data"] = bill;
+
+                PreviewData.Add(obj);
+            }
+        }
+    }
+
+
+    //receipt
+    // ========================= RECEIPT IMPORT =========================
+
+    static readonly string[] RequiredReceiptColumns =
+    {
+   "Branch",
+    "Receipt No",
+    "Date",
+    "Account Name",
+    "Cash/Bank",
+    "Receipt Amt"
+};
+
+    // Receipt-specific masters
+    List<Voucher> ReceiptVouchers = new();
+                   
+
+    // Reuse AccountMap (party lookup). Bank/Cash bhi Account hi hai, same map se milega.
+
+    async Task LoadReceiptMasters()
+    {
+        var vouchers = await VoucherService.GetAllAsync();
+        ReceiptVouchers = vouchers;
+
+       @*  // pick the RECEIPT voucher for the current branch
+        ReceiptVoucherId = vouchers
+            .Where(v => !string.IsNullOrWhiteSpace(v.VoucherGroup)
+                     && v.VoucherGroup.Trim().Equals("RECEIPT", StringComparison.OrdinalIgnoreCase)
+                     && v.VoucherBranchId == BranchContext.BranchId)
+            .Select(v => (int?)v.VoucherId)
+            .FirstOrDefault(); *@
+    }
+
+    async Task ReadReceiptExcel()
+    {
+        if (SelectedFile == null)
+            return;
+
+        await LoadMasters();          // for AccountMap (party + bank lookups)
+        await LoadReceiptMasters();   // for RECEIPT voucher
+        PreviewData.Clear();
+
+        using var stream = SelectedFile.OpenReadStream(20 * 1024 * 1024);
+        using var ms = new MemoryStream();
+        await stream.CopyToAsync(ms);
+        ms.Position = 0;
+
+        using var package = new ExcelPackage(ms);
+        var ws = package.Workbook.Worksheets.First();
+
+        if (ws.Dimension == null)
+            return;
+
+        var map = ExcelService.ReadHeader(ws);
+        ExcelColumns = map.Columns.Keys.ToList();
+
+        foreach (var col in RequiredReceiptColumns)
+        {
+            if (!map.Has(col))
+                throw new Exception($"Excel Column Missing: {col}");
+        }
+
+        int totalRows = ws.Dimension.End.Row;
+
+        for (int row = 2; row <= totalRows; row++)
+        {
+            if (ExcelService.IsBlankRow(ws, row))
+                continue;
+
+            var errors = new List<string>();
+
+            string partyName = ExcelService.GetText(ws, map, row, "Account Name");
+            string bankName = ExcelService.GetText(ws, map, row, "Cash/Bank");
+            string branch = ExcelService.GetText(ws, map, row, "Branch");
+            double receiptAmt = ExcelService.GetDouble(ws, map, row, "Receipt Amt") ?? 0;
+            double discount = ExcelService.GetDouble(ws, map, row, "Discount") ?? 0;
+            double shortage = ExcelService.GetDouble(ws, map, row, "Short") ?? 0;
+            double tds = ExcelService.GetDouble(ws, map, row, "Tds") ?? 0;
+
+            DateTime date = ExcelService.GetDate(ws, map, row, "Date") ?? DateTime.Today;
+            string receiptNo = ExcelService.GetText(ws, map, row, "Receipt No");
+            //branch 
+            int? branchid = FindBranchId(branch);
+            if (branchid == null)
+                errors.Add($"Account '{branch}' not found. Please create Account master.");
+
+                int? receiptVoucherId = ReceiptVouchers
+    .Where(v =>
+        !string.IsNullOrWhiteSpace(v.VoucherGroup) &&
+        v.VoucherGroup.Trim().Equals("RECEIPT", StringComparison.OrdinalIgnoreCase) &&
+    v.VoucherBranchId == branchid)
+    .Select(v => (int?)v.VoucherId)
+    .FirstOrDefault();
+
+            if (!string.IsNullOrWhiteSpace(receiptNo) && receiptVoucherId != null && branchid != null)
+            {
+                bool exists = await JournalService.ExistsAsync(
+                    receiptNo,
+                    branchid,
+                    receiptVoucherId.Value,
+                    YearStatechangeService.SelectedYearId);
+
+                if (exists && !AllowDuplicate)
+                    errors.Add($"Receipt No '{receiptNo}' already exists.");
+            }
+            // ---- Party ----
+            int? partyId = FindAccountId(partyName);
+            if (partyId == null)
+                errors.Add($"Account '{partyName}' not found. Please create Account master.");
+
+            // ---- Bank/Cash ----
+            int? bankId = FindAccountId(bankName);
+            if (bankId == null)
+                errors.Add($"Cash/Bank '{bankName}' not found. Please create Account master.");
+
+            // ---- Receipt voucher ----
+            if (receiptVoucherId == null)
+                errors.Add("RECEIPT voucher not found for current branch. Please create Voucher master.");
+
+            if (receiptAmt <= 0)
+                errors.Add("Receipt Amt must be greater than 0.");
+           
+
+            // ✅ ALL ON ACCOUNT — no bill-to-bill.
+            // OnAccount = ReceiptAmt - (discount + tds + shortage), clamped at 0.
+            double onAccount = Math.Max(receiptAmt - discount - tds - shortage, 0);
+
+            var journal = new Journal
+            {
+                JournalVoucherId = receiptVoucherId ?? 0,
+                JournalBranchId = branchid??0,
+                JournalYearId = YearStatechangeService.SelectedYearId,
+                JournalNoStr = receiptNo,
+                 JournalNo= 0,
+                JournalPartyId = partyId ?? 0,
+                JournalAccountId = bankId ?? 0,
+                JournalMasterType = "RECEIPT",
+                JournalRefType = "Cr",
+                JournalDate = date,
+                JournalAmount = receiptAmt,
+                JournalTotalDiscount = (float)discount,
+                JournalTotalShort = (float)shortage,
+                JournalTotalTds = (float)tds,
+                JournalOnAccount = (float)onAccount,
+                JournalTotal = receiptAmt,   // total received
+                JournalChqNo = ExcelService.GetText(ws, map, row, "Chq.No."),
+                JournalChqDate = ExcelService.GetText(ws, map, row, "Chq.Date"),
+                JournalRemarks = ExcelService.GetText(ws, map, row, "Remarks"),
+                JournalStatus = true,
+                JournalCreated = DateTime.Now,
+                JournalUpdated = DateTime.Now,
+
+                // On-account => NO bill settlement rows
+                BillRefDetails = new List<BillRefDetail>()
+            };
+
+            string status = errors.Any() ? "Error" : "Ready";
+
+            dynamic obj = new ExpandoObject();
+            var dict = (IDictionary<string, object?>)obj;
+
+            dict["RowNo"] = row;
+            dict["Status"] = status;
+            dict["Message"] = string.Join(", ", errors);
+
+            foreach (var col in ExcelColumns)
+                dict[col] = ExcelService.GetText(ws, map, row, col);
+
+            dict["Data"] = journal;
+
+            PreviewData.Add(obj);
+        }
+    }
+
+    async Task SaveReceipts()
+    {
+        bool hasError = PreviewData
+            .Select(x => (IDictionary<string, object?>)x)
+            .Any(d => d.TryGetValue("Status", out var status) &&
+                      status?.ToString() == "Error");
+
+        if (hasError)
+        {
+            ToastService.Error("Errors present. Please fix all errors before saving. No data was imported.");
+            return;
+        }
+
+        var receipts = PreviewData
+            .Select(x => (IDictionary<string, object?>)x)
+            .Where(d =>
+                d.TryGetValue("Status", out var status) &&
+                status?.ToString() == "Ready" &&
+                d.TryGetValue("Data", out var data) &&
+                data is Journal)
+            .Select(d => (Journal)d["Data"]!)
+            .ToList();
+
+        if (!receipts.Any())
+        {
+            ToastService.Error("PLEASE IMPORT CORRECT DATA");
+            return;
+        }
+
+        foreach (var j in receipts)
+            j.JournalYearId = YearStatechangeService.SelectedYearId;
+
+        var result = await JournalService.BulkCreateAsync(receipts);
+
+        if (result == null)
+        {
+            ToastService.Error(JournalService.LastError ?? "Bulk import failed.");
+            return;
+        }
+
+        // Match by Receipt No column back to preview rows
+        foreach (var item in result.Items)
+        {
+            foreach (var row in PreviewData)
+            {
+                var rd = (IDictionary<string, object?>)row;
+                if (rd.TryGetValue("Receipt No", out var rno) &&
+                    rno?.ToString() == item.JournalNoInput)
+                {
+                    rd["Status"] = item.Success ? "Saved" : "Error";
+                    rd["Message"] = item.Success ? $"Imported (Journal Id {item.JournalId})" : item.Error;
+                }
+            }
+        }
+
+        if (result.FailCount == 0)
+            ToastService.Success($"{result.SuccessCount} receipt(s) imported successfully.");
+        else
+            ToastService.Warning($"{result.SuccessCount} imported, {result.FailCount} failed. Check Message column.");
+
+        StateHasChanged();
+    }
+
+    //payment
+    static readonly string[] RequiredpaymentColumns =
+    {
+    "Branch",
+    "Voucher No",
+    "Date",
+    "Account Name",
+    "Cash/Bank",
+    "Amount"
+};
+
+    List<Voucher> PaymentVouchers = new();
+    
+    async Task LoadPaymentMasters()
+    {
+        var vouchers = await VoucherService.GetAllAsync();
+        PaymentVouchers = vouchers;
+
+        @* // pick the PAYMENT voucher for the current branch
+        PaymentVoucherId = vouchers
+            .Where(v => !string.IsNullOrWhiteSpace(v.VoucherGroup)
+                     && v.VoucherGroup.Trim().Equals("PAYMENT", StringComparison.OrdinalIgnoreCase)
+                     && v.VoucherBranchId == BranchContext.BranchId)
+            .Select(v => (int?)v.VoucherId)
+            .FirstOrDefault(); *@
+    }
+async Task ReadPaymentExcel()
+    {
+        if (SelectedFile == null)
+            return;
+
+        await LoadMasters();          // for AccountMap (party + bank lookups)
+        await LoadPaymentMasters();   // for PAYMENT voucher
+        PreviewData.Clear();
+
+        using var stream = SelectedFile.OpenReadStream(20 * 1024 * 1024);
+        using var ms = new MemoryStream();
+        await stream.CopyToAsync(ms);
+        ms.Position = 0;
+
+        using var package = new ExcelPackage(ms);
+        var ws = package.Workbook.Worksheets.First();
+
+        if (ws.Dimension == null)
+            return;
+
+        var map = ExcelService.ReadHeader(ws);
+        ExcelColumns = map.Columns.Keys.ToList();
+
+        foreach (var col in RequiredpaymentColumns)
+        {
+            if (!map.Has(col))
+                throw new Exception($"Excel Column Missing: {col}");
+        }
+
+        int totalRows = ws.Dimension.End.Row;
+
+        for (int row = 2; row <= totalRows; row++)
+        {
+            if (ExcelService.IsBlankRow(ws, row))
+                continue;
+
+            var errors = new List<string>();
+
+            string partyName = ExcelService.GetText(ws, map, row, "Account Name");
+            string bankName = ExcelService.GetText(ws, map, row, "Cash/Bank");
+            string branch = ExcelService.GetText(ws, map, row, "Branch");
+            double paymentAmt = ExcelService.GetDouble(ws, map, row, "Amount") ?? 0;
+            double discount = ExcelService.GetDouble(ws, map, row, "Discount") ?? 0;
+            double shortage = ExcelService.GetDouble(ws, map, row, "Short") ?? 0;
+            double tds = ExcelService.GetDouble(ws, map, row, "Tds") ?? 0;
+
+            DateTime date = ExcelService.GetDate(ws, map, row, "Date") ?? DateTime.Today;
+            string paymentNo = ExcelService.GetText(ws, map, row, "Voucher No");
+            //branch 
+            int? branchid = FindBranchId(branch);
+            if (branchid == null)
+                errors.Add($"Account '{branch}' not found. Please create Account master.");
+
+                int? paymentVoucherId = PaymentVouchers
+    .Where(v =>
+        !string.IsNullOrWhiteSpace(v.VoucherGroup) &&
+        v.VoucherGroup.Trim().Equals("PAYMENT", StringComparison.OrdinalIgnoreCase) &&
+    v.VoucherBranchId == branchid)
+    .Select(v => (int?)v.VoucherId)
+    .FirstOrDefault();
+
+if (paymentVoucherId == null)
+{
+    errors.Add($"PAYMENT voucher not found for branch '{branch}'.");
+}
+
+            if (!string.IsNullOrWhiteSpace(paymentNo) && paymentVoucherId != null && branchid != null)
+            {
+                bool exists = await JournalService.ExistsAsync(
+                    paymentNo,
+                    branchid,
+                     paymentVoucherId.Value,
+                    YearStatechangeService.SelectedYearId);
+
+                if (exists && !AllowDuplicate)
+                    errors.Add($"Payment No '{paymentNo}' already exists.");
+            }
+            // ---- Party ----
+            int? partyId = FindAccountId(partyName);
+            if (partyId == null)
+                errors.Add($"Account '{partyName}' not found. Please create Account master.");
+
+            // ---- Bank/Cash ----
+            int? bankId = FindAccountId(bankName);
+            if (bankId == null)
+                errors.Add($"Cash/Bank '{bankName}' not found. Please create Account master.");
+
+           
+            if (paymentAmt <= 0)
+                errors.Add("Payment Amt must be greater than 0.");
+           
+
+            // ✅ ALL ON ACCOUNT — no bill-to-bill.
+            // OnAccount = ReceiptAmt - (discount + tds + shortage), clamped at 0.
+            double onAccount = Math.Max(paymentAmt - discount - tds - shortage, 0);
+
+            var journal = new Journal
+            {
+                JournalVoucherId = paymentVoucherId ?? 0,
+                JournalBranchId = branchid??0,
+                JournalYearId = YearStatechangeService.SelectedYearId,
+                JournalNoStr = paymentNo,
+                 JournalNo= 0,
+                JournalPartyId = partyId ?? 0,
+                JournalAccountId = bankId ?? 0,
+                JournalMasterType = "PAYMENT",
+                JournalRefType = "Dr",
+                JournalDate = date,
+                JournalAmount = paymentAmt,
+                JournalTotalDiscount = (float)discount,
+                JournalTotalShort = (float)shortage,
+                JournalTotalTds = (float)tds,
+                JournalOnAccount = (float)onAccount,
+                JournalTotal = paymentAmt,   // total paid
+                JournalChqNo = ExcelService.GetText(ws, map, row, "Chq.No."),
+                JournalChqDate = ExcelService.GetText(ws, map, row, "Chq.Date"),
+                JournalRemarks = ExcelService.GetText(ws, map, row, "Remarks"),
+                JournalStatus = true,
+                JournalCreated = DateTime.Now,
+                JournalUpdated = DateTime.Now,
+
+                // On-account => NO bill settlement rows
+                BillRefDetails = new List<BillRefDetail>()
+            };
+
+            string status = errors.Any() ? "Error" : "Ready";
+
+            dynamic obj = new ExpandoObject();
+            var dict = (IDictionary<string, object?>)obj;
+
+            dict["RowNo"] = row;
+            dict["Status"] = status;
+            dict["Message"] = string.Join(", ", errors);
+
+            foreach (var col in ExcelColumns)
+                dict[col] = ExcelService.GetText(ws, map, row, col);
+
+            dict["Data"] = journal;
+
+            PreviewData.Add(obj);
+        }
+    }
+
+    async Task SavePayment()
+    {
+        bool hasError = PreviewData
+            .Select(x => (IDictionary<string, object?>)x)
+            .Any(d => d.TryGetValue("Status", out var status) &&
+                      status?.ToString() == "Error");
+
+        if (hasError)
+        {
+            ToastService.Error("Errors present. Please fix all errors before saving. No data was imported.");
+            return;
+        }
+
+        var Payment = PreviewData
+            .Select(x => (IDictionary<string, object?>)x)
+            .Where(d =>
+                d.TryGetValue("Status", out var status) &&
+                status?.ToString() == "Ready" &&
+                d.TryGetValue("Data", out var data) &&
+                data is Journal)
+            .Select(d => (Journal)d["Data"]!)
+            .ToList();
+
+        if (!Payment.Any())
+        {
+            ToastService.Error("PLEASE IMPORT CORRECT DATA");
+            return;
+        }
+
+        foreach (var j in Payment)
+            j.JournalYearId = YearStatechangeService.SelectedYearId;
+
+        var result = await JournalService.BulkCreateAsync(Payment);
+
+        if (result == null)
+        {
+            ToastService.Error(JournalService.LastError ?? "Bulk import failed.");
+            return;
+        }
+
+        // Match by Payment No column back to preview rows
+        foreach (var item in result.Items)
+        {
+            foreach (var row in PreviewData)
+            {
+                var rd = (IDictionary<string, object?>)row;
+                if (rd.TryGetValue("Voucher No", out var rno) &&
+                    rno?.ToString() == item.JournalNoInput)
+                {
+                    rd["Status"] = item.Success ? "Saved" : "Error";
+                    rd["Message"] = item.Success ? $"Imported (Journal Id {item.JournalId})" : item.Error;
+                }
+            }
+        }
+
+        if (result.FailCount == 0)
+            ToastService.Success($"{result.SuccessCount} Payment(s) imported successfully.");
+        else
+            ToastService.Warning($"{result.SuccessCount} imported, {result.FailCount} failed. Check Message column.");
+
+        StateHasChanged();
+    }
+
+    // ========================= CONTRA IMPORT =========================
+
+    static readonly string[] RequiredContraColumns =
+    {
+    "Branch",
+    "Contra No",
+    "Date",
+    "From Account",
+    "To Account",
+    "Amount"
+};
+
+    List<Voucher> ContraVouchers = new();
+
+    async Task LoadContraMasters()
+    {
+        ContraVouchers = await VoucherService.GetAllAsync();
+    }
+
+    async Task ReadContraExcel()
+    {
+        if (SelectedFile == null)
+            return;
+
+        await LoadMasters();        // AccountMap (from + to account lookups)
+        await LoadContraMasters();  // CONTRA voucher
+        PreviewData.Clear();
+
+        using var stream = SelectedFile.OpenReadStream(20 * 1024 * 1024);
+        using var ms = new MemoryStream();
+        await stream.CopyToAsync(ms);
+        ms.Position = 0;
+
+        using var package = new ExcelPackage(ms);
+        var ws = package.Workbook.Worksheets.First();
+
+        if (ws.Dimension == null)
+            return;
+
+        var map = ExcelService.ReadHeader(ws);
+        ExcelColumns = map.Columns.Keys.ToList();
+
+        foreach (var col in RequiredContraColumns)
+        {
+            if (!map.Has(col))
+                throw new Exception($"Excel Column Missing: {col}");
+        }
+
+        int totalRows = ws.Dimension.End.Row;
+
+        for (int row = 2; row <= totalRows; row++)
+        {
+            if (ExcelService.IsBlankRow(ws, row))
+                continue;
+
+            var errors = new List<string>();
+
+            string branch = ExcelService.GetText(ws, map, row, "Branch");
+            string fromName = ExcelService.GetText(ws, map, row, "From Account");
+            string toName = ExcelService.GetText(ws, map, row, "To Account");
+            double amount = ExcelService.GetDouble(ws, map, row, "Amount") ?? 0;
+            DateTime date = ExcelService.GetDate(ws, map, row, "Date") ?? DateTime.Today;
+            string contraNo = ExcelService.GetText(ws, map, row, "Contra No");
+
+            // ---- Branch ----
+            int? branchid = FindBranchId(branch);
+            if (branchid == null)
+                errors.Add($"Branch '{branch}' not found. Please create Branch master.");
+
+            // ---- CONTRA voucher for this branch ----
+            int? contraVoucherId = ContraVouchers
+                .Where(v =>
+                    !string.IsNullOrWhiteSpace(v.VoucherGroup) &&
+                    v.VoucherGroup.Trim().Equals("CONTRA", StringComparison.OrdinalIgnoreCase) &&
+                    v.VoucherBranchId == branchid)
+                .Select(v => (int?)v.VoucherId)
+                .FirstOrDefault();
+
+            if (contraVoucherId == null)
+                errors.Add($"CONTRA voucher not found for branch '{branch}'. Please create Voucher master.");
+
+            // ---- Duplicate check ----
+            if (!string.IsNullOrWhiteSpace(contraNo) && contraVoucherId != null && branchid != null)
+            {
+                bool exists = await JournalService.ExistsAsync(
+                    contraNo,
+                    branchid,
+                    contraVoucherId.Value,
+                    YearStatechangeService.SelectedYearId);
+
+                if (exists && !AllowDuplicate)
+                    errors.Add($"Contra No '{contraNo}' already exists.");
+            }
+
+            // ---- From Account (=> JournalAccountId) ----
+            int? fromId = FindAccountId(fromName);
+            if (fromId == null)
+                errors.Add($"From Account '{fromName}' not found. Please create Account master.");
+
+            // ---- To Account (=> JournalPartyId) ----
+            int? toId = FindAccountId(toName);
+            if (toId == null)
+                errors.Add($"To Account '{toName}' not found. Please create Account master.");
+
+            // ---- Same account guard ----
+            if (fromId != null && toId != null && fromId == toId)
+                errors.Add("'From' and 'To' accounts cannot be the same.");
+
+            if (amount <= 0)
+                errors.Add("Amount must be greater than 0.");
+
+            var journal = new Journal
+            {
+                JournalVoucherId = contraVoucherId ?? 0,
+                JournalBranchId = branchid ?? 0,
+                JournalYearId = YearStatechangeService.SelectedYearId,
+                JournalNoStr = contraNo,
+                JournalNo = 0,
+                JournalAccountId = fromId ?? 0,   // From
+                JournalPartyId = toId ?? 0,       // To
+                JournalMasterType = "CONTRA",
+                JournalRefType = "Cr",
+                JournalDate = date,
+                JournalAmount = amount,
+                JournalOnAccount = (float)amount,
+                JournalTotal = amount,            // controller's isContra uses JournalTotal
+                JournalChqNo = ExcelService.GetText(ws, map, row, "Ref_No"),
+                JournalChqDate = ExcelService.GetText(ws, map, row, "Ref_Date"),
+                JournalRemarks = ExcelService.GetText(ws, map, row, "Remarks"),
+                JournalStatus = true,
+                JournalCreated = DateTime.Now,
+                JournalUpdated = DateTime.Now,
+
+                // Contra has no bill settlements
+                BillRefDetails = new List<BillRefDetail>()
+            };
+
+            string status = errors.Any() ? "Error" : "Ready";
+
+            dynamic obj = new ExpandoObject();
+            var dict = (IDictionary<string, object?>)obj;
+
+            dict["RowNo"] = row;
+            dict["Status"] = status;
+            dict["Message"] = string.Join(", ", errors);
+
+            foreach (var col in ExcelColumns)
+                dict[col] = ExcelService.GetText(ws, map, row, col);
+
+            dict["Data"] = journal;
+
+            PreviewData.Add(obj);
+        }
+    }
+
+    async Task SaveContra()
+    {
+        bool hasError = PreviewData
+            .Select(x => (IDictionary<string, object?>)x)
+            .Any(d => d.TryGetValue("Status", out var status) &&
+                      status?.ToString() == "Error");
+
+        if (hasError)
+        {
+            ToastService.Error("Errors present. Please fix all errors before saving. No data was imported.");
+            return;
+        }
+
+        var contras = PreviewData
+            .Select(x => (IDictionary<string, object?>)x)
+            .Where(d =>
+                d.TryGetValue("Status", out var status) &&
+                status?.ToString() == "Ready" &&
+                d.TryGetValue("Data", out var data) &&
+                data is Journal)
+            .Select(d => (Journal)d["Data"]!)
+            .ToList();
+
+        if (!contras.Any())
+        {
+            ToastService.Error("PLEASE IMPORT CORRECT DATA");
+            return;
+        }
+
+        foreach (var j in contras)
+            j.JournalYearId = YearStatechangeService.SelectedYearId;
+
+        var result = await JournalService.BulkCreateAsync(contras);
+
+        if (result == null)
+        {
+            ToastService.Error(JournalService.LastError ?? "Bulk import failed.");
+            return;
+        }
+
+        // Match by Contra No column back to preview rows
+        foreach (var item in result.Items)
+        {
+            foreach (var row in PreviewData)
+            {
+                var rd = (IDictionary<string, object?>)row;
+                if (rd.TryGetValue("Contra No", out var cno) &&
+                    cno?.ToString() == item.JournalNoInput)
+                {
+                    rd["Status"] = item.Success ? "Saved" : "Error";
+                    rd["Message"] = item.Success ? $"Imported (Journal Id {item.JournalId})" : item.Error;
+                }
+            }
+        }
+
+        if (result.FailCount == 0)
+            ToastService.Success($"{result.SuccessCount} contra(s) imported successfully.");
+        else
+            ToastService.Warning($"{result.SuccessCount} imported, {result.FailCount} failed. Check Message column.");
+
+        StateHasChanged();
+    }
+
+
+    }

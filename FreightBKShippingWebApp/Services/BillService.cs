@@ -270,5 +270,49 @@ namespace FreightBKShippingWebApp.Services
                 return false;
             }
         }
+
+
+        public async Task<bool> ExistsAsync(
+     string billNo,
+     int? branchId = null,
+     int? voucherId = null,
+     int? yearId = null)
+        {
+            try
+            {
+                var url = $"api/Bills/exists?billNo={Uri.EscapeDataString(billNo)}";
+
+                if (branchId.HasValue)
+                    url += $"&branchId={branchId.Value}";
+
+                if (voucherId.HasValue)
+                    url += $"&voucherId={voucherId.Value}";
+
+                if (yearId.HasValue)
+                    url += $"&yearId={yearId.Value}";
+
+                return await _api.GetFromJsonAsync<bool>(url);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Error checking bill exists: {ex.Message}");
+                return false;
+            }
+        }
+
+        public async Task<BulkBillImportResultDto?> BulkCreateAsync(List<Bill> bills)
+        {
+            try
+            {
+                LastError = null;
+                return await _api.PostAsync<BulkBillImportResultDto, List<Bill>>("api/Bills/bulk", bills);
+            }
+            catch (Exception ex)
+            {
+                LastError = ex.Message;
+                Console.WriteLine($"❌ Error bulk creating bills: {ex.Message}");
+                return null;
+            }
+        }
     }
 }

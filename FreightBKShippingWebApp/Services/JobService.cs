@@ -109,5 +109,41 @@ namespace FreightBKShippingWebApp.Services
             }
         }
 
+        public async Task<bool> ExistsAsync(
+     string jobNo,
+     int? branchId,
+     string? jobType,
+     string? yearId)
+        {
+            try
+            {
+                return await _api.GetFromJsonAsync<bool>(
+                    $"api/Jobs/exists?jobNo={Uri.EscapeDataString(jobNo)}" +
+                    $"&branchId={branchId}" +
+                    $"&jobType={Uri.EscapeDataString(jobType ?? "")}" +
+                    $"&yearId={Uri.EscapeDataString(yearId ?? "")}");
+            }
+            catch
+            {
+                return false;
+            }
+        }
+        public async Task<(bool Success, string? Error)> BulkCreateAsync(List<Job> jobs)
+        {
+            try
+            {
+                var result = await _api.PostAsync<bool, List<Job>>(
+                    "api/job/bulkimport",
+                    jobs);
+
+                return result
+                    ? (true, null)
+                    : (false, "Import Failed");
+            }
+            catch (Exception ex)
+            {
+                return (false, ex.Message);
+            }
+        }
     }
 }

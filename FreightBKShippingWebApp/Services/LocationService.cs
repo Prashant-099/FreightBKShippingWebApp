@@ -45,19 +45,19 @@ namespace FreightBKShippingWebApp.Services
            
         }
 
-        public async Task<bool> CreateAsync(Location location)
+        public async Task<int> CreateAsync(Location location)
         {
             try
             {
                 LastError = null;
-                var result = await _api.PostAsync<bool, Location>("api/Locations", location);
+                var result = await _api.PostAsync<int, Location>("api/Locations", location);
                 return result;
             }
             catch (Exception ex)
             {
                 LastError = ex.Message;
                 Console.WriteLine($"❌ Error creating location: {ex.Message}");
-                return false;
+                return 0;
             }
            
            

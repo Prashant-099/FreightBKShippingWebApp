@@ -396,7 +396,7 @@ namespace FreightBKShippingWebApp.Model
         public float BillAdvance { get; set; }
 
         [Column("bill_netamount")]
-        public float BillNetAmount { get; set; }
+        public double BillNetAmount { get; set; }
 
         [Column("bill_tds_amt")]
         public float BillTdsAmt { get; set; }

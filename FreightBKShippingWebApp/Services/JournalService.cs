@@ -136,5 +136,57 @@ namespace FreightBKShippingWebApp.Services
                 return new List<BillRefDetail>();
             }
         }
+
+        public async Task<bool> ExistsAsync(    string journalNo,    int? branchId,    int? voucherId,    int yearId)
+        {
+            try
+            {
+                return await _api.GetFromJsonAsync<bool>(
+                    $"api/Journals/exists?" +
+                    $"journalNo={Uri.EscapeDataString(journalNo)}" +
+                    $"&branchId={branchId}" +
+                    $"&voucherId={voucherId}" +
+                    $"&yearId={yearId}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Error checking journal exists: {ex.Message}");
+                return false;
+            }
+        }
+
+        public async Task<BulkJournalImportResultDto?> BulkCreateAsync(List<Journal> journals)
+        {
+            try
+            {
+                LastError = null;
+
+                return await _api.PostAsync<BulkJournalImportResultDto, List<Journal>>(
+                    "api/Journals/bulk",
+                    journals);
+            }
+            catch (Exception ex)
+            {
+                LastError = ex.Message;
+                Console.WriteLine($"❌ Error bulk creating journals: {ex.Message}");
+                return null;
+            }
+        }
+        public class BulkJournalImportResultDto
+        {
+            public int TotalCount { get; set; }
+            public int SuccessCount { get; set; }
+            public int FailCount { get; set; }
+            public List<BulkJournalResultItemDto> Items { get; set; } = new();
+        }
+
+        public class BulkJournalResultItemDto
+        {
+            public string? JournalNoInput { get; set; }   // Excel se aaya Receipt No (match ke liye)
+            public bool Success { get; set; }
+            public int JournalId { get; set; }
+            public string? JournalNo { get; set; }
+            public string? Error { get; set; }
+        }
     }
 }
